@@ -1090,6 +1090,185 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   list(jac)
 }
 
+# Two-level (single group) Gamma.eta: the NACOV of the structural statistics
+# c(EETA_b, vech(VETA_b)) per level, plus their full (cross-level) covariance.
+#
+# The 'sample' statistics of the two-level local approach are the h1
+# (saturated) estimates s = c(Mu.W, vech(Sigma.W), Mu.B, vech(Sigma.B)), whose
+# sampling variability is the cluster-sandwich Gamma of the two-level (D)WLS
+# machinery (see lav_samplestats_wls_2l.R):
+#   Gamma.s = nobs * (I1^-1 J1 I1^-1) / nclusters
+# with I1/J1 the expected/first-order per-cluster h1 informations at the h1
+# estimates. The jacobian of the structural statistics w.r.t. s uses the same
+# decomposition as the single-level lav_sam_step1_local_jac():
+#   JAC_b = (JACc_b %*% JACa) + JACb_b
+# where JACa (the influence of s on the step-1 measurement parameters) comes
+# from the two-level measurement-block fits -- their Delta rows and h1
+# information are laid out exactly like s, so the single-level influence
+# formula invI . Delta' . A1 carries over, with the block statistics mapped
+# into the joint s per level; JACb_b is the direct map of level b's segment
+# of s (VETA_b = M_b S_b M_b'); and JACc_b is the numeric jacobian through
+# the measurement estimates, reusing lav_sam_jac_est_rows() (which re-runs
+# the two-level lav_sam_step1_local()).
+#
+# The structural model is refit as a two-'group' model (one group per level,
+# nobs = c(N, nclusters)), so the per-level Gamma.eta list must follow
+# lavaan's per-group NACOV convention Gamma_g = Cov(sqrt(n_g) stats_g):
+#   Gamma.eta[[1]] =         JAC_1 Gamma.s JAC_1'    (n_1 = N; Gamma.s is
+#                                                     N-scaled already)
+#   Gamma.eta[[2]] = (G/N) * JAC_2 Gamma.s JAC_2'    (n_2 = G = nclusters)
+# The two levels' statistics are correlated (they share s and the step 1
+# chain), which the per-group list cannot express; we therefore also return
+# the plain covariance of the STACKED statistics (Gamma.eta.full), and step 2
+# computes the exact cross-level sandwich via the Case B path.
+lav_sam_gamma_eta_2l <- function(step1 = NULL, fit = NULL) {
+  lavdata <- fit@Data
+  lavmodel <- fit@Model
+  g <- 1L
+
+  # supported setting: two levels, single group, continuous, complete data,
+  # h1 statistics
+  if (lavdata@ngroups > 1L) {
+    lav_msg_stop(gettext(
+      "two-level Gamma.eta: not available for multigroup multilevel
+       models (yet)!"))
+  }
+  if (lavmodel@categorical) {
+    lav_msg_stop(gettext(
+      "two-level Gamma.eta: not available for categorical data (yet)!"))
+  }
+  if (length(unlist(fit@pta$vnames$lv.interaction)) > 0L) {
+    lav_msg_stop(gettext(
+      "two-level Gamma.eta: not available with latent interactions (yet)!"))
+  }
+  if (!is.null(step1$local.options$twolevel.method) &&
+      step1$local.options$twolevel.method != "h1") {
+    lav_msg_stop(gettext(
+      "two-level Gamma.eta: only available for twolevel.method = \"h1\"."))
+  }
+  if (anyNA(lavdata@X[[g]])) {
+    lav_msg_stop(gettext(
+      "two-level Gamma.eta: not available for missing data (yet)!"))
+  }
+
+  lp <- lavdata@Lp[[g]]
+  meanstructure <- lavmodel@meanstructure # always TRUE for two-level
+
+  # level variable sets, in the order used by the h1 estimates and the
+  # Delta rows (the Lp$ov.idx order; note ov.idx[[2]] may be unsorted)
+  ov_l <- lapply(1:2, function(l) lavdata@ov.names[[g]][lp$ov.idx[[l]]])
+  p_l <- lengths(ov_l)
+  seg_len <- p_l + p_l * (p_l + 1L) / 2L
+  seg_offset <- c(0L, seg_len[1]) # start of each level's (mean, vech) segment
+  n_s <- sum(seg_len)
+
+  # h1 (saturated) estimates: step1$COV/YBAR hold them per level (this is
+  # the twolevel.method = "h1" path of lav_sam_get_cov_ybar())
+  mu_w <- drop(step1$YBAR[[1]])
+  sigma_w <- step1$COV[[1]]
+  mu_b <- drop(step1$YBAR[[2]])
+  sigma_b <- step1$COV[[2]]
+  if (ncol(sigma_w) != p_l[1] || ncol(sigma_b) != p_l[2]) {
+    lav_msg_stop(gettext(
+      "internal error: two-level Gamma.eta: step1$COV dimensions do not
+       match the level variable sets."))
+  }
+
+  # Gamma.s: cluster-sandwich NACOV of the h1 estimates (the same
+  # computation as lav_samp_wls_2l(), N-scaled convention)
+  nobs <- fit@SampleStats@nobs[[g]]
+  nclusters <- lp$nclusters[[2]]
+  i1 <- lav_mvn_cl_info_expected(
+    lp = lp, mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b,
+    x_idx = fit@SampleStats@x.idx[[g]]
+  )
+  j1 <- lav_mvn_cl_info_firstorder(
+    y1 = lavdata@X[[g]], ylp = fit@SampleStats@YLp[[g]], lp = lp,
+    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b,
+    x_idx = fit@SampleStats@x.idx[[g]], divide_by_two = TRUE
+  )
+  diag_i1 <- diag(i1)
+  keep <- which(abs(diag_i1) > sqrt(.Machine$double.eps) * max(abs(diag_i1)))
+  i1_inv <- matrix(0, nrow(i1), ncol(i1))
+  inv_keep <- try(lav_mat_sym_inverse(i1[keep, keep, drop = FALSE]),
+                  silent = TRUE)
+  if (inherits(inv_keep, "try-error")) {
+    lav_msg_stop(gettext(
+      "two-level Gamma.eta: could not invert the h1 information matrix."))
+  }
+  i1_inv[keep, keep] <- inv_keep
+  gamma_s <- nobs * (i1_inv %*% j1 %*% i1_inv) / nclusters
+  gamma_s <- (gamma_s + t(gamma_s)) / 2
+
+  # JACa: influence d(theta.mm)/d(s) of the two-level measurement blocks
+  jaca <- matrix(0, nrow = length(fit@ParTable$lhs), ncol = n_s)
+  for (mm in seq_len(length(step1$MM.FIT))) {
+    fit_mm_block <- step1$MM.FIT[[mm]]
+    if (fit_mm_block@Data@nlevels != 2L) {
+      lav_msg_stop(gettext(
+        "two-level Gamma.eta: all measurement blocks must be two-level
+         models."))
+    }
+    # invI . Delta' . A1, exactly as in the single-level case (se = "local"
+    # uses the observed information; see lav_sam_step1_local_jac())
+    mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
+    mm_delta <- lavTech(fit_mm_block, "Delta")
+    mm_inv_observed <- lavTech(fit_mm_block, "inverted.information.observed")
+    mm_jac <- t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
+
+    # keep only rows that are also in FIT@ParTable
+    mm_keep_idx <- fit_mm_block@ParTable$free[step1$block.ptm.idx[[mm]]]
+    mm_jac <- mm_jac[mm_keep_idx, , drop = FALSE]
+
+    # map the block's statistics (mu_w, vech(Sigma.W), mu_b, vech(Sigma.B)
+    # over the block variables) into the joint s, per level
+    mm_lp <- fit_mm_block@Data@Lp[[g]]
+    mm_col_idx <- unlist(lapply(1:2, function(l) {
+      mm_ov_l <- fit_mm_block@Data@ov.names[[g]][mm_lp$ov.idx[[l]]]
+      idx_l <- match(mm_ov_l, ov_l[[l]])
+      if (anyNA(idx_l)) {
+        lav_msg_stop(gettext(
+          "internal error: two-level Gamma.eta: unable to map the
+           measurement-block variables into the joint statistics vector."))
+      }
+      seg_offset[l] + lav_mat_vech_which_idx(p_l[l], idx = idx_l,
+                                             add_idx_at_start = TRUE)
+    }))
+    mm_row_idx <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
+    jaca[mm_row_idx, mm_col_idx] <- mm_jac
+  }
+
+  # keep only the free 'measurement' parameters
+  pt_1 <- step1$PT
+  ov_names <- unique(unlist(lapply(step1$MM.FIT, lav_object_vnames, "ov")))
+  lv_ind <- unlist(fit@pta$vnames$lv.ind)
+  keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                    meanstructure)
+  jaca <- jaca[keep_idx, , drop = FALSE]
+
+  # per level: JAC_b = (JACc_b %*% JACa) + JACb_b
+  jac <- vector("list", 2L)
+  for (b in 1:2) {
+    # direct part: (EETA_b, vech(VETA_b)) = f(mean_b, vech(S_b)), theta fixed
+    jacb_core <- lav_sam_jacb_cont_g(step1$M[[b]], meanstructure)
+    jacb <- matrix(0, nrow = nrow(jacb_core), ncol = n_s)
+    jacb[, seg_offset[b] + seq_len(seg_len[b])] <- jacb_core
+    # indirect part: through the measurement estimates
+    jacc <- lav_sam_jac_est_rows(keep_idx, step1, fit, b, meanstructure)
+    jac[[b]] <- (jacc %*% jaca) + jacb
+  }
+
+  # per-level NACOV (Gamma_g = Cov(sqrt(n_g) stats_g), n = c(N, nclusters))
+  # + the full covariance of the stacked statistics (cross-level blocks)
+  gamma_eta <- vector("list", 2L)
+  gamma_eta[[1]] <- jac[[1]] %*% gamma_s %*% t(jac[[1]])
+  gamma_eta[[2]] <- (nclusters / nobs) * (jac[[2]] %*% gamma_s %*% t(jac[[2]]))
+  jac_full <- rbind(jac[[1]], jac[[2]])
+  gamma_eta_full <- jac_full %*% (gamma_s / nobs) %*% t(jac_full)
+
+  list(Gamma.eta = gamma_eta, Gamma.eta.full = gamma_eta_full, JAC = jac)
+}
+
 # multigroup version of lav_sam_step1_local_jac() (single level, no latent
 # interactions, continuous data).
 #

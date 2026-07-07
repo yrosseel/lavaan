@@ -221,10 +221,11 @@ sam <- function(model = NULL,
     # check for multiple blocks: multigroup (single level) is supported for
     # the local approach as long as the measurement model has no across-group
     # constraints (checked later in lav_sam_step1_local_jac_mg()); multilevel
-    # local SEs are not available yet
-    if (fit@Data@nlevels > 1L && se %in% c("local", "local.nt")) {
-      lav_msg_stop(gettext("se = \"local\" not available (yet) if multiple
-                            levels are involved."))
+    # local SEs are supported for the single-group continuous complete-data
+    # setting (see lav_sam_gamma_eta_2l()), but not the normal-theory variant
+    if (fit@Data@nlevels > 1L && se == "local.nt") {
+      lav_msg_stop(gettext("se = \"local.nt\" not available if multiple
+                            levels are involved; use se = \"local\"."))
     }
 
     # single-level clustered data: the normal-theory Gamma used by
@@ -309,6 +310,16 @@ sam <- function(model = NULL,
           gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit, group = g)
           gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
         }
+      } else if (fit@Data@nlevels > 1L) {
+        # two-level: Gamma.eta per level (one entry per pseudo-group of the
+        # structural refit) from the cluster-sandwich Gamma of the h1
+        # estimates; the cross-level covariance of the stacked statistics
+        # goes through the Case B (full-covariance) sandwich in step 2
+        tmp_2l <- lav_sam_gamma_eta_2l(step1 = step1, fit = fit)
+        gamma_eta <- tmp_2l$Gamma.eta
+        step1$JAC <- tmp_2l$JAC
+        step1$Gamma.eta.full <- tmp_2l$Gamma.eta.full
+        step1$caseB <- TRUE
       } else {
         jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
 

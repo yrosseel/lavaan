@@ -42,7 +42,11 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{se = "twostep"} is automatically replaced by
     \code{se = "twostep.robust"}, and the standard errors (also for
     \code{se = "local"} and \code{se = "bootstrap"}, which resamples whole
-    clusters) account for the clustering.}
+    clusters) account for the clustering. For two-level models,
+    \code{se = "local"} is available for the single-group continuous
+    complete-data setting; it uses the cluster-sandwich covariance of the
+    saturated (h1) estimates, and also enables the corrected structural
+    test statistic.}
 \item{mm_list}{List. Define the measurement blocks. 
      Each element of the list should
      be either a single name of a latent variable, or a vector of latent
