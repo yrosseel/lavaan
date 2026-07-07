@@ -185,10 +185,10 @@ lav_export_lavaan <- function(object, ...) {
 
   # operator categories
   con.op <- c("==", "<", ">", ":=")
-  is.con <- pt$op %in% con.op
+  is_con <- pt$op %in% con.op
 
   # ---- 1. resolve equality classes -> clean display labels -----------------
-  display.label <- lav_export_lavaan_labels(pt, is.con)
+  display_label <- lav_export_lavaan_labels(pt, is_con)
 
   # ---- 2. emit the model, block by block -----------------------------------
   body <- character(0L)
@@ -202,14 +202,14 @@ lav_export_lavaan <- function(object, ...) {
       if (nlevels > 1L) {
         body <- c(body, paste0("level: ", l))
       }
-      block.idx <- which(!is.con & pt$group == g & pt$level == l)
+      block_idx <- which(!is_con & pt$group == g & pt$level == l)
       body <- c(body,
-                lav_export_lavaan_block(pt, block.idx, display.label))
+                lav_export_lavaan_block(pt, block_idx, display_label))
     }
   }
 
   # ---- 3. constraints and defined parameters (block-independent) ------------
-  con.lines <- lav_export_lavaan_constraints(pt, is.con, display.label)
+  con.lines <- lav_export_lavaan_constraints(pt, is_con, display_label)
   if (length(con.lines)) {
     body <- c(body, "", con.lines)
   }
@@ -240,9 +240,9 @@ lav_export_num <- function(x) {
 # determine, for each parameter row, the clean label to display (or "")
 # parameters that are constrained equal (via a shared label or via a pairwise
 # `==` constraint) get a single shared display label
-lav_export_lavaan_labels <- function(pt, is.con) {
+lav_export_lavaan_labels <- function(pt, is_con) {
   nn <- length(pt$lhs)
-  par.idx <- which(!is.con)
+  par.idx <- which(!is_con)
 
   # union-find over parameter rows (indexed by position in pt)
   parent <- seq_len(nn)
@@ -271,7 +271,7 @@ lav_export_lavaan_labels <- function(pt, is.con) {
     if (token %in% names(plab2row)) {
       return(unname(plab2row[token]))
     }
-    which(!is.con & pt$label == token)
+    which(!is_con & pt$label == token)
   }
 
   # (a) union rows that share the same non-empty label
@@ -302,12 +302,12 @@ lav_export_lavaan_labels <- function(pt, is.con) {
 
   # build classes
   root <- vapply(seq_len(nn), find, integer(1L))
-  display.label <- rep("", nn)
+  display_label <- rep("", nn)
 
   # collect names already in use (variable names + user labels) to avoid
   # collisions when generating fresh labels
   is.plabel.style <- function(x) grepl("^\\.", x)
-  user.lab <- unique(pt$label[!is.con & nzchar(pt$label) &
+  user.lab <- unique(pt$label[!is_con & nzchar(pt$label) &
                               !is.plabel.style(pt$label)])
   reserved <- unique(c(pt$lhs, pt$rhs, user.lab,
                        pt$lhs[pt$op == ":="]))
@@ -324,7 +324,7 @@ lav_export_lavaan_labels <- function(pt, is.con) {
   }
 
   for (r in unique(root[par.idx])) {
-    members <- which(root == r & !is.con)
+    members <- which(root == r & !is_con)
     if (length(members) == 0L) next
     # prefer an existing user label
     member.user.lab <- pt$label[members]
@@ -337,15 +337,15 @@ lav_export_lavaan_labels <- function(pt, is.con) {
     } else {
       lab <- ""
     }
-    display.label[members] <- lab
+    display_label[members] <- lab
   }
 
-  display.label
+  display_label
 }
 
 # emit the (compact) model lines for one block
-lav_export_lavaan_block <- function(pt, block.idx, display.label) {
-  if (length(block.idx) == 0L) {
+lav_export_lavaan_block <- function(pt, block_idx, display_label) {
+  if (length(block_idx) == 0L) {
     return(character(0L))
   }
 
@@ -354,7 +354,7 @@ lav_export_lavaan_block <- function(pt, block.idx, display.label) {
   # modifier-decorated rhs term for a single row; returns NA to drop the term
   term <- function(i) {
     rhs <- pt$rhs[i]
-    lab <- display.label[i]
+    lab <- display_label[i]
     if (pt$free[i] == 0L) {
       if (is.na(pt$ustart[i])) {
         return(NA_character_) # eg fixed.x (co)variance/mean: refit re-adds it
@@ -374,16 +374,16 @@ lav_export_lavaan_block <- function(pt, block.idx, display.label) {
 
   # ordered operator groups for stable, readable output
   op.order <- c("=~", "<~", "~", "~1", "~~", "|", "~*~")
-  ops <- intersect(op.order, unique(pt$op[block.idx]))
-  ops <- c(ops, setdiff(unique(pt$op[block.idx]), op.order))
+  ops <- intersect(op.order, unique(pt$op[block_idx]))
+  ops <- c(ops, setdiff(unique(pt$op[block_idx]), op.order))
 
   for (op in ops) {
-    rows <- block.idx[pt$op[block.idx] == op]
+    rows <- block_idx[pt$op[block_idx] == op]
     if (op == "~1") {
       # one line per lhs: `x1 ~ <mod>1`
       for (lhs in unique(pt$lhs[rows])) {
         i <- rows[pt$lhs[rows] == lhs][1L]
-        lab <- display.label[i]
+        lab <- display_label[i]
         if (pt$free[i] == 0L) {
           if (is.na(pt$ustart[i])) next
           mod <- paste0(lav_export_num(pt$ustart[i]), "*")
@@ -417,8 +417,8 @@ lav_export_lavaan_block <- function(pt, block.idx, display.label) {
 # all references to plabels / old labels rewritten to the clean display labels.
 # pairwise equality constraints between two parameters are dropped (they are
 # folded into shared labels). returns a data.frame with columns lhs, op, rhs.
-lav_export_constraints_df <- function(pt, is.con, display.label) {
-  con.idx <- which(is.con)
+lav_export_constraints_df <- function(pt, is_con, display_label) {
+  con.idx <- which(is_con)
   empty <- data.frame(lhs = character(0L), op = character(0L),
                       rhs = character(0L), stringsAsFactors = FALSE)
   if (length(con.idx) == 0L) {
@@ -427,15 +427,15 @@ lav_export_constraints_df <- function(pt, is.con, display.label) {
 
   # token translation map: plabel/old-label -> display label
   trans <- character(0L)
-  has.disp <- which(nzchar(display.label))
+  has.disp <- which(nzchar(display_label))
   if (length(has.disp)) {
     if (any(nzchar(pt$plabel[has.disp]))) {
       pidx <- has.disp[nzchar(pt$plabel[has.disp])]
-      trans[pt$plabel[pidx]] <- display.label[pidx]
+      trans[pt$plabel[pidx]] <- display_label[pidx]
     }
     if (any(nzchar(pt$label[has.disp]))) {
       lidx <- has.disp[nzchar(pt$label[has.disp])]
-      trans[pt$label[lidx]] <- display.label[lidx]
+      trans[pt$label[lidx]] <- display_label[lidx]
     }
   }
   rewrite <- function(expr) {
@@ -455,8 +455,8 @@ lav_export_constraints_df <- function(pt, is.con, display.label) {
   # which `==` rows are pairwise equalities already folded into labels?
   token.re <- "^[A-Za-z.][A-Za-z0-9._]*$"
   is.param.ref <- function(token) {
-    token %in% pt$plabel[!is.con] ||
-      token %in% pt$label[!is.con & nzchar(pt$label)]
+    token %in% pt$plabel[!is_con] ||
+      token %in% pt$label[!is_con & nzchar(pt$label)]
   }
 
   lhs <- rhs <- op <- character(0L)
@@ -475,8 +475,8 @@ lav_export_constraints_df <- function(pt, is.con, display.label) {
 }
 
 # emit lavaan-syntax lines for defined parameters and constraints
-lav_export_lavaan_constraints <- function(pt, is.con, display.label) {
-  con.df <- lav_export_constraints_df(pt, is.con, display.label)
+lav_export_lavaan_constraints <- function(pt, is_con, display_label) {
+  con.df <- lav_export_constraints_df(pt, is_con, display_label)
   if (nrow(con.df) == 0L) {
     return(character(0L))
   }

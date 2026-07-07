@@ -38,18 +38,18 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
   # model statements (in lav_export_mplus_block), *after* label/constraint
   # resolution, so that plabel references keep matching.
 
-  is.con <- pt$op %in% c("==", "<", ">", ":=")
-  display.label <- lav_export_lavaan_labels(pt, is.con)
-  mlabel <- vapply(display.label, lav_export_mplus_label, character(1L),
+  is_con <- pt$op %in% c("==", "<", ">", ":=")
+  display_label <- lav_export_lavaan_labels(pt, is_con)
+  mlabel <- vapply(display_label, lav_export_mplus_label, character(1L),
                    USE.NAMES = FALSE)
 
-  ov.ord <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov.ord"))
+  ov_ord <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov.ord"))
 
   # Mplus is case-insensitive, so a latent variable name (eg factor 'C1') may
   # collide with an observed variable name that differs only in case (eg
   # indicator 'c1'). Mplus rejects such input; rename offending latent
   # variables to a collision-free name (see lav_export_mplus_lv_rename).
-  lv.rename <- lav_export_mplus_lv_rename(pt)
+  lv_rename <- lav_export_mplus_lv_rename(pt)
 
   # Mplus group labels (used both in the GROUPING statement and the
   # group-specific MODEL headers, so they must agree)
@@ -64,23 +64,23 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
       for (l in seq_len(nlevels)) {
         sec <- if (l == 1L) "%WITHIN%" else "%BETWEEN%"
         body <- c(body, paste0("  ", sec))
-        rows <- which(!is.con & pt$group == g & pt$level == l)
+        rows <- which(!is_con & pt$group == g & pt$level == l)
         # in Mplus, means/intercepts exist only on the between level
-        body <- c(body, lav_export_mplus_block(pt, rows, mlabel, ov.ord,
+        body <- c(body, lav_export_mplus_block(pt, rows, mlabel, ov_ord,
                                                indent = "    ",
-                                               drop.means = (l == 1L),
-                                               lv.rename = lv.rename))
+                                               drop_means = (l == 1L),
+                                               lv_rename = lv_rename))
       }
     } else {
-      rows <- which(!is.con & pt$group == g)
-      body <- c(body, lav_export_mplus_block(pt, rows, mlabel, ov.ord,
+      rows <- which(!is_con & pt$group == g)
+      body <- c(body, lav_export_mplus_block(pt, rows, mlabel, ov_ord,
                                             indent = "  ",
-                                            lv.rename = lv.rename))
+                                            lv_rename = lv_rename))
     }
   }
 
   # ---- MODEL CONSTRAINT block ----
-  con.df <- lav_export_constraints_df(pt, is.con, display.label)
+  con.df <- lav_export_constraints_df(pt, is_con, display_label)
   con.block <- ""
   if (nrow(con.df)) {
     lines <- character(0L)
@@ -102,7 +102,7 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
   # ---- header (TITLE / DATA / VARIABLE / ANALYSIS) ----
   head <- lav_export_mplus_header(object, pt, data_file = data_file,
                                   ngroups = ngroups, nlevels = nlevels,
-                                  ov.ord = ov.ord, opt = opt,
+                                  ov_ord = ov_ord, opt = opt,
                                   group_labels = group_labels)
 
   out <- paste0(head,
@@ -114,9 +114,9 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
 }
 
 # emit Mplus MODEL statements for a set of parameter rows
-lav_export_mplus_block <- function(pt, rows, mlabel, ov.ord, indent = "  ",
-                                   drop.means = FALSE,
-                                   lv.rename = character(0L)) {
+lav_export_mplus_block <- function(pt, rows, mlabel, ov_ord, indent = "  ",
+                                   drop_means = FALSE,
+                                   lv_rename = character(0L)) {
   if (length(rows) == 0L) {
     return(character(0L))
   }
@@ -128,16 +128,16 @@ lav_export_mplus_block <- function(pt, rows, mlabel, ov.ord, indent = "  ",
 
     # rename latent variables that would clash (case-insensitively) with an
     # observed variable name in (case-insensitive) Mplus
-    if (length(lv.rename)) {
-      if (lhs %in% names(lv.rename)) lhs <- unname(lv.rename[lhs])
-      if (rhs %in% names(lv.rename)) rhs <- unname(lv.rename[rhs])
+    if (length(lv_rename)) {
+      if (lhs %in% names(lv_rename)) lhs <- unname(lv_rename[lhs])
+      if (rhs %in% names(lv_rename)) rhs <- unname(lv_rename[rhs])
     }
 
     # skip parameters that Mplus handles implicitly
     if (op %in% c("~~", "~1") && pt$exo[i] == 1L) next            # fixed.x exo
-    if (op == "~~" && lhs == rhs && lhs %in% ov.ord) next         # ordinal var
-    if (op == "~1" && lhs %in% ov.ord) next                       # ordinal int
-    if (op == "~1" && drop.means) next             # within level: no means
+    if (op == "~~" && lhs == rhs && lhs %in% ov_ord) next         # ordinal var
+    if (op == "~1" && lhs %in% ov_ord) next                       # ordinal int
+    if (op == "~1" && drop_means) next             # within level: no means
 
     lab <- if (nzchar(mlabel[i])) paste0(" (", mlabel[i], ")") else ""
     mod <- lav_export_mplus_mod(pt$free[i], pt$ustart[i])
@@ -259,7 +259,7 @@ lav_export_mplus_group_labels <- function(object, ngroups) {
 
 # build the TITLE / DATA / VARIABLE / ANALYSIS header
 lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
-                                    ov.ord, opt, group_labels = NULL) {
+                                    ov_ord, opt, group_labels = NULL) {
   if (is.null(group_labels)) {
     group_labels <- lav_export_mplus_group_labels(object, ngroups)
   }
@@ -327,9 +327,9 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
   if (data.type == "full") {
     c_var <- paste0(c_var, "  missing are all (-999999);\n")
   }
-  if (length(ov.ord)) {
+  if (length(ov_ord)) {
     c_var <- paste0(c_var, "  categorical are\n",
-                    lav_export_mplus_wrap(ov.ord), ";\n")
+                    lav_export_mplus_wrap(ov_ord), ";\n")
   }
   if (ngroups > 1L && length(data_file) <= 1L) {
     glab <- paste0(seq_len(ngroups), "=", group_labels)

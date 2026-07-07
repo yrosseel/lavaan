@@ -1291,7 +1291,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     if (!is.null(attr(y$fit, "add.h0"))) {
       add_h0 <- isTRUE(attr(y$fit, "add.h0"))
     }
-    lav_fitmeasures_print(y$fit, nd = nd, add.h0 = add_h0)
+    lav_fitmeasures_print(y$fit, nd = nd, add_h0 = add_h0)
   }
 
   # efa output
