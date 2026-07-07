@@ -85,15 +85,24 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   if (lavoptions$se %in% c("none", "bootstrap")) {
     lavoptions_mm$se <- "none"
   } else {
+    # single-level clustered data: use the cluster-robust variants, so that
+    # the step 1 standard errors (and Sigma.11) reflect the clustering;
+    # for the Gamma (NACOV) based sandwich (se = "robust.sem"), no switch
+    # is needed: the NACOV is computed with the cluster correction whenever
+    # the data contains a cluster variable
+    clustered_flag <- fit@Data@nlevels == 1L && length(fit@Data@cluster) > 0L
     # categorical?
     if (fit@Model@categorical) {
       lavoptions_mm$se <- "robust.sem"
     } else if (lavoptions$estimator.orig == "MLM") {
       lavoptions_mm$se <- "robust.sem"
     } else if (lavoptions$estimator.orig == "MLR") {
-      lavoptions_mm$se <- "robust.huber.white"
+      lavoptions_mm$se <- if (clustered_flag) "robust.cluster"
+                          else "robust.huber.white"
     } else if (lavoptions$estimator.orig == "PML") {
       lavoptions_mm$se <- "robust.huber.white"
+    } else if (clustered_flag) {
+      lavoptions_mm$se <- "robust.cluster"
     } else {
       lavoptions_mm$se <- "standard" # may be overridden later
     }

@@ -34,10 +34,15 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     we deal with default options.}
 \item{se}{Character. The type of standard errors that are used in the
     final (structural) model. If \code{"twostep"} (the default), the
-    standard errors take the estimation uncertainty of the first (measurement) 
+    standard errors take the estimation uncertainty of the first (measurement)
     stage into account. If \code{"standard"}, this uncertainty is ignored,
     and we treat the measurement information as known. If \code{"none"},
-    no standard errors are computed.}
+    no standard errors are computed. If the data are clustered (a
+    \code{cluster=} argument is provided, without multilevel model syntax),
+    \code{se = "twostep"} is automatically replaced by
+    \code{se = "twostep.robust"}, and the standard errors (also for
+    \code{se = "local"} and \code{se = "bootstrap"}, which resamples whole
+    clusters) account for the clustering.}
 \item{mm_list}{List. Define the measurement blocks. 
      Each element of the list should
      be either a single name of a latent variable, or a vector of latent

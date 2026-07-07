@@ -133,7 +133,9 @@ sam <- function(model = NULL,
   # check for gamma.unbiased
   if (is.null(dotdotdot$gamma.unbiased)) {
      # put in TRUE in dotdotdot # lavaan default is still FALSE
-     dotdotdot$gamma.unbiased <- TRUE
+     # but not for clustered data: the unbiased Gamma is not available there;
+     # the (biased) cluster-robust Gamma is used instead
+     dotdotdot$gamma.unbiased <- is.null(dotdotdot$cluster)
   }
 
 
@@ -223,6 +225,15 @@ sam <- function(model = NULL,
     if (fit@Data@nlevels > 1L && se %in% c("local", "local.nt")) {
       lav_msg_stop(gettext("se = \"local\" not available (yet) if multiple
                             levels are involved."))
+    }
+
+    # single-level clustered data: the normal-theory Gamma used by
+    # se = "local.nt" does not account for clustering
+    if (se == "local.nt" && fit@Data@nlevels == 1L &&
+        length(fit@Data@cluster) > 0L) {
+      lav_msg_warn(gettext("se = \"local.nt\" uses the normal-theory Gamma,
+        which does not account for clustering; consider se = \"local\"
+        instead."))
     }
   }
 

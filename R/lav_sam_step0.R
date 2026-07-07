@@ -22,6 +22,17 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
   # note: setting cat.wls.w = FALSE (no weight matrix if categorical)
   # would break the computation of twostep standard errors
+
+  # single-level clustered data (cluster = , no level: syntax): the classic
+  # twostep correction uses the model-based (expected) information for the
+  # second-step piece, which is not robust to clustering; switch to the
+  # robust (sandwich) variant, which picks up the cluster-robust Gamma
+  multilevel_flag <- any(flat_model$op == ":" &
+                         tolower(flat_model$lhs) == "level")
+  if (se == "twostep" && !multilevel_flag && !is.null(dotdotdot$cluster)) {
+    se <- "twostep.robust"
+  }
+
   if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$sample.icov <- TRUE
     dotdotdot0$fixed.x <- FALSE
