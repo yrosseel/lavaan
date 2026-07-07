@@ -1345,9 +1345,9 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         )
       }
 
-      if (!is.null(y$efa$sumsq.table[[b]])) {
+      if (!is.null(y$efa$sumsq_table[[b]])) {
         cat("\n")
-        print(y$efa$sumsq.table[[b]], nd = nd)
+        print(y$efa$sumsq_table[[b]], nd = nd)
       }
 
       # factor correlations:
@@ -1371,23 +1371,23 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       }
 
       # factor score determinacy (for regression scores only!)
-      if (!is.null(y$efa$fs.determinacy[[b]])) {
+      if (!is.null(y$efa$fs_determinacy[[b]])) {
         cat("
 Correlation regression factor scores and factors (determinacy):\n\n")
-        print(y$efa$fs.determinacy[[b]], nd = nd)
+        print(y$efa$fs_determinacy[[b]], nd = nd)
         cat("
 R2 regression factor scores (= squared correlations):\n\n")
-        tmp <- y$efa$fs.determinacy[[b]]
+        tmp <- y$efa$fs_determinacy[[b]]
         tmp2 <- tmp * tmp
         class(tmp2) <- c("lavaan.vector", "numeric")
         print(tmp2, nd = nd)
       }
 
-      # lambda.structure
-      if (!is.null(y$efa$lambda.structure[[b]])) {
+      # lambda_structure
+      if (!is.null(y$efa$lambda_structure[[b]])) {
         cat("\n")
         cat("Standardized structure (= LAMBDA %*% PSI):\n\n")
-        print(y$efa$lambda.structure[[b]], nd = nd)
+        print(y$efa$lambda_structure[[b]], nd = nd)
       }
 
       # standard errors lambda
