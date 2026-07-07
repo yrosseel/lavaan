@@ -125,6 +125,137 @@ lav_standardize_ov_sd <- function(lavpartable, g, vy = NULL, ov_var = NULL,
   list(ov_names = ov_names, ov = ov, ov2 = ov2)
 }
 
+# scaling corrections for two-way latent product terms (interactions
+# X:Z, quadratic terms X:X) in block 'g' of lav_standardize_lv(), based on
+# Brandt et al. (2015, Eq. 13) and Kelava & Brandt (2022). The standardized
+# solution treats a product term as the product of the centered,
+# standardized components, whereas the model parameters describe the raw
+# product A:B. Three corrections are needed, all exact (no distributional
+# assumptions):
+
+# (1) scaling SD (FV): the SD of a standardized product term is
+# SD(A)*SD(B), not SD(A:B). eta[A:B] is replaced accordingly, so that the
+# generic scaling in the caller applies the right factor everywhere A:B
+# appears.
+
+# (2) simple main effects (KS, 08/05/26): with uncentered components, b1 in
+# y ~ b1*x + b2*z + b3*x:z + b4*x:x is the slope at x = z = 0. The
+# standardized solution reports the slope at the means, i.e. the partial
+# derivative dy/dx = b1 + b3*z + 2*b4*x evaluated at E(x), E(z). Looping
+# over the product terms, each term adds beta_ab * E(other component) to
+# the main effect of each of its components. 
+
+# (3) product moments (FV, 05/07/26): the psi/alpha rows of A:B describe the
+# uncentered product. Without centering them first, the standardized
+# moments would depend on how the mean structure is parameterized. With
+# ac = A - E(A) and bc = B - E(B) we have the exact identity
+# ac*bc = A:B - E(B)*A - E(A)*B + E(A)*E(B), so the centered product is
+# a linear combination of elements of eta. Collect the weights in a
+# matrix K (one row per variable, regular lvs keep their identity row),
+# e.g. for eta = (X, Z, X:Z, X:X) with mx = E(X), mz = E(Z):
+# row X:Z = (-mz, -mx, 1, 0), row X:X = (-2*mx, 0, 0, 1). Then
+# K %*% PSI %*% t(K) holds all centered (co)variances at once (constants
+# do not affect them), and the centered means follow from
+# E(ac*bc) = E(A:B) - E(A)*E(B). K acts on psi_g (not VETA): the "~~"
+# rows are psi elements, and for a residual covariance with an
+# endogenous lv, PSI[X, Y] = Cov(X, zeta_Y) is exactly what the
+# centering needs. The corrected rows are also written into est_c,
+# because the cov_std block in the caller derives its sqrt(variance)
+# divisors from est_c (not out, which is scaled by then).
+
+# Returns the corrected (out, est_c, eta)
+lav_standardize_lv_int <- function(out, est_c, eta, est, partable, lv_names,
+                                   lv_int_names, eeta, psi_g, g) {
+  # component indices of each usable product term (int = A:B, a = A, b = B)
+  int_names_ok <- character(0L)
+  int_comp <- list()
+  for (int_name in lv_int_names) {
+    components <- strsplit(int_name, ":", fixed = TRUE)[[1L]]
+    # only two-way terms: a three-way (or higher) product would need its own
+    # decomposition, and the product of three SDs
+    if (length(components) != 2L) next
+    idx_int <- match(int_name, lv_names)
+    idx_a   <- match(components[1L], lv_names)
+    idx_b   <- match(components[2L], lv_names)
+    # need a, b and the interaction term before moving on
+    if (is.na(idx_a) || is.na(idx_b) || is.na(idx_int)) next
+    int_names_ok <- c(int_names_ok, int_name)
+    int_comp <- c(int_comp,
+      list(list(int = idx_int, a = idx_a, b = idx_b)))
+  }
+  if (length(int_comp) == 0L) {
+    return(list(out = out, est_c = est_c, eta = eta))
+  }
+
+  # only used by the shift in (2), which needs nonzero means, but guarding
+  # it with any(eeta != 0) would cost as much as building it
+  reg_row <- partable$op == "~" & partable$block == g
+  for (i in seq_along(int_comp)) {
+    p <- int_comp[[i]]
+
+    # (1) replace ETA for the product term with SD(A)*SD(B)
+    eta[p$int] <- eta[p$a] * eta[p$b]
+
+    # (2) shift the simple main effects to the mean-evaluated slopes
+    exp_a <- eeta[p$a]
+    exp_b <- eeta[p$b]
+    if (exp_a != 0 || exp_b != 0) {
+      int_row <- reg_row & partable$rhs == int_names_ok[i]
+      for (dep in unique(partable$lhs[int_row])) {
+        # beta_ab is read from est (not partable$est): in the *_x wrappers
+        # (delta method, bootstrap) est is the perturbed parameter vector, and
+        # the gradient of the shifted main effects wrt beta_ab must not be lost
+        beta_ab <- est[int_row & partable$lhs == dep]
+        dep_row <- reg_row & partable$lhs == dep
+        idx_beta_a <- which(dep_row & partable$rhs == lv_names[p$a])
+        idx_beta_b <- which(dep_row & partable$rhs == lv_names[p$b])
+        out[idx_beta_a] <- out[idx_beta_a] + beta_ab * exp_b
+        out[idx_beta_b] <- out[idx_beta_b] + beta_ab * exp_a
+      }
+    }
+  }
+
+  # (3) center the (co)variances and means of the product terms
+  if (!is.null(psi_g) && any(eeta != 0)) {
+    kmat <- diag(nrow(psi_g))
+    for (p in int_comp) {
+      kmat[p$int, p$a] <- kmat[p$int, p$a] - eeta[p$b]
+      kmat[p$int, p$b] <- kmat[p$int, p$b] - eeta[p$a]
+    }
+    # shift_mat holds, for every pair of latent variables, the mean-driven
+    # part of their (co)variance (zero unless a product term is involved)
+    shift_mat <- psi_g - kmat %*% psi_g %*% t(kmat)
+
+    # "~~" rows involving at least one product term: this covers the
+    # variance of a product term (X:Z ~~ X:Z), its covariance with a
+    # regular lv (X:Z ~~ V), and product-product covariances (X:Z ~~ X:X).
+    # Rows whose other side is not a lv are left alone (keep)
+    idx_cov <- which(partable$op == "~~" & partable$block == g &
+      (partable$lhs %in% int_names_ok |
+       partable$rhs %in% int_names_ok))
+    l_idx <- match(partable$lhs[idx_cov], lv_names)
+    r_idx <- match(partable$rhs[idx_cov], lv_names)
+    keep <- which(!is.na(l_idx) & !is.na(r_idx))
+    shift <- shift_mat[cbind(l_idx[keep], r_idx[keep])]
+    out[idx_cov[keep]] <- out[idx_cov[keep]] - shift
+    # of est_c only the variance entries are read back later, but centering
+    # all touched rows keeps est_c fully consistent and a diagonal-only
+    # filter would cost as much as it saves
+    est_c[idx_cov[keep]] <- est_c[idx_cov[keep]] - shift
+
+    # "~1" rows of the product terms: E(ac*bc) = E(A:B) - E(A)*E(B). After
+    # the generic scaling this equals, e.g., cor(X, Z) for X:Z
+    idx_mean <- which(partable$op == "~1" & partable$block == g &
+      partable$lhs %in% int_names_ok)
+    for (row_i in idx_mean) {
+      p <- int_comp[[match(partable$lhs[row_i], int_names_ok)]]
+      out[row_i] <- out[row_i] - eeta[p$a] * eeta[p$b]
+    }
+  }
+
+  list(out = out, est_c = est_c, eta = eta)
+}
+
 # Given a parameter vector 'x', set it as the model parameters and return the
 # (glist, est) pair to feed into the standardization engines. Handles the
 # (EFA) rotation case. Used by the bootstrap/Monte-Carlo machinery.
@@ -207,7 +338,20 @@ lav_standardize_lv <- function(lavobject = NULL,
   n <- length(est)
   stopifnot(n == length(partable$lhs))
 
-  nmat <- lavmodel@nmat
+  # working copy of est: for interaction terms (e.g., X:Z), the (co)variance
+  # and mean rows are 'centered' below (the mean-driven part of the product
+  # moments is removed) before any scaling takes place. The cov_std block
+  # further down needs these centered -- but still unscaled -- variances to
+  # compute its sqrt(variance) divisors, so we keep them in est_c.
+  est_c <- est
+
+  # any latent product terms (in any block)? only their corrections (see
+  # lav_standardize_lv_int) need E(ETA), psi and the mm indices. Regular
+  # models skip these, and E(ETA) is LISREL-only anyway (RAM would stop)
+  lv_int_any <- length(lav_pt_vnames(lavpartable, "lv.interaction")) > 0L
+  if (lv_int_any) {
+    mm_idx <- lav_model_group_mm_indices(lavmodel@nmat)
+  }
 
   # compute ETA
   if (is.null(lv_var)) {
@@ -216,11 +360,13 @@ lav_standardize_lv <- function(lavobject = NULL,
       glist = glist
     )
 
-    lv_eeta <- lav_model_eeta(
-      lavmodel = lavmodel,
-      glist = glist,
-      lavsamplestats = lavobject@SampleStats
-    )
+    if (lv_int_any) {
+      lv_eeta <- lav_model_eeta(
+        lavmodel = lavmodel,
+        glist = glist,
+        lavsamplestats = lavobject@SampleStats
+      )
+    }
   }
 
   for (g in 1:lavmodel@nblocks) {
@@ -234,117 +380,46 @@ lav_standardize_lv <- function(lavobject = NULL,
     }
 
     if (is.null(lv_var)) {
-      eta2 <- diag(lv_eta[[g]])
-      eeta <- lv_eeta[[g]]
+      veta_g <- lv_eta[[g]] # full model-implied V(ETA), only kept as a
+                            # psi fallback for the centering below (RAM)
+      eta2 <- diag(veta_g)
     } else {
+      veta_g <- NULL
       eta2 <- lv_var[[g]]
-      eeta <- numeric(length(eta2))
     }
     # change negative values to NA
     eta2[eta2 < 0] <- as.numeric(NA)
     eta <- sqrt(eta2)
 
-    # Interaction/quadratic term correction (FV)
-    # (based on Kelava & Brandt, 2022; Brandt et al., 2015)
-    # For interaction terms A:B, the standardized coefficient should use
-    # SD(A)*SD(B) instead of SD(A:B) (Eq. 13 in Brandt et al., 2015).
-    lv_int_names <- lav_pt_vnames(lavpartable, "lv.interaction",
-      block = g
-    )
-
-    if (length(lv_int_names) > 0L) {
-
-      for (int_name in lv_int_names) {
-        components <- strsplit(int_name, ":", fixed = TRUE)[[1L]]
-        a <- components[1]
-        b <- components[2]
-
-        idx_int <- match(int_name, lv_names)
-        idx_a   <- match(a, lv_names)
-        idx_b   <- match(b, lv_names)
-
-        # Need a, b and interaction term before moving on
-        if (is.na(idx_a) || is.na(idx_b) || is.na(idx_int)) next
-
-        exp_a <- eeta[idx_a]
-        exp_b <- eeta[idx_b]
-
-        # Do we need to shift simple main effects?
-        if (exp_a != 0 || exp_b != 0) {
-          # KS, 08/05/26
-          #
-          # This covers the general case of y ~ x + z + w + x:z + x:x
-          # This should naturally extend to other conditions with more
-          # interaction terms. e.g., y ~ x + z + w + x:z + x:x + w:z
-          #
-          # For y = b0 + b1*x + b2*z + b3*xz + b4x^2
-          # b1 and b2 are the slope at the x=0 and z=0. When mean-centering
-          # we have to re-define b1 and b2 to the expected slopes
-          # (i.e., the partial derivatives) at x=mean(x), z=mean(z).
-          #
-          # Computing the partial derivatives we get
-          #
-          #   dy/dx = b1 + b3*z + 2*b4*x
-          #   dy/dz = b2 + b3*x
-          #
-          # With x=mean(x) and z=mean(x), we get
-          #
-          #   dy/dx = b1 + b3 * mean(z) + 2 * b4 * mean(x)
-          #   dy/dz = b2 + b3 * mean(x)
-          #
-          # Since we iteratively update out[<idx>] for b1 and b2, we carry
-          # out all the necessary conditions, by the end of the loop.
-          #
-          # Iteration: 1, interaction term: x:z
-          #   b1 <- b1 + b3 * mean(z)
-          #   b2 <- b2 + b3 * mean(x)
-          #
-          # Iteration: 2, quadratic term: x:x
-          #   b1 <- b1 + b4 * mean(x)
-          #   b1 <- b1 + b4 * mean(x)
-          #
-          #   The above is thus equivalent to b1 + 2 * b4 * mean(x)
-          #
-          # Putting it all together we get
-          #
-          #   b1 <- b1 + b3 * mean(z) + 2 * b4 * mean(x)
-          #   b2 <- b2 + b3 * mean(x)
-          #
-
-          # Find dependent variables
-          lv_int_dep <- unique(partable$lhs[
-            partable$op == "~" & partable$rhs == int_name
-          ])
-
-          for (dep in lv_int_dep) {
-            idx_beta_a <- which(
-              partable$lhs == dep & partable$op == "~" &
-              partable$rhs == a & partable$group == g
-            )
-
-            idx_beta_b <- which(
-              partable$lhs == dep & partable$op == "~" &
-              partable$rhs == b & partable$group == g
-            )
-
-            beta_ab <- partable$est[
-              partable$lhs == dep & partable$op == "~" &
-              partable$rhs == int_name & partable$group == g
-            ]
-
-            out[idx_beta_a] <- out[idx_beta_a] + beta_ab * exp_b
-            out[idx_beta_b] <- out[idx_beta_b] + beta_ab * exp_a
-          }
-        }
-
-        # Replace ETA for interaction terms with SD(A)*SD(B)
-        eta[idx_int] <- eta[idx_a] * eta[idx_b]
-      }
+    # two-way latent product terms (X:Z, X:X): shift the simple main
+    # effects, scale by SD(A)*SD(B), and center the product moments (see
+    # lav_standardize_lv_int() for the rationale)
+    if (lv_int_any) {
+      lv_int_names <- lav_pt_vnames(lavpartable, "lv.interaction",
+        block = g
+      )
+    } else {
+      lv_int_names <- character(0L)
     }
-
-    # End interaction/quadratic term correction for now (08/05/26;KS)
-    # The next step is to correctly scale the variances of the interaction
-    # terms
+    if (length(lv_int_names) > 0L) {
+      if (is.null(lv_var)) {
+        eeta <- lv_eeta[[g]]
+      } else {
+        eeta <- numeric(length(eta2))
+      }
+      psi_g <- glist[mm_idx[[g]]]$psi
+      if (is.null(psi_g)) { # e.g., RAM representation
+        psi_g <- veta_g
+      }
+      tmp <- lav_standardize_lv_int(
+        out = out, est_c = est_c, eta = eta, est = est, partable = partable,
+        lv_names = lv_names, lv_int_names = lv_int_names, eeta = eeta,
+        psi_g = psi_g, g = g
+      )
+      out <- tmp$out
+      est_c <- tmp$est_c
+      eta <- tmp$eta
+    }
 
     # 1a. "=~" regular indicators
     idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
@@ -387,10 +462,11 @@ lav_standardize_lv <- function(lavobject = NULL,
     # - only rhs is LV (and fixed.x = FALSE)
     # - both lhs and rhs are LV (regular case)
     if (cov_std) {
-      if (!is.complex(est[rv_idx])) {
-        rv <- sqrt(abs(est[rv_idx])) # abs in case of heywood cases
+      # est_c: est with the interaction-term variances centered (see above)
+      if (!is.complex(est_c[rv_idx])) {
+        rv <- sqrt(abs(est_c[rv_idx])) # abs in case of heywood cases
       } else {
-        rv <- sqrt(est[rv_idx])
+        rv <- sqrt(est_c[rv_idx])
       }
       rv_names <- partable$lhs[rv_idx]
     }
