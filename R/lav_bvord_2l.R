@@ -56,7 +56,9 @@ lav_bvord_2l_cor_twostep_fit <- function(fit_y1 = NULL,
   }
 
   # optim
-  minfns <- lav_uvbv_optim_fns(optim_method, lav_bvord_2l_min_fns())
+  minfns <- lav_uvbv_optim_fns(
+    optim_method, lav_bvord_2l_min_fns(covariates = cache$nexo_any)
+  )
 
   control_nlminb <- list(
     eval.max = 20000L, iter.max = 10000L,
@@ -128,32 +130,76 @@ lav_bvord_2l_init_cache <- function(fit_y1 = NULL,
   ncat2 <- nth2 + 1L
   npat <- ncat1 * ncat2
 
-  # response patterns: pattern p = (k, l) at index k + (l-1)*ncat1
-  yp1 <- rep(seq_len(ncat1), times = ncat2)
-  yp2 <- rep(seq_len(ncat2), each = ncat1)
+  # covariates? (per-observation kernels instead of per-pattern ones)
+  nexo_a <- fit_y1$nexo
+  nexo_c <- fit_y2$nexo
+  nexo_any <- (nexo_a > 0L || nexo_c > 0L)
 
-  # cluster x pattern count matrix
-  pid <- y1 + (y2 - 1L) * ncat1
   cl_sorted <- sort(unique(cluster_idx))
   cl_pos <- match(cluster_idx, cl_sorted)
-  cmat <- unclass(table(
-    factor(cl_pos, levels = seq_len(nclusters)),
-    factor(pid, levels = seq_len(npat))
-  ))
-  dimnames(cmat) <- NULL
-  storage.mode(cmat) <- "double"
 
-  # pattern-level unshifted rectangle bounds
-  o12_1 <- lav_uvord_o12(y = yp1, nth = nth1)
-  o12_2 <- lav_uvord_o12(y = yp2, nth = nth2)
-  z12_1 <- lav_uvord_z12(y = yp1, th = th1, o1 = o12_1$o1, o2 = o12_1$o2)
-  z12_2 <- lav_uvord_z12(y = yp2, th = th2, o1 = o12_2$o1, o2 = o12_2$o2)
+  cmat <- NULL
+  yp1 <- yp2 <- NULL
+  y1_1 <- y1_2 <- y2_1 <- y2_2 <- NULL
+  z_a <- z_c <- NULL
+  idx1a <- idx2a <- idx1c <- idx2c <- NULL
 
-  # pattern-level threshold indicator matrices
-  y1_1 <- matrix(seq_len(nth1), npat, nth1, byrow = TRUE) == yp1
-  y1_2 <- matrix(seq_len(nth1), npat, nth1, byrow = TRUE) == (yp1 - 1L)
-  y2_1 <- matrix(seq_len(nth2), npat, nth2, byrow = TRUE) == yp2
-  y2_2 <- matrix(seq_len(nth2), npat, nth2, byrow = TRUE) == (yp2 - 1L)
+  if (!nexo_any) {
+    # response patterns: pattern p = (k, l) at index k + (l-1)*ncat1
+    yp1 <- rep(seq_len(ncat1), times = ncat2)
+    yp2 <- rep(seq_len(ncat2), each = ncat1)
+
+    # cluster x pattern count matrix
+    pid <- y1 + (y2 - 1L) * ncat1
+    cmat <- unclass(table(
+      factor(cl_pos, levels = seq_len(nclusters)),
+      factor(pid, levels = seq_len(npat))
+    ))
+    dimnames(cmat) <- NULL
+    storage.mode(cmat) <- "double"
+
+    # pattern-level unshifted rectangle bounds
+    o12_1 <- lav_uvord_o12(y = yp1, nth = nth1)
+    o12_2 <- lav_uvord_o12(y = yp2, nth = nth2)
+    z12_1 <- lav_uvord_z12(y = yp1, th = th1, o1 = o12_1$o1,
+                           o2 = o12_1$o2)
+    z12_2 <- lav_uvord_z12(y = yp2, th = th2, o1 = o12_2$o1,
+                           o2 = o12_2$o2)
+
+    # pattern-level threshold indicator matrices
+    y1_1 <- matrix(seq_len(nth1), npat, nth1, byrow = TRUE) == yp1
+    y1_2 <- matrix(seq_len(nth1), npat, nth1, byrow = TRUE) == (yp1 - 1L)
+    y2_1 <- matrix(seq_len(nth2), npat, nth2, byrow = TRUE) == yp2
+    y2_2 <- matrix(seq_len(nth2), npat, nth2, byrow = TRUE) == (yp2 - 1L)
+  } else {
+    # observation-level unshifted rectangle bounds, with the fixed linear
+    # predictors eta = z beta absorbed (z1 = tau - eta + o1, ...)
+    eta_a <- 0
+    if (nexo_a > 0L) {
+      beta_a <- fit_y1$theta[fit_y1$nth + 1L + seq_len(nexo_a)]
+      z_a <- fit_y1$z
+      eta_a <- drop(z_a %*% beta_a)
+    }
+    eta_c <- 0
+    if (nexo_c > 0L) {
+      beta_c <- fit_y2$theta[fit_y2$nth + 1L + seq_len(nexo_c)]
+      z_c <- fit_y2$z
+      eta_c <- drop(z_c %*% beta_c)
+    }
+    o12_1 <- lav_uvord_o12(y = y1, nth = nth1)
+    o12_2 <- lav_uvord_o12(y = y2, nth = nth2)
+    z12_1 <- lav_uvord_z12(y = y1, th = th1, o1 = o12_1$o1,
+                           o2 = o12_1$o2, offset = eta_a)
+    z12_2 <- lav_uvord_z12(y = y2, th = th2, o1 = o12_2$o1,
+                           o2 = o12_2$o2, offset = eta_c)
+
+    # threshold-score index sets: z1 involves tau_y (y <= nth), z2
+    # involves tau_{y-1} (y >= 2)
+    idx1a <- which(y1 <= nth1)
+    idx2a <- which(y1 >= 2L)
+    idx1c <- which(y2 <= nth2)
+    idx2c <- which(y2 >= 2L)
+  }
 
   # 2-D tensor grid of standardized GH nodes
   gh <- lav_2l_gh_xw(ngh = ngh)
@@ -181,6 +227,12 @@ lav_bvord_2l_init_cache <- function(fit_y1 = NULL,
       z1a0 = z12_1$z1, z2a0 = z12_1$z2,
       z1c0 = z12_2$z1, z2c0 = z12_2$z2,
       y1_1 = y1_1, y1_2 = y1_2, y2_1 = y2_1, y2_2 = y2_2,
+      nexo_a = nexo_a, nexo_c = nexo_c, nexo_any = nexo_any,
+      nexo_wa = fit_y1$nexo_w, nexo_ba = fit_y1$nexo_b,
+      nexo_wc = fit_y2$nexo_w, nexo_bc = fit_y2$nexo_b,
+      z_a = z_a, z_c = z_c,
+      y1v = y1, y2v = y2,
+      idx1a = idx1a, idx2a = idx2a, idx1c = idx1c, idx2c = idx2c,
       u1 = u1, u2 = u2, logw = logw, nq = ngh * ngh, ngh = ngh,
       theta = theta
     ),
@@ -329,6 +381,176 @@ lav_bvord_2l_sc_cache <- function(cache = NULL, free_only = FALSE) {
   })                     # nolint end
 }
 
+# --- with covariates (per-observation kernels, one node at a time) ---
+
+lav_bvord_2l_x_loglik_cache <- function(cache = NULL) {
+  with(cache, {          # nolint start
+    rho_w <- theta[1]
+    cb <- theta[2]
+
+    # Cholesky of Sigma_b
+    l21 <- cb / s1
+    l22 <- sqrt(max(vb2 - cb * cb / vb1, 1e-12))
+    b_a <- s1 * u1
+    b_c <- l21 * u1 + l22 * u2
+
+    ll <- matrix(0, nclusters, nq)
+    for (q in seq_len(nq)) {
+      p_i <- pbinorm(
+        upper_x = z1a0 - b_a[q], upper_y = z1c0 - b_c[q],
+        lower_x = z2a0 - b_a[q], lower_y = z2c0 - b_c[q], rho = rho_w
+      )
+      p_i[p_i < .Machine$double.eps] <- .Machine$double.eps
+      ll[, q] <- drop(rowsum.default(log(p_i), group = cluster_idx,
+                                     reorder = TRUE))
+    }
+
+    lwll <- sweep(ll, 2L, logw, "+")
+    mmax <- apply(lwll, 1L, max)
+    logl_j <- mmax + log(rowSums(exp(lwll - mmax)))
+    pw <- exp(lwll - logl_j)
+
+    loglik <- sum(logl_j)
+    return(loglik)
+  })                     # nolint end
+}
+
+lav_bvord_2l_x_grad_cache <- function(cache = NULL) {
+  sc <- lav_bvord_2l_x_sc_cache(cache = cache, free_only = TRUE)
+  colSums(sc)
+}
+
+# cluster-wise scores, covariate case; assumes the loglik has been
+# evaluated at cache$theta (pw available)
+# free_only = FALSE: columns tau_a (nth1), tau_c (nth2), vb_a, vb_c,
+#                    rho_w, cb, a-slopes, c-slopes
+# free_only = TRUE:  columns rho_w, cb (for the optimizer)
+lav_bvord_2l_x_sc_cache <- function(cache = NULL, free_only = FALSE) {
+  cache$free_only <- free_only
+  with(cache, {          # nolint start
+    rho_w <- theta[1]
+    cb <- theta[2]
+    r <- sqrt(1 - rho_w * rho_w)
+
+    l21 <- cb / s1
+    l22 <- sqrt(max(vb2 - cb * cb / vb1, 1e-12))
+    b_a <- s1 * u1
+    b_c <- l21 * u1 + l22 * u2
+
+    # derivatives of the node positions w.r.t. (vb_a, vb_c, cb)
+    dbc_dcb <- u1 / s1 - u2 * cb / (vb1 * l22)
+    dba_dvba <- u1 / (2 * s1)
+    dbc_dvba <- -u1 * cb / (2 * vb1 * s1) +
+      u2 * (cb * cb / (vb1 * vb1)) / (2 * l22)
+    dbc_dvbc <- u2 / (2 * l22)
+
+    if (free_only) {
+      npar <- 2L
+      rho_col <- 1L
+      cb_col <- 2L
+    } else {
+      npar <- nth1 + nth2 + 4L + nexo_a + nexo_c
+      rho_col <- nth1 + nth2 + 3L
+      cb_col <- nth1 + nth2 + 4L
+      asl_col <- nth1 + nth2 + 4L + seq_len(nexo_a)
+      csl_col <- nth1 + nth2 + 4L + nexo_a + seq_len(nexo_c)
+    }
+    sc <- matrix(0, nclusters, npar)
+
+    for (q in seq_len(nq)) {
+      z1a <- z1a0 - b_a[q]
+      z2a <- z2a0 - b_a[q]
+      z1c <- z1c0 - b_c[q]
+      z2c <- z2c0 - b_c[q]
+      p_i <- pbinorm(upper_x = z1a, upper_y = z1c,
+                     lower_x = z2a, lower_y = z2c, rho = rho_w)
+      p_i[p_i < .Machine$double.eps] <- .Machine$double.eps
+      inv_p <- 1 / p_i
+      pwq <- pw[, q]
+
+      # rectangle derivatives w.r.t. the c-bounds
+      d_z1c <- dnorm(z1c) * (pnorm((z1a - rho_w * z1c) / r) -
+                             pnorm((z2a - rho_w * z1c) / r))
+      d_z2c <- dnorm(z2c) * (pnorm((z1a - rho_w * z2c) / r) -
+                             pnorm((z2a - rho_w * z2c) / r))
+      kc <- -(d_z1c - d_z2c) * inv_p # d logp / d(b_c shift)
+      g_c <- drop(rowsum.default(kc, group = cluster_idx,
+                                 reorder = TRUE))
+
+      # within correlation: four-corner densities
+      phi_rho <- (lav_dbinorm(z1a, z1c, rho_w) -
+                  lav_dbinorm(z2a, z1c, rho_w) -
+                  lav_dbinorm(z1a, z2c, rho_w) +
+                  lav_dbinorm(z2a, z2c, rho_w)) * inv_p
+      g_rho <- drop(rowsum.default(phi_rho, group = cluster_idx,
+                                   reorder = TRUE))
+
+      sc[, rho_col] <- sc[, rho_col] + pwq * g_rho
+      sc[, cb_col] <- sc[, cb_col] + pwq * g_c * dbc_dcb[q]
+
+      if (free_only) {
+        next
+      }
+
+      # rectangle derivatives w.r.t. the a-bounds
+      d_z1a <- dnorm(z1a) * (pnorm((z1c - rho_w * z1a) / r) -
+                             pnorm((z2c - rho_w * z1a) / r))
+      d_z2a <- dnorm(z2a) * (pnorm((z1c - rho_w * z2a) / r) -
+                             pnorm((z2c - rho_w * z2a) / r))
+      ka <- -(d_z1a - d_z2a) * inv_p
+      g_a <- drop(rowsum.default(ka, group = cluster_idx,
+                                 reorder = TRUE))
+
+      # thresholds: z1 involves tau_y (y <= nth), z2 involves tau_{y-1}
+      kern_a <- matrix(0, nobs, nth1)
+      kern_a[cbind(idx1a, y1v[idx1a])] <- (d_z1a * inv_p)[idx1a]
+      kern_a[cbind(idx2a, y1v[idx2a] - 1L)] <-
+        kern_a[cbind(idx2a, y1v[idx2a] - 1L)] - (d_z2a * inv_p)[idx2a]
+      kern_c <- matrix(0, nobs, nth2)
+      kern_c[cbind(idx1c, y2v[idx1c])] <- (d_z1c * inv_p)[idx1c]
+      kern_c[cbind(idx2c, y2v[idx2c] - 1L)] <-
+        kern_c[cbind(idx2c, y2v[idx2c] - 1L)] - (d_z2c * inv_p)[idx2c]
+      cl_th <- rowsum.default(cbind(kern_a, kern_c),
+                              group = cluster_idx, reorder = TRUE)
+      sc[, seq_len(nth1 + nth2)] <- sc[, seq_len(nth1 + nth2)] +
+        pwq * cl_th
+
+      # between variances (node-position chain)
+      sc[, nth1 + nth2 + 1L] <- sc[, nth1 + nth2 + 1L] +
+        pwq * (g_a * dba_dvba[q] + g_c * dbc_dvba[q])
+      sc[, nth1 + nth2 + 2L] <- sc[, nth1 + nth2 + 2L] +
+        pwq * g_c * dbc_dvbc[q]
+
+      # slopes: dz/dbeta_r = -z[, r] (both bounds) -> same kernels as
+      # the node-position shifts
+      if (nexo_a > 0L) {
+        sc[, asl_col] <- sc[, asl_col] +
+          pwq * rowsum.default(z_a * ka, group = cluster_idx,
+                               reorder = TRUE)
+      }
+      if (nexo_c > 0L) {
+        sc[, csl_col] <- sc[, csl_col] +
+          pwq * rowsum.default(z_c * kc, group = cluster_idx,
+                               reorder = TRUE)
+      }
+    }
+
+    if (free_only) {
+      colnames(sc) <- c("rho_w", "cb")
+    } else {
+      colnames(sc) <- c(
+        paste0("tau_a", seq_len(nth1)), paste0("tau_c", seq_len(nth2)),
+        "vb_a", "vb_c", "rho_w", "cb",
+        if (nexo_a > 0L) paste0("a_", lav_uvreg_2l_slope_names(
+          nexo_wa, nexo_ba)) else character(0L),
+        if (nexo_c > 0L) paste0("c_", lav_uvreg_2l_slope_names(
+          nexo_wc, nexo_bc)) else character(0L)
+      )
+    }
+    return(sc)
+  })                     # nolint end
+}
+
 # cluster-wise scores at given values - no cache
 lav_bvord_2l_sc <- function(fit_y1 = NULL, fit_y2 = NULL,
                             rho_w = NULL, cb = NULL, ngh = 13L) {
@@ -336,6 +558,10 @@ lav_bvord_2l_sc <- function(fit_y1 = NULL, fit_y2 = NULL,
     fit_y1 = fit_y1, fit_y2 = fit_y2, ngh = ngh
   )
   cache$theta <- c(rho_w, cb)
+  if (cache$nexo_any) {
+    tmp <- lav_bvord_2l_x_loglik_cache(cache = cache) # populates pw
+    return(lav_bvord_2l_x_sc_cache(cache = cache))
+  }
   tmp <- lav_bvord_2l_loglik_cache(cache = cache) # populates pw
   lav_bvord_2l_sc_cache(cache = cache)
 }
@@ -347,13 +573,23 @@ lav_bvord_2l_logl <- function(fit_y1 = NULL, fit_y2 = NULL,
     fit_y1 = fit_y1, fit_y2 = fit_y2, ngh = ngh
   )
   cache$theta <- c(rho_w, cb)
+  if (cache$nexo_any) {
+    return(lav_bvord_2l_x_loglik_cache(cache = cache))
+  }
   lav_bvord_2l_loglik_cache(cache = cache)
 }
 
 # nlminb objective/gradient (see lav_uvbv_common.R)
-lav_bvord_2l_min_fns <- function() {
-  lav_uvbv_min_fns(
-    logl_fun = lav_bvord_2l_loglik_cache,
-    grad_fun = lav_bvord_2l_grad_cache
-  )
+lav_bvord_2l_min_fns <- function(covariates = FALSE) {
+  if (covariates) {
+    lav_uvbv_min_fns(
+      logl_fun = lav_bvord_2l_x_loglik_cache,
+      grad_fun = lav_bvord_2l_x_grad_cache
+    )
+  } else {
+    lav_uvbv_min_fns(
+      logl_fun = lav_bvord_2l_loglik_cache,
+      grad_fun = lav_bvord_2l_grad_cache
+    )
+  }
 }

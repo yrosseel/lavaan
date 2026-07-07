@@ -91,20 +91,39 @@ lav_bvreg_2l_cov_twostep_fit <- function(fit_y1 = NULL,
 
 # prepare cache environment
 # fit_y1/fit_y2: lav_uvreg_2l_fit() objects of the two variables
+#
+# with covariates (fit$nexo > 0) the pair likelihood is evaluated on the
+# RESIDUALS e = y - z theta_m (all mean parameters fixed at their stage-1
+# values): the pair model is then the no-covariate model with mu = 0
 lav_bvreg_2l_init_cache <- function(fit_y1 = NULL,
                                     fit_y2 = NULL,
                                     parent = parent.frame()) {
   stopifnot(length(fit_y1$y) == length(fit_y2$y))
-
-  # pair sufficient statistics
-  cs <- lav_2l_cluster_stats(
-    y = cbind(fit_y1$y, fit_y2$y),
-    cluster_idx = fit_y1$cluster_idx
-  )
+  cluster_idx <- fit_y1$cluster_idx
 
   # fixed univariate parameters
   mu1 <- fit_y1$theta[1]; vw1 <- fit_y1$theta[2]; vb1 <- fit_y1$theta[3]
   mu2 <- fit_y2$theta[1]; vw2 <- fit_y2$theta[2]; vb2 <- fit_y2$theta[3]
+
+  # residualize (covariates)
+  e1 <- fit_y1$y
+  if (fit_y1$nexo > 0L) {
+    theta_m1 <- fit_y1$theta[c(1L, 3L + seq_len(fit_y1$nexo))]
+    e1 <- fit_y1$y - drop(fit_y1$z %*% theta_m1)
+    mu1 <- 0
+  }
+  e2 <- fit_y2$y
+  if (fit_y2$nexo > 0L) {
+    theta_m2 <- fit_y2$theta[c(1L, 3L + seq_len(fit_y2$nexo))]
+    e2 <- fit_y2$y - drop(fit_y2$z %*% theta_m2)
+    mu2 <- 0
+  }
+
+  # pair sufficient statistics
+  cs <- lav_2l_cluster_stats(
+    y = cbind(e1, e2),
+    cluster_idx = cluster_idx
+  )
 
   # ANOVA-type starting values for (cw, cb)
   nobs <- cs$nobs
@@ -112,8 +131,8 @@ lav_bvreg_2l_init_cache <- function(fit_y1 = NULL,
   njs <- cs$njs
   # within cross-products: wvech columns are (11, 21, 22)
   cw0 <- cs$wtot[2] / (nobs - nclusters)
-  csb <- sum(njs * (cs$ybar[, 1] - mean(fit_y1$y)) *
-               (cs$ybar[, 2] - mean(fit_y2$y))) / (nclusters - 1)
+  csb <- sum(njs * (cs$ybar[, 1] - mean(e1)) *
+               (cs$ybar[, 2] - mean(e2))) / (nclusters - 1)
   n0 <- (nobs - sum(njs^2) / nobs) / (nclusters - 1)
   cb0 <- (csb - cw0) / n0
   # keep the starting values admissible
@@ -129,7 +148,12 @@ lav_bvreg_2l_init_cache <- function(fit_y1 = NULL,
 
   list2env(
     list(
-      cs = cs, n = nobs,
+      cs = cs, n = nobs, cluster_idx = cluster_idx,
+      e = cbind(e1, e2),
+      z1 = fit_y1$z, z2 = fit_y2$z,
+      nexo1 = fit_y1$nexo, nexo2 = fit_y2$nexo,
+      nexo_w1 = fit_y1$nexo_w, nexo_b1 = fit_y1$nexo_b,
+      nexo_w2 = fit_y2$nexo_w, nexo_b2 = fit_y2$nexo_b,
       mu1 = mu1, vw1 = vw1, vb1 = vb1,
       mu2 = mu2, vw2 = vw2, vb2 = vb2,
       theta = theta
@@ -196,7 +220,8 @@ lav_bvreg_2l_min_fns <- function() {
 }
 
 # cluster-wise scores (of the loglik) w.r.t. ALL parameters
-# (mu_y1, wvar_y1, bvar_y1, mu_y2, wvar_y2, bvar_y2, wcov, bcov)
+# (mu_y1, wvar_y1, bvar_y1, mu_y2, wvar_y2, bvar_y2, wcov, bcov
+#  [, y1 slopes, y2 slopes])
 lav_bvreg_2l_sc <- function(fit_y1 = NULL, fit_y2 = NULL,
                             cw = NULL, cb = NULL) {
   cache <- lav_bvreg_2l_init_cache(fit_y1 = fit_y1, fit_y2 = fit_y2)
@@ -209,6 +234,35 @@ lav_bvreg_2l_sc <- function(fit_y1 = NULL, fit_y2 = NULL,
   )
   sc <- -0.5 * dm2ll
   colnames(sc) <- names(lav_bvreg_2l_params())
+
+  # slope columns (covariates): rowsum(z * m) with m the GLS-weighted
+  # residuals
+  if (cache$nexo1 > 0L || cache$nexo2 > 0L) {
+    m <- lav_2l_gauss_mresid(
+      e = cache$e, cluster_idx = cache$cluster_idx,
+      sigma_w = sigma_w, sigma_b = sigma_b
+    )
+    if (cache$nexo1 > 0L) {
+      sc_sl1 <- rowsum.default(
+        cache$z1[, -1, drop = FALSE] * m[, 1],
+        group = cache$cluster_idx, reorder = TRUE
+      )
+      colnames(sc_sl1) <- paste0(
+        "y1_", lav_uvreg_2l_slope_names(cache$nexo_w1, cache$nexo_b1)
+      )
+      sc <- cbind(sc, sc_sl1)
+    }
+    if (cache$nexo2 > 0L) {
+      sc_sl2 <- rowsum.default(
+        cache$z2[, -1, drop = FALSE] * m[, 2],
+        group = cache$cluster_idx, reorder = TRUE
+      )
+      colnames(sc_sl2) <- paste0(
+        "y2_", lav_uvreg_2l_slope_names(cache$nexo_w2, cache$nexo_b2)
+      )
+      sc <- cbind(sc, sc_sl2)
+    }
+  }
   sc
 }
 

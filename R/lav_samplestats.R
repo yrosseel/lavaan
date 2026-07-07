@@ -392,9 +392,16 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       current_verbose <- lav_verbose()
       if (lav_verbose(lav_debug()))
         on.exit(lav_verbose(current_verbose), TRUE)
+      # multilevel: X contains ALL ('tilde') variables (y + x); the flat
+      # (single-level) muthen1984 run below -- starting values only --
+      # needs the y columns only
+      data_1_cat <- x[[g]]
+      if (nlevels > 1L && conditional_x) {
+        data_1_cat <- x[[g]][, seq_along(ov_names[[g]]), drop = FALSE]
+      }
       if (conditional_x) {
         cat_1 <- muthen1984(
-          data_1 = x[[g]],
+          data_1 = data_1_cat,
           wt = wt[[g]],
           sampling_weights_type = swt_type,
           ov_names = ov_names[[g]],

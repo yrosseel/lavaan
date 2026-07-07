@@ -2,15 +2,18 @@
 # continuous/ordinal data, and the asymptotic covariance matrix of the
 # estimates (the two-level analogue of muthen1984())
 #
-# YR 2026 (two-level WLS, phase 4)
+# YR 2026 (two-level WLS, phase 4; covariates added in phase 7)
 #
 # stage 1: univariate two-level models per variable
-#            continuous: (mu, vw, vb)        -- lav_uvreg_2l_fit()
-#            ordinal:    (tau_1..K, vb)      -- lav_uvord_2l_fit()
+#            continuous: (mu, vw, vb[, slopes]) -- lav_uvreg_2l_fit()
+#            ordinal:    (tau_1..K, vb[, slopes]) -- lav_uvord_2l_fit()
 #          (ordinal: within latent variance fixed to 1, no mean)
+#          exogenous covariates (conditional.x): within-level covariates
+#          x_w enter every regression; between-level covariates x_b only
+#          the regressions of variables with a between part
 # stage 2: bivariate two-level models per pair, univariate parameters
-#          fixed, estimating theta = (cw, cb) -- the within and between
-#          covariance -- jointly:
+#          (incl. the slopes) fixed, estimating theta = (cw, cb) -- the
+#          within and between RESIDUAL covariance -- jointly:
 #            cont/cont: lav_bvreg_2l_cov_twostep_fit()
 #            cont/ord:  lav_bvmix_2l_cov_twostep_fit()
 #            ord/ord:   lav_bvord_2l_cor_twostep_fit()
@@ -28,9 +31,10 @@
 #          case); INNER = crossprod of the stacked cluster-wise scores.
 #
 # The parameter (statistic) vector s is ordered per variable first
-# (mu/vw/vb or tau_1..K/vb), then per pair (cw, cb), pairs in
-# column-major lower-triangular order ((2,1), (3,1), ..., (3,2), ...).
-# The mapping to the lavaan WLS.obs layout is done by the caller.
+# (mu/vw/vb or tau_1..K/vb, followed by the within + between slopes),
+# then per pair (cw, cb), pairs in column-major lower-triangular order
+# ((2,1), (3,1), ..., (3,2), ...). The mapping to the lavaan WLS.obs
+# layout is done by the caller.
 
 lav_muthen2007 <- function(y = NULL,
                            ov_names = NULL,
@@ -38,6 +42,10 @@ lav_muthen2007 <- function(y = NULL,
                            cluster_idx = NULL,
                            between_flag = NULL, # per variable: does it
                                                 # have a between part?
+                           x_w = NULL, # within-level covariates
+                           x_b = NULL, # between-level covariates
+                           xw_names = NULL,
+                           xb_names = NULL,
                            ngh = 21L, # stage 1 + mixed pairs
                            ngh2 = 13L, # ordinal pairs (per dimension)
                            wls_w = TRUE) {
@@ -59,45 +67,90 @@ lav_muthen2007 <- function(y = NULL,
       two-level stage-wise estimation."))
   }
 
+  # covariates
+  nexo_w <- if (is.null(x_w)) 0L else NCOL(x_w)
+  nexo_b <- if (is.null(x_b)) 0L else NCOL(x_b)
+  if (nexo_w > 0L && is.null(xw_names)) {
+    xw_names <- colnames(x_w)
+    if (is.null(xw_names)) {
+      xw_names <- paste0("xw", seq_len(nexo_w))
+    }
+  }
+  if (nexo_b > 0L && is.null(xb_names)) {
+    xb_names <- colnames(x_b)
+    if (is.null(xb_names)) {
+      xb_names <- paste0("xb", seq_len(nexo_b))
+    }
+  }
+
   # ---- stage 1: univariate fits ----
   fit <- vector("list", nvar)
   for (p in seq_len(nvar)) {
+    x_w_p <- if (nexo_w > 0L) x_w else NULL
+    x_b_p <- if (nexo_b > 0L && between_flag[p]) x_b else NULL
     if (ord_flag[p]) {
       fit[[p]] <- lav_uvord_2l_fit(
-        y = y[, p], cluster_idx = cluster_idx, ngh = ngh
+        y = y[, p], x_w = x_w_p, x_b = x_b_p,
+        cluster_idx = cluster_idx, ngh = ngh
       )
     } else {
       fit[[p]] <- lav_uvreg_2l_fit(
-        y = y[, p], cluster_idx = cluster_idx,
+        y = y[, p], x_w = x_w_p, x_b = x_b_p,
+        cluster_idx = cluster_idx,
         between = between_flag[p]
       )
     }
   }
 
   # univariate parameter blocks
+  # free_idx_uni: positions of the FREE univariate parameters within
+  # fit$theta (excludes the pinned vb of within-only variables);
+  # sc_names_uni: the matching cluster-score column names
   npar_uni <- integer(nvar)
+  free_idx_uni <- vector("list", nvar)
+  sc_names_uni <- vector("list", nvar)
   th <- vector("list", nvar)
   th_idx <- vector("list", nvar)
   mu <- numeric(nvar)
   vw <- numeric(nvar)
   vb <- numeric(nvar)
+  slopes_w <- matrix(0, nvar, nexo_w)
+  slopes_b <- matrix(0, nvar, nexo_b)
   for (p in seq_len(nvar)) {
+    f <- fit[[p]]
+    sln <- lav_uvreg_2l_slope_names(f$nexo_w, f$nexo_b)
     if (ord_flag[p]) {
-      th[[p]] <- fit[[p]]$theta[fit[[p]]$th_idx]
+      th[[p]] <- f$theta[f$th_idx]
       th_idx[[p]] <- rep(p, length(th[[p]]))
       mu[p] <- 0
       vw[p] <- 1.0
-      vb[p] <- fit[[p]]$theta[fit[[p]]$bvar_idx]
-      npar_uni[p] <- length(th[[p]]) + 1L
+      vb[p] <- f$theta[f$bvar_idx]
+      free_idx_uni[[p]] <- c(f$th_idx, f$bvar_idx,
+                             f$wslope_idx, f$bslope_idx)
+      sc_names_uni[[p]] <- c(paste0("th", seq_along(f$th_idx)),
+                             "bvar", sln)
     } else {
-      th[[p]] <- fit[[p]]$theta[fit[[p]]$mu_idx]
+      th[[p]] <- f$theta[f$mu_idx]
       th_idx[[p]] <- 0L
-      mu[p] <- fit[[p]]$theta[fit[[p]]$mu_idx]
-      vw[p] <- fit[[p]]$theta[fit[[p]]$wvar_idx]
-      vb[p] <- fit[[p]]$theta[fit[[p]]$bvar_idx]
-      # within-only variables: vb is fixed at 0 (not a parameter)
-      npar_uni[p] <- if (between_flag[p]) 3L else 2L
+      mu[p] <- f$theta[f$mu_idx]
+      vw[p] <- f$theta[f$wvar_idx]
+      vb[p] <- f$theta[f$bvar_idx]
+      if (between_flag[p]) {
+        free_idx_uni[[p]] <- c(1L, 2L, 3L, f$wslope_idx, f$bslope_idx)
+        sc_names_uni[[p]] <- c("mu", "wvar", "bvar", sln)
+      } else {
+        # within-only variables: vb is fixed at 0 (not a parameter)
+        free_idx_uni[[p]] <- c(1L, 2L, f$wslope_idx)
+        sc_names_uni[[p]] <- c("mu", "wvar", sln)
+      }
     }
+    if (f$nexo_w > 0L) {
+      slopes_w[p, ] <- f$theta[f$wslope_idx]
+    }
+    if (f$nexo_b > 0L) {
+      slopes_b[p, ] <- f$theta[f$bslope_idx]
+    }
+    npar_uni[p] <- length(free_idx_uni[[p]])
   }
 
   # ---- stage 2: pairwise fits ----
@@ -150,13 +203,7 @@ lav_muthen2007 <- function(y = NULL,
 
   # the stage-wise parameter (statistic) vector
   s_uni <- unlist(lapply(seq_len(nvar), function(p) {
-    if (ord_flag[p]) {
-      c(th[[p]], vb[p])
-    } else if (between_flag[p]) {
-      c(mu[p], vw[p], vb[p])
-    } else {
-      c(mu[p], vw[p])
-    }
+    fit[[p]]$theta[free_idx_uni[[p]]]
   }))
   s_pair <- unlist(lapply(seq_len(pstar), function(pp) {
     pair_theta[pp, seq_len(pair_neta[pp])]
@@ -164,16 +211,24 @@ lav_muthen2007 <- function(y = NULL,
   s_all <- c(s_uni, s_pair)
   par_names <- c(
     unlist(lapply(seq_len(nvar), function(p) {
+      f <- fit[[p]]
+      sl_nm <- character(0L)
+      if (f$nexo_w > 0L) {
+        sl_nm <- c(sl_nm, paste0(ov_names[p], "~", xw_names))
+      }
+      if (f$nexo_b > 0L) {
+        sl_nm <- c(sl_nm, paste0(ov_names[p], "~", xb_names))
+      }
       if (ord_flag[p]) {
         c(paste0(ov_names[p], "|t", seq_along(th[[p]])),
-          paste0(ov_names[p], "~b~", ov_names[p]))
+          paste0(ov_names[p], "~b~", ov_names[p]), sl_nm)
       } else if (between_flag[p]) {
         c(paste0(ov_names[p], "~1"),
           paste0(ov_names[p], "~w~", ov_names[p]),
-          paste0(ov_names[p], "~b~", ov_names[p]))
+          paste0(ov_names[p], "~b~", ov_names[p]), sl_nm)
       } else {
         c(paste0(ov_names[p], "~1"),
-          paste0(ov_names[p], "~w~", ov_names[p]))
+          paste0(ov_names[p], "~w~", ov_names[p]), sl_nm)
       }
     })),
     unlist(lapply(seq_len(pstar), function(pp) {
@@ -191,9 +246,11 @@ lav_muthen2007 <- function(y = NULL,
     FIT = fit,
     TH = th, TH.IDX = th_idx,
     MU = mu, SIGMA.W = sigma_w, SIGMA.B = sigma_b,
+    SLOPES.W = slopes_w, SLOPES.B = slopes_b,
     pair.theta = pair_theta, pair.vars = pair_vars,
     pair.type = pair_type, pair.neta = pair_neta,
     between.flag = between_flag,
+    nexo.w = nexo_w, nexo.b = nexo_b,
     theta = s_all, npar.uni = npar_uni,
     ord.flag = ord_flag,
     WLS.W = NULL, SC = NULL
@@ -221,11 +278,8 @@ lav_muthen2007 <- function(y = NULL,
       sc_p <- lav_uvord_2l_sc(fit[[p]])
     } else {
       sc_p <- lav_uvreg_2l_sc(fit[[p]])
-      if (!between_flag[p]) {
-        # vb is fixed at 0: (mu, wvar) columns only
-        sc_p <- sc_p[, c("mu", "wvar"), drop = FALSE]
-      }
     }
+    sc_p <- sc_p[, sc_names_uni[[p]], drop = FALSE]
     sc_all[, uni_start[p]:uni_end[p]] <- sc_p
   }
 
@@ -237,6 +291,16 @@ lav_muthen2007 <- function(y = NULL,
     a11_p <- crossprod(sc_all[, idx, drop = FALSE])
     a11[idx, idx] <- a11_p
     a11_inv[idx, idx] <- lav_mat_sym_inverse(a11_p)
+  }
+
+  # pair-score column names for a member variable, in the same order as
+  # its univariate block (sc_names_uni): base names + slope names
+  m07_pair_var_names <- function(f, base_names, prefix_sl) {
+    sln <- lav_uvreg_2l_slope_names(f$nexo_w, f$nexo_b)
+    if (length(sln) == 0L) {
+      return(base_names)
+    }
+    c(base_names, paste0(prefix_sl, sln))
   }
 
   # pairwise scores; A21 and A22
@@ -251,44 +315,59 @@ lav_muthen2007 <- function(y = NULL,
       sc_pair <- lav_bvreg_2l_sc(
         fit_y1 = fit[[j]], fit_y2 = fit[[i]], cw = cw, cb = cb
       )
-      free_idx <- match(c("wcov", "bcov"), colnames(sc_pair))
-      var1_idx <- match(c("mu_y1", "wvar_y1", "bvar_y1"), colnames(sc_pair))
-      var2_idx <- match(c("mu_y2", "wvar_y2", "bvar_y2"), colnames(sc_pair))
-      # within-only members: drop their (fixed) bvar column
-      if (!between_flag[j]) var1_idx <- var1_idx[1:2]
-      if (!between_flag[i]) var2_idx <- var2_idx[1:2]
+      free_names <- c("wcov", "bcov")
+      var1_names <- m07_pair_var_names(
+        fit[[j]], c("mu_y1", "wvar_y1",
+                    if (between_flag[j]) "bvar_y1"), "y1_")
+      var2_names <- m07_pair_var_names(
+        fit[[i]], c("mu_y2", "wvar_y2",
+                    if (between_flag[i]) "bvar_y2"), "y2_")
     } else if (type == "bvord") {
       sc_pair <- lav_bvord_2l_sc(
         fit_y1 = fit[[j]], fit_y2 = fit[[i]], rho_w = cw, cb = cb,
         ngh = ngh2
       )
-      nth_j <- length(th[[j]]); nth_i <- length(th[[i]])
-      free_idx <- match(c("rho_w", "cb"), colnames(sc_pair))
-      var1_idx <- c(seq_len(nth_j), # tau_a
-                    match("vb_a", colnames(sc_pair)))
-      var2_idx <- c(nth_j + seq_len(nth_i), # tau_c
-                    match("vb_c", colnames(sc_pair)))
+      free_names <- c("rho_w", "cb")
+      var1_names <- m07_pair_var_names(
+        fit[[j]], c(paste0("tau_a", seq_along(th[[j]])), "vb_a"), "a_")
+      var2_names <- m07_pair_var_names(
+        fit[[i]], c(paste0("tau_c", seq_along(th[[i]])), "vb_c"), "c_")
     } else if (type == "bvmix") {
       # y1 = continuous (j), y2 = ordinal (i)
       sc_pair <- lav_bvmix_2l_sc(
         fit_y1 = fit[[j]], fit_y2 = fit[[i]], cw = cw, cb = cb, ngh = ngh
       )
-      nth_i <- length(th[[i]])
-      free_idx <- match(c("cw", "cb"), colnames(sc_pair))
-      var1_idx <- match(c("mu_a", "vw_a", "vb_a"), colnames(sc_pair))
-      var2_idx <- c(3L + seq_len(nth_i), # tau_c
-                    match("vb_c", colnames(sc_pair)))
-      if (!between_flag[j]) var1_idx <- var1_idx[1:2]
+      free_names <- c("cw", "cb")
+      var1_names <- m07_pair_var_names(
+        fit[[j]], c("mu_a", "vw_a",
+                    if (between_flag[j]) "vb_a"), "a_")
+      var2_names <- m07_pair_var_names(
+        fit[[i]], c(paste0("tau_c", seq_along(th[[i]])), "vb_c"), "c_")
     } else { # bvmix.swap: y1 = continuous (i), y2 = ordinal (j)
       sc_pair <- lav_bvmix_2l_sc(
         fit_y1 = fit[[i]], fit_y2 = fit[[j]], cw = cw, cb = cb, ngh = ngh
       )
-      nth_j <- length(th[[j]])
-      free_idx <- match(c("cw", "cb"), colnames(sc_pair))
+      free_names <- c("cw", "cb")
       # variable j is the ordinal one here (the 'c' side of the module)
-      var1_idx <- c(3L + seq_len(nth_j), match("vb_c", colnames(sc_pair)))
-      var2_idx <- match(c("mu_a", "vw_a", "vb_a"), colnames(sc_pair))
-      if (!between_flag[i]) var2_idx <- var2_idx[1:2]
+      var1_names <- m07_pair_var_names(
+        fit[[j]], c(paste0("tau_c", seq_along(th[[j]])), "vb_c"), "c_")
+      var2_names <- m07_pair_var_names(
+        fit[[i]], c("mu_a", "vw_a",
+                    if (between_flag[i]) "vb_a"), "a_")
+    }
+
+    free_idx <- match(free_names, colnames(sc_pair))
+    var1_idx <- match(var1_names, colnames(sc_pair))
+    var2_idx <- match(var2_names, colnames(sc_pair))
+    if (anyNA(c(free_idx, var1_idx, var2_idx))) {
+      wanted <- c(free_names, var1_names, var2_names)
+      missing_names <- wanted[!wanted %in% colnames(sc_pair)]
+      lav_msg_stop(gettextf(
+        "internal error: pair score columns do not match the univariate
+        parameter blocks (pair %1$s/%2$s, missing: %3$s; available: %4$s).",
+        ov_names[j], ov_names[i],
+        paste(missing_names, collapse = ", "),
+        paste(colnames(sc_pair), collapse = ", ")))
     }
 
     # pairs with a within-only member: cb is fixed at 0, cw only

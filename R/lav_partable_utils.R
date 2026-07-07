@@ -209,6 +209,11 @@ lav_pt_ndat <- function(partable) {
           ndat[b] <- ndat[b] - nvar_ord
           ndat[b] <- ndat[b] + nth
         }
+        # add slopes (conditional.x): per block, every 'y' variable is
+        # regressed on the block's exogenous covariates
+        if (conditional_x) {
+          ndat[b] <- ndat[b] + (nvar * nexo)
+        }
       } else {
         # no variances
         ndat[b] <- ndat[b] - nvar_ord

@@ -57,10 +57,14 @@ lav_model <- function(lavpartable = NULL,
         # per BLOCK: the levels may span different variable sets, so
         # rebuild th.idx from the parameter table (in the block's
         # variable order: ordinal variables contribute their thresholds,
-        # numeric variables a 0 placeholder)
+        # numeric variables a 0 placeholder); if conditional.x, the
+        # exogenous covariates are not part of the variable set
+        conditional_x_flag <- any(lavpartable$exo > 0L &
+                                  lavpartable$op == "~")
         th_idx <- vector("list", nblocks)
         for (b in seq_len(nblocks)) {
-          ov_names_b <- lav_pt_vnames(lavpartable, "ov", block = b)
+          ov_names_b <- lav_pt_vnames(lavpartable,
+            if (conditional_x_flag) "ov.nox" else "ov", block = b)
           th_lhs_b <- lavpartable$lhs[lavpartable$op == "|" &
                                       lavpartable$block == b]
           th_idx_b <- integer(0L)

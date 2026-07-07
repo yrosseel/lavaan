@@ -109,17 +109,31 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
     b_between <- (g - 1L) * nlevels + 2L
 
     # OBSERVED        # if these change, tag @TDJorgensen in commit message
-    s_within <- lavobject@h1$implied$cov[[b_within]]
-    # m_within <- lavobject@h1$implied$mean[[b_within]]
-    s_between <- lavobject@h1$implied$cov[[b_between]]
-    # m_between <- lavobject@h1$implied$mean[[b_between]]
+    h1_implied <- lavobject@h1$implied
+    if (!is.null(h1_implied$res.cov) &&
+        !is.null(h1_implied$res.cov[[b_within]])) {
+      # conditional.x with residual (y-only) unrestricted moments
+      # (two-level (D)WLS with covariates): compare the residual
+      # covariance matrices directly
+      s_within <- h1_implied$res.cov[[b_within]]
+      s_between <- h1_implied$res.cov[[b_between]]
 
-    # ESTIMATED       # if these change, tag @TDJorgensen in commit message
-    implied <- lav_model_implied_cond2uncond(lavobject@implied)
-    sigma_within <- implied$cov[[b_within]]
-    # mu_within <- implied$mean[[b_within]]
-    sigma_between <- implied$cov[[b_between]]
-    # mu_between <- implied$mean[[b_between]]
+      # ESTIMATED     # if these change, tag @TDJorgensen in commit message
+      sigma_within <- lavobject@implied$res.cov[[b_within]]
+      sigma_between <- lavobject@implied$res.cov[[b_between]]
+    } else {
+      s_within <- h1_implied$cov[[b_within]]
+      # m_within <- h1_implied$mean[[b_within]]
+      s_between <- h1_implied$cov[[b_between]]
+      # m_between <- h1_implied$mean[[b_between]]
+
+      # ESTIMATED     # if these change, tag @TDJorgensen in commit message
+      implied <- lav_model_implied_cond2uncond(lavobject@implied)
+      sigma_within <- implied$cov[[b_within]]
+      # mu_within <- implied$mean[[b_within]]
+      sigma_between <- implied$cov[[b_between]]
+      # mu_between <- implied$mean[[b_between]]
+    }
 
     # force pd for between
     #    S.between <- lav_mat_sym_force_pd(S.between)

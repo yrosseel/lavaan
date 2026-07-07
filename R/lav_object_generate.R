@@ -43,7 +43,10 @@ lav_object_baseline <- function(object = NULL,
   }
 
   # if two-level, force conditional.x = FALSE (for now)
-  if (lavdata@nlevels > 1L && lavoptions$conditional.x) {
+  # exception: two-level (D)WLS, where the baseline model supports (and
+  # needs) conditional.x
+  if (lavdata@nlevels > 1L && lavoptions$conditional.x &&
+      !lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
     lavoptions$conditional.x <- FALSE
   }
 

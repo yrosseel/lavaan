@@ -421,10 +421,10 @@ lav_options_set <- function(opt = NULL) {
           only complete data (missing = \"listwise\") is supported (for now).",
           dQuote(opt$missing)))
       }
-      if (isTRUE(opt$conditional.x)) {
+      if (isTRUE(opt$conditional.x) && !opt$.categorical) {
         lav_msg_stop(gettext(
           "conditional.x = TRUE is not supported for two-level (D)WLS
-          estimation (yet)."))
+          estimation with continuous-only data (yet)."))
       }
       if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
         lav_msg_stop(gettext(

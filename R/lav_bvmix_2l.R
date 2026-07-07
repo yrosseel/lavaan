@@ -132,12 +132,44 @@ lav_bvmix_2l_init_cache <- function(fit_y1 = NULL,
   vb_c <- fit_y2$theta[fit_y2$bvar_idx]
   nth <- length(tau_c)
 
-  # cluster structure (reuse the stage-1 sufficient statistics of y_a)
-  cs_a <- fit_y1$cs
+  # covariates: residualize the continuous side (the pair model is then
+  # the no-covariate model with mu_a = 0), and compute the fixed linear
+  # predictor eta_c of the ordinal side
+  nexo_a <- fit_y1$nexo
+  nexo_c <- fit_y2$nexo
+  z_a <- z_c <- NULL
+  if (nexo_a > 0L) {
+    theta_ma <- fit_y1$theta[c(1L, 3L + seq_len(nexo_a))]
+    y_a <- fit_y1$y - drop(fit_y1$z %*% theta_ma)
+    mu_a <- 0
+    z_a <- fit_y1$z[, -1, drop = FALSE] # slope columns only
+  }
+  eta_c <- 0
+  if (nexo_c > 0L) {
+    beta_c <- fit_y2$theta[fit_y2$nth + 1L + seq_len(nexo_c)]
+    z_c <- fit_y2$z
+    eta_c <- drop(z_c %*% beta_c)
+  }
+
+  # cluster structure (reuse the stage-1 sufficient statistics of y_a,
+  # unless we residualized)
+  if (nexo_a > 0L) {
+    cs_a <- lav_2l_cluster_stats(y = y_a, cluster_idx = cluster_idx)
+  } else {
+    cs_a <- fit_y1$cs
+  }
   njs <- cs_a$njs
   nclusters <- cs_a$nclusters
   cl_sorted <- sort(unique(cluster_idx))
   cl_pos <- match(cluster_idx, cl_sorted)
+
+  # cluster means of the a-side slope design columns (for the chain
+  # through m_j: d r_aj / d beta_r = -zbar_a[j, r])
+  zbar_a <- NULL
+  if (nexo_a > 0L) {
+    zbar_a <- rowsum.default(z_a, group = cluster_idx,
+                             reorder = TRUE) / njs
+  }
 
   # fixed per-cluster quantities
   v_aj <- vw_a + njs * vb_a
@@ -175,6 +207,10 @@ lav_bvmix_2l_init_cache <- function(fit_y1 = NULL,
       nobs = nobs, n = nobs, nclusters = nclusters, njs = njs,
       mu_a = mu_a, vw_a = vw_a, vb_a = vb_a,
       tau_c = tau_c, vb_c = vb_c, nth = nth,
+      nexo_a = nexo_a, nexo_c = nexo_c,
+      nexo_wa = fit_y1$nexo_w, nexo_ba = fit_y1$nexo_b,
+      nexo_wc = fit_y2$nexo_w, nexo_bc = fit_y2$nexo_b,
+      z_a = z_a, z_c = z_c, zbar_a = zbar_a, eta_c = eta_c,
       v_aj = v_aj, r_aj = r_aj, logf_a = logf_a, cs_a = cs_a,
       dev_a = dev_a, o1 = o12$o1, o2 = o12$o2, y1 = y1, y2 = y2,
       gh = gh, ngh = ngh,
@@ -219,7 +255,8 @@ lav_bvmix_2l_loglik_cache <- function(cache = NULL) {
     }
 
     th_s <- tau_c / gp$sd_c
-    base_i <- gp$a_sl * dev_a / gp$sd_c # per item, fixed over nodes
+    # per item, fixed over nodes (eta_c = fixed ordinal linear predictor)
+    base_i <- (gp$a_sl * dev_a + eta_c) / gp$sd_c
 
     ll <- matrix(0, nclusters, ngh)
     for (q in seq_len(ngh)) {
@@ -318,12 +355,14 @@ lav_bvmix_2l_sc_cache <- function(cache = NULL) {
     }
 
     th_s <- tau_c / sd_c
-    base_i <- a_sl * dev_a / sd_c
+    base_i <- (a_sl * dev_a + eta_c) / sd_c
 
-    sc <- matrix(0, nclusters, nth + np)
+    sc <- matrix(0, nclusters, nth + np + nexo_a + nexo_c)
     tau_idx <- 3L + seq_len(nth) # after mu_a, vw_a, vb_a
     par_idx <- c(1L, 2L, 3L, 3L + nth + 1L, 3L + nth + 2L, 3L + nth + 3L)
     # (mu_a, vw_a, vb_a, vb_c, cw, cb) positions in the output
+    asl_idx <- nth + np + seq_len(nexo_a)
+    csl_idx <- nth + np + nexo_a + seq_len(nexo_c)
 
     for (q in seq_len(ngh)) {
       gamma_j <- gp$m_j + gp$s_gj * gh$x[q]
@@ -374,6 +413,26 @@ lav_bvmix_2l_sc_cache <- function(cache = NULL) {
         sc[, par_idx[p]] <- sc[, par_idx[p]] +
           pwq * (direct + g_gam * dgam)
       }
+
+      # slope columns (covariates)
+      if (nexo_a > 0L) {
+        # a-side slopes: like mu_a, but with design column z_a[, r]:
+        # direct: ddev_i = -z_a[, r]; chain: d r_aj = -zbar_a[j, r]
+        sza <- rowsum.default(z_a * ((p1 - p2) * inv_pi),
+                              group = cluster_idx, reorder = TRUE)
+        for (r in seq_len(nexo_a)) {
+          direct_r <- a_sl * sza[, r] / sd_c
+          dgam_r <- -c_g * njs * zbar_a[, r] / v_aj
+          sc[, asl_idx[r]] <- sc[, asl_idx[r]] +
+            pwq * (direct_r + g_gam * dgam_r)
+        }
+      }
+      if (nexo_c > 0L) {
+        # c-side slopes: dz_i = -z_c[, r] / sd_c (direct only)
+        szc <- rowsum.default(z_c * ((p1 - p2) * inv_pi),
+                              group = cluster_idx, reorder = TRUE)
+        sc[, csl_idx] <- sc[, csl_idx] - pwq * szc / sd_c
+      }
     }
 
     # the (fixed-parameter) Gaussian factor f(y_a,j): mu_a, vw_a, vb_a
@@ -388,9 +447,22 @@ lav_bvmix_2l_sc_cache <- function(cache = NULL) {
     )
     sc[, 1:3] <- sc[, 1:3] + (-0.5 * dm2ll_a)
 
+    # ... and its a-side slope scores: rowsum(z_a * m) with m the
+    # (univariate) GLS-weighted residuals
+    if (nexo_a > 0L) {
+      h_j <- njs * vb_a / v_aj
+      m_uni <- (dev_a - (h_j * r_aj)[cl_pos]) / vw_a
+      sc[, asl_idx] <- sc[, asl_idx] +
+        rowsum.default(z_a * m_uni, group = cluster_idx, reorder = TRUE)
+    }
+
     colnames(sc) <- c(
       "mu_a", "vw_a", "vb_a", paste0("tau_c", seq_len(nth)),
-      "vb_c", "cw", "cb"
+      "vb_c", "cw", "cb",
+      if (nexo_a > 0L) paste0("a_", lav_uvreg_2l_slope_names(
+        nexo_wa, nexo_ba)) else character(0L),
+      if (nexo_c > 0L) paste0("c_", lav_uvreg_2l_slope_names(
+        nexo_wc, nexo_bc)) else character(0L)
     )
     return(sc)
   })                     # nolint end

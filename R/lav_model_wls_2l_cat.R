@@ -82,6 +82,11 @@ lav_m07_th_raw <- function(lavmodel = NULL, glist = NULL) {
 # delta = FALSE switches off the implied standardization)
 lav_m07_implied_raw <- function(lavmodel = NULL, glist = NULL) {
   imp <- lav_model_implied(lavmodel, glist = glist, delta = FALSE)
+  if (lavmodel@conditional.x) {
+    # lav_model_implied() does not forward delta = FALSE to the slopes
+    imp$res.slopes <- lav_model_pi(lavmodel = lavmodel, glist = glist,
+                                   delta = FALSE)
+  }
   imp$th.raw <- lav_m07_th_raw(lavmodel = lavmodel, glist = glist)
   imp
 }
@@ -133,18 +138,33 @@ lav_m07_block_info <- function(lavmodel = NULL, g = NULL,
 lav_m07_wls_est <- function(lavmodel = NULL, glist = NULL) {
   nlevels <- 2L
   ngroups <- lavmodel@nblocks %/% nlevels
+  conditional_x <- lavmodel@conditional.x
   imp <- lav_m07_implied_raw(lavmodel, glist = glist)
 
   out <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
-    sigma_w <- imp$cov[[(g - 1L) * 2L + 1L]]
-    sigma_b <- imp$cov[[(g - 1L) * 2L + 2L]]
+    if (conditional_x) {
+      sigma_w <- imp$res.cov[[(g - 1L) * 2L + 1L]]
+      sigma_b <- imp$res.cov[[(g - 1L) * 2L + 2L]]
+    } else {
+      sigma_w <- imp$cov[[(g - 1L) * 2L + 1L]]
+      sigma_b <- imp$cov[[(g - 1L) * 2L + 2L]]
+    }
     nvar <- NROW(sigma_w)
     nb <- NROW(sigma_b)
     bi <- lav_m07_block_info(lavmodel, g = g, nw = nvar, nb = nb)
 
-    mean_w <- imp$mean[[bi$b1]]
-    mu_b <- imp$mean[[bi$b2]]
+    if (conditional_x) {
+      mean_w <- imp$res.int[[bi$b1]]
+      mu_b <- imp$res.int[[bi$b2]]
+      pi_w <- imp$res.slopes[[bi$b1]]
+      pi_b <- imp$res.slopes[[bi$b2]]
+    } else {
+      mean_w <- imp$mean[[bi$b1]]
+      mu_b <- imp$mean[[bi$b2]]
+      pi_w <- matrix(0, nvar, 0L)
+      pi_b <- matrix(0, nb, 0L)
+    }
     th_raw2 <- imp$th.raw[[bi$b2]]
     th_idx_2 <- lavmodel@th.idx[[bi$b2]]
 
@@ -162,24 +182,29 @@ lav_m07_wls_est <- function(lavmodel = NULL, glist = NULL) {
     th_std[ord_pos_1] <- th_raw2[ord_pos_2] *
       delta_1[bi$th_idx_1[ord_pos_1]]
 
-    # 2. within means of the within-only (continuous) variables
+    # 2. within means/intercepts of the within-only (continuous) variables
     mu_w <- mean_w[!bi$between_flag]
 
-    # 3. within variances of the continuous variables
+    # 3. standardized within slopes (vec, column-major over (var, exo))
+    piw_std <- as.numeric(delta_1 * pi_w)
+
+    # 4. within variances of the continuous variables
     vw <- diag(sigma_w)[!ord]
 
-    # 4. standardized within covariances (vech, no diagonal)
+    # 5. standardized within covariances (vech, no diagonal)
     sw_std <- diag(delta_1) %*% sigma_w %*% diag(delta_1)
     cw <- lav_mat_vech(sw_std, diagonal = FALSE)
 
-    # 5./6. standardized between means + covariance matrix
+    # 6./7./8. standardized between means/intercepts + slopes +
+    # covariance matrix (all scaled by the WITHIN scale factors)
     delta_b <- delta_1[bi$w2b]
     mub_std <- delta_b * mu_b
+    pib_std <- as.numeric(delta_b * pi_b)
     sb_std <- diag(delta_b, nrow = nb) %*% sigma_b %*%
       diag(delta_b, nrow = nb)
 
     out[[g]] <- c(
-      th_std, mu_w, vw, cw, mub_std,
+      th_std, mu_w, piw_std, vw, cw, mub_std, pib_std,
       lav_mat_vech(sb_std, diagonal = TRUE)
     )
   }
@@ -188,13 +213,31 @@ lav_m07_wls_est <- function(lavmodel = NULL, glist = NULL) {
 }
 
 # the standardization map H (per group): rows = statistics, columns = raw
-# rows [ th (nth) ; mean_w (nvar) ; vech(Sigma_w) ; mean_b (nb) ;
-#        vech(Sigma_b) (nb*) ]
+# rows. The raw row layout follows the continuous-view lav_model_delta():
+#
+#   conditional.x = FALSE:
+#     [ th (nth2) ; mean_w (nvar) ; vech(Sigma_w) ;
+#       mean_b (nb) ; vech(Sigma_b) ]
+#   conditional.x = TRUE (per block: interleaved intercept + slope rows,
+#   one set per variable):
+#     [ th (nth2) ; {int_p, slopes_p (nq1)} x nvar ; vech(Sigma_w) ;
+#       {int_k, slopes_k (nq2)} x nb ; vech(Sigma_b) ]
+#
+# (the unconditional case is the nq1 = nq2 = 0 special case)
 lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
+                         pi_w = NULL, pi_b = NULL,
                          th_raw2 = NULL, th_idx_1 = NULL,
                          th_idx_2 = NULL, w2b = NULL) {
   nvar <- NROW(sigma_w)
   nb <- NROW(sigma_b)
+  if (is.null(pi_w)) {
+    pi_w <- matrix(0, nvar, 0L)
+  }
+  if (is.null(pi_b)) {
+    pi_b <- matrix(0, nb, 0L)
+  }
+  nq1 <- NCOL(pi_w)
+  nq2 <- NCOL(pi_b)
   between_flag <- seq_len(nvar) %in% w2b
   ord <- (seq_len(nvar) %in% th_idx_1[th_idx_1 > 0L])
   num_idx <- which(!ord)
@@ -210,11 +253,14 @@ lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
 
   # raw row indices
   r_th <- seq_len(nth2)
-  r_muw <- nth2 + seq_len(nvar)
-  r_sw <- nth2 + nvar + seq_len(pstar_d)
-  r_mub <- nth2 + nvar + pstar_d + seq_len(nb)
-  r_sb <- nth2 + nvar + pstar_d + nb + seq_len(pstar_b)
-  nraw <- nth2 + nvar + pstar_d + nb + pstar_b
+  r_int1 <- nth2 + (seq_len(nvar) - 1L) * (1L + nq1) + 1L
+  # slope rows of variable p: r_int1[p] + 1..nq1
+  r_sw <- nth2 + nvar * (1L + nq1) + seq_len(pstar_d)
+  r_int2 <- nth2 + nvar * (1L + nq1) + pstar_d +
+    (seq_len(nb) - 1L) * (1L + nq2) + 1L
+  r_sb <- nth2 + nvar * (1L + nq1) + pstar_d + nb * (1L + nq2) +
+    seq_len(pstar_b)
+  nraw <- nth2 + nvar * (1L + nq1) + pstar_d + nb * (1L + nq2) + pstar_b
 
   # position of sigma[i,j] (i >= j) within vech(, diagonal = TRUE)
   vech_pos <- matrix(0L, nvar, nvar)
@@ -226,8 +272,8 @@ lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
   vech_pos_b[lower.tri(vech_pos_b, diag = TRUE)] <- seq_len(pstar_b)
   vech_pos_b[upper.tri(vech_pos_b)] <- t(vech_pos_b)[upper.tri(vech_pos_b)]
 
-  nstat <- nth1 + sum(!between_flag) + length(num_idx) + pstar + nb +
-    pstar_b
+  nstat <- nth1 + sum(!between_flag) + nvar * nq1 + length(num_idx) +
+    pstar + nb + nb * nq2 + pstar_b
   h <- matrix(0, nstat, nraw)
   row <- 0L
 
@@ -245,19 +291,29 @@ lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
     # continuous entries: fixed at zero (zero row)
   }
 
-  # 2. within means of the within-only (continuous) variables
+  # 2. within means/intercepts of the within-only (continuous) variables
   for (p in which(!between_flag)) {
     row <- row + 1L
-    h[row, r_muw[p]] <- 1
+    h[row, r_int1[p]] <- 1
   }
 
-  # 3. within variances of continuous variables
+  # 3. standardized within slopes: pi*_pq = delta_p pi_pq
+  # (vec, column-major: all variables for exo 1, then exo 2, ...)
+  for (q in seq_len(nq1)) {
+    for (p in seq_len(nvar)) {
+      row <- row + 1L
+      h[row, r_int1[p] + q] <- delta_1[p]
+      h[row, r_sw[diag_pos[p]]] <- pi_w[p, q] * ddelta[p]
+    }
+  }
+
+  # 4. within variances of continuous variables
   for (p in num_idx) {
     row <- row + 1L
     h[row, r_sw[diag_pos[p]]] <- 1
   }
 
-  # 4. standardized within covariances (i > j)
+  # 5. standardized within covariances (i > j)
   for (j in seq_len(nvar - 1L)) {
     for (i in (j + 1L):nvar) {
       row <- row + 1L
@@ -270,15 +326,25 @@ lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
     }
   }
 
-  # 5. standardized between means (between variables only)
+  # 6. standardized between means/intercepts (between variables only)
   for (k in seq_len(nb)) {
     row <- row + 1L
     p <- w2b[k]
-    h[row, r_mub[k]] <- delta_1[p]
+    h[row, r_int2[k]] <- delta_1[p]
     h[row, r_sw[diag_pos[p]]] <- mu_b[k] * ddelta[p]
   }
 
-  # 6. standardized between covariances (vech with diagonal, i >= j)
+  # 7. standardized between slopes: pi*_kq = delta_{w2b(k)} pi_kq
+  for (q in seq_len(nq2)) {
+    for (k in seq_len(nb)) {
+      row <- row + 1L
+      p <- w2b[k]
+      h[row, r_int2[k] + q] <- delta_1[p]
+      h[row, r_sw[diag_pos[p]]] <- pi_b[k, q] * ddelta[p]
+    }
+  }
+
+  # 8. standardized between covariances (vech with diagonal, i >= j)
   for (jj in seq_len(nb)) {
     for (ii in jj:nb) {
       row <- row + 1L
@@ -345,22 +411,37 @@ lav_m07_delta <- function(lavmodel = NULL, glist = NULL) {
     }
   }
 
+  conditional_x <- lavmodel@conditional.x
   delta_out <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
-    sigma_w <- imp$cov[[(g - 1L) * 2L + 1L]]
-    sigma_b <- imp$cov[[(g - 1L) * 2L + 2L]]
+    if (conditional_x) {
+      sigma_w <- imp$res.cov[[(g - 1L) * 2L + 1L]]
+      sigma_b <- imp$res.cov[[(g - 1L) * 2L + 2L]]
+    } else {
+      sigma_w <- imp$cov[[(g - 1L) * 2L + 1L]]
+      sigma_b <- imp$cov[[(g - 1L) * 2L + 2L]]
+    }
     nvar <- NROW(sigma_w)
     nb <- NROW(sigma_b)
     bi <- lav_m07_block_info(lavmodel, g = g, nw = nvar, nb = nb)
-    mu_b <- imp$mean[[bi$b2]]
+    if (conditional_x) {
+      mu_b <- imp$res.int[[bi$b2]]
+      pi_w <- imp$res.slopes[[bi$b1]]
+      pi_b <- imp$res.slopes[[bi$b2]]
+    } else {
+      mu_b <- imp$mean[[bi$b2]]
+      pi_w <- pi_b <- NULL
+    }
     th_raw2 <- imp$th.raw[[bi$b2]]
     th_idx_2 <- lavmodel@th.idx[[bi$b2]]
 
-    # stack the raw rows: [th (b2); mean_w; vech Sw; mean_b; vech Sb]
+    # stack the raw rows: [th (b2); int/slope rows W; vech Sw;
+    #                      int/slope rows B; vech Sb]
     draw <- rbind(th_jac[[bi$b2]], delta_raw[[g]])
 
     h <- lav_m07_hmat(
       sigma_w = sigma_w, sigma_b = sigma_b, mu_b = mu_b,
+      pi_w = pi_w, pi_b = pi_b,
       th_raw2 = th_raw2, th_idx_1 = bi$th_idx_1,
       th_idx_2 = th_idx_2, w2b = bi$w2b
     )

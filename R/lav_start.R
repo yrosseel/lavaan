@@ -229,7 +229,7 @@ lav_start <- function(start_method = "default",
       #      (1.0 - 0.50) * lavsamplestats@var[[1L]][sample.var.idx]
       #  }
       #} else {
-        if (conditional_x && nlevels == 1L) {
+        if (conditional_x && !is.null(lavsamplestats@res.cov[[g]])) {
           start[ov_var_idx] <-
             (1.0 - 0.50) * diag(lavsamplestats@res.cov[[g]])[sample_var_idx]
         } else {
@@ -281,7 +281,7 @@ lav_start <- function(start_method = "default",
             }
             cov_1 <- h1_cov[ov_idx, ov_idx, drop = FALSE]
           } else {
-            if (conditional_x && nlevels == 1L) {
+            if (conditional_x && !is.null(lavsamplestats@res.cov[[g]])) {
               cov_1 <- lavsamplestats@res.cov[[g]][ov_idx,
                 ov_idx,
                 drop = FALSE
@@ -804,7 +804,15 @@ lav_start <- function(start_method = "default",
             lavpartable$lhs %in% this_block_x &
             lavpartable$rhs %in% this_block_x)
 
-          if (is.null(lavh1$implied$cov[[1]])) {
+          if (!is.null(lavh1$implied$cov.x[[block]]) &&
+              NROW(lavh1$implied$cov.x[[block]]) > 0L) {
+            # the h1 cov blocks span the y variables only, and the x
+            # moments are stored separately (two-level (D)WLS with
+            # conditional.x)
+            cov_1 <- lavh1$implied$cov.x[[block]]
+            row_idx <- match(lavpartable$lhs[exo_idx], colnames(cov_1))
+            col_idx <- match(lavpartable$rhs[exo_idx], colnames(cov_1))
+          } else if (is.null(lavh1$implied$cov[[1]])) {
             row_idx <- match(lavpartable$lhs[exo_idx], ov_names)
             col_idx <- match(lavpartable$rhs[exo_idx], ov_names)
             if (l == 1L) {
@@ -830,7 +838,11 @@ lav_start <- function(start_method = "default",
             lavpartable$op == "~1" &
             lavpartable$lhs %in% this_block_x)
 
-          if (is.null(lavh1$implied$mean[[1]])) {
+          if (!is.null(lavh1$implied$mean.x[[block]]) &&
+              length(lavh1$implied$mean.x[[block]]) > 0L) {
+            int <- lavh1$implied$mean.x[[block]]
+            idx <- match(lavpartable$lhs[ov_int_idx], names(int))
+          } else if (is.null(lavh1$implied$mean[[1]])) {
             idx <- match(lavpartable$lhs[ov_int_idx], ov_names)
             if (l == 1L) {
               int <- lavsamplestats@YLp[[g]][[2]]$Mu.W

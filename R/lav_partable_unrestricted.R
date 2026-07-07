@@ -176,10 +176,11 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
   # if multilevel
   if (nlevels > 1L) {
     # fixed.x       <- FALSE # for now
-    conditional_x <- FALSE # for now
     if (!lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
       categorical <- FALSE # for now
+      conditional_x <- FALSE # for now
     }
+    # else: two-level (D)WLS supports conditional.x (slopes per block)
   }
 
   lhs <- rhs <- op <- character(0)
@@ -235,16 +236,28 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
       # only for multilevel, overwrite sample.cov and sample_mean
       if (nlevels > 1L) {
         if (independent) {
-          # better use lavdata@Lp[[g]]$ov.x.idx??
-          # in case we have x/y mismatch across levels?
-          ov_x_idx <- lavpta$vidx$ov.x[[b]]
           ov_names_x <- lavpta$vnames$ov.x[[b]]
           ov_names_nox <- lavpta$vnames$ov.nox[[b]]
-          sample_cov_x <- lavh1$implied$cov[[b]][ov_x_idx,
-            ov_x_idx,
-            drop = FALSE
-          ]
-          sample_mean_x <- lavh1$implied$mean[[b]][ov_x_idx]
+          if (!is.null(lavh1$implied$cov.x) &&
+              !is.null(lavh1$implied$cov.x[[b]]) &&
+              NROW(lavh1$implied$cov.x[[b]]) > 0L) {
+            # conditional.x with y-only h1 cov blocks and separately
+            # stored covariate moments (two-level (D)WLS)
+            sample_cov_x <- lavh1$implied$cov.x[[b]]
+            sample_mean_x <- lavh1$implied$mean.x[[b]]
+          } else if (length(ov_names_x) > 0L) {
+            # better use lavdata@Lp[[g]]$ov.x.idx??
+            # in case we have x/y mismatch across levels?
+            ov_x_idx <- lavpta$vidx$ov.x[[b]]
+            sample_cov_x <- lavh1$implied$cov[[b]][ov_x_idx,
+              ov_x_idx,
+              drop = FALSE
+            ]
+            sample_mean_x <- lavh1$implied$mean[[b]][ov_x_idx]
+          } else {
+            sample_cov_x <- NULL
+            sample_mean_x <- NULL
+          }
         } else {
           ov_names_x <- character(0L)
           ov_names_nox <- ov_names
@@ -253,6 +266,10 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
         if (length(lavh1) > 0L) {
           sample_cov <- lavh1$implied$cov[[b]]
           sample_mean <- lavh1$implied$mean[[b]]
+          if (conditional_x && !is.null(lavh1$implied$res.slopes) &&
+              !is.null(lavh1$implied$res.slopes[[b]])) {
+            sample_slopes <- lavh1$implied$res.slopes[[b]]
+          }
         } else {
           sample_cov <- diag(length(ov_names))
           sample_mean <- numeric(length(ov_names))
@@ -360,8 +377,9 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
           }
 
           # add thresholds
-          # (two-level: at the between level only)
-          if (nlevels == 1L || l == nlevels) {
+          # (two-level: FREE at the between level; fixed-to-zero
+          #  placeholder rows at the within level -- the same convention
+          #  as lavaanify() for the user model)
           lhs_th <- character(0)
           rhs_th <- character(0)
           for (o in ord_names) {
@@ -377,16 +395,20 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
           block <- c(block, rep(b, nel))
           group <- c(group, rep(g, nel))
           level <- c(level, rep(l, nel))
-          free <- c(free, rep(1L, nel))
           exo <- c(exo, rep(0L, nel))
-
-          # starting values
-          if (!is.null(sample_th) && !is.null(sample_th_idx)) {
-            th_start <- sample_th[sample_th_idx > 0L]
-            ustart <- c(ustart, th_start)
+          if (nlevels == 1L || l == nlevels) {
+            free <- c(free, rep(1L, nel))
+            # starting values
+            if (!is.null(sample_th) && !is.null(sample_th_idx)) {
+              th_start <- sample_th[sample_th_idx > 0L]
+              ustart <- c(ustart, th_start)
+            } else {
+              ustart <- c(ustart, rep(as.numeric(NA), nel))
+            }
           } else {
-            ustart <- c(ustart, rep(as.numeric(NA), nel))
-          }
+            # within level: fixed-to-zero placeholders
+            free <- c(free, rep(0L, nel))
+            ustart <- c(ustart, rep(0, nel))
           } # thresholds
 
           # fixed-to-zero intercepts (since 0.5.17)
@@ -447,9 +469,12 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
         # if multilevel, level=1 has fixed zeroes
         if (nlevels > 1L && l == 1L) {
           within_1 <- rep(0L, nel)
+          # within-only variables have a free mean at level 1; match by
+          # NAME: ov_int may exclude ordinal (and exogenous) variables,
+          # while within.idx refers to the full ('tilde') variable set
           # FIXME: assuming 1 group
-          within_idx <- match(lp$within.idx[[2]], lp$ov.idx[[1]])
-          within_1[within_idx] <- 1L
+          within_names <- lp$ov.names[lp$within.idx[[2]]]
+          within_1[ov_int %in% within_names] <- 1L
           free <- c(free, within_1)
         } else {
           free <- c(free, rep(1L, nel))

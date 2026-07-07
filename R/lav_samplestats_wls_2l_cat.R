@@ -38,23 +38,79 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
   # 'h1' (unrestricted model) implied statistics, in the standard
   # multilevel layout (within/between block per group); consumed by
   # fit measures (srmr), the baseline model (starting values), ...
-  h1_implied <- list(
-    cov = vector("list", ngroups * nlevels),
-    mean = vector("list", ngroups * nlevels)
-  )
+  if (isTRUE(lavoptions$conditional.x)) {
+    # note: we ALSO fill in the (residual, y-only) cov/mean entries:
+    # several consumers (starting values, ...) look for
+    # lavh1$implied$cov[[b]] regardless of conditional.x
+    h1_implied <- list(
+      cov = vector("list", ngroups * nlevels),
+      mean = vector("list", ngroups * nlevels),
+      res.cov = vector("list", ngroups * nlevels),
+      res.int = vector("list", ngroups * nlevels),
+      res.slopes = vector("list", ngroups * nlevels),
+      cov.x = vector("list", ngroups * nlevels),
+      mean.x = vector("list", ngroups * nlevels)
+    )
+  } else {
+    h1_implied <- list(
+      cov = vector("list", ngroups * nlevels),
+      mean = vector("list", ngroups * nlevels)
+    )
+  }
+
+  conditional_x <- isTRUE(lavoptions$conditional.x)
 
   for (g in seq_len(ngroups)) {
     lp <- lavdata@Lp[[g]]
     nobs <- lavsamplestats@nobs[[g]]
 
-    # phase 5 (v1) restrictions
-    if (length(lavsamplestats@x.idx[[g]]) > 0L) {
+    if (!conditional_x && length(lavsamplestats@x.idx[[g]]) > 0L) {
       lav_msg_stop(gettext(
-        "fixed.x = TRUE is not supported (yet) for two-level (D)WLS
-        estimation; use fixed.x = FALSE."))
+        "fixed.x = TRUE with conditional.x = FALSE is not supported (yet)
+        for two-level (D)WLS estimation."))
     }
-    ov_names_1 <- lavdata@ov.names.l[[g]][[1]]
-    ov_names_2 <- lavdata@ov.names.l[[g]][[2]]
+
+    # y variables per level (excluding exogenous covariates), in the
+    # block variable order; the covariates (if any) come from the Lp
+    # within.x/between.x index sets ('split' covariates -- appearing at
+    # both levels -- have already been moved to the y set).
+    # NOTE: all Lp index sets refer to the 'tilde' universe (lp$ov.names
+    # = the y variables followed by the x variables), which is also the
+    # column order of lavdata@X[[g]] for multilevel data
+    ov_names_all <- lp$ov.names
+    x_w <- x_b <- NULL
+    xw_names <- xb_names <- NULL
+    if (conditional_x) {
+      y_idx1 <- lp$ov.y.idx[[1]]
+      y_idx2 <- lp$ov.y.idx[[2]]
+      xw_idx <- lp$within.x.idx[[1]]
+      xb_idx <- lp$between.x.idx[[2]]
+      if (length(xw_idx) > 0L) {
+        x_w <- lavdata@X[[g]][, xw_idx, drop = FALSE]
+        xw_names <- ov_names_all[xw_idx]
+      }
+      if (length(xb_idx) > 0L) {
+        x_b <- lavdata@X[[g]][, xb_idx, drop = FALSE]
+        xb_names <- ov_names_all[xb_idx]
+      }
+      # 'split' covariates (exogenous, but appearing at both levels) are
+      # not supported (yet): every covariate must be within-only or
+      # between-only
+      split_x <- setdiff(lavdata@ov.names.x[[g]], c(xw_names, xb_names))
+      if (length(split_x) > 0L) {
+        lav_msg_stop(gettextf(
+          "two-level (D)WLS estimation does not support exogenous
+          covariates that appear at both levels (yet): %s. Each covariate
+          should be used at a single level only (cfr. within/between
+          covariates); alternatively, use fixed.x = FALSE.",
+          lav_msg_view(split_x, "none")))
+      }
+    } else {
+      y_idx1 <- lp$ov.idx[[1]]
+      y_idx2 <- lp$ov.idx[[2]]
+    }
+    ov_names_1 <- ov_names_all[y_idx1]
+    ov_names_2 <- ov_names_all[y_idx2]
     if (length(setdiff(ov_names_2, ov_names_1)) > 0L) {
       lav_msg_stop(gettext(
         "two-level (D)WLS estimation with categorical data does not
@@ -79,11 +135,13 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
 
     # stage-wise estimation of the unrestricted two-level model
     m07 <- lav_muthen2007(
-      y = lavdata@X[[g]],
+      y = lavdata@X[[g]][, y_idx1, drop = FALSE],
       ov_names = ov_names_1,
       ov_types = ov_types,
       cluster_idx = lp$cluster.idx[[2]],
       between_flag = between_flag,
+      x_w = x_w, x_b = x_b,
+      xw_names = xw_names, xb_names = xb_names,
       ngh = lavoptions$integration.ngh,
       ngh2 = 13L,
       wls_w = TRUE
@@ -137,11 +195,52 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
     b_idx <- which(between_flag)
     mu_w1 <- numeric(NROW(m07$SIGMA.W))
     mu_w1[!between_flag] <- m07$MU[!between_flag]
-    h1_implied$cov[[(g - 1) * nlevels + 1L]] <- m07$SIGMA.W
-    h1_implied$cov[[(g - 1) * nlevels + 2L]] <-
-      m07$SIGMA.B[b_idx, b_idx, drop = FALSE]
-    h1_implied$mean[[(g - 1) * nlevels + 1L]] <- mu_w1
-    h1_implied$mean[[(g - 1) * nlevels + 2L]] <- m07$MU[b_idx]
+    w_pos <- (g - 1) * nlevels + 1L
+    b_pos <- (g - 1) * nlevels + 2L
+    if (conditional_x) {
+      h1_implied$cov[[w_pos]] <- m07$SIGMA.W
+      h1_implied$cov[[b_pos]] <-
+        m07$SIGMA.B[b_idx, b_idx, drop = FALSE]
+      h1_implied$mean[[w_pos]] <- mu_w1
+      h1_implied$mean[[b_pos]] <- m07$MU[b_idx]
+      h1_implied$res.cov[[w_pos]] <- m07$SIGMA.W
+      h1_implied$res.cov[[b_pos]] <-
+        m07$SIGMA.B[b_idx, b_idx, drop = FALSE]
+      h1_implied$res.int[[w_pos]] <- mu_w1
+      h1_implied$res.int[[b_pos]] <- m07$MU[b_idx]
+      h1_implied$res.slopes[[w_pos]] <- m07$SLOPES.W
+      h1_implied$res.slopes[[b_pos]] <-
+        m07$SLOPES.B[b_idx, , drop = FALSE]
+      # observed covariate moments (within: observation level; between:
+      # cluster level), with the covariate names as dimnames
+      if (!is.null(x_w)) {
+        n1 <- NROW(x_w)
+        cx1 <- cov(x_w) * (n1 - 1) / n1
+        dimnames(cx1) <- list(xw_names, xw_names)
+        h1_implied$cov.x[[w_pos]] <- cx1
+        h1_implied$mean.x[[w_pos]] <- setNames(colMeans(x_w), xw_names)
+      } else {
+        h1_implied$cov.x[[w_pos]] <- matrix(0, 0L, 0L)
+        h1_implied$mean.x[[w_pos]] <- numeric(0L)
+      }
+      if (!is.null(x_b)) {
+        xbj <- x_b[!duplicated(lp$cluster.idx[[2]]), , drop = FALSE]
+        nj <- NROW(xbj)
+        cx2 <- cov(xbj) * (nj - 1) / nj
+        dimnames(cx2) <- list(xb_names, xb_names)
+        h1_implied$cov.x[[b_pos]] <- cx2
+        h1_implied$mean.x[[b_pos]] <- setNames(colMeans(xbj), xb_names)
+      } else {
+        h1_implied$cov.x[[b_pos]] <- matrix(0, 0L, 0L)
+        h1_implied$mean.x[[b_pos]] <- numeric(0L)
+      }
+    } else {
+      h1_implied$cov[[w_pos]] <- m07$SIGMA.W
+      h1_implied$cov[[b_pos]] <-
+        m07$SIGMA.B[b_idx, b_idx, drop = FALSE]
+      h1_implied$mean[[w_pos]] <- mu_w1
+      h1_implied$mean[[b_pos]] <- m07$MU[b_idx]
+    }
   }
 
   lavsamplestats@WLS.obs <- wls_obs
@@ -165,12 +264,14 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
 #
 #   1. th (per within variable: thresholds for ordinal, fixed 0 for
 #      continuous)
-#   2. within means of the within-only (continuous) variables
-#   3. within variances of the continuous variables
-#   4. within covariances (vech, no diagonal)
-#   5. between means (continuous: mu; ordinal: fixed 0) -- between
-#      variables only
-#   6. vech(Sigma_b, diagonal = TRUE) -- between variables only
+#   2. within means/intercepts of the within-only (continuous) variables
+#   3. vec(Pi_w): within slopes, column-major over (variable, covariate)
+#   4. within variances of the continuous variables
+#   5. within covariances (vech, no diagonal)
+#   6. between means/intercepts (continuous: mu; ordinal: fixed 0) --
+#      between variables only
+#   7. vec(Pi_b): between slopes, column-major -- between variables only
+#   8. vech(Sigma_b, diagonal = TRUE) -- between variables only
 lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
                               between_flag = NULL) {
   nvar <- length(ov_types)
@@ -189,6 +290,31 @@ lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
   }
   eta_end <- cumsum(pair_neta)
   eta_start <- eta_end - pair_neta + 1L
+  nexo_w <- if (is.null(m07$nexo.w)) 0L else m07$nexo.w
+  nexo_b <- if (is.null(m07$nexo.b)) 0L else m07$nexo.b
+
+  # per-variable offsets (within the univariate block) of the 'base'
+  # parameters and the slopes; the univariate block layout is
+  #   ordinal:              (tau_1..K, vb, wsl..., bsl...)
+  #   continuous (between): (mu, vw, vb, wsl..., bsl...)
+  #   continuous (within):  (mu, vw, wsl...)
+  nth_p <- integer(nvar) # thresholds per variable (0 = continuous)
+  vb_off <- integer(nvar) # offset of vb (NA-like 0 if absent)
+  wsl_off <- integer(nvar) # offset of the last param before wsl
+  for (p in seq_len(nvar)) {
+    if (ord[p]) {
+      nth_p[p] <- npar_uni[p] - 1L - nexo_w -
+        (if (between_flag[p]) nexo_b else 0L)
+      vb_off[p] <- nth_p[p] + 1L
+      wsl_off[p] <- nth_p[p] + 1L
+    } else if (between_flag[p]) {
+      vb_off[p] <- 3L
+      wsl_off[p] <- 3L
+    } else {
+      vb_off[p] <- 0L
+      wsl_off[p] <- 2L
+    }
+  }
 
   # source positions (in the stage-wise vector) of each target entry;
   # 0 = structurally-fixed entry (value stored in fixed_val)
@@ -200,10 +326,9 @@ lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
   # 1. th: thresholds (ordinal); fixed 0 slots (continuous)
   for (p in seq_len(nvar)) {
     if (ord[p]) {
-      nth_p <- npar_uni[p] - 1L
-      src <- c(src, uni_start[p] - 1L + seq_len(nth_p))
-      fixed_val <- c(fixed_val, rep(NA_real_, nth_p))
-      th_idx <- c(th_idx, rep(p, nth_p))
+      src <- c(src, uni_start[p] - 1L + seq_len(nth_p[p]))
+      fixed_val <- c(fixed_val, rep(NA_real_, nth_p[p]))
+      th_idx <- c(th_idx, rep(p, nth_p[p]))
     } else {
       src <- c(src, 0L)
       fixed_val <- c(fixed_val, 0)
@@ -217,14 +342,21 @@ lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
       fixed_val <- c(fixed_val, NA_real_)
     }
   }
-  # 3. variances of the continuous variables (vw)
-  for (p in seq_len(nvar)) {
-    if (!ord[p]) {
-      src <- c(src, uni_start[p] + 1L) # (mu, vw[, vb])
+  # 3. vec(Pi_w): all variables for covariate 1, then covariate 2, ...
+  for (q in seq_len(nexo_w)) {
+    for (p in seq_len(nvar)) {
+      src <- c(src, uni_start[p] - 1L + wsl_off[p] + q)
       fixed_val <- c(fixed_val, NA_real_)
     }
   }
-  # 4. within covariances/'correlations' (vech, no diagonal): cw
+  # 4. variances of the continuous variables (vw)
+  for (p in seq_len(nvar)) {
+    if (!ord[p]) {
+      src <- c(src, uni_start[p] + 1L) # (mu, vw, ...)
+      fixed_val <- c(fixed_val, NA_real_)
+    }
+  }
+  # 5. within covariances/'correlations' (vech, no diagonal): cw
   for (pp in seq_len(pstar)) {
     src <- c(src, ntheta + eta_start[pp]) # cw is the first free param
     fixed_val <- c(fixed_val, NA_real_)
@@ -232,7 +364,7 @@ lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
 
   # --- between block (between variables only) ---
   b_idx <- which(between_flag)
-  # 5. between means: mu (continuous); 0 (ordinal, fixed)
+  # 6. between means: mu (continuous); 0 (ordinal, fixed)
   for (p in b_idx) {
     if (ord[p]) {
       src <- c(src, 0L)
@@ -242,7 +374,14 @@ lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
       fixed_val <- c(fixed_val, NA_real_)
     }
   }
-  # 6. vech(Sigma_b, diagonal = TRUE): vb (diag) and cb (off-diagonal)
+  # 7. vec(Pi_b) over the between variables
+  for (q in seq_len(nexo_b)) {
+    for (p in b_idx) {
+      src <- c(src, uni_start[p] - 1L + wsl_off[p] + nexo_w + q)
+      fixed_val <- c(fixed_val, NA_real_)
+    }
+  }
+  # 8. vech(Sigma_b, diagonal = TRUE): vb (diag) and cb (off-diagonal)
   # in lav_mat_vech (column-major) order over the between variables
   pair_pos <- matrix(0L, nvar, nvar)
   pp <- 0L
@@ -257,7 +396,7 @@ lav_m07_repackage <- function(m07 = NULL, ov_types = NULL,
     for (ii in jj:nb) {
       i <- b_idx[ii]; j <- b_idx[jj]
       if (i == j) {
-        src <- c(src, uni_end[j]) # vb is the last univariate parameter
+        src <- c(src, uni_start[j] - 1L + vb_off[j])
         fixed_val <- c(fixed_val, NA_real_)
       } else {
         pp <- pair_pos[i, j]

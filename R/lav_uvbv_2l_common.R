@@ -168,6 +168,31 @@ lav_2l_gauss_dm2ll <- function(cs = NULL, mu = NULL,
   out
 }
 
+# per-observation GLS-weighted residuals m = Sigma_j^{-1} e (n x d):
+#
+#     m_i = Sw^{-1} e_i - Sw^{-1} (nj Sb) Vj^{-1} ebar_j
+#
+# the score of the loglik with respect to a mean parameter of variable a
+# with observation-level design column x is sum_i x_i m_ia (cluster-wise:
+# rowsum(x * m[, a])); used for the slope parameters (covariates)
+lav_2l_gauss_mresid <- function(e = NULL, cluster_idx = NULL,
+                                sigma_w = NULL, sigma_b = NULL) {
+  e <- as.matrix(e)
+  d <- NCOL(e)
+  njs <- tabulate(cluster_idx)
+  ebar <- rowsum.default(e, group = cluster_idx, reorder = TRUE) / njs
+  sw_inv <- solve(sigma_w)
+  m <- e %*% sw_inv
+  adj <- matrix(0, length(njs), d)
+  for (nj in sort(unique(njs))) {
+    idx <- which(njs == nj)
+    vj_inv <- solve(sigma_w + nj * sigma_b)
+    hmat <- sw_inv %*% (nj * sigma_b) %*% vj_inv
+    adj[idx, ] <- ebar[idx, , drop = FALSE] %*% t(hmat)
+  }
+  m - adj[cluster_idx, , drop = FALSE]
+}
+
 # standardized Gauss-Hermite nodes for integrating over N(0, 1):
 #   integral f(u) phi(u) du ~= sum_q w_q f(x_q)
 # (the caller rescales: b_q = sqrt(vb) * x_q)

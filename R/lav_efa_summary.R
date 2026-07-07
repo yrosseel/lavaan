@@ -24,7 +24,7 @@ lav_efa_summary <- function(object,
                             )) {
   stopifnot(inherits(object, "lavaan"))
   efa_args <- lav_snake_case(efa_args)
- 
+
   nblocks <- object@Model@nblocks
   orthogonal_flag <- object@Options$rotation.args$orthogonal
 

@@ -360,11 +360,12 @@ lav_model_pt  <- function(
             block = seq_len(nblocks)[-block]
           )
         } else {
-          # TEST ME
-          this_group <- ceiling(block / nlevels)
-          blocks_within_group <- (this_group - 1L) * nlevels + seq_len(nlevels)
+          nlevels_pt <- nblocks %/% ngroups
+          this_group <- ceiling(block / nlevels_pt)
+          blocks_within_group <- (this_group - 1L) * nlevels_pt +
+            seq_len(nlevels_pt)
           other_block_names <- lav_pt_vnames(flat, "ov",
-            block = blocks_within_group[-block]
+            block = blocks_within_group[blocks_within_group != block]
           )
         }
         ov_names_x_block <- lav_pt_vnames(flat_block, "ov.x")
