@@ -243,12 +243,17 @@ lav_m07_delta <- function(lavmodel = NULL, glist = NULL) {
   imp <- lav_m07_implied_raw(lavmodel, glist = glist)
 
   # threshold Jacobian: the raw thresholds are affine in the free
-  # parameters, so one-sided finite differences are exact
+  # parameters, so one-sided finite differences are exact.
+  # IMPORTANT: the base thresholds must be evaluated at the SAME
+  # parameter vector as the perturbed ones (x0 from the lavmodel object,
+  # which may differ from the current glist state!)
   x0 <- lav_model_get_parameters(lavmodel)
-  th0 <- lav_m07_th_raw(lavmodel = lavmodel, glist = glist)
+  lavmodel_0 <- lav_model_set_parameters(lavmodel, x = x0)
+  th_base <- lav_m07_th_raw(lavmodel = lavmodel_0,
+                            glist = lavmodel_0@GLIST)
   nx <- length(x0)
   th_jac <- vector("list", lavmodel@nblocks)
-  nth_b <- sapply(th0, length)
+  nth_b <- sapply(th_base, length)
   for (b in seq_len(lavmodel@nblocks)) {
     th_jac[[b]] <- matrix(0, nth_b[b], nx)
   }
@@ -260,7 +265,7 @@ lav_m07_delta <- function(lavmodel = NULL, glist = NULL) {
                           glist = lavmodel_k@GLIST)
     for (b in seq_len(lavmodel@nblocks)) {
       if (nth_b[b] > 0L) {
-        th_jac[[b]][, k] <- th1[[b]] - th0[[b]]
+        th_jac[[b]][, k] <- th1[[b]] - th_base[[b]]
       }
     }
   }
