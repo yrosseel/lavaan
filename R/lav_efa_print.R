@@ -1,6 +1,8 @@
 # print only (standardized) loadings
 lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
-                             dot.cutoff = 0.1, alpha.level = 0.01, ...) {  # nolint
+                             dot_cutoff = 0.1, alpha_level = 0.01, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # unclass
   y <- unclass(x)
 
@@ -18,8 +20,8 @@ lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
     mm_lambda <- unclass(y$efa$lambda[[b]])
     lav_print_loadings(mm_lambda,
       nd = nd, cutoff = cutoff,
-      dot_cutoff = dot.cutoff,
-      alpha_level = alpha.level,
+      dot_cutoff = dot_cutoff,
+      alpha_level = alpha_level,
       x_se = y$efa$lambda.se[[b]]
     )
     cat("\n")
@@ -30,7 +32,9 @@ lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
 
 # print efaList
 lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
-                          dot.cutoff = 0.1, alpha.level = 0.01, ...) {   # nolint
+                          dot_cutoff = 0.1, alpha_level = 0.01, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # unclass
   y <- unclass(x)
 
@@ -50,9 +54,9 @@ lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
         theta            = FALSE,
         psi              = FALSE,
         eigenvalues      = FALSE,
-        sumsq.table      = FALSE,
-        lambda.structure = FALSE,
-        fs.determinacy   = FALSE,
+        sumsq_table      = FALSE,
+        lambda_structure = FALSE,
+        fs_determinacy   = FALSE,
         se               = FALSE,
         zstat            = FALSE,
         pvalue           = FALSE
@@ -60,8 +64,8 @@ lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
     )
     res_1[[ff]] <- lav_efa_print(res,
       nd = nd, cutoff = cutoff,
-      dot.cutoff = dot.cutoff,
-      alpha.level = alpha.level, ...
+      dot_cutoff = dot_cutoff,
+      alpha_level = alpha_level, ...
     )
   }
 
@@ -71,14 +75,12 @@ lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
 
 # print summary efaList
 lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
-                                  dot.cutoff = 0.1, alpha.level = 0.01, # nolint
+                                  dot_cutoff = 0.1, alpha_level = 0.01,
                                   ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # unclass
   y <- unclass(x)
-
-  # rename arguments which are modified inside the function
-  dot_cutoff <- dot.cutoff
-  alpha_level <- alpha.level
 
   # get nd, if it is stored as an attribute
   nd_1 <- attr(y, "nd")
@@ -90,13 +92,13 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   if (!is.null(ct) && is.numeric(ct)) {
     cutoff <- ct
   }
-  # get dot.cutoff, if it is stored as an attribute
-  dc <- attr(y, "dot.cutoff")
+  # get dot_cutoff, if it is stored as an attribute
+  dc <- attr(y, "dot_cutoff")
   if (!is.null(dc) && is.numeric(dc)) {
     dot_cutoff <- dc
   }
-  # get alpha.level, if it is stored as an attribute
-  al <- attr(y, "alpha.level")
+  # get alpha_level, if it is stored as an attribute
+  al <- attr(y, "alpha_level")
   if (!is.null(al) && is.numeric(al)) {
     alpha_level <- al
   }
@@ -223,14 +225,14 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   nfactors <- x$nfactors
 
   # fit measures
-  if (!is.null(x$fit.table)) {
+  if (!is.null(x$fit_table)) {
     cat("\n")
     if (nfits > 1L) {
       cat("Overview models:\n")
     } else {
       cat("Fit measures:\n")
     }
-    print(x$fit.table, nd = nd, shift = 2L)
+    print(x$fit_table, nd = nd, shift = 2L)
   }
 
   # eigenvalues
@@ -255,8 +257,8 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
     res <- x$model.list[[f]]
     attr(res, "nd") <- nd
     attr(res, "cutoff") <- cutoff
-    attr(res, "dot.cutoff") <- dot_cutoff
-    attr(res, "alpha.level") <- alpha_level
+    attr(res, "dot_cutoff") <- dot_cutoff
+    attr(res, "alpha_level") <- alpha_level
 
     if (nfits > 1L) {
       if (f == 1L) {

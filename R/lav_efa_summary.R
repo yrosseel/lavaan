@@ -15,15 +15,16 @@ lav_efa_summary <- function(object,
                               theta = TRUE,
                               psi = TRUE,
                               eigenvalues = TRUE,
-                              sumsq.table = TRUE,
-                              lambda.structure = FALSE,
-                              fs.determinacy = FALSE,
+                              sumsq_table = TRUE,
+                              lambda_structure = FALSE,
+                              fs_determinacy = FALSE,
                               se = FALSE,
                               zstat = FALSE,
                               pvalue = FALSE
                             )) {
   stopifnot(inherits(object, "lavaan"))
-
+  efa_args <- lav_snake_case(efa_args)
+ 
   nblocks <- object@Model@nblocks
   orthogonal_flag <- object@Options$rotation.args$orthogonal
 
@@ -74,7 +75,7 @@ lav_efa_summary <- function(object,
   # Note: these 'determinacy' values are only properly defined for the
   #       'regression' factor scores! (If we would apply the same formulas
   #       for Bartlett factor scores, we would obtain 1's!
-  if (efa_args$fs.determinacy) {
+  if (efa_args$fs_determinacy) {
     fs_determinacy <- lapply(seq_len(nblocks), function(b) {
       cor_1 <- cov2cor(cov_1[[b]]) # just in case
       cor_inv <- try(solve(cor_1), silent = TRUE)
@@ -90,7 +91,7 @@ lav_efa_summary <- function(object,
 
   # sum-of-squares table
   sumsq_table <- NULL
-  if (efa_args$sumsq.table) {
+  if (efa_args$sumsq_table) {
     sumsq_table <- lapply(seq_len(nblocks), function(b) {
       # nvar <- nrow(mm_lambda[[b]])
       nfactor <- ncol(mm_lambda[[b]])
@@ -156,10 +157,10 @@ lav_efa_summary <- function(object,
 
       tmp
     })
-  } # sumsq.table
+  } # sumsq_table
 
   # (factor) structure coefficients
-  if (efa_args$lambda.structure) {
+  if (efa_args$lambda_structure) {
     lambda_structure <- lapply(seq_len(nblocks), function(b) {
       tmp <- mm_lambda[[b]] %*% mm_psi[[b]]
       class(tmp) <- c("lavaan.matrix", "matrix")
@@ -296,10 +297,10 @@ lav_efa_summary <- function(object,
     block.label = block_label,
     std_ov = std_ov,
     eigvals = eigvals,
-    sumsq.table = sumsq_table,
+    sumsq_table = sumsq_table,
     orthogonal = object@Options$rotation.args$orthogonal,
-    lambda.structure = lambda_structure,
-    fs.determinacy = fs_determinacy,
+    lambda_structure = lambda_structure,
+    fs_determinacy = fs_determinacy,
     lambda = mm_lambda,
     theta = mm_theta,
     psi = mm_psi,
@@ -319,13 +320,15 @@ lav_efa_summary <- function(object,
 
 
 # summary efaList
-lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, # nolint start
-                            alpha.level = 0.01,
+lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot_cutoff = 0.1,
+                            alpha_level = 0.01,
                             lambda = TRUE, theta = TRUE, psi = TRUE,
-                            fit.table = TRUE, fs.determinacy = FALSE,
-                            eigenvalues = TRUE, sumsq.table = TRUE,
-                            lambda.structure = FALSE, se = FALSE,
-                            zstat = FALSE, pvalue = FALSE, ...) {               # nolint end
+                            fit_table = TRUE, fs_determinacy = FALSE,
+                            eigenvalues = TRUE, sumsq_table = TRUE,
+                            lambda_structure = FALSE, se = FALSE,
+                            zstat = FALSE, pvalue = FALSE, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # kill object$loadings if present
   object[["loadings"]] <- NULL
 
@@ -335,9 +338,9 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
   # construct efa.args
   efa_args <- list(
     lambda = lambda, theta = theta, psi = psi,
-    eigenvalues = eigenvalues, sumsq.table = sumsq.table,
-    lambda.structure = lambda.structure,
-    fs.determinacy = fs.determinacy,
+    eigenvalues = eigenvalues, sumsq_table = sumsq_table,
+    lambda_structure = lambda_structure,
+    fs_determinacy = fs_determinacy,
     se = se, zstat = zstat, pvalue = pvalue
   )
 
@@ -374,7 +377,7 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
 
   # fit.measures
   table_1 <- NULL
-  if (fit.table) {
+  if (fit_table) {
     # first, create standard table
     fit <- fitMeasures(object, fit.measures = "default")
     names_1 <- rownames(fit)
@@ -452,16 +455,16 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     rotation = rotation,
     rotation.args = rotation_args,
     lavdata = lavdata,
-    fit.table = table_1,
+    fit_table = table_1,
     nfactors = nfactors,
     model.list = res
   )
 
-  # add nd, cutoff, dot.cutoff, ... as attributes (for printing)
+  # add nd, cutoff, dot_cutoff, ... as attributes (for printing)
   attr(out, "nd") <- nd
   attr(out, "cutoff") <- cutoff
-  attr(out, "dot.cutoff") <- dot.cutoff
-  attr(out, "alpha.level") <- alpha.level
+  attr(out, "dot_cutoff") <- dot_cutoff
+  attr(out, "alpha_level") <- alpha_level
 
   # create class
   class(out) <- c("efaList.summary", "list")
