@@ -216,9 +216,9 @@ lav_test_fmg_check_estimator <- function(lavoptions = NULL,
   ))
 }
 
-lav_test_fmg_ugamma_eigenvalues <- function(UGamma, df,
+lav_test_fmg_ugamma_eigenvalues <- function(ugamma, df,
                                             truncate_negative = TRUE) {
-  eigs <- Re(eigen(UGamma, only.values = TRUE)$values)
+  eigs <- Re(eigen(ugamma, only.values = TRUE)$values)
   lambdas_raw <- sort(eigs, decreasing = TRUE)[seq_len(df)]
   lambdas <- lambdas_raw
   truncated <- rep(FALSE, length(lambdas))
@@ -256,7 +256,7 @@ lav_test_fmg_label <- function(parsed, unbiased = FALSE, chisq = "ml") {
   paste0(
     method_label,
     " p-value test (base: ", chisq_label,
-    ", Gamma: ", gamma_label, ")"
+    ", gamma: ", gamma_label, ")"
   )
 }
 
@@ -328,8 +328,8 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
     n.minus.one <- lavoptions$gamma.n.minus.one
   }
 
-  Delta <- lav_model_delta(lavmodel)
-  Gamma <- lav_object_gamma(
+  delta <- lav_model_delta(lavmodel)
+  gamma <- lav_object_gamma(
     lavobject = NULL,
     lavdata = lavdata,
     lavoptions = lavoptions,
@@ -351,8 +351,8 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   if (!lineq.flag) {
     for (g in seq_len(ngroups)) {
       RES <- WLS.obs[[g]] - WLS.est[[g]]
-      Delta.c <- lav_mat_ortho_complement(Delta[[g]])
-      t_dgd <- crossprod(Delta.c, Gamma[[g]]) %*% Delta.c
+      Delta.c <- lav_mat_ortho_complement(delta[[g]])
+      t_dgd <- crossprod(Delta.c, gamma[[g]]) %*% Delta.c
       t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
       Ng <- if (n.minus.one) nobs[[g]] - 1L else nobs[[g]]
       t_res_delta_c <- crossprod(RES, Delta.c)
@@ -362,7 +362,7 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
     STAT <- sum(stat.group)
   } else {
     RES.all <- do.call("c", WLS.obs) - do.call("c", WLS.est)
-    Delta.all <- do.call("rbind", Delta)
+    Delta.all <- do.call("rbind", delta)
     if (lavmodel@eq.constraints) {
       Delta.g <- Delta.all %*% lavmodel@eq.constraints.K
     } else {
@@ -371,9 +371,9 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
     Gamma.inv.weighted <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
       Ng <- if (n.minus.one) nobs[[g]] - 1L else nobs[[g]]
-      Gamma.inv.temp <- try(solve(Gamma[[g]]), silent = TRUE)
+      Gamma.inv.temp <- try(solve(gamma[[g]]), silent = TRUE)
       if (inherits(Gamma.inv.temp, "try-error")) {
-        Gamma.inv.temp <- MASS::ginv(Gamma[[g]])
+        Gamma.inv.temp <- MASS::ginv(gamma[[g]])
       }
       Gamma.inv.weighted[[g]] <- Gamma.inv.temp * Ng / ntotal
     }
@@ -424,7 +424,7 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
 #' @param lavmodel Model object (extracted from lavobject if NULL)
 #' @param lavdata Data object (extracted from lavobject if NULL)
 #' @param lavoptions Options (extracted from lavobject if NULL)
-#' @param TEST.unscaled Unscaled test from lavobject@test[[1]]
+#' @param test_unscaled Unscaled test from lavobject@test[[1]]
 #' @param test Character string specifying the test (e.g., "peba4_ug_rls")
 #' @return List with test results including stat, df, pvalue
 #' @keywords internal
@@ -434,12 +434,12 @@ lav_test_fmg <- function(lavobject = NULL,
                          lavimplied = NULL,
                          lavdata = NULL,
                          lavoptions = NULL,
-                         TEST.unscaled = NULL,
-                         TEST.chisq = NULL,
-                         E.inv = NULL,
-                         Delta = NULL,
-                         WLS.V = NULL,
-                         Gamma = NULL,
+                         test_unscaled = NULL,
+                         test_chisq = NULL,
+                         e_inv = NULL,
+                         delta = NULL,
+                         wls_v = NULL,
+                         gamma = NULL,
                          test = "peba4") {
   # Extract from lavobject if provided
   if (!is.null(lavobject)) {
@@ -447,8 +447,8 @@ lav_test_fmg <- function(lavobject = NULL,
     lavmodel <- lavobject@Model
     lavoptions <- lavobject@Options
     lavdata <- lavobject@Data
-    if (is.null(TEST.unscaled)) {
-      TEST.unscaled <- lavobject@test[[1]]
+    if (is.null(test_unscaled)) {
+      test_unscaled <- lavobject@test[[1]]
     }
   }
 
@@ -461,19 +461,19 @@ lav_test_fmg <- function(lavobject = NULL,
   unbiased <- lav_test_fmg_resolve_unbiased(parsed, lavoptions = lavoptions)
   label <- lav_test_fmg_label(parsed, unbiased = unbiased, chisq = chisq)
 
-  if (is.null(TEST.chisq)) {
-    TEST.chisq <- TEST.unscaled
+  if (is.null(test_chisq)) {
+    test_chisq <- test_unscaled
     if (chisq == "rls") {
       if (is.null(lavobject)) {
         return(NULL)
       }
-      TEST.chisq <- lav_test_fmg_browne_nt_model(lavobject = lavobject)
+      test_chisq <- lav_test_fmg_browne_nt_model(lavobject = lavobject)
     }
   }
-  chisq_stat <- TEST.chisq$stat
+  chisq_stat <- test_chisq$stat
 
   # Get df
-  df <- TEST.unscaled$df
+  df <- test_unscaled$df
 
   # Handle df == 0 case
   if (df == 0L || df < 0L) {
@@ -481,7 +481,7 @@ lav_test_fmg <- function(lavobject = NULL,
       test = test,
       stat = as.numeric(NA),
       source.stat = chisq_stat,
-      source.stat.group = TEST.chisq$stat.group,
+      source.stat.group = test_chisq$stat.group,
       df = df,
       pvalue = as.numeric(NA),
       refdistr = "chisq",
@@ -493,28 +493,28 @@ lav_test_fmg <- function(lavobject = NULL,
     ))
   }
 
-  # Get UGamma matrix (with unbiased option)
-  UGamma <- lav_test_fmg_ugamma(
+  # Get ugamma matrix (with unbiased option)
+  ugamma <- lav_test_fmg_ugamma(
     lavobject = lavobject,
     lavsamplestats = lavsamplestats,
     lavmodel = lavmodel,
     lavimplied = lavimplied,
     lavdata = lavdata,
     lavoptions = lavoptions,
-    TEST.unscaled = TEST.unscaled,
-    E.inv = E.inv,
-    Delta = Delta,
-    WLS.V = WLS.V,
-    Gamma = Gamma,
+    test_unscaled = test_unscaled,
+    e_inv = e_inv,
+    delta = delta,
+    wls_v = wls_v,
+    gamma = gamma,
     unbiased = unbiased
   )
 
-  if (is.null(UGamma)) {
+  if (is.null(ugamma)) {
     return(list(
       test = test,
       stat = as.numeric(NA),
       source.stat = chisq_stat,
-      source.stat.group = TEST.chisq$stat.group,
+      source.stat.group = test_chisq$stat.group,
       df = df,
       pvalue = as.numeric(NA),
       refdistr = "chisq",
@@ -527,7 +527,7 @@ lav_test_fmg <- function(lavobject = NULL,
   }
 
   # Compute eigenvalues (first df eigenvalues)
-  eig <- lav_test_fmg_ugamma_eigenvalues(UGamma, df)
+  eig <- lav_test_fmg_ugamma_eigenvalues(ugamma, df)
   lambdas <- eig$values
 
   # Compute p-value based on method
@@ -547,7 +547,7 @@ lav_test_fmg <- function(lavobject = NULL,
   pvalue <- max(0, min(1, pvalue))
   stat <- lav_test_fmg_chisq_equivalent(pvalue, df)
   stat.group <- lav_test_fmg_stat_group_equivalent(
-    stat_group = TEST.chisq$stat.group,
+    stat_group = test_chisq$stat.group,
     source_stat = chisq_stat,
     stat = stat
   )
@@ -558,7 +558,7 @@ lav_test_fmg <- function(lavobject = NULL,
     stat = stat,
     stat.group = stat.group,
     source.stat = chisq_stat,
-    source.stat.group = TEST.chisq$stat.group,
+    source.stat.group = test_chisq$stat.group,
     df = df,
     pvalue = pvalue,
     refdistr = "chisq",
@@ -574,14 +574,14 @@ lav_test_fmg <- function(lavobject = NULL,
 }
 
 # =====================================================
-# UGamma computation
+# ugamma computation
 # =====================================================
 
-#' Get UGamma matrix with optional unbiased gamma
+#' Get ugamma matrix with optional unbiased gamma
 #'
 #' @param lavobject A lavaan object
 #' @param unbiased Logical: use Du & Bentler (2022) unbiased gamma?
-#' @return UGamma matrix
+#' @return ugamma matrix
 #' @keywords internal
 lav_test_fmg_ugamma <- function(lavobject = NULL,
                                 lavsamplestats = NULL,
@@ -589,11 +589,11 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
                                 lavimplied = NULL,
                                 lavdata = NULL,
                                 lavoptions = NULL,
-                                TEST.unscaled = NULL,
-                                E.inv = NULL,
-                                Delta = NULL,
-                                WLS.V = NULL,
-                                Gamma = NULL,
+                                test_unscaled = NULL,
+                                e_inv = NULL,
+                                delta = NULL,
+                                wls_v = NULL,
+                                gamma = NULL,
                                 unbiased = FALSE) {
   if (!is.null(lavobject)) {
     lavsamplestats <- lavobject@SampleStats
@@ -601,36 +601,36 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     lavimplied <- lavobject@implied
     lavoptions <- lavobject@Options
     lavdata <- lavobject@Data
-    if (is.null(TEST.unscaled)) {
-      TEST.unscaled <- lavobject@test[[1]]
+    if (is.null(test_unscaled)) {
+      test_unscaled <- lavobject@test[[1]]
     }
   }
 
   ngroups <- lavdata@ngroups
 
   if (unbiased) {
-    # Recompute Gamma with unbiased = TRUE
-    Gamma <- vector("list", ngroups)
+    # Recompute gamma with unbiased = TRUE
+    gamma <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      Gamma[[g]] <- lav_samp_gamma(
+      gamma[[g]] <- lav_samp_gamma(
         m_y = lavdata@X[[g]],
         meanstructure = lavoptions$meanstructure,
         unbiased = TRUE
       )
     }
   } else {
-    if (is.null(Gamma)) {
+    if (is.null(gamma)) {
       if (!is.null(lavobject)) {
-        Gamma <- lavTech(lavobject, "Gamma")
+        gamma <- lavTech(lavobject, "gamma")
       } else {
-        Gamma <- lavsamplestats@NACOV
+        gamma <- lavsamplestats@NACOV
       }
     }
-    if (!is.list(Gamma)) {
-      Gamma <- list(Gamma)
+    if (!is.list(gamma)) {
+      gamma <- list(gamma)
     }
-    if (is.null(Gamma[[1L]])) {
-      Gamma <- lav_object_gamma(
+    if (is.null(gamma[[1L]])) {
+      gamma <- lav_object_gamma(
         lavobject = NULL,
         lavdata = lavdata,
         lavoptions = lavoptions,
@@ -643,7 +643,7 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     }
   }
 
-  # Get U matrix and UGamma using existing infrastructure
+  # Get U matrix and ugamma using existing infrastructure
   out <- lav_test_sb(
     lavobject = lavobject,
     lavsamplestats = lavsamplestats,
@@ -651,11 +651,11 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     lavimplied = lavimplied,
     lavdata = lavdata,
     lavoptions = lavoptions,
-    test_unscaled = TEST.unscaled,
-    e_inv = E.inv,
-    delta = Delta,
-    wls_v = WLS.V,
-    m_gamma = Gamma,
+    test_unscaled = test_unscaled,
+    e_inv = e_inv,
+    delta = delta,
+    wls_v = wls_v,
+    m_gamma = gamma,
     method = "original",
     return_ugamma = TRUE,
     return_u = TRUE
@@ -665,7 +665,7 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     return(NULL)
   }
 
-  # If unbiased, recompute UGamma with new Gamma
+  # If unbiased, recompute ugamma with new gamma
   if (unbiased) {
     U <- out$UfromUGamma
     if (is.null(U)) {
@@ -674,17 +674,17 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
 
     # Rescale gamma by group weights
     fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-    Gamma_scaled <- vector("list", length(Gamma))
-    for (g in seq_along(Gamma)) {
-      Gamma_scaled[[g]] <- Gamma[[g]] / fg[g]
+    Gamma_scaled <- vector("list", length(gamma))
+    for (g in seq_along(gamma)) {
+      Gamma_scaled[[g]] <- gamma[[g]] / fg[g]
     }
     Gamma_all <- lav_mat_bdiag(Gamma_scaled)
-    UGamma <- U %*% Gamma_all
+    ugamma <- U %*% Gamma_all
   } else {
-    UGamma <- out$UGamma
+    ugamma <- out$ugamma
   }
 
-  UGamma
+  ugamma
 }
 
 # =====================================================
@@ -770,7 +770,7 @@ lav_test_fmg_imhof <- function(q, lambda, h = rep(1, length(lambda)),
 #' Penalized EBA p-value (Foldnes et al. 2024)
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @param j Number of blocks
 #' @return p-value
 #' @keywords internal
@@ -794,7 +794,7 @@ lav_test_fmg_peba <- function(chisq, lambdas, j = 4L) {
 #' Penalized OLS p-value (Foldnes et al. 2024)
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @param gamma Penalization parameter
 #' @return p-value
 #' @keywords internal
@@ -819,7 +819,7 @@ lav_test_fmg_pols <- function(chisq, lambdas, gamma = 2) {
 #' Penalized all eigenvalues (for nested models)
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @return p-value
 #' @keywords internal
 lav_test_fmg_pall <- function(chisq, lambdas) {
@@ -834,7 +834,7 @@ lav_test_fmg_pall <- function(chisq, lambdas) {
 #' All eigenvalues exact p-value
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @return p-value
 #' @keywords internal
 lav_test_fmg_all <- function(chisq, lambdas) {
@@ -848,7 +848,7 @@ lav_test_fmg_all <- function(chisq, lambdas) {
 #' Satorra-Bentler via eigenvalues
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @return p-value
 #' @keywords internal
 lav_test_fmg_sb <- function(chisq, lambdas) {
@@ -863,7 +863,7 @@ lav_test_fmg_sb <- function(chisq, lambdas) {
 #' Scaled and shifted p-value
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @param df Degrees of freedom
 #' @return p-value
 #' @keywords internal
@@ -889,7 +889,7 @@ lav_test_fmg_ss <- function(chisq, lambdas, df) {
 #' Scaled F p-value (Wu & Lin 2016)
 #'
 #' @param chisq Chi-square statistic
-#' @param lambdas Eigenvalues of UGamma
+#' @param lambdas Eigenvalues of ugamma
 #' @return p-value
 #' @keywords internal
 lav_test_fmg_scaled_f <- function(chisq, lambdas) {
@@ -982,10 +982,10 @@ lav_test_fmg_nested <- function(m0, m1, test = "pall") {
   }
   chisq_diff <- chisq0 - chisq1
 
-  # Get UGamma for nested comparison (Satorra 2000 projection)
-  UGamma <- lav_test_fmg_ugamma_nested(m0, m1, unbiased = unbiased)
+  # Get ugamma for nested comparison (Satorra 2000 projection)
+  ugamma <- lav_test_fmg_ugamma_nested(m0, m1, unbiased = unbiased)
 
-  if (is.null(UGamma)) {
+  if (is.null(ugamma)) {
     return(list(
       test = test,
       stat = as.numeric(NA),
@@ -997,7 +997,7 @@ lav_test_fmg_nested <- function(m0, m1, test = "pall") {
   }
 
   # Compute first df eigenvalues
-  eig <- lav_test_fmg_ugamma_eigenvalues(UGamma, df)
+  eig <- lav_test_fmg_ugamma_eigenvalues(ugamma, df)
   lambdas <- eig$values
 
   # Compute p-value (pall is recommended for nested)
@@ -1025,33 +1025,33 @@ lav_test_fmg_nested <- function(m0, m1, test = "pall") {
   )
 }
 
-#' Compute UGamma for nested models (Satorra 2000 projection)
+#' Compute ugamma for nested models (Satorra 2000 projection)
 #'
 #' @param m0 Restricted model
 #' @param m1 Unrestricted model
 #' @param unbiased Use unbiased gamma?
-#' @return UGamma matrix
+#' @return ugamma matrix
 #' @keywords internal
 lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
   lavdata <- m1@Data
   ngroups <- lavdata@ngroups
 
-  # Get Gamma from m1 (with optional unbiased)
+  # Get gamma from m1 (with optional unbiased)
   if (unbiased) {
-    Gamma <- vector("list", ngroups)
+    gamma <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      Gamma[[g]] <- lav_samp_gamma(
+      gamma[[g]] <- lav_samp_gamma(
         m_y = lavdata@X[[g]],
         meanstructure = m1@Options$meanstructure,
         unbiased = TRUE
       )
     }
   } else {
-    Gamma <- lavTech(m1, "Gamma")
-    if (is.null(Gamma)) {
-      Gamma <- lavTech(m0, "Gamma")
+    gamma <- lavTech(m1, "gamma")
+    if (is.null(gamma)) {
+      gamma <- lavTech(m0, "gamma")
     }
-    if (is.null(Gamma)) {
+    if (is.null(gamma)) {
       lav_msg_stop(gettextf(
         paste(
           "Could not calculate the gamma matrix.",
@@ -1060,10 +1060,10 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
         dQuote("MLM"), dQuote("satorra.bentler")
       ))
     }
-    if (!is.list(Gamma)) Gamma <- list(Gamma)
+    if (!is.list(gamma)) gamma <- list(gamma)
   }
 
-  WLS.V <- lavTech(m1, "WLS.V")
+  wls_v <- lavTech(m1, "WLS.V")
   PI <- lav_model_delta(m1@Model)
   P.inv <- lavTech(m1, "inverted.information")
 
@@ -1100,15 +1100,15 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
 
   # Build global matrices
   fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal
-  Gamma_f <- vector("list", length(Gamma))
-  for (g in seq_along(Gamma)) {
-    Gamma_f[[g]] <- Gamma[[g]] / fg[g]
+  Gamma_f <- vector("list", length(gamma))
+  for (g in seq_along(gamma)) {
+    Gamma_f[[g]] <- gamma[[g]] / fg[g]
   }
   Gamma_all <- lav_mat_bdiag(Gamma_f)
 
-  V_f <- WLS.V
-  for (g in seq_along(WLS.V)) {
-    V_f[[g]] <- fg[g] * WLS.V[[g]]
+  V_f <- wls_v
+  for (g in seq_along(wls_v)) {
+    V_f[[g]] <- fg[g] * wls_v[[g]]
   }
   V_all <- lav_mat_bdiag(V_f)
 

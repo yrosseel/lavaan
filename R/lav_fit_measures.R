@@ -851,7 +851,10 @@ lav_fit_rv <- function(object, fit_measures = "all",
 }
 
 # print a nice summary of the fit measures
-lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
+lav_fitmeasures_print <- function(x, ..., nd = 3L, add_h0 = TRUE) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
+
   names_x <- names(x)
 
   # scaled?
@@ -861,7 +864,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
   num_format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
   ## TDJ: optionally add h0 model's fit statistic, for lavaan.mi
-  if (add.h0 && "chisq" %in% names_x) {
+  if (add_h0 && "chisq" %in% names_x) {
     cat("\nModel Test User Model:\n\n")
 
     # container three columns

@@ -29,7 +29,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   lav_adapt_func(environment(), dotdotdot, FALSE)
   type <- tolower(type[1])
   test <- tolower(test[1])
-  method.orig <- method[1]
+  method_orig <- method[1]
   method <- tolower(gsub("[-_\\.]", "", method[1]))
   if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt")) {
     if (type == "browne") {
@@ -147,7 +147,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       mods = mods,
       test = test,
       method = method,
-      method.orig = method.orig,
+      method_orig = method_orig,
       estimator = estimator,
       ntotal = ntotal,
       ngroups = ngroups,
@@ -211,7 +211,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
         "method = %s requires robust test statistics, but none of the models
         were fitted with a robust test; the method= argument is ignored, and a
         standard (regular) chi-squared difference test is computed instead.",
-        dQuote(method.orig)))
+        dQuote(method_orig)))
     }
     test_1 <- "standard"
     method <- "standard"
@@ -644,14 +644,14 @@ lav_test_lrt_single_model <- function(object, method = "default",
 }
 
 lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
-                             method.orig = method,
+                             method_orig = method,
                              estimator = "ML", ntotal = NULL,
                              ngroups = NULL, missing = "listwise") {
   if (!method %in% c("default", "standard", "satorra2000")) {
     lav_msg_stop(gettextf(
       "FMG nested tests require method= %1$s, %2$s, or %3$s; found %4$s.",
       dQuote("default"), dQuote("standard"), dQuote("satorra.2000"),
-      dQuote(method.orig)
+      dQuote(method_orig)
     ))
   }
   invisible(lapply(

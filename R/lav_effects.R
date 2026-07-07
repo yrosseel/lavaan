@@ -379,7 +379,7 @@ lavEffects <- function(object,
         ci_lower <- est + qnorm(a) * se
         ci_upper <- est + qnorm(1 - a) * se
       } else { # monte.carlo
-        mc <- lav_effects_mc_draws(x_hat, vcov, R = mc_r, seed = mc_seed)
+        mc <- lav_effects_mc_draws(x_hat, vcov, r = mc_r, seed = mc_seed)
         mc.eff <- apply(mc, 1L, eff_func)
         if (length(est) == 1L) {
           mc.eff <- matrix(mc.eff, ncol = 1L)
@@ -420,11 +420,11 @@ lavEffects <- function(object,
 
   # standardized effects? Add std.lv/std.all/std.nox/std.user columns (point
   # estimates), just like the standardized= argument of parameterEstimates().
-  std.types <- lav_effects_std_types(object, standardized)
-  if (length(std.types$types) > 0L) {
+  std_types <- lav_effects_std_types(object, standardized)
+  if (length(std_types$types) > 0L) {
     eff_df <- lav_effects_add_standardized(eff_df, object, lavmodel, specs,
       row_block = row_block, row_lin = row_lin,
-      std.types = std.types$types, ov.std.user = std.types$ov.std.user,
+      std_types = std_types$types, ov_std_user = std_types$ov_std_user,
       cov_std = cov_std)
   }
 
@@ -448,7 +448,7 @@ lavEffects <- function(object,
 # vector of standardization types and an optional set of user-specified
 # observed variables to standardize (std.user)
 lav_effects_std_types <- function(object, standardized) {
-  ov.std.user <- NULL
+  ov_std_user <- NULL
   if (is.logical(standardized)) {
     if (isTRUE(standardized)) {
       types <- c("std.lv", "std.all")
@@ -471,8 +471,8 @@ lav_effects_std_types <- function(object, standardized) {
           "standardized= argument contains unknown observed variable(s): %s",
           paste(bad, collapse = ", ")))
       }
-      ov.std.user <- standardized[standardized %in% ov.all]
-      if (length(ov.std.user) == 0L) {
+      ov_std_user <- standardized[standardized %in% ov.all]
+      if (length(ov_std_user) == 0L) {
         types <- character(0L)
       } else {
         types <- c("std.lv", "std.user")
@@ -491,27 +491,27 @@ lav_effects_std_types <- function(object, standardized) {
       }
     }
   }
-  list(types = types, ov.std.user = ov.std.user)
+  list(types = types, ov_std_user = ov_std_user)
 }
 
 # the (model-implied) standard-deviation vector used to standardize the BETA
 # variables of a block, for a given standardization 'type'. Variables that are
 # not standardized under this type get a SD of 1.
-lav_effects_std_sd_vec <- function(var.names, sd.all, type, lv.names,
-                                   ovx.names, ov.std.user) {
-  sdv <- sd.all
+lav_effects_std_sd_vec <- function(var_names, sd_all, type, lv_names,
+                                   ovx_names, ov_std_user) {
+  sdv <- sd_all
   if (type == "std.lv") {
     # only the (true) latent variables are standardized
-    sdv[!(var.names %in% lv.names)] <- 1
+    sdv[!(var_names %in% lv_names)] <- 1
   } else if (type == "std.nox") {
     # all variables except the exogenous observed 'x'
-    sdv[var.names %in% ovx.names] <- 1
+    sdv[var_names %in% ovx_names] <- 1
   } else if (type == "std.user") {
     # latents + user-specified observed variables
-    keep <- (var.names %in% lv.names) | (var.names %in% ov.std.user)
+    keep <- (var_names %in% lv_names) | (var_names %in% ov_std_user)
     sdv[!keep] <- 1
   }
-  # type == "std.all": standardize everything (sdv = sd.all)
+  # type == "std.all": standardize everything (sdv = sd_all)
   sdv
 }
 
@@ -520,8 +520,8 @@ lav_effects_std_sd_vec <- function(var.names, sd.all, type, lv.names,
 # SDs are the model-implied standard deviations of the BETA variables under the
 # requested standardization type.
 lav_effects_add_standardized <- function(eff_df, object, lavmodel, specs,
-                                         row_block, row_lin, std.types,
-                                         ov.std.user = NULL, cov_std = TRUE) {
+                                         row_block, row_lin, std_types,
+                                         ov_std_user = NULL, cov_std = TRUE) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   glist_names <- names(lavmodel@GLIST)
@@ -534,8 +534,8 @@ lav_effects_add_standardized <- function(eff_df, object, lavmodel, specs,
   # variables, plus the variable classifications needed by each type
   sd.row.all <- vector("list", nblocks)
   sd.col.all <- vector("list", nblocks)
-  lv.names <- vector("list", nblocks)
-  ovx.names <- vector("list", nblocks)
+  lv_names <- vector("list", nblocks)
+  ovx_names <- vector("list", nblocks)
   for (b in seq_len(nblocks)) {
     sp <- specs[[b]]
     if (is.null(sp)) {
@@ -558,12 +558,12 @@ lav_effects_add_standardized <- function(eff_df, object, lavmodel, specs,
     } else {
       sd.col.all[[b]] <- sd.eta
     }
-    lv.names[[b]] <- lav_pt_vnames(partable, "lv", block = b)
-    ovx.names[[b]] <- lav_pt_vnames(partable, "ov.x", block = b)
+    lv_names[[b]] <- lav_pt_vnames(partable, "lv", block = b)
+    ovx_names[[b]] <- lav_pt_vnames(partable, "ov.x", block = b)
   }
 
   nr.rows <- nrow(eff_df)
-  for (ty in std.types) {
+  for (ty in std_types) {
     # per-block SD vectors (row and column) for this standardization type
     sd.row <- vector("list", nblocks)
     sd.col <- vector("list", nblocks)
@@ -572,9 +572,9 @@ lav_effects_add_standardized <- function(eff_df, object, lavmodel, specs,
         next
       }
       sd.row[[b]] <- lav_effects_std_sd_vec(specs[[b]]$row.names,
-        sd.row.all[[b]], ty, lv.names[[b]], ovx.names[[b]], ov.std.user)
+        sd.row.all[[b]], ty, lv_names[[b]], ovx_names[[b]], ov_std_user)
       sd.col[[b]] <- lav_effects_std_sd_vec(specs[[b]]$col.names,
-        sd.col.all[[b]], ty, lv.names[[b]], ovx.names[[b]], ov.std.user)
+        sd.col.all[[b]], ty, lv_names[[b]], ovx_names[[b]], ov_std_user)
     }
     std.col <- rep(as.numeric(NA), nr.rows)
     for (r in seq_len(nr.rows)) {
@@ -728,15 +728,15 @@ lav_effects_print <- function(x, ..., nd = 3L) {
 # is forced to FALSE (we are not interested in self-loops).
 lav_effects_reachable <- function(a) {
   n <- nrow(a)
-  R <- (a != 0)
+  r <- (a != 0)
   if (n > 1L) {
-    # Warshall: R[i, j] |= R[i, k] & R[k, j]
+    # Warshall: r[i, j] |= r[i, k] & r[k, j]
     for (k in seq_len(n)) {
-      R <- R | (R[, k, drop = FALSE] %*% R[k, , drop = FALSE] > 0L)
+      r <- r | (r[, k, drop = FALSE] %*% r[k, , drop = FALSE] > 0L)
     }
   }
-  diag(R) <- FALSE
-  R
+  diag(r) <- FALSE
+  r
 }
 
 # build the master effect-evaluation function:
@@ -798,10 +798,10 @@ lav_effects_func <- function(specs, effects, nblocks) {
   }
 }
 
-# draw R samples from MVN(x_hat, vcov), saving/restoring the RNG state
-lav_effects_mc_draws <- function(x_hat, vcov, R = 20000L, seed = NULL) {
-  R <- as.integer(R)
-  stopifnot(R > 0L)
+# draw r samples from MVN(x_hat, vcov), saving/restoring the RNG state
+lav_effects_mc_draws <- function(x_hat, vcov, r = 20000L, seed = NULL) {
+  r <- as.integer(r)
+  stopifnot(r > 0L)
 
   if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
     saved.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
@@ -818,10 +818,10 @@ lav_effects_mc_draws <- function(x_hat, vcov, R = 20000L, seed = NULL) {
   }
 
   vcov.sym <- 0.5 * (vcov + t(vcov))
-  mc <- lav_mvrnorm(n = R, mu = x_hat, sigma_1 = vcov.sym,
+  mc <- lav_mvrnorm(n = r, mu = x_hat, sigma_1 = vcov.sym,
     check_symmetry = FALSE)
   if (!is.matrix(mc)) {
-    mc <- matrix(mc, nrow = R)
+    mc <- matrix(mc, nrow = r)
   }
   mc
 }

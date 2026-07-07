@@ -586,12 +586,12 @@ lav_model_test <- function(lavobject = NULL,
         lavdata = lavdata,
         lavoptions = lavoptions,
         lavimplied = lavimplied,
-        TEST.unscaled = test_1[[1]],
-        TEST.chisq = unscaled_test,
-        E.inv = attr(vcov_1, "E.inv"),
-        Delta = attr(vcov_1, "Delta"),
-        WLS.V = attr(vcov_1, "WLS.V"),
-        Gamma = attr(vcov_1, "Gamma"),
+        test_unscaled = test_1[[1]],
+        test_chisq = unscaled_test,
+        e_inv = attr(vcov_1, "E.inv"),
+        delta = attr(vcov_1, "Delta"),
+        wls_v = attr(vcov_1, "WLS.V"),
+        gamma = attr(vcov_1, "Gamma"),
         test = this_test
       )
     } else if (lavoptions$estimator == "PML") {
