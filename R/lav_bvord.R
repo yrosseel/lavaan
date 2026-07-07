@@ -4,7 +4,9 @@
 # - polychoric (and tetrachoric) correlations
 # - bivariate ordinal regression
 # - using sampling weights wt
-
+#
+# YR/LDW 2026: refactored (see lav_uvbv_common.R for the shared cache/minfns
+#              design); no change in behavior
 #
 #  info concerning lintr package, Luc DW May 7, 2026
 #  there is a known problem in codetools, transferred to lintr, that
@@ -61,15 +63,11 @@ lav_bvord_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
                                       init_theta = NULL,
                                       control = list(step.min = 0.1), # 0.6-7
                                       y1_name = NULL, y2_name = NULL) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvord_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
   # create cache environment
-  cache <- lav_bvord_init_cache(fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt)
+  cache <- lav_bvord_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt,
+    fit_y1 = fit_y1, fit_y2 = fit_y2
+  )
 
   # empty cells or not
   empty_cells <- FALSE
@@ -166,16 +164,7 @@ lav_bvord_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   } # non-exo
 
   # optim.method
-  min_objective <- lav_bvord_min_objective
-  min_gradient <- lav_bvord_min_grad
-  min_hessian <- lav_bvord_min_hessian
-  if (optim_method == "nlminb" || optim_method == "nlminb2") {
-    # nothing to do
-  } else if (optim_method == "nlminb0") {
-    min_gradient <- min_hessian <- NULL
-  } else if (optim_method == "nlminb1") {
-    min_hessian <- NULL
-  }
+  minfns <- lav_uvbv_optim_fns(optim_method, lav_bvord_min_fns())
 
   # optimize
   if (is.null(control$trace)) {
@@ -191,8 +180,8 @@ lav_bvord_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
 
   # try 1
   optim <- nlminb(
-    start = start_x, objective = min_objective,
-    gradient = min_gradient, hessian = min_hessian,
+    start = start_x, objective = minfns$objective,
+    gradient = minfns$gradient, hessian = minfns$hessian,
     control = control,
     scale = optim_scale, lower = -0.999, upper = +0.999,
     cache = cache
@@ -202,7 +191,7 @@ lav_bvord_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   if (optim$convergence != 0L) {
     # try again, with different starting value
     optim <- nlminb(
-      start = 0, objective = min_objective,
+      start = 0, objective = minfns$objective,
       gradient = NULL, hessian = NULL,
       control = control,
       scale = optim_scale, lower = -0.995, upper = +0.995,
@@ -233,6 +222,43 @@ lav_bvord_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   rho
 }
 
+# build the cache from user-level arguments: fit the univariate models if
+# needed, apply parameter overrides, and initialize the cache environment
+# (shared by lav_bvord_cor_twostep_fit/_cor_sc/_logl/_lik)
+lav_bvord_cache_from_args <- function(y1, y2, exo = NULL, wt = NULL,
+                                      rho = NULL,
+                                      fit_y1 = NULL, fit_y2 = NULL,
+                                      th_y1 = NULL, th_y2 = NULL,
+                                      sl_y1 = NULL, sl_y2 = NULL,
+                                      scores = FALSE) {
+  if (is.null(fit_y1)) {
+    fit_y1 <- lav_uvord_fit(y = y1, x = exo, wt = wt)
+  }
+  if (is.null(fit_y2)) {
+    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
+  }
+
+  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in
+  #                                     lav_model_gradient_pml.R)
+  fit_y1 <- lav_uvord_update_fit(
+    fit_y = fit_y1,
+    th_new = th_y1, sl_new = sl_y1
+  )
+  fit_y2 <- lav_uvord_update_fit(
+    fit_y = fit_y2,
+    th_new = th_y2, sl_new = sl_y2
+  )
+
+  cache <- lav_bvord_init_cache(
+    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+    scores = scores
+  )
+  if (!is.null(rho)) {
+    cache$theta <- rho
+  }
+
+  cache
+}
 
 # prepare cache environment
 lav_bvord_init_cache <- function(fit_y1 = NULL,
@@ -255,8 +281,6 @@ lav_bvord_init_cache <- function(fit_y1 = NULL,
     nth_y2 <- length(th_y2)
     pth_y1 <- pnorm(th_y1)
     pth_y2 <- pnorm(th_y2)
-    upper_y <- rep(th_y2, times = rep.int(nth_y1, nth_y2))
-    upper_x <- rep(th_y1, times = ceiling(length(upper_y)) / nth_y1)
   } else {
     nexo <- ncol(exo)
     freq <- NULL
@@ -301,95 +325,72 @@ lav_bvord_init_cache <- function(fit_y1 = NULL,
   # parameter vector
   theta <- rho_init # only, for now
 
-  # different cache if exo or not
+  # cache environment: common part + exo/noexo specific parts
+  # (+ the case x th indicator matrices when scores are needed)
+  cache_list <- list(
+    nexo = nexo, theta = theta, wt = wt, n = n,
+    y1 = y1, y2 = y2, freq = freq
+  )
   if (nexo == 0L) {
+    cache_list <- c(cache_list, list(
+      th_y1 = th_y1, th_y2 = th_y2,
+      nth_y1 = nth_y1, nth_y2 = nth_y2,
+      pth_y1 = pth_y1, pth_y2 = pth_y2
+    ))
     if (scores) {
-      out <- list2env(
-        list(
-          nexo = nexo, theta = theta, n = n,
-          fit_y1_z1 = fit_y1$z1, fit_y1_z2 = fit_y1$z2,
-          fit_y2_z1 = fit_y2$z1, fit_y2_z2 = fit_y2$z2,
-          y1_y1 = fit_y1$y1, y1_y2 = fit_y1$y2,
-          y2_y1 = fit_y2$y1, y2_y2 = fit_y2$y2,
-          y1 = y1, y2 = y2, freq = freq,
-          th_y1 = th_y1, th_y2 = th_y2,
-          nth_y1 = nth_y1, nth_y2 = nth_y2,
-          pth_y1 = pth_y1, pth_y2 = pth_y2,
-          upper_y = upper_y, upper_x = upper_x
-        ),
-        parent = parent
-      )
-    } else {
-      out <- list2env(
-        list(
-          nexo = nexo, theta = theta, n = n,
-          y1 = y1, y2 = y2, freq = freq,
-          th_y1 = th_y1, th_y2 = th_y2,
-          nth_y1 = nth_y1, nth_y2 = nth_y2,
-          pth_y1 = pth_y1, pth_y2 = pth_y2,
-          upper_y = upper_y, upper_x = upper_x
-        ),
-        parent = parent
-      )
+      cache_list <- c(cache_list, list(
+        fit_y1_z1 = fit_y1$z1, fit_y1_z2 = fit_y1$z2,
+        fit_y2_z1 = fit_y2$z1, fit_y2_z2 = fit_y2$z2
+      ))
     }
   } else {
+    cache_list <- c(cache_list, list(
+      fit_y1_z1 = fit_y1_z1, fit_y1_z2 = fit_y1_z2,
+      fit_y2_z1 = fit_y2_z1, fit_y2_z2 = fit_y2_z2,
+      missing_idx = missing_idx
+    ))
     if (scores) {
-      out <- list2env(
-        list(
-          nexo = nexo, theta = theta, wt = wt, n = n,
-          exo = exo,
-          y1_y1 = fit_y1$y1, y1_y2 = fit_y1$y2,
-          y2_y1 = fit_y2$y1, y2_y2 = fit_y2$y2,
-          fit_y1_z1 = fit_y1_z1, fit_y1_z2 = fit_y1_z2,
-          fit_y2_z1 = fit_y2_z1, fit_y2_z2 = fit_y2_z2,
-          missing_idx = missing_idx
-        ),
-        parent = parent
-      )
-    } else {
-      out <- list2env(
-        list(
-          nexo = nexo, theta = theta, wt = wt, n = n,
-          fit_y1_z1 = fit_y1_z1, fit_y1_z2 = fit_y1_z2,
-          fit_y2_z1 = fit_y2_z1, fit_y2_z2 = fit_y2_z2,
-          missing_idx = missing_idx
-        ),
-        parent = parent
-      )
+      cache_list <- c(cache_list, list(exo = exo))
     }
   }
+  if (scores) {
+    cache_list <- c(cache_list, list(
+      y1_y1 = fit_y1$y1, y1_y2 = fit_y1$y2,
+      y2_y1 = fit_y2$y1, y2_y2 = fit_y2$y2
+    ))
+  }
 
-  out
+  list2env(cache_list, parent = parent)
 }
 
 # probabilities for each cell, given rho, th_y1 and th_y2
 lav_bvord_noexo_pi_cache <- function(cache = NULL) {
   with(cache, {                     # nolint start
-    rho <- theta[1L]
-
-    # catch special case: rho = 0.0
-    if (rho == 0.0) {
-      row_pi <- base::diff(c(0, pth_y1, 1))
-      col_pi <- base::diff(c(0, pth_y2, 1))
-      pi_ij <- base::outer(row_pi, col_pi)
-      return(pi_ij)
-    }
-
-    bi <- pbivnorm::pbivnorm(x = upper_x, y = upper_y, rho = rho)
-    dim(bi) <- c(nth_y1, nth_y2)
-    bi <- rbind(0, bi, pth_y2, deparse.level = 0L)
-    bi <- cbind(0, bi, c(0, pth_y1, 1), deparse.level = 0L)
-
-    # get probabilities
-    nr <- nrow(bi)
-    nc <- ncol(bi)
-    pi0 <- bi[-1L, -1L] - bi[-1L, -nc] - bi[-nr, -1L] + bi[-nr, -nc]
-
-    # all elements should be strictly positive
-    pi0[pi0 < .Machine$double.eps^(2/3)] <- .Machine$double.eps^(2/3)
-
+    pi0 <- lav_bvord_noexo_pi(
+      rho = theta[1L], th_y1 = th_y1, th_y2 = th_y2
+    )
     return(pi0)
   })                                         # nolint end
+}
+
+# the four-corner accumulation: given the (nth_y1 x nth_y2) matrix of values
+# at all threshold crossings, compute the (nth_y1+1 x nth_y2+1) per-cell
+# rectangle combination x[i,j] - x[i-1,j] - x[i,j-1] + x[i-1,j-1]
+lav_bvord_corner_sum <- function(x = NULL, nth_y1 = NULL, nth_y2 = NULL) {
+  p1 <- p2 <- p3 <- p4 <- matrix(0, nth_y1 + 1L, nth_y2 + 1L)
+  t1_idx <- seq_len(nth_y1)
+  t2_idx <- seq_len(nth_y2)
+
+  # p1 is left-upper corner
+  p1[t1_idx, t2_idx] <- x
+  # p2 is left-lower corner
+  p2[t1_idx + 1L, t2_idx] <- x
+  # p3 is right-upper corner
+  p3[t1_idx, t2_idx + 1L] <- x
+  # p4 is right-lower corner
+  p4[t1_idx + 1L, t2_idx + 1L] <- x
+
+  p1 - p2 - p3 + p4
 }
 
 # partial derivative of CDF(th_y1, th_y2, rho) with respect to rho
@@ -404,55 +405,21 @@ lav_bvord_noexo_phi_cache <- function(cache = NULL) {
       nrow = nth_y1, ncol = nth_y2
     )
 
-    p1 <- p2 <- p3 <- p4 <- matrix(0, nth_y1 + 1L, nth_y2 + 1L)
-    t1_idx <- seq_len(nth_y1)
-    t2_idx <- seq_len(nth_y2)
-
-    # p1 is left-upper corner
-    p1[t1_idx, t2_idx] <- dbi_norm
-    # p2 is left-lower corner
-    p2[t1_idx + 1L, t2_idx] <- dbi_norm
-    # p3 is right-upper corner
-    p3[t1_idx, t2_idx + 1L] <- dbi_norm
-    # p3 is right-lower corner
-    p4[t1_idx + 1L, t2_idx + 1L] <- dbi_norm
-
-    phi <- p1 - p2 - p3 + p4
+    phi <- lav_bvord_corner_sum(dbi_norm, nth_y1, nth_y2)
     return(phi)
   })                                          # nolint end
 }
 
-# Olsson 1979 A2
+# derivative of phi_2(y1,y2;rho) wrt rho equals
+# phi_2(y1,y2;rho) * guv(y1,y2;rho) -- see lav_dbinorm_guv() in lav_bvreg.R
 lav_bvord_noexo_gnorm_cache <- function(cache = NULL) {
   with(cache, {                         # nolint start
     rho <- theta[1L]
 
-    # note: Olsson 1979 A2 contains an error!!
-    # derivative of phi_2(y1,y2;rho) wrt to rho equals
-    # phi_2(y1,y2;rho) * guv(y1,y2;rho), where guv() is defined below:
-    guv <- function(u, v, rho) {
-      r <- (1 - rho * rho)
-      (u * v * r -
-        rho * ((u * u) - 2 * rho * u * v + (v * v)) + rho * r) / (r * r)
-    }
-
     # compute gnorm for all possible combinations
-    gnorm_1 <- dbi_norm * matrix(guv(t1, t2, rho), nth_y1, nth_y2)
+    gnorm_1 <- dbi_norm * matrix(lav_dbinorm_guv(t1, t2, rho), nth_y1, nth_y2)
 
-    p1 <- p2 <- p3 <- p4 <- matrix(0, nth_y1 + 1L, nth_y2 + 1L)
-    t1_idx <- seq_len(nth_y1)
-    t2_idx <- seq_len(nth_y2)
-
-    # p1 is left-upper corner
-    p1[t1_idx, t2_idx] <- gnorm_1
-    # p2 is left-lower corner
-    p2[t1_idx + 1L, t2_idx] <- gnorm_1
-    # p3 is right-upper corner
-    p3[t1_idx, t2_idx + 1L] <- gnorm_1
-    # p3 is right-lower corner
-    p4[t1_idx + 1L, t2_idx + 1L] <- gnorm_1
-
-    gnorm <- p1 - p2 - p3 + p4
+    gnorm <- lav_bvord_corner_sum(gnorm_1, nth_y1, nth_y2)
     return(gnorm)
   })                                          # nolint end
 }
@@ -532,10 +499,6 @@ lav_bvord_grad_cache <- function(cache = NULL) {
 
       # avoid dividing by very tiny numbers (new in 0.6-6)
       # -> done automatically: lik == NA in this case
-      # bad.idx <- which(lik <= sqrt(.Machine$double.eps))
-      # if(length(bad.idx) > 0L) {
-      #    lik[bad.idx] <- as.numeric(NA)
-      # }
 
       dx2 <- phi / lik
 
@@ -568,16 +531,10 @@ lav_bvord_hessian_cache <- function(cache = NULL) {
 
       # exo
     } else {
-      guv <- function(u, v, rho) {
-        r <- (1 - rho * rho)
-        (u * v * r -
-          rho * ((u * u) - 2 * rho * u * v + (v * v)) + rho * r) / (r * r)
-      }
-
-      gnorm <- ((d1 * guv(fit_y1_z1, fit_y2_z1, rho)) -
-        (d2 * guv(fit_y1_z2, fit_y2_z1, rho)) -
-        (d3 * guv(fit_y1_z1, fit_y2_z2, rho)) +
-        (d4 * guv(fit_y1_z2, fit_y2_z2, rho)))
+      gnorm <- ((d1 * lav_dbinorm_guv(fit_y1_z1, fit_y2_z1, rho)) -
+        (d2 * lav_dbinorm_guv(fit_y1_z2, fit_y2_z1, rho)) -
+        (d3 * lav_dbinorm_guv(fit_y1_z1, fit_y2_z2, rho)) +
+        (d4 * lav_dbinorm_guv(fit_y1_z2, fit_y2_z2, rho)))
 
       if (is.null(wt)) {
         h <- sum(gnorm / lik - (phi * phi) / (lik * lik), na.rm = TRUE)
@@ -592,43 +549,24 @@ lav_bvord_hessian_cache <- function(cache = NULL) {
   })                                              # nolint end
 }
 
-
-
-# compute total (log)likelihood, for specific 'x' (nlminb)
-lav_bvord_min_objective <- function(x, cache = NULL) {
-  cache$theta <- x
-  -1 * lav_bvord_logl_cache(cache = cache) / cache$n
+# nlminb objective/gradient/hessian (see lav_uvbv_common.R)
+lav_bvord_min_fns <- function() {
+  lav_uvbv_min_fns(
+    logl_fun = lav_bvord_logl_cache,
+    grad_fun = lav_bvord_grad_cache,
+    hessian_fun = lav_bvord_hessian_cache
+  )
 }
-
-# compute gradient, for specific 'x' (nlminb)
-lav_bvord_min_grad <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_bvord_logl_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_bvord_grad_cache(cache = cache) / cache$n
-}
-
-# compute hessian, for specific 'x' (nlminb)
-lav_bvord_min_hessian <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_bvord_logl_cache(cache = cache)
-    tmp <- lav_bvord_grad_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_bvord_hessian_cache(cache = cache) / cache$n
-}
-
-
 
 
 # casewise scores
 lav_bvord_cor_sc_cache <- function(cache = NULL, na_zero = FALSE,
                                        use_weights = TRUE) {
+  # make the arguments visible inside with(cache, ...): symbols there
+  # resolve through the cache environment (and its parents), NOT through
+  # this function's frame
+  cache$na_zero <- na_zero
+  cache$use_weights <- use_weights
   with(cache, {                 # nolint start
     rho <- theta[1L]
     r <- sqrt(1 - rho * rho)
@@ -732,37 +670,18 @@ lav_bvord_cor_sc <- function(y1, y2, exo = NULL, wt = NULL,
                                  th_y1 = NULL, th_y2 = NULL,
                                  sl_y1 = NULL, sl_y2 = NULL,
                                  na_zero = FALSE, use_weights = TRUE) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvord_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in
-  #                                     lav_model_gradient_pml.R)
-  fit_y1 <- lav_uvord_update_fit(
-    fit_y = fit_y1,
-    th_new = th_y1, sl_new = sl_y1
-  )
-  fit_y2 <- lav_uvord_update_fit(
-    fit_y = fit_y2,
-    th_new = th_y2, sl_new = sl_y2
-  )
-
-  # create cache environment
-  cache <- lav_bvord_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvord_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    th_y1 = th_y1, th_y2 = th_y2,
+    sl_y1 = sl_y1, sl_y2 = sl_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
-  sc <- lav_bvord_cor_sc_cache(
+  lav_bvord_cor_sc_cache(
     cache = cache, na_zero = na_zero,
     use_weights = use_weights
   )
-
-  sc
 }
 
 # logl - no cache
@@ -771,27 +690,12 @@ lav_bvord_logl <- function(y1, y2, exo = NULL, wt = NULL,
                            fit_y1 = NULL, fit_y2 = NULL,
                            th_y1 = NULL, th_y2 = NULL,
                            sl_y1 = NULL, sl_y2 = NULL) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvord_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied()
-  #                             in lav_model_gradient_pml.R)
-  fit_y1 <- lav_uvord_update_fit(
-    fit_y = fit_y1,
-    th_new = th_y1, sl_new = sl_y1
+  cache <- lav_bvord_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    th_y1 = th_y1, th_y2 = th_y2,
+    sl_y1 = sl_y1, sl_y2 = sl_y2
   )
-  fit_y2 <- lav_uvord_update_fit(
-    fit_y = fit_y2,
-    th_new = th_y2, sl_new = sl_y2
-  )
-
-  # create cache environment
-  cache <- lav_bvord_init_cache(fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt)
-  cache$theta <- rho
 
   lav_bvord_logl_cache(cache = cache)
 }
@@ -803,26 +707,12 @@ lav_bvord_lik <- function(y1, y2, exo = NULL, wt = NULL,
                           th_y1 = NULL, th_y2 = NULL,
                           sl_y1 = NULL, sl_y2 = NULL,
                           .log = FALSE) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvord_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # update fit.y1/fit.y2
-  fit_y1 <- lav_uvord_update_fit(
-    fit_y = fit_y1,
-    th_new = th_y1, sl_new = sl_y1
+  cache <- lav_bvord_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    th_y1 = th_y1, th_y2 = th_y2,
+    sl_y1 = sl_y1, sl_y2 = sl_y2
   )
-  fit_y2 <- lav_uvord_update_fit(
-    fit_y = fit_y2,
-    th_new = th_y2, sl_new = sl_y2
-  )
-
-  # create cache environment
-  cache <- lav_bvord_init_cache(fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt)
-  cache$theta <- rho
 
   lik <- lav_bvord_lik_cache(cache = cache) # unweighted
   if (.log) {
@@ -841,7 +731,8 @@ lav_bvord_lik <- function(y1, y2, exo = NULL, wt = NULL,
   lik
 }
 
-# noexo_pi - for backwards compatibility
+# probabilities for each cell, given rho, th_y1 and th_y2
+# (also used directly by lav_tables.R and the PML objective)
 lav_bvord_noexo_pi <- function(rho = NULL, th_y1 = NULL, th_y2 = NULL) {
   nth_y1 <- length(th_y1)
   nth_y2 <- length(th_y2)
@@ -856,10 +747,9 @@ lav_bvord_noexo_pi <- function(rho = NULL, th_y1 = NULL, th_y2 = NULL) {
     return(pi_ij)
   }
 
-  # prepare for a single call to pbinorm
+  # prepare for a single call to pbivnorm
   upper_y <- rep(th_y2, times = rep.int(nth_y1, nth_y2))
   upper_x <- rep(th_y1, times = ceiling(length(upper_y)) / nth_y1)
-  # rho <- rep(rho, length(upper_x)) # only one rho here
 
   bi <- pbivnorm::pbivnorm(x = upper_x, y = upper_y, rho = rho)
   dim(bi) <- c(nth_y1, nth_y2)

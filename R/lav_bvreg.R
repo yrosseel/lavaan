@@ -1,11 +1,21 @@
 # the weighted bivariate linear regression model
-# YR 14 March 2020 ((replacing the old lav_pearson.R + lav_binorm.R routines)
+# YR 14 March 2020 (replacing the old lav_pearson.R + lav_binorm.R routines)
 #
-# - bivariate standard normal
+# - bivariate standard normal (density/CDF primitives, also used by the
+#   other bv modules)
 # - pearson correlation
 # - bivariate linear regression
 # - using sampling weights wt
-
+#
+# YR/LDW 2026: refactored (see lav_uvbv_common.R for the shared cache/minfns
+#              design); fixed two dormant bugs (see below); no change in
+#              behavior otherwise
+#
+#  info concerning lintr package, Luc DW May 7, 2026
+#  there is a known problem in codetools, transferred to lintr, that
+#  variables assigned in a with() are marked as 'may not be used';
+#  to this end the code in with() statements are excluded from linting!
+#
 
 # density of a bivariate __standard__ normal
 lav_dbinorm <- function(u, v, rho, force_zero = FALSE) {
@@ -32,6 +42,18 @@ lav_dbinorm <- function(u, v, rho, force_zero = FALSE) {
   out
 }
 
+# the factor g(u, v; rho) in
+#
+#    d phi_2(u, v; rho) / d rho = phi_2(u, v; rho) * g(u, v; rho)
+#
+# i.e. the derivative of the log bivariate standard normal density with
+# respect to rho; used for the rho-Hessians in lav_bvord.R
+# note: Olsson 1979 A2 contains an error here!
+lav_dbinorm_guv <- function(u, v, rho) {
+  r <- (1 - rho * rho)
+  (u * v * r -
+    rho * ((u * u) - 2 * rho * u * v + (v * v)) + rho * r) / (r * r)
+}
 
 # switch between pbivnorm, mnormt, ...
 pbinorm <- function(upper_x = NULL, upper_y = NULL, rho = 0.0,
@@ -92,32 +114,20 @@ lav_bvreg_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
                                       optim_scale = 1,
                                       init_theta = NULL,
                                       control = list()) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvreg_fit(y = y2, x = exo, wt = wt)
-  }
-
   # create cache environment
-  cache <- lav_bvreg_init_cache(fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt)
+  cache <- lav_bvreg_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt,
+    fit_y1 = fit_y1, fit_y2 = fit_y2
+  )
 
   # the complete case is trivial
-  if (!anyNA(fit_y1$y) && !anyNA(fit_y2$y)) {
+  if (!anyNA(cache$y1) && !anyNA(cache$y2)) {
     return(cache$theta[1L])
   }
 
   # optim.method
-  min_objective <- lav_bvreg_min_objective
-  min_gradient <- lav_bvreg_min_grad
-  min_hessian <- lav_bvreg_min_hessian
-  if (optim_method == "nlminb" || optim_method == "nlminb2") {
-    # nothing to do
-  } else if (optim_method == "nlminb0") {
-    min_gradient <- min_hessian <- NULL
-  } else if (optim_method == "nlminb1") {
-    min_hessian <- NULL
-  } else if (optim_method == "none") {
+  minfns <- lav_uvbv_optim_fns(optim_method, lav_bvreg_min_fns())
+  if (optim_method == "none") {
     return(cache$theta[1L])
   }
 
@@ -135,8 +145,8 @@ lav_bvreg_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
 
   # try 1
   optim <- nlminb(
-    start = start_x, objective = min_objective,
-    gradient = min_gradient, hessian = min_hessian,
+    start = start_x, objective = minfns$objective,
+    gradient = minfns$gradient, hessian = minfns$hessian,
     control = control,
     scale = optim_scale, lower = -0.999, upper = +0.999,
     cache = cache
@@ -145,22 +155,21 @@ lav_bvreg_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   # try 2 (scale = 10)
   if (optim$convergence != 0L) {
     optim <- nlminb(
-      start = start_x, objective = min_objective,
-      gradient = min_gradient, hessian = min_hessian,
+      start = start_x, objective = minfns$objective,
+      gradient = minfns$gradient, hessian = minfns$hessian,
       control = control,
       scale = 10, lower = -0.999, upper = +0.999,
       cache = cache
     )
   }
 
-  # try 3 (start = 0, step.min = 0.1)
+  # try 3 (start = 0, step.min = 0.1, gradient, no hessian)
   if (optim$convergence != 0L) {
     control$step.min <- 0.1
-    min_gradient <- lav_bvreg_min_grad
     # try again, with different starting value
     optim <- nlminb(
-      start = 0, objective = min_objective,
-      gradient = min_gradient, hessian = NULL,
+      start = 0, objective = minfns$objective,
+      gradient = lav_bvreg_min_fns()$gradient, hessian = NULL,
       control = control,
       scale = optim_scale, lower = -0.999, upper = +0.999,
       cache = cache
@@ -188,6 +197,47 @@ lav_bvreg_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   rho
 }
 
+# build the cache from user-level arguments: fit the univariate models if
+# needed, apply parameter overrides, and initialize the cache environment
+# (shared by lav_bvreg_cor_twostep_fit/_cor_sc/_logl/_lik)
+lav_bvreg_cache_from_args <- function(y1, y2, exo = NULL, wt = NULL,
+                                      rho = NULL,
+                                      fit_y1 = NULL, fit_y2 = NULL,
+                                      evar_y1 = NULL, beta_y1 = NULL,
+                                      evar_y2 = NULL, beta_y2 = NULL,
+                                      scores = FALSE) {
+  if (is.null(fit_y1)) {
+    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
+  }
+  if (is.null(fit_y2)) {
+    fit_y2 <- lav_uvreg_fit(y = y2, x = exo, wt = wt)
+  }
+
+  # user specified parameters
+  if (!is.null(evar_y1) || !is.null(beta_y1)) {
+    fit_y1 <- lav_uvreg_update_fit(
+      fit_y = fit_y1,
+      evar_new = evar_y1, beta_new = beta_y1
+    )
+  }
+  if (!is.null(evar_y2) || !is.null(beta_y2)) {
+    fit_y2 <- lav_uvreg_update_fit(
+      fit_y = fit_y2,
+      evar_new = evar_y2, beta_new = beta_y2
+    )
+  }
+
+  cache <- lav_bvreg_init_cache(
+    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+    scores = scores
+  )
+  if (!is.null(rho)) {
+    cache$theta <- rho
+  }
+
+  cache
+}
+
 # Y1 = linear
 # Y2 = linear
 lav_bvreg_init_cache <- function(fit_y1 = NULL,
@@ -207,8 +257,10 @@ lav_bvreg_init_cache <- function(fit_y1 = NULL,
   eta_y1 <- fit_y1$yhat
 
   # Y2
+  # (was fit_y2$theta[fit_y1$var_idx]: harmless as long as both fits share
+  #  the same covariates, which all current callers do)
   y2c <- y2 - fit_y2$yhat
-  evar_y2 <- fit_y2$theta[fit_y1$var_idx]
+  evar_y2 <- fit_y2$theta[fit_y2$var_idx]
   sd_y2 <- sqrt(evar_y2)
   eta_y2 <- fit_y2$yhat
 
@@ -254,30 +306,20 @@ lav_bvreg_init_cache <- function(fit_y1 = NULL,
   # parameter vector
   theta <- rho_init # only
 
-  # different cache if scores or not
+  # cache environment
+  # (note: y1/y2 are only stored when scores = FALSE is not enough --
+  #  they are needed by the twostep fit for the anyNA check)
+  cache_list <- list(
+    nexo = nexo, theta = theta, wt = wt, n = n,
+    y1 = y1, y2 = y2, y1c = y1c, y2c = y2c,
+    evar_y1 = evar_y1, sd_y1 = sd_y1, eta_y1 = eta_y1,
+    evar_y2 = evar_y2, sd_y2 = sd_y2, eta_y2 = eta_y2
+  )
   if (scores) {
-    out <- list2env(
-      list(
-        nexo = nexo, theta = theta, n = n,
-        y1c = y1c, y2c = y2c, exo = exo,
-        evar_y1 = evar_y1, sd_y1 = sd_y1, eta_y1 = eta_y1,
-        evar_y2 = evar_y2, sd_y2 = sd_y2, eta_y2 = eta_y2
-      ),
-      parent = parent
-    )
-  } else {
-    out <- list2env(
-      list(
-        nexo = nexo, theta = theta, n = n,
-        y1c = y1c, y2c = y2c,
-        evar_y1 = evar_y1, sd_y1 = sd_y1, eta_y1 = eta_y1,
-        evar_y2 = evar_y2, sd_y2 = sd_y2, eta_y2 = eta_y2
-      ),
-      parent = parent
-    )
+    cache_list$exo <- exo
   }
 
-  out
+  list2env(cache_list, parent = parent)
 }
 
 
@@ -369,37 +411,20 @@ lav_bvreg_hessian_cache <- function(cache = NULL) {
       h_1 <- sum(wt * h, na.rm = TRUE)
     }
     dim(h_1) <- c(1L, 1L) # for nlminb
-
     return(h_1)
   })               # nolint end
 }
 
-# compute total (log)likelihood, for specific 'x' (nlminb)
-lav_bvreg_min_objective <- function(x, cache = NULL) {
-  cache$theta <- x
-  -1 * lav_bvreg_logl_cache(cache = cache) / cache$n
-}
-
-# compute gradient, for specific 'x' (nlminb)
-lav_bvreg_min_grad <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_bvreg_logl_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_bvreg_grad_cache(cache = cache) / cache$n
-}
-
-# compute hessian, for specific 'x' (nlminb)
-lav_bvreg_min_hessian <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    tmp <- lav_bvreg_logl_cache(cache = cache)
-    tmp <- lav_bvreg_grad_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_bvreg_hessian_cache(cache = cache) / cache$n
+# nlminb objective/gradient/hessian (see lav_uvbv_common.R)
+# note: this also fixes a dormant bug: the old lav_bvreg_min_hessian did
+# not store 'x' in cache$theta before recomputing (never triggered: the
+# default optim_method "nlminb1" does not use the hessian)
+lav_bvreg_min_fns <- function() {
+  lav_uvbv_min_fns(
+    logl_fun = lav_bvreg_logl_cache,
+    grad_fun = lav_bvreg_grad_cache,
+    hessian_fun = lav_bvreg_hessian_cache
+  )
 }
 
 # casewise scores - cache
@@ -475,37 +500,15 @@ lav_bvreg_cor_sc <- function(y1, y2, exo = NULL, wt = NULL,
                                  fit_y1 = NULL, fit_y2 = NULL,
                                  evar_y1 = NULL, beta_y1 = NULL,
                                  evar_y2 = NULL, beta_y2 = NULL) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvreg_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # user specified parameters
-  if (!is.null(evar_y1) || !is.null(beta_y1)) {
-    fit_y1 <- lav_uvreg_update_fit(
-      fit_y = fit_y1,
-      evar_new = evar_y1, beta_new = beta_y1
-    )
-  }
-  if (!is.null(evar_y2) || !is.null(beta_y2)) {
-    fit_y2 <- lav_uvreg_update_fit(
-      fit_y = fit_y2,
-      evar_new = evar_y2, beta_new = beta_y2
-    )
-  }
-
-  # create cache environment
-  cache <- lav_bvreg_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvreg_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    evar_y1 = evar_y1, beta_y1 = beta_y1,
+    evar_y2 = evar_y2, beta_y2 = beta_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
-  sc <- lav_bvreg_cor_sc_cache(cache = cache)
-
-  sc
+  lav_bvreg_cor_sc_cache(cache = cache)
 }
 
 # logl - no cache
@@ -514,33 +517,13 @@ lav_bvreg_logl <- function(y1, y2, exo = NULL, wt = NULL,
                            fit_y1 = NULL, fit_y2 = NULL,
                            evar_y1 = NULL, beta_y1 = NULL,
                            evar_y2 = NULL, beta_y2 = NULL) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvreg_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # user specified parameters
-  if (!is.null(evar_y1) || !is.null(beta_y1)) {
-    fit_y1 <- lav_uvreg_update_fit(
-      fit_y = fit_y1,
-      evar_new = evar_y1, beta_new = beta_y1
-    )
-  }
-  if (!is.null(evar_y2) || !is.null(beta_y2)) {
-    fit_y2 <- lav_uvreg_update_fit(
-      fit_y = fit_y2,
-      evar_new = evar_y2, beta_new = beta_y2
-    )
-  }
-
-  # create cache environment
-  cache <- lav_bvreg_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvreg_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    evar_y1 = evar_y1, beta_y1 = beta_y1,
+    evar_y2 = evar_y2, beta_y2 = beta_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
   lav_bvreg_logl_cache(cache = cache)
 }
@@ -552,33 +535,13 @@ lav_bvreg_lik <- function(y1, y2, exo = NULL, wt = NULL,
                           evar_y1 = NULL, beta_y1 = NULL,
                           evar_y2 = NULL, beta_y2 = NULL,
                           .log = FALSE) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvreg_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # user specified parameters
-  if (!is.null(evar_y1) || !is.null(beta_y1)) {
-    fit_y1 <- lav_uvreg_update_fit(
-      fit_y = fit_y1,
-      evar_new = evar_y1, beta_new = beta_y1
-    )
-  }
-  if (!is.null(evar_y2) || !is.null(beta_y2)) {
-    fit_y2 <- lav_uvreg_update_fit(
-      fit_y = fit_y2,
-      evar_new = evar_y2, beta_new = beta_y2
-    )
-  }
-
-  # create cache environment
-  cache <- lav_bvreg_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvreg_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    evar_y1 = evar_y1, beta_y1 = beta_y1,
+    evar_y2 = evar_y2, beta_y2 = beta_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
   lik <- lav_bvreg_lik_cache(cache = cache)
   if (.log) {

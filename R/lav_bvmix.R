@@ -4,17 +4,20 @@
 # - polyserial (and biserial) correlations
 # - bivariate ordinal/linear regression
 # - using sampling weights wt
-
-
-# polyserial correlation
 #
-# Y1 = linear
-# Y2 = ordinal
+# YR/LDW 2026: refactored (see lav_uvbv_common.R for the shared cache/minfns
+#              design); no change in behavior
 #
 #  info concerning lintr package, Luc DW May 7, 2026
 #  there is a known problem in codetools, transferred to lintr, that
 #  variables assigned in a with() are marked as 'may not be used';
 #  to this end the code in with() statements are excluded from linting!
+#
+
+# polyserial correlation
+#
+# Y1 = linear
+# Y2 = ordinal
 #
 lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
                                       fit_y1 = NULL, fit_y2 = NULL,
@@ -23,27 +26,14 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
                                       optim_scale = 1.0,
                                       init_theta = NULL,
                                       control = list()) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
   # create cache environment
-  cache <- lav_bvmix_init_cache(fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt)
+  cache <- lav_bvmix_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt,
+    fit_y1 = fit_y1, fit_y2 = fit_y2
+  )
 
   # optim.method
-  min_objective <- lav_bvmix_min_objective
-  min_gradient <- lav_bvmix_min_grad
-  min_hessian <- lav_bvmix_min_hessian
-  if (optim_method == "nlminb" || optim_method == "nlminb2") {
-    # nothing to do
-  } else if (optim_method == "nlminb0") {
-    min_gradient <- min_hessian <- NULL
-  } else if (optim_method == "nlminb1") {
-    min_hessian <- NULL
-  }
+  minfns <- lav_uvbv_optim_fns(optim_method, lav_bvmix_min_fns())
 
   # optimize
   if (is.null(control$trace)) {
@@ -59,8 +49,8 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
 
   # try 1
   optim <- nlminb(
-    start = start_x, objective = min_objective,
-    gradient = min_gradient, hessian = min_hessian,
+    start = start_x, objective = minfns$objective,
+    gradient = minfns$gradient, hessian = minfns$hessian,
     control = control,
     scale = optim_scale, lower = -0.995, upper = +0.995,
     cache = cache
@@ -69,7 +59,7 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   # try 2
   if (optim$convergence != 0L) {
     optim <- nlminb(
-      start = start_x, objective = min_objective,
+      start = start_x, objective = minfns$objective,
       gradient = NULL, hessian = NULL,
       control = control,
       scale = optim_scale, lower = -0.995, upper = +0.995,
@@ -80,7 +70,7 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   # try 3
   if (optim$convergence != 0L) {
     optim <- nlminb(
-      start = 0, objective = min_objective,
+      start = 0, objective = minfns$objective,
       gradient = NULL, hessian = NULL,
       control = control,
       scale = 10, lower = -0.995, upper = +0.995,
@@ -91,7 +81,7 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   # try 4 -- new in 0.6-8
   if (optim$convergence != 0L) {
     optim <- optimize(
-      f = min_objective, interval = c(-0.995, +0.995),
+      f = minfns$objective, interval = c(-0.995, +0.995),
       cache = cache, tol = .Machine$double.eps
     )
     if (is.finite(optim$minimum)) {
@@ -118,6 +108,46 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   rho
 }
 
+# build the cache from user-level arguments: fit the univariate models if
+# needed, apply parameter overrides, and initialize the cache environment
+# (shared by lav_bvmix_cor_twostep_fit/_cor_sc/_logl/_lik)
+#
+# Y1 = linear   (evar_y1/beta_y1 overrides)
+# Y2 = ordinal  (th_y2/sl_y2 overrides)
+lav_bvmix_cache_from_args <- function(y1, y2, exo = NULL, wt = NULL,
+                                      rho = NULL,
+                                      fit_y1 = NULL, fit_y2 = NULL,
+                                      evar_y1 = NULL, beta_y1 = NULL,
+                                      th_y2 = NULL, sl_y2 = NULL,
+                                      scores = FALSE) {
+  if (is.null(fit_y1)) {
+    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
+  }
+  if (is.null(fit_y2)) {
+    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
+  }
+
+  # update parameters/z1/z2 if needed (used in lav_pml_dploglik_dimplied()
+  #                                    in lav_model_gradient_pml.R)
+  fit_y1 <- lav_uvreg_update_fit(
+    fit_y = fit_y1, evar_new = evar_y1,
+    beta_new = beta_y1
+  )
+  fit_y2 <- lav_uvord_update_fit(
+    fit_y = fit_y2, th_new = th_y2,
+    sl_new = sl_y2
+  )
+
+  cache <- lav_bvmix_init_cache(
+    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+    scores = scores
+  )
+  if (!is.null(rho)) {
+    cache$theta <- rho
+  }
+
+  cache
+}
 
 # Y1 = linear
 # Y2 = ordinal
@@ -157,29 +187,17 @@ lav_bvmix_init_cache <- function(fit_y1 = NULL,
   }
 
   # starting value -- Olsson 1982 eq 38
-  if (nexo > 0L) {
-    # exo
-    if (is.null(wt)) {
-      cor_1 <- cor(z, y2, use = "pairwise.complete.obs")
-      sd_1 <- sd(y2, na.rm = TRUE) * sqrt((n - 1) / n)
-    } else {
-      tmp <- na.omit(cbind(z, y2, wt))
-      cor_1 <- cov.wt(x = tmp[, 1:2], wt = tmp[, 3], cor = TRUE)$cor[2, 1]
-      sd_1 <- sqrt(lav_mat_var_wt(tmp[, 2], wt = tmp[, 3]))
-    }
-    rho_init <- (cor_1 * sd_1 / sum(dnorm(th_y2)))
+  # (with covariates, based on the standardized residual z instead of y1)
+  v1 <- if (nexo > 0L) z else y1
+  if (is.null(wt)) {
+    cor_1 <- cor(v1, y2, use = "pairwise.complete.obs")
+    sd_1 <- sd(y2, na.rm = TRUE) * sqrt((n - 1) / n)
   } else {
-    # no exo
-    if (is.null(wt)) {
-      cor_1 <- cor(y1, y2, use = "pairwise.complete.obs")
-      sd_1 <- sd(y2, na.rm = TRUE) * sqrt((n - 1) / n)
-    } else {
-      tmp <- na.omit(cbind(y1, y2, wt))
-      cor_1 <- cov.wt(x = tmp[, 1:2], wt = tmp[, 3], cor = TRUE)$cor[2, 1]
-      sd_1 <- sqrt(lav_mat_var_wt(tmp[, 2], wt = tmp[, 3]))
-    }
-    rho_init <- (cor_1 * sd_1 / sum(dnorm(th_y2)))
+    tmp <- na.omit(cbind(v1, y2, wt))
+    cor_1 <- cov.wt(x = tmp[, 1:2], wt = tmp[, 3], cor = TRUE)$cor[2, 1]
+    sd_1 <- sqrt(lav_mat_var_wt(tmp[, 2], wt = tmp[, 3]))
   }
+  rho_init <- (cor_1 * sd_1 / sum(dnorm(th_y2)))
 
   # sanity check
   if (is.na(rho_init)) {
@@ -191,30 +209,20 @@ lav_bvmix_init_cache <- function(fit_y1 = NULL,
   # parameter vector
   theta <- rho_init # only
 
-  # different cache if scores or not
+  # cache environment
+  cache_list <- list(
+    nexo = nexo, theta = theta, wt = wt, n = n,
+    y1 = y1, y1_var = y1_var, y1_sd = y1_sd, y1_eta = y1_eta, z = z,
+    fit_y2_z1 = fit_y2$z1, fit_y2_z2 = fit_y2$z2
+  )
   if (scores) {
-    out <- list2env(
-      list(
-        nexo = nexo, theta = theta, n = n,
-        y1_var = y1_var, exo = exo,
-        y2_y1 = fit_y2$y1, y2_y2 = fit_y2$y2,
-        y1 = y1, y1_sd = y1_sd, y1_eta = y1_eta, z = z,
-        fit_y2_z1 = fit_y2$z1, fit_y2_z2 = fit_y2$z2
-      ),
-      parent = parent
-    )
-  } else {
-    out <- list2env(
-      list(
-        nexo = nexo, theta = theta, n = n,
-        y1 = y1, y1_sd = y1_sd, y1_eta = y1_eta, z = z,
-        fit_y2_z1 = fit_y2$z1, fit_y2_z2 = fit_y2$z2
-      ),
-      parent = parent
-    )
+    cache_list <- c(cache_list, list(
+      exo = exo,
+      y2_y1 = fit_y2$y1, y2_y2 = fit_y2$y2
+    ))
   }
 
-  out
+  list2env(cache_list, parent = parent)
 }
 
 
@@ -330,38 +338,27 @@ lav_bvmix_hessian_cache <- function(cache = NULL) {
   })                                    # nolint end
 }
 
-# compute total (log)likelihood, for specific 'x' (nlminb)
-lav_bvmix_min_objective <- function(x, cache = NULL) {
-  cache$theta <- x
-  -1 * lav_bvmix_logl_cache(cache = cache) / cache$n
-}
-
-# compute gradient, for specific 'x' (nlminb)
-lav_bvmix_min_grad <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_bvmix_logl_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_bvmix_grad_cache(cache = cache) / cache$n
-}
-
-# compute hessian, for specific 'x' (nlminb)
-lav_bvmix_min_hessian <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    tmp <- lav_bvmix_logl_cache(cache = cache)
-    tmp <- lav_bvmix_grad_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_bvmix_hessian_cache(cache = cache) / cache$n
+# nlminb objective/gradient/hessian (see lav_uvbv_common.R)
+# note: this also fixes a dormant bug: the old lav_bvmix_min_hessian did
+# not store 'x' in cache$theta before recomputing (never triggered: the
+# default optim_method "nlminb1" does not use the hessian)
+lav_bvmix_min_fns <- function() {
+  lav_uvbv_min_fns(
+    logl_fun = lav_bvmix_logl_cache,
+    grad_fun = lav_bvmix_grad_cache,
+    hessian_fun = lav_bvmix_hessian_cache
+  )
 }
 
 
 lav_bvmix_cor_sc_cache <- function(cache = NULL,
                                        sigma_correction = FALSE,
                                        na_zero = FALSE) {
+  # make the arguments visible inside with(cache, ...): symbols there
+  # resolve through the cache environment (and its parents), NOT through
+  # this function's frame
+  cache$sigma_correction <- sigma_correction
+  cache$na_zero <- na_zero
   with(cache, {                           # nolint start
     rho <- theta[1L]
     r <- sqrt(1 - rho * rho)
@@ -460,38 +457,19 @@ lav_bvmix_cor_sc <- function(y1, y2, exo = NULL, wt = NULL,
                                  th_y2 = NULL, sl_y2 = NULL,
                                  sigma_correction = FALSE,
                                  na_zero = FALSE) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied()
-  #             in lav_model_gradient_pml.R)
-  fit_y1 <- lav_uvreg_update_fit(
-    fit_y = fit_y1, evar_new = evar_y1,
-    beta_new = beta_y1
-  )
-  fit_y2 <- lav_uvord_update_fit(
-    fit_y = fit_y2, th_new = th_y2,
-    sl_new = sl_y2
-  )
-
-  # create cache environment
-  cache <- lav_bvmix_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvmix_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    evar_y1 = evar_y1, beta_y1 = beta_y1,
+    th_y2 = th_y2, sl_y2 = sl_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
-  sc <- lav_bvmix_cor_sc_cache(
+  lav_bvmix_cor_sc_cache(
     cache = cache,
     sigma_correction = sigma_correction,
     na_zero = na_zero
   )
-
-  sc
 }
 
 # logl - no cache
@@ -500,30 +478,13 @@ lav_bvmix_logl <- function(y1, y2, exo = NULL, wt = NULL,
                            fit_y1 = NULL, fit_y2 = NULL,
                            evar_y1 = NULL, beta_y1 = NULL,
                            th_y2 = NULL, sl_y2 = NULL) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in
-  #                                     lav_model_gradient_pml.R)
-  fit_y1 <- lav_uvreg_update_fit(
-    fit_y = fit_y1, evar_new = evar_y1,
-    beta_new = beta_y1
-  )
-  fit_y2 <- lav_uvord_update_fit(
-    fit_y = fit_y2, th_new = th_y2,
-    sl_new = sl_y2
-  )
-
-  # create cache environment
-  cache <- lav_bvmix_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvmix_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    evar_y1 = evar_y1, beta_y1 = beta_y1,
+    th_y2 = th_y2, sl_y2 = sl_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
   lav_bvmix_logl_cache(cache = cache)
 }
@@ -535,30 +496,13 @@ lav_bvmix_lik <- function(y1, y2, exo = NULL, wt = NULL,
                           evar_y1 = NULL, beta_y1 = NULL,
                           th_y2 = NULL, sl_y2 = NULL,
                           take_log = FALSE) {
-  if (is.null(fit_y1)) {
-    fit_y1 <- lav_uvreg_fit(y = y1, x = exo, wt = wt)
-  }
-  if (is.null(fit_y2)) {
-    fit_y2 <- lav_uvord_fit(y = y2, x = exo, wt = wt)
-  }
-
-  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in
-  #                                      lav_model_gradient_pml.R)
-  fit_y1 <- lav_uvreg_update_fit(
-    fit_y = fit_y1, evar_new = evar_y1,
-    beta_new = beta_y1
-  )
-  fit_y2 <- lav_uvord_update_fit(
-    fit_y = fit_y2, th_new = th_y2,
-    sl_new = sl_y2
-  )
-
-  # create cache environment
-  cache <- lav_bvmix_init_cache(
-    fit_y1 = fit_y1, fit_y2 = fit_y2, wt = wt,
+  cache <- lav_bvmix_cache_from_args(
+    y1 = y1, y2 = y2, exo = exo, wt = wt, rho = rho,
+    fit_y1 = fit_y1, fit_y2 = fit_y2,
+    evar_y1 = evar_y1, beta_y1 = beta_y1,
+    th_y2 = th_y2, sl_y2 = sl_y2,
     scores = TRUE
   )
-  cache$theta <- rho
 
   lik <- lav_bvmix_lik_cache(cache = cache) # unweighted
   if (take_log) {
