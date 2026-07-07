@@ -175,7 +175,7 @@ lav_bvmix_2l_init_cache <- function(fit_y1 = NULL,
       nobs = nobs, n = nobs, nclusters = nclusters, njs = njs,
       mu_a = mu_a, vw_a = vw_a, vb_a = vb_a,
       tau_c = tau_c, vb_c = vb_c, nth = nth,
-      v_aj = v_aj, r_aj = r_aj, logf_a = logf_a,
+      v_aj = v_aj, r_aj = r_aj, logf_a = logf_a, cs_a = cs_a,
       dev_a = dev_a, o1 = o12$o1, o2 = o12$o2, y1 = y1, y2 = y2,
       gh = gh, ngh = ngh,
       theta = theta
@@ -253,39 +253,78 @@ lav_bvmix_2l_grad_cache <- function(cache = NULL) {
   colSums(sc[, c("cw", "cb"), drop = FALSE])
 }
 
-# cluster-wise scores of the loglik w.r.t. (tau_c, cw, cb)
-# (the remaining fixed-parameter columns are added in the sandwich stage)
-# assumes the loglik has been evaluated at cache$theta (pw available)
-lav_bvmix_2l_sc_cache <- function(cache = NULL) {
+# derivatives of the model ingredients (a_sl, sd_c, c_g, var_g, v_aj,
+# r_aj, dev) with respect to every parameter, for the chain rule:
+# columns of the returned patterns:
+#   mu_a, vw_a, vb_a, vb_c, cw, cb
+lav_bvmix_2l_dpats <- function(cache = NULL, gp = NULL) {
   with(cache, {          # nolint start
     cw <- theta[1]
     cb <- theta[2]
-    gp <- lav_bvmix_2l_gamma_pars(cache)
+    a_sl <- gp$a_sl
+    sd_c <- gp$sd_c
 
+    pats <- list(
+      mu_a = list(da = 0, dsd = 0, dcg = 0, dvarg = 0,
+                  dvw = 0, dvb = 0, dr = -1, ddev = -1),
+      vw_a = list(da = -a_sl / vw_a,
+                  dsd = cw * cw / (2 * vw_a * vw_a * sd_c),
+                  dcg = a_sl * vb_a / vw_a,
+                  dvarg = (-a_sl / vw_a) * (2 * a_sl * vb_a - 2 * cb),
+                  dvw = 1, dvb = 0, dr = 0, ddev = 0),
+      vb_a = list(da = 0, dsd = 0, dcg = -a_sl, dvarg = a_sl * a_sl,
+                  dvw = 0, dvb = 1, dr = 0, ddev = 0),
+      vb_c = list(da = 0, dsd = 0, dcg = 0, dvarg = 1,
+                  dvw = 0, dvb = 0, dr = 0, ddev = 0),
+      cw = list(da = 1 / vw_a, dsd = -cw / (vw_a * sd_c),
+                dcg = -vb_a / vw_a,
+                dvarg = (2 * a_sl * vb_a - 2 * cb) / vw_a,
+                dvw = 0, dvb = 0, dr = 0, ddev = 0),
+      cb = list(da = 0, dsd = 0, dcg = 1, dvarg = -2 * a_sl,
+                dvw = 0, dvb = 0, dr = 0, ddev = 0)
+    )
+    return(pats)
+  })                     # nolint end
+}
+
+# cluster-wise scores of the loglik w.r.t. ALL parameters
+# columns: mu_a, vw_a, vb_a, tau_c (nth), vb_c, cw, cb
+# assumes the loglik has been evaluated at cache$theta (pw available)
+lav_bvmix_2l_sc_cache <- function(cache = NULL) {
+  with(cache, {          # nolint start
+    gp <- lav_bvmix_2l_gamma_pars(cache)
     a_sl <- gp$a_sl
     sd_c <- gp$sd_c
     c_g <- gp$c_g
 
-    # derivatives of the ingredients
-    da_dcw <- 1 / vw_a
-    dsd_dcw <- -cw / (vw_a * sd_c)
-    dcg_dcw <- -vb_a / vw_a
-    dcg_dcb <- 1
-    dvarg_dcw <- (2 * a_sl * vb_a - 2 * cb) / vw_a
-    dvarg_dcb <- -2 * a_sl
+    pats <- lav_bvmix_2l_dpats(cache, gp = gp)
+    pnames <- names(pats)
+    np <- length(pnames)
 
-    # per-cluster chain pieces: gamma_jq = m_j + s_gj x_q
-    dm_dcw <- dcg_dcw * njs * r_aj / v_aj
-    dm_dcb <- dcg_dcb * njs * r_aj / v_aj
-    dvg_dcw <- dvarg_dcw - 2 * c_g * dcg_dcw * njs / v_aj
-    dvg_dcb <- dvarg_dcb - 2 * c_g * dcg_dcb * njs / v_aj
-    dsg_dcw <- dvg_dcw / (2 * gp$s_gj)
-    dsg_dcb <- dvg_dcb / (2 * gp$s_gj)
+    # per-cluster chain pieces: gamma_jq = m_j + s_gj x_q, with
+    # m_j = c_g nj r_aj / v_aj and v_gj = var_g - c_g^2 nj / v_aj
+    dm <- matrix(0, nclusters, np)
+    dsg <- matrix(0, nclusters, np)
+    for (p in seq_len(np)) {
+      pt <- pats[[p]]
+      dvaj <- pt$dvw + njs * pt$dvb
+      dm[, p] <- pt$dcg * njs * r_aj / v_aj +
+        c_g * njs * pt$dr / v_aj -
+        c_g * njs * r_aj * dvaj / (v_aj * v_aj)
+      dvg <- pt$dvarg -
+        njs * (2 * c_g * pt$dcg * v_aj - c_g * c_g * dvaj) /
+          (v_aj * v_aj)
+      dsg[, p] <- dvg / (2 * gp$s_gj)
+    }
 
-    th_s <- tau_c / gp$sd_c
+    th_s <- tau_c / sd_c
     base_i <- a_sl * dev_a / sd_c
 
-    sc <- matrix(0, nclusters, nth + 2L)
+    sc <- matrix(0, nclusters, nth + np)
+    tau_idx <- 3L + seq_len(nth) # after mu_a, vw_a, vb_a
+    par_idx <- c(1L, 2L, 3L, 3L + nth + 1L, 3L + nth + 2L, 3L + nth + 3L)
+    # (mu_a, vw_a, vb_a, vb_c, cw, cb) positions in the output
+
     for (q in seq_len(ngh)) {
       gamma_j <- gp$m_j + gp$s_gj * gh$x[q]
       offset_i <- gamma_j[cl_pos] / sd_c + base_i
@@ -310,31 +349,49 @@ lav_bvmix_2l_sc_cache <- function(cache = NULL) {
         group = cluster_idx, reorder = TRUE
       )
 
+      # per-node cluster aggregates for the generic direct/chain terms
+      # (note: z1/z2 include the +-100 offsets of the extreme categories,
+      #  but there p1/p2 = dnorm(+-100) are exactly zero)
+      s0 <- rowsum.default((p1 - p2) * inv_pi,
+                           group = cluster_idx, reorder = TRUE)
+      s1 <- rowsum.default((p1 * z1 - p2 * z2) * inv_pi,
+                           group = cluster_idx, reorder = TRUE)
+      sdev <- rowsum.default(dev_a * (p1 - p2) * inv_pi,
+                             group = cluster_idx, reorder = TRUE)
       # gamma: dz/dgamma = -1/sd_c
-      g_gam <- rowsum.default((p2 - p1) * (inv_pi / sd_c),
-                              group = cluster_idx, reorder = TRUE)
-
-      # direct cw term:
-      # dz1/dcw = -(dev_i da_dcw)/sd_c - z1 * dsd_dcw/sd_c
-      # (z1 includes the +-100 offsets of the extreme categories, but
-      #  there p1 = dnorm(z1) is exactly zero, so the product vanishes)
-      dz1_dcw <- -(dev_a * da_dcw) / sd_c - z1 * dsd_dcw / sd_c
-      dz2_dcw <- -(dev_a * da_dcw) / sd_c - z2 * dsd_dcw / sd_c
-      g_cw_dir <- rowsum.default((p1 * dz1_dcw - p2 * dz2_dcw) * inv_pi,
-                                 group = cluster_idx, reorder = TRUE)
-
-      # chain terms through the node positions
-      dgam_dcw <- dm_dcw + gh$x[q] * dsg_dcw
-      dgam_dcb <- dm_dcb + gh$x[q] * dsg_dcb
+      g_gam <- -s0 / sd_c
 
       pwq <- pw[, q]
-      sc[, seq_len(nth)] <- sc[, seq_len(nth)] + pwq * g_tau
-      sc[, nth + 1L] <- sc[, nth + 1L] +
-        pwq * (g_cw_dir + g_gam * dgam_dcw)
-      sc[, nth + 2L] <- sc[, nth + 2L] + pwq * (g_gam * dgam_dcb)
+      sc[, tau_idx] <- sc[, tau_idx] + pwq * g_tau
+
+      for (p in seq_len(np)) {
+        pt <- pats[[p]]
+        # direct term: dz_i = (-da dev_i - a ddev)/sd_c - z_i dsd/sd_c
+        direct <- (-pt$da * sdev - a_sl * pt$ddev * s0) / sd_c -
+          (pt$dsd / sd_c) * s1
+        # chain term through the node positions
+        dgam <- dm[, p] + gh$x[q] * dsg[, p]
+        sc[, par_idx[p]] <- sc[, par_idx[p]] +
+          pwq * (direct + g_gam * dgam)
+      }
     }
 
-    colnames(sc) <- c(paste0("tau_c", seq_len(nth)), "cw", "cb")
+    # the (fixed-parameter) Gaussian factor f(y_a,j): mu_a, vw_a, vb_a
+    dm2ll_a <- lav_2l_gauss_dm2ll(
+      cs = cs_a, mu = mu_a,
+      sigma_w = matrix(vw_a, 1, 1), sigma_b = matrix(vb_a, 1, 1),
+      params = list(
+        list(dmu = 1, dsw = NULL, dsb = NULL),
+        list(dmu = NULL, dsw = matrix(1, 1, 1), dsb = NULL),
+        list(dmu = NULL, dsw = NULL, dsb = matrix(1, 1, 1))
+      )
+    )
+    sc[, 1:3] <- sc[, 1:3] + (-0.5 * dm2ll_a)
+
+    colnames(sc) <- c(
+      "mu_a", "vw_a", "vb_a", paste0("tau_c", seq_len(nth)),
+      "vb_c", "cw", "cb"
+    )
     return(sc)
   })                     # nolint end
 }
