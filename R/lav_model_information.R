@@ -99,8 +99,13 @@ lav_model_info_expected <- function(lavmodel = NULL,
   }
 
 
-  # 2. H1 information (single level)
-  if (lavdata@nlevels == 1L) {
+  # two-level least-squares? (WLS.V/WLS.VD hold the stacked two-level
+  # weight matrix; the standard Delta' A1 Delta path applies per group)
+  wls_2l <- (lavdata@nlevels > 1L &&
+    lavmodel@estimator %in% c("WLS", "DWLS", "ULS"))
+
+  # 2. H1 information (single level, or two-level least-squares)
+  if (lavdata@nlevels == 1L || wls_2l) {
     a1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
@@ -121,8 +126,8 @@ lav_model_info_expected <- function(lavmodel = NULL,
     # note LISREL documentation suggests (Ng - 1) instead of Ng...
     fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
 
-    # multilevel
-    if (lavdata@nlevels > 1L) {
+    # multilevel (ML)
+    if (lavdata@nlevels > 1L && !wls_2l) {
       # here, we assume only 2 levels, at [[1]] and [[2]]
       if (lavoptions$h1.information[1] == "structured") {
         sigma_w <- lavimplied$cov[[(g - 1) * 2 + 1]]

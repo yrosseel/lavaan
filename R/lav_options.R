@@ -409,48 +409,118 @@ lav_options_set <- function(opt = NULL) {
   if (opt$.multilevel) {
     opt$meanstructure <- TRUE
 
-    # test
-    if (length(opt$test) == 1L && opt$test == "default") {
-      # ok, will be set later
-    } else if (all(opt$test %in% c(
-      "none", "standard", "yuan.bentler",
-      "yuan.bentler.mplus"
-    ))) {
-      # nothing to do
-    } else {
-      lav_msg_stop(gettextf(
-        "`test' argument must be one of %s in the multilevel case",
-        lav_msg_view(c(
-          "none", "standard", "yuan.bentler",
-          "yuan.bentler.mplus"
-        ), log_sep = "or")
-      ))
-    }
+    # two-level least-squares estimation? (WLS/WLSM(V)/ULS(M,MV)/DWLS)
+    multilevel_wls <-
+      lav_options_estimatorgroup(opt$estimator) %in% c("WLS", "DWLS", "ULS")
 
-    # se
-    if (opt$se == "default") {
-      # ok, will be set later
-    } else if (any(opt$se == c(
-      "none", "standard", "robust.huber.white", "sandwich", "bootstrap"
-    ))) {
-      # nothing to do (bootstrap uses the cluster bootstrap; see lavBootstrap)
-    } else if (opt$se == "robust") {
-      opt$se <- "robust.huber.white"
-    } else {
-      lav_msg_stop(gettextf(
-        "`se' argument must be one of %s in the multilevel case",
-        lav_msg_view(c("none", "standard", "robust.huber.white", "bootstrap"),
-          log_sep = "or"
-        )
-      ))
-    }
+    if (multilevel_wls) {
+      # two-level (D)WLS: continuous, complete data (for now)
+      if (!opt$missing %in% c("default", "listwise")) {
+        lav_msg_stop(gettextf(
+          "missing = %s is not supported for two-level (D)WLS estimation;
+          only complete data (missing = \"listwise\") is supported (for now).",
+          dQuote(opt$missing)))
+      }
+      if (isTRUE(opt$conditional.x)) {
+        lav_msg_stop(gettext(
+          "conditional.x = TRUE is not supported for two-level (D)WLS
+          estimation (yet)."))
+      }
+      if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
+        lav_msg_stop(gettext(
+          "sampling weights are not supported for two-level (D)WLS
+          estimation (yet)."))
+      }
+      # the sample 'statistics' are the h1 (saturated) estimates
+      opt$h1 <- TRUE
 
-    # information
-    if (opt$information[1] == "default") {
-      opt$information[1] <- "observed"
-    }
-    if (length(opt$information) > 1L && opt$information[2] == "default") {
-      opt$information[2] <- "observed"
+      # test
+      if (length(opt$test) == 1L && opt$test == "default") {
+        # ok, will be set later
+      } else if (all(opt$test %in% c(
+        "none", "standard", "satorra.bentler",
+        "scaled.shifted", "mean.var.adjusted"
+      ))) {
+        # nothing to do
+      } else {
+        lav_msg_stop(gettextf(
+          "`test' argument must be one of %s in the two-level (D)WLS case",
+          lav_msg_view(c(
+            "none", "standard", "satorra.bentler",
+            "scaled.shifted", "mean.var.adjusted"
+          ), log_sep = "or")
+        ))
+      }
+
+      # se
+      if (opt$se == "default") {
+        # ok, will be set later
+      } else if (any(opt$se == c(
+        "none", "standard", "robust.sem", "bootstrap"
+      ))) {
+        # nothing to do (bootstrap uses the cluster bootstrap)
+      } else if (opt$se == "robust") {
+        opt$se <- "robust.sem"
+      } else {
+        lav_msg_stop(gettextf(
+          "`se' argument must be one of %s in the two-level (D)WLS case",
+          lav_msg_view(c("none", "standard", "robust.sem", "bootstrap"),
+            log_sep = "or"
+          )
+        ))
+      }
+
+      # information
+      if (opt$information[1] == "default") {
+        opt$information[1] <- "expected"
+      }
+      if (length(opt$information) > 1L && opt$information[2] == "default") {
+        opt$information[2] <- "expected"
+      }
+    } else {
+      # test
+      if (length(opt$test) == 1L && opt$test == "default") {
+        # ok, will be set later
+      } else if (all(opt$test %in% c(
+        "none", "standard", "yuan.bentler",
+        "yuan.bentler.mplus"
+      ))) {
+        # nothing to do
+      } else {
+        lav_msg_stop(gettextf(
+          "`test' argument must be one of %s in the multilevel case",
+          lav_msg_view(c(
+            "none", "standard", "yuan.bentler",
+            "yuan.bentler.mplus"
+          ), log_sep = "or")
+        ))
+      }
+
+      # se
+      if (opt$se == "default") {
+        # ok, will be set later
+      } else if (any(opt$se == c(
+        "none", "standard", "robust.huber.white", "sandwich", "bootstrap"
+      ))) {
+        # nothing to do (bootstrap uses the cluster bootstrap; see lavBootstrap)
+      } else if (opt$se == "robust") {
+        opt$se <- "robust.huber.white"
+      } else {
+        lav_msg_stop(gettextf(
+          "`se' argument must be one of %s in the multilevel case",
+          lav_msg_view(c("none", "standard", "robust.huber.white", "bootstrap"),
+            log_sep = "or"
+          )
+        ))
+      }
+
+      # information
+      if (opt$information[1] == "default") {
+        opt$information[1] <- "observed"
+      }
+      if (length(opt$information) > 1L && opt$information[2] == "default") {
+        opt$information[2] <- "observed"
+      }
     }
   }
 

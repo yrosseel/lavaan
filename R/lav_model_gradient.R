@@ -354,7 +354,10 @@ lav_model_grad <- function(lavmodel = NULL,
       delta <- lav_model_delta(lavmodel = lavmodel, glist = glist)
     }
 
-    for (g in 1:lavmodel@nblocks) {
+    # note: WLS.obs/WLS.est/Delta/WLS.V(D) and group_w are all per GROUP
+    # (for multilevel models, the within/between blocks are stacked per
+    #  group in all of them; nblocks == ngroups for single-level models)
+    for (g in 1:lavsamplestats@ngroups) {
       # diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
       # group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
       # 0.5-17: use crossprod twice; treat DWLS/ULS special

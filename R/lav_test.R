@@ -441,8 +441,10 @@ lav_model_test <- function(lavobject = NULL,
     # NOT observed data
     chisq_group <- pml$PLRTH0Sat.group
 
-    # twolevel
-  } else if (lavdata@nlevels > 1L) {
+    # twolevel (ML: LRT versus the h1 model; the least-squares estimators
+    # fall through to the fx-based statistic below)
+  } else if (lavdata@nlevels > 1L &&
+    !(lavoptions$estimator %in% c("WLS", "DWLS", "ULS"))) {
     if (length(lavh1) > 0L) {
       # LRT
       chisq_group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)

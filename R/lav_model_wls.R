@@ -1,4 +1,8 @@
 # compute WLS.est (as a list per group)
+#
+# multilevel: the per-block (within/between) vectors are stacked per group:
+# c(within, between), matching WLS.obs (lav_samp_wls_2l) and the per-group
+# Delta matrix (lav_model_delta)
 lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
                               lavimplied = NULL) {
   nblocks <- lavmodel@nblocks
@@ -95,6 +99,20 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
     }
 
     wls_est_1[[g]] <- wls_est
+  }
+
+  # multilevel: stack the blocks of each group (within on top)
+  if (lavmodel@multilevel) {
+    nlevels <- 2L
+    ngroups <- nblocks %/% nlevels
+    wls_est_2 <- vector("list", length = ngroups)
+    for (g in seq_len(ngroups)) {
+      wls_est_2[[g]] <- c(
+        wls_est_1[[(g - 1) * nlevels + 1L]],
+        wls_est_1[[(g - 1) * nlevels + 2L]]
+      )
+    }
+    wls_est_1 <- wls_est_2
   }
 
   wls_est_1

@@ -54,7 +54,8 @@ lav_model_objective <- function(lavmodel = NULL,
       (estimator == "GLS" && partial_cor)) {
     lavimplied <- lav_model_implied(lavmodel, glist = glist)
     # check for COV with negative diagonal elements?
-    for (g in 1:lavsamplestats@ngroups) {
+    # (note: all blocks, not groups -- multilevel has 2 blocks per group)
+    for (g in seq_len(lavmodel@nblocks)) {
       cov_1 <- if (lavmodel@conditional.x) {
         lavimplied$res.cov[[g]]
       } else {
@@ -426,7 +427,8 @@ lav_model_objective <- function(lavmodel = NULL,
     if (estimator == "PML") {
       # no weighting needed! (since N_g is part of the logl per group)
       fx <- sum(fx_group)
-  } else if (lavdata@nlevels > 1L) {
+  } else if (lavdata@nlevels > 1L &&
+    !(estimator %in% c("WLS", "DWLS", "ULS"))) {
     # no weighting needed! (implicit in obj, which is based on loglik)
     fx <- sum(fx_group)
     } else {
