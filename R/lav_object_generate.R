@@ -334,7 +334,11 @@ lav_object_extended <- function(object, add = NULL,
 }
 
 # 4. catml model
-lav_object_catml <- function(lavobject = NULL) {
+# allow_refit: if an input correlation matrix is not positive definite,
+# it is always smoothed; but the model parameters are only re-estimated
+# if allow_refit = TRUE (if FALSE, we keep the original -- typically
+# DWLS -- estimates, and merely re-evaluate; as in lavaan <= 0.6-13)
+lav_object_catml <- function(lavobject = NULL, allow_refit = TRUE) {
   stopifnot(inherits(lavobject, "lavaan"))
   stopifnot(lavobject@Model@categorical)
 
@@ -404,7 +408,9 @@ lav_object_catml <- function(lavobject = NULL) {
       cov_1 <- cov2cor(lav_mat_sym_force_pd(cor_1, tol = 1e-04))
       lavsamplestats@cov[[g]] <- cov_1
       lavsamplestats@var[[g]] <- diag(cov_1)
-      refit <- TRUE
+      if (allow_refit) {
+        refit <- TRUE
+      }
     } else {
       cov_1 <- cor_1
     }
@@ -446,6 +452,9 @@ lav_object_catml <- function(lavobject = NULL) {
   lavoptions$test <- "standard" # always for now
   lavoptions$rotation <- "none" # new in 0.6-19
   lavoptions$baseline <- TRUE # also for RMSEA?
+  # the robust corrections assume the (default) independence baseline
+  # (Savalei, 2021, eq. 6b); never use a 'nested' baseline here
+  lavoptions$baseline.type <- "independence"
   if (!refit) {
     lavoptions$optim.method <- "none"
     lavoptions$optim.force.converged <- TRUE

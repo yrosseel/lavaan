@@ -17,7 +17,7 @@ fitMeasures(object, fit_measures = "all",
                            rmsea.close.h0    = 0.05,
                            rmsea.notclose.h0 = 0.08,
                            robust            = TRUE,
-                           cat.check.pd      = TRUE),
+                           cat.nonpd         = "na"),
             output = "vector", ...)
 fitmeasures(object, fit_measures = "all",
             baseline_model = NULL, h1_model = NULL,
@@ -27,7 +27,7 @@ fitmeasures(object, fit_measures = "all",
                            rmsea.close.h0    = 0.05,
                            rmsea.notclose.h0 = 0.08,
                            robust            = TRUE,
-                           cat.check.pd      = TRUE),
+                           cat.nonpd         = "na"),
             output = "vector", ...)
 }
 \arguments{
@@ -61,9 +61,17 @@ fitmeasures(object, fit_measures = "all",
   \code{robust}
   option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
   rmsea/cfi/gfi measures (for example if the computations take too long).
-  The \code{cat.check.pd} option, default \code{TRUE}, is only used when data is categorical. If
-  \code{TRUE}, robust values for RMSEA and CFI are only computed if the input
-  correlation matrix is positive-definite (for all groups).}
+  The \code{cat.nonpd} option, default \code{"na"}, is only used when data is
+  categorical, and determines what happens to the robust values of RMSEA, CFI
+  and GFI when an input (polychoric/tetrachoric) correlation matrix is not
+  positive-definite (for at least one group): if \code{"na"}, the robust
+  values are \code{NA}; if \code{"refit"}, the input correlation matrix is
+  smoothed to be positive-definite, and the model parameters are re-estimated
+  using \code{estimator = "catML"}; if \code{"smooth"}, the input correlation
+  matrix is smoothed, but the original (DWLS) parameter estimates are retained
+  (this was the behavior in lavaan 0.6-13 and earlier). The older
+  \code{cat.check.pd = FALSE} option is a deprecated alias for
+  \code{cat.nonpd = "refit"}.}
 \item{baseline_model}{If not NULL, an object of class
   \code{\linkS4class{lavaan}}, representing a user-specified baseline model.
   If a baseline model is provided, all fit indices relying on a

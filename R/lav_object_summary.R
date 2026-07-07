@@ -108,7 +108,7 @@ lav_object_summary <- function(object, header = TRUE,
     rmsea.close.h0 = 0.05,
     rmsea.notclose.h0 = 0.08,
     robust = TRUE,
-    cat.check.pd = TRUE
+    cat.nonpd = "na"
   )
   if (is.logical(fit_measures)) {
     if (fit_measures) {

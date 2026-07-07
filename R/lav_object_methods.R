@@ -74,7 +74,7 @@ setMethod(
              rmsea.h0.closefit = 0.05,
              rmsea.h0.notclosefit = 0.08,
              robust = TRUE,
-             cat.check.pd = TRUE
+             cat.nonpd = "na"
            ),
            modindices = FALSE,
            srmr_close_h0 = NULL,

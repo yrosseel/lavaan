@@ -24,7 +24,7 @@ setMethod(
              rmsea.close.h0 = 0.05,
              rmsea.notclose.h0 = 0.08,
              robust = TRUE,
-             cat.check.pd = TRUE
+             cat.nonpd = "na"
            ),
            output = "vector", ...) {
     dotdotdot <- list(...)
@@ -50,7 +50,7 @@ setMethod(
              rmsea.close.h0 = 0.05,
              rmsea.notclose.h0 = 0.08,
              robust = TRUE,
-             cat.check.pd = TRUE
+             cat.nonpd = "na"
            ),
            output = "vector", ...) {
     dotdotdot <- list(...)
@@ -78,7 +78,7 @@ lav_efalist_fitmeasures <- function(
       rmsea.close.h0 = 0.05,
       rmsea.notclose.h0 = 0.08,
       robust = TRUE,
-      cat.check.pd = TRUE
+      cat.nonpd = "na"
     ),
     output = "list", ...) {
   dotdotdot <- list(...)
@@ -136,7 +136,7 @@ lav_fit <- function(object, fit_measures = "all",
                                rmsea.close.h0 = 0.05,
                                rmsea.notclose.h0 = 0.08,
                                robust = TRUE,
-                               cat.check.pd = TRUE
+                               cat.nonpd = "na"
                              ),
                              output = "vector") {
   # check object
@@ -150,7 +150,7 @@ lav_fit <- function(object, fit_measures = "all",
     rmsea.close.h0 = 0.05,
     rmsea.notclose.h0 = 0.08,
     robust = TRUE,
-    cat.check.pd = TRUE
+    cat.nonpd = "na"
   )
   if (!missing(fm_args)) {
     lav_deprecated_args("fit_measures", "fm_args")
@@ -170,6 +170,27 @@ lav_fit <- function(object, fit_measures = "all",
     fit_measures$fit.measures <- NULL
     fm_args <- modifyList(default_fm_args, fit_measures)
     fit_measures <- temp
+  }
+
+  # resolve the cat.nonpd option (new in 0.7-1): what to do when data are
+  # categorical and an input correlation matrix is not positive definite?
+  #    "na"     -> robust fit indices are NA (default)
+  #    "refit"  -> smooth the matrix, and re-estimate the parameters
+  #                using estimator = "catML"
+  #    "smooth" -> smooth the matrix, but keep the (DWLS) parameter
+  #                estimates (as in lavaan <= 0.6-13)
+  # the older cat.check.pd = FALSE is a deprecated alias for "refit"
+  if (!is.null(fm_args$cat.check.pd) && !isTRUE(fm_args$cat.check.pd) &&
+      identical(fm_args$cat.nonpd, "na")) {
+    fm_args$cat.nonpd <- "refit"
+  }
+  if (!is.character(fm_args$cat.nonpd) ||
+      !fm_args$cat.nonpd %in% c("na", "refit", "smooth")) {
+    lav_msg_warn(gettextf(
+      "invalid cat.nonpd value [%s] set to default \"na\".",
+      fm_args$cat.nonpd
+    ))
+    fm_args$cat.nonpd <- "na"
   }
 
   # standard test
@@ -580,7 +601,7 @@ lav_fit <- function(object, fit_measures = "all",
         standard_test = standard_test,
         scaled_test = scaled_test,
         robust = fm_args$robust,
-        cat_check_pd = fm_args$cat.check.pd
+        cat_nonpd = fm_args$cat.nonpd
       )
     )
   }
@@ -640,7 +661,7 @@ lav_fit <- function(object, fit_measures = "all",
         close_h0 = rmsea_close_h0,
         notclose_h0 = rmsea_notclose_h0,
         robust = fm_args$robust,
-        cat_check_pd = fm_args$cat.check.pd
+        cat_nonpd = fm_args$cat.nonpd
       )
     )
   }
@@ -679,7 +700,7 @@ lav_fit <- function(object, fit_measures = "all",
         scaled_test = scaled_test,
         ci_level = gfi_ci_level,
         robust = fm_args$robust,
-        cat_check_pd = fm_args$cat.check.pd
+        cat_nonpd = fm_args$cat.nonpd
       )
     )
   }

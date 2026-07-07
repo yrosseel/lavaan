@@ -11,7 +11,7 @@ fitMeasures <- function(object, fit_measures = "all",           # nolint
                           rmsea.close.h0 = 0.05,
                           rmsea.notclose.h0 = 0.08,
                           robust = TRUE,
-                          cat.check.pd = TRUE
+                          cat.nonpd = "na"
                         ),
                         output = "vector", ...) {
   UseMethod("fitMeasures", object)
@@ -25,7 +25,7 @@ fitmeasures <- function(object, fit_measures = "all",
                           rmsea.close.h0 = 0.05,
                           rmsea.notclose.h0 = 0.08,
                           robust = TRUE,
-                          cat.check.pd = TRUE
+                          cat.nonpd = "na"
                         ),
                         output = "vector", ...) {
   UseMethod("fitmeasures", object)
@@ -44,7 +44,7 @@ setGeneric(
              rmsea.close.h0 = 0.05,
              rmsea.notclose.h0 = 0.08,
              robust = TRUE,
-             cat.check.pd = TRUE
+             cat.nonpd = "na"
            ),
            output = "vector", ...) {
     standardGeneric("fitMeasures")
@@ -61,7 +61,7 @@ setGeneric(
              rmsea.close.h0 = 0.05,
              rmsea.notclose.h0 = 0.08,
              robust = TRUE,
-             cat.check.pd = TRUE
+             cat.nonpd = "na"
            ),
            output = "vector", ...) {
     standardGeneric("fitmeasures")

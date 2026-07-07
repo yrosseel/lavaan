@@ -12,8 +12,20 @@
 # YR Dec 2022: first version
 # YR Jan 2023: catml_dwls should check if the input 'correlation' matrix
 #              is positive-definite (or not)
+# YR Jul 2026: replace check_pd = TRUE/FALSE by nonpd = "na"/"refit"/"smooth"
+#              (what to do when an input correlation matrix is not
+#              positive definite):
+#                "na"     -> return NA for the robust quantities (default)
+#                "refit"  -> smooth the input matrix, and re-estimate the
+#                            model parameters using estimator = "catML"
+#                            (the former check_pd = FALSE behavior)
+#                "smooth" -> smooth the input matrix, but keep the (DWLS)
+#                            parameter estimates (as in lavaan <= 0.6-13)
+#              if the input matrices are positive definite, all three
+#              choices are identical: the ML ingredients are evaluated at
+#              the (unchanged) DWLS estimates
 
-lav_fit_catml_dwls <- function(lavobject, check_pd = TRUE) {
+lav_fit_catml_dwls <- function(lavobject, nonpd = "na") {
   # empty list
   empty_list <- list(
     XX3 = as.numeric(NA), df3 = as.numeric(NA),
@@ -33,26 +45,29 @@ lav_fit_catml_dwls <- function(lavobject, check_pd = TRUE) {
   }
 
   # check if input matrix (or matrices) are all positive definite
-  # (perhaps later, we can rely on 'smoothing', but not for now
-  # pd_flag <- TRUE
-  if (check_pd) {
+  if (nonpd == "na") {
     for (g in seq_len(lavdata@ngroups)) {
       cor_1 <- lavsamplestats@cov[[g]]
       ev <- eigen(cor_1, symmetric = TRUE, only.values = TRUE)$values
       if (any(ev < .Machine$double.eps^(1 / 2))) {
-        # non-pd!
-        # pd_flag <- FALSE
+        # non-pd! return NA
         # should we give a warning here? (not for now)
         # warning("lavaan WARNING: robust RMSEA/CFI could not be computed
         #   because the input correlation matrix is not positive-definite")
-        # what should we do? return NA (for now)
         return(empty_list)
       }
     }
   }
 
-  # 'refit' using estimator = "catML"
-  fit_catml <- try(lav_object_catml(lavobject), silent = TRUE)
+  # evaluate the ML ingredients using estimator = "catML": a plain
+  # (re)evaluation at the DWLS estimates if the input matrices are
+  # positive definite; if not, the input matrices are smoothed first, and
+  # the model parameters are re-estimated (nonpd = "refit") or kept at
+  # the DWLS values (nonpd = "smooth")
+  fit_catml <- try(
+    lav_object_catml(lavobject, allow_refit = (nonpd != "smooth")),
+    silent = TRUE
+  )
   if (inherits(fit_catml, "try-error")) {
     return(empty_list)
   }

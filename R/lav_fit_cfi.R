@@ -230,7 +230,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
                                   standard_test = "standard",
                                   scaled_test = "none",
                                   robust = TRUE,
-                                  cat_check_pd = TRUE) {
+                                  cat_nonpd = "na") {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
 
@@ -364,7 +364,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   if (robust_flag) {
     xx3 <- x2
     if (categorical_flag) {
-      out <- try(lav_fit_catml_dwls(lavobject, check_pd = cat_check_pd),
+      out <- try(lav_fit_catml_dwls(lavobject, nonpd = cat_nonpd),
         silent = TRUE
       )
       if (inherits(out, "try-error")) {
@@ -407,6 +407,13 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
 
   # 1. BASELINE model
   baseline_test <- NULL
+
+  # is the (effective) baseline model the default independence model?
+  # (needed below: the robust corrections for categorical data -- Savalei,
+  #  2021, eq. 6b -- are only valid for the independence baseline)
+  baseline_default_flag <- is.null(baseline_model) &&
+    is.null(lavobject@external$baseline.model) &&
+    !identical(lavobject@Options$baseline.type, "nested")
 
   # we use the following priority:
   # 1. user-provided baseline model
@@ -480,6 +487,16 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
       xx3_null <- x2_null
       if (categorical_flag) {
         if (inherits(out, "try-error")) {
+          xx3_null <- c_hat_null <- as.numeric(NA)
+        } else if (!baseline_default_flag) {
+          # the robust corrections for categorical data assume the
+          # (default) independence baseline model; for any other baseline
+          # model, mixing its test statistic/df with the independence-
+          # based correction (tr Gamma) would be wrong -> return NA
+          lav_msg_warn(gettext(
+            "robust fit indices are currently not available for
+             categorical data in combination with a non-default baseline
+             model; returning NA."))
           xx3_null <- c_hat_null <- as.numeric(NA)
         } else {
           xx3_null <- out$XX3.null

@@ -219,7 +219,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
                                     ci_level = 0.90,
                                     close_h0 = 0.05, notclose_h0 = 0.08,
                                     robust = TRUE,
-                                    cat_check_pd = TRUE) {
+                                    cat_nonpd = "na") {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
 
@@ -348,9 +348,10 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   }
 
   # robust ingredients
+  n3 <- n
   if (robust_flag) {
     if (categorical_flag) {
-      out <- try(lav_fit_catml_dwls(lavobject, check_pd = cat_check_pd),
+      out <- try(lav_fit_catml_dwls(lavobject, nonpd = cat_nonpd),
         silent = TRUE
       )
       if (inherits(out, "try-error")) {
@@ -361,6 +362,11 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
         c_hat3 <- c_hat <- out$c.hat3
         xx3_scaled <- out$XX3.scaled
       }
+      # new in 0.7-1: the robust quantities (xx3, c.hat3, ...) are all
+      # ML-based (chi-square = N * F_ML), so we use N -- not N-1 -- in
+      # the denominator; this also matches what a direct
+      # estimator = "catML" run would use
+      n3 <- lavobject@SampleStats@ntotal
     } else if (fiml_flag) {
       xx3 <- fiml$XX3
       df3 <- fiml$df3
@@ -420,7 +426,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
     }
     if (robust_flag) {
       indices["rmsea.robust"] <-
-        lav_fit_rmsea(x2 = xx3, df = df3, n = n, c_hat = c_hat3, g = g)
+        lav_fit_rmsea(x2 = xx3, df = df3, n = n3, c_hat = c_hat3, g = g)
     }
   }
 
@@ -443,7 +449,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
       # note: input is scaled test statistic!
       ci_robust <- lav_fit_rmsea_ci(
         x2 = xx3_scaled,
-        df = df3, n = n, g = g, c_hat = c_hat,
+        df = df3, n = n3, g = g, c_hat = c_hat,
         level = ci_level
       )
       indices["rmsea.ci.lower.robust"] <- ci_robust$rmsea.ci.lower
@@ -482,14 +488,14 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
         lav_fit_rmsea_closefit(
           x2 = xx3_scaled,
           df = df3,
-          n = n, g = g, c_hat = c_hat,
+          n = n3, g = g, c_hat = c_hat,
           rmsea_h0 = close_h0
         )
       indices["rmsea.notclose.pvalue.robust"] <- # new in 0.6-13
         lav_fit_rmsea_notclosefit(
           x2 = xx3_scaled,
           df = df3,
-          n = n, g = g, c_hat = c_hat,
+          n = n3, g = g, c_hat = c_hat,
           rmsea_h0 = notclose_h0
         )
     }

@@ -269,7 +269,13 @@ lav_fit_gfi_ci <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
 lav_fit_gfi_family <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
                                ci_level = 0.90, robust_flag = FALSE,
                                xx3 = NULL, df3 = NULL, c_hat = NULL,
-                               c_hat3 = NULL, xx3_scaled = NULL) {
+                               c_hat3 = NULL, xx3_scaled = NULL,
+                               n3 = NULL) {
+  # n3: the sample size to be used for the *robust* quantities (which may
+  # be N rather than N-1 in the categorical case; see lav_fit_rmsea.R)
+  if (is.null(n3)) {
+    n3 <- n
+  }
   out <- list(
     est = as.numeric(NA), ci.lower = as.numeric(NA), ci.upper = as.numeric(NA),
     robust = as.numeric(NA), ci.lower.robust = as.numeric(NA),
@@ -286,11 +292,11 @@ lav_fit_gfi_family <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
 
   if (robust_flag) {
     out$robust <- lav_fit_gfi(
-      x2 = xx3, df = df3, n = n, p = p, c_hat = c_hat3
+      x2 = xx3, df = df3, n = n3, p = p, c_hat = c_hat3
     )
     # note: input is the scaled test statistic!
     ci_robust <- lav_fit_gfi_ci(
-      x2 = xx3_scaled, df = df3, n = n, p = p,
+      x2 = xx3_scaled, df = df3, n = n3, p = p,
       c_hat = c_hat, level = ci_level
     )
     out$ci.lower.robust <- ci_robust$gfi.ci.lower
@@ -309,7 +315,7 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
                                   scaled_test = "none",
                                   ci_level = 0.90,
                                   robust = TRUE,
-                                  cat_check_pd = TRUE) {
+                                  cat_nonpd = "na") {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
 
@@ -478,9 +484,10 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
     # robust ingredients
     xx3 <- xx3_scaled <- df3 <- c_hat <- c_hat3 <- as.numeric(NA)
     xx3_rls <- xx3_scaled_rls <- as.numeric(NA)
+    n3 <- n
     if (robust_flag) {
       if (categorical_flag) {
-        out <- try(lav_fit_catml_dwls(lavobject, check_pd = cat_check_pd),
+        out <- try(lav_fit_catml_dwls(lavobject, nonpd = cat_nonpd),
           silent = TRUE
         )
         if (inherits(out, "try-error")) {
@@ -495,6 +502,9 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
         # no separate RLS version for categorical data
         xx3_rls <- xx3
         xx3_scaled_rls <- xx3_scaled
+        # the robust quantities are ML-based: use N, not N-1
+        # (see lav_fit_rmsea.R)
+        n3 <- lavobject@SampleStats@ntotal
       } else if (fiml_flag) {
         xx3 <- fiml$XX3
         df3 <- fiml$df3
@@ -530,13 +540,15 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
     gfi_lrt <- lav_fit_gfi_family(
       x2 = x2, df = df, n = n, p = p, ci_level = ci_level,
       robust_flag = robust_flag, xx3 = xx3, df3 = df3,
-      c_hat = c_hat, c_hat3 = c_hat3, xx3_scaled = xx3_scaled
+      c_hat = c_hat, c_hat3 = c_hat3, xx3_scaled = xx3_scaled,
+      n3 = n3
     )
     # GFI based on the RLS statistic (the recommended version)
     gfi_rls <- lav_fit_gfi_family(
       x2 = x2_rls, df = df, n = n, p = p, ci_level = ci_level,
       robust_flag = robust_flag, xx3 = xx3_rls, df3 = df3,
-      c_hat = c_hat, c_hat3 = c_hat3, xx3_scaled = xx3_scaled_rls
+      c_hat = c_hat, c_hat3 = c_hat3, xx3_scaled = xx3_scaled_rls,
+      n3 = n3
     )
 
     # the default (printed) 'gfi' is the RLS version
