@@ -1,14 +1,34 @@
-# functions to deal with binary/ordinal univariate data
-
-# - probit regression
-# - ordinal probit regression
-# - logit regression
-# - ordinal logit regression
-
+# the univariate ordinal (probit/logit) regression model
+#
+# - probit regression / ordinal probit regression
+# - logit regression / ordinal logit regression (logistic = TRUE)
+# - using case weights wt
+#
+# YR 25 Nov 2019 (replacing the old lav_probit.R routines)
+# YR/LDW 2026: refactored (see lav_uvbv_common.R for the shared cache/minfns
+#              design); no change in behavior
+#
 # Note: the idea of using 'o1' and 'o2' when computing z1/z2 comes from
 #       the dissertation of Christensen, 2012 (see also his `ordinal' package)
-
-# YR - 25 Nov 2019 (replacing the old lav_probit.R routines)
+#
+# The model for case i with response category y_i = k (k = 1, .., nth + 1):
+#
+#     P(y_i = k) = pfun(z1_i) - pfun(z2_i)
+#
+# with the latent-response 'rectangle' bounds
+#
+#     z1_i = th[k]     - eta_i  (+100 if k == nth + 1, i.e. th[nth+1] = +Inf)
+#     z2_i = th[k - 1] - eta_i  (-100 if k == 1,       i.e. th[0]     = -Inf)
+#
+# and linear predictor eta_i = X_i %*% beta (0 if no covariates).
+# The parameter vector is theta = c(th, beta).
+#
+# fit object (list) contract -- see lav_uvord_fit():
+#   theta, nexo, nth, th_idx, slope_idx, missing_idx,
+#   y (integer, recoded to 1..ncat), wt, y1, y2 (case x th indicator
+#   matrices), z1, z2 (bounds at theta), x
+# The z1/z2 values are those of the *last* evaluation inside nlminb;
+# lav_uvord_update_fit() recomputes them for new parameter values.
 
 lav_uvord_fit <- function(y = NULL,
                           x = NULL,
@@ -29,36 +49,13 @@ lav_uvord_fit <- function(y = NULL,
   }
 
   # check weights
-  if (is.null(wt)) {
-    wt <- rep(1, length(y))
-  } else {
-    if (length(y) != length(wt)) {
-      lav_msg_stop(gettext("length y is not the same as length wt"))
-    }
-    if (any(wt < 0)) {
-      lav_msg_stop(gettext("all weights should be positive"))
-    }
-  }
-
-  # check lower/upper
-  # TODO
+  wt <- lav_uvbv_wt_check(y = y, wt = wt)
 
   # optim.method
-  min_objective <- lav_uvord_min_objective
+  minfns <- lav_uvbv_optim_fns(optim_method, lav_uvord_min_fns())
   y_ncat <- length(tabulate(y)) # number of response categories
-  if (y_ncat > 1L) {
-    min_gradient <- lav_uvord_min_grad
-    min_hessian <- lav_uvord_min_hessian
-  } else {
-    min_gradient <- NULL
-    min_hessian <- NULL
-  }
-  if (optim_method == "nlminb" || optim_method == "nlminb2") {
-    # nothing to do
-  } else if (optim_method == "nlminb0") {
-    min_gradient <- min_hessian <- NULL
-  } else if (optim_method == "nlminb1") {
-    min_hessian <- NULL
+  if (y_ncat <= 1L) {
+    minfns$gradient <- minfns$hessian <- NULL
   }
 
   # create cache environment
@@ -72,8 +69,8 @@ lav_uvord_fit <- function(y = NULL,
   control_nlminb <- modifyList(control_nlminb, control)
 
   optim <- nlminb(
-    start = cache$theta, objective = min_objective,
-    gradient = min_gradient, hessian = min_hessian,
+    start = cache$theta, objective = minfns$objective,
+    gradient = minfns$gradient, hessian = minfns$hessian,
     control = control_nlminb, lower = lower, upper = upper,
     cache = cache
   )
@@ -83,7 +80,7 @@ lav_uvord_fit <- function(y = NULL,
   }
 
   # return results as a list (to be compatible with lav_bvord.R)
-  out <- list(
+  list(
     theta = optim$par,
     nexo = cache$nexo,
     nth = cache$nth,
@@ -117,6 +114,38 @@ lav_uvord_th <- function(y = NULL, wt = NULL) {
   qnorm(cumsum(y_prop[-length(y_prop)]))
 }
 
+# the -Inf/+Inf 'offsets': add +100 (-100) to z1 (z2) for the extreme
+# categories, so that pfun() evaluates to 1 (0) there
+lav_uvord_o12 <- function(y = NULL, nth = NULL) {
+  list(
+    o1 = ifelse(y == nth + 1, 100, 0),
+    o2 = ifelse(y == 1, -100, 0)
+  )
+}
+
+# the latent-response rectangle bounds z1/z2, given thresholds th, (optional)
+# slopes beta for covariates x, and an (optional) additional per-case offset
+# (the offset is not used by the single-level code, but allows a cluster
+#  random effect to shift eta in a two-level extension)
+lav_uvord_z12 <- function(y = NULL, th = NULL, o1 = NULL, o2 = NULL,
+                          x = NULL, beta = NULL, offset = NULL) {
+  th_1 <- c(0, th, 0) # th[0] and th[nth+1]; o1/o2 take over there
+  eta <- NULL
+  if (!is.null(x) && length(beta) > 0L) {
+    eta <- drop(x %*% beta)
+  }
+  if (!is.null(offset)) {
+    eta <- if (is.null(eta)) offset else eta + offset
+  }
+  if (!is.null(eta)) {
+    z1 <- th_1[y + 1L] - eta + o1
+    z2 <- th_1[y] - eta + o2
+  } else {
+    z1 <- th_1[y + 1L] + o1
+    z2 <- th_1[y] + o2
+  }
+  list(z1 = z1, z2 = z2)
+}
 
 # prepare cache environment
 lav_uvord_init_cache <- function(y = NULL,
@@ -196,8 +225,9 @@ lav_uvord_init_cache <- function(y = NULL,
   }
 
   # offsets -Inf/+Inf
-  o1 <- ifelse(y == nth + 1, 100, 0)
-  o2 <- ifelse(y == 1, -100, 0)
+  o12 <- lav_uvord_o12(y = y, nth = nth)
+  o1 <- o12$o1
+  o2 <- o12$o2
 
   # TH matrices (Matrix logical?)
   if (nth > 0L) {
@@ -218,25 +248,15 @@ lav_uvord_init_cache <- function(y = NULL,
     th_start <- 0
   } else {
     if (logistic) {
-      # th.start <- seq(-1, 1, length = nth) / 2
       th_start <- qlogis((1:nth) / (nth + 1))
     } else {
-      # th.start <- seq(-1, 1, length = nth) / 2
       th_start <- qnorm((1:nth) / (nth + 1))
     }
   }
   beta_start <- rep(0, nexo)
   theta <- c(th_start, beta_start)
 
-  # parameter labels (for pretty output only)
-  # th.lab <- paste("th", seq_len(nth), sep = "")
-  # sl.lab <- character(0L)
-  # if(nexo > 0L) {
-  #    sl.lab <- paste("beta", seq_len(nexo), sep = "")
-  # }
-  # theta.labels <- c(th.lab, sl.lab)
-
-  out <- list2env(
+  list2env(
     list(
       y = y, x = x, wt = wt, o1 = o1, o2 = o2,
       missing_idx = missing_idx, n = n,
@@ -248,8 +268,6 @@ lav_uvord_init_cache <- function(y = NULL,
     ),
     parent = parent
   )
-
-  out
 }
 
 # compute total (log)likelihood
@@ -274,16 +292,10 @@ lav_uvord_loglik_cache <- function(cache = NULL) {
 
     # free parameters
     th <- theta[1:nth]
-    th_1 <- c(0, th, 0)
     beta <- theta[-c(1:nth)]
-    if (nexo > 0L) {
-      eta <- drop(x %*% beta)
-      z1 <- th_1[y + 1L] - eta + o1
-      z2 <- th_1[y] - eta + o2
-    } else {
-      z1 <- th_1[y + 1L] + o1
-      z2 <- th_1[y] + o2
-    }
+    z12 <- lav_uvord_z12(y = y, th = th, o1 = o1, o2 = o2, x = x, beta = beta)
+    z1 <- z12$z1
+    z2 <- z12$z2
     pi_i <- pfun(z1) - pfun(z2)
 
     # avoid numerical degradation if z2 (and therefore z1) are both 'large'
@@ -419,11 +431,8 @@ lav_uvord_hessian_cache <- function(cache = NULL) {
   })                             # nolint end
 }
 
-
-# compute total (log)likelihood, for specific 'x' (nlminb)
-lav_uvord_min_objective <- function(x, cache = NULL) {
-  # check order of first 2 thresholds; if x[1] > x[2], return Inf
-  # new in 0.6-8
+# reject descending values for the first few thresholds (new in 0.6-8)
+lav_uvord_pre_objective <- function(x, cache = NULL) {
   if (cache$nth > 1L && x[1] > x[2]) {
     return(+Inf)
   }
@@ -433,30 +442,17 @@ lav_uvord_min_objective <- function(x, cache = NULL) {
   if (cache$nth > 3L && x[3] > x[4]) {
     return(+Inf)
   }
-  cache$theta <- x
-  -1 * lav_uvord_loglik_cache(cache = cache) / cache$n
+  NULL
 }
 
-# compute gradient, for specific 'x' (nlminb)
-lav_uvord_min_grad <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_uvord_loglik_cache(cache = cache)
-  }
-  -1 * lav_uvord_grad_cache(cache = cache) / cache$n
-}
-
-# compute hessian, for specific 'x' (nlminb)
-lav_uvord_min_hessian <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_uvord_loglik_cache(cache = cache)
-    tmp <- lav_uvord_grad_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_uvord_hessian_cache(cache = cache) / cache$n
+# nlminb objective/gradient/hessian (see lav_uvbv_common.R)
+lav_uvord_min_fns <- function() {
+  lav_uvbv_min_fns(
+    logl_fun = lav_uvord_loglik_cache,
+    grad_fun = lav_uvord_grad_cache,
+    hessian_fun = lav_uvord_hessian_cache,
+    pre_objective = lav_uvord_pre_objective
+  )
 }
 
 # get 'z1' and 'z2' values, given (new) values for the parameters
@@ -476,23 +472,17 @@ lav_uvord_update_fit <- function(fit_y = NULL, th_new = NULL, sl_new = NULL) {
   }
 
   nth <- length(fit_y$th_idx)
-  o1 <- ifelse(fit_y$y == nth + 1, 100, 0)
-  o2 <- ifelse(fit_y$y == 1, -100, 0)
+  o12 <- lav_uvord_o12(y = fit_y$y, nth = nth)
 
   theta <- fit_y$theta
   th <- theta[1:nth]
-  th_1 <- c(0, th, 0)
   beta <- theta[-c(1:nth)]
-  y <- fit_y$y
-  x <- fit_y$x
-  if (length(fit_y$slope_idx) > 0L) {
-    eta <- drop(x %*% beta)
-    fit_y$z1 <- th_1[y + 1L] - eta + o1
-    fit_y$z2 <- th_1[y] - eta + o2
-  } else {
-    fit_y$z1 <- th_1[y + 1L] + o1
-    fit_y$z2 <- th_1[y] + o2
-  }
+  z12 <- lav_uvord_z12(
+    y = fit_y$y, th = th, o1 = o12$o1, o2 = o12$o2,
+    x = fit_y$x, beta = beta
+  )
+  fit_y$z1 <- z12$z1
+  fit_y$z2 <- z12$z2
 
   fit_y
 }

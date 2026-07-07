@@ -1,9 +1,21 @@
 # the univariate (weighted) linear model
-
+#
 # - scores/gradient/hessian
 # - including the residual variance!
-
-# YR - 30 Dec 2019 (replacing the old lav_ols.R routines)
+#
+# YR 30 Dec 2019 (replacing the old lav_ols.R routines)
+# YR/LDW 2026: refactored (see lav_uvbv_common.R for the shared cache/minfns
+#              design); fixed a dormant bug in lav_uvreg_update_fit() (yhat
+#              lost the slopes; never triggered, as all callers pass
+#              intercept-only models)
+#
+# The parameter vector is theta = c(beta, evar), with beta = c(int, slopes)
+# and evar the residual variance; yhat = X1 %*% beta with X1 = [1, X].
+#
+# fit object (list) contract -- see lav_uvreg_fit():
+#   theta, nexo, int_idx, slope_idx, beta_idx, var_idx, y, wt, x, yhat
+# The yhat values are those of the *last* evaluation inside nlminb;
+# lav_uvreg_update_fit() recomputes them for new parameter values.
 
 lav_uvreg_fit <- function(y = NULL,
                           x = NULL,
@@ -12,28 +24,10 @@ lav_uvreg_fit <- function(y = NULL,
                           control = list(),
                           output = "list") {
   # check weights
-  if (is.null(wt)) {
-    wt <- rep(1, length(y))
-  } else {
-    if (length(y) != length(wt)) {
-      lav_msg_stop(gettext("length y is not the same as length wt"))
-    }
-    if (any(wt < 0)) {
-      lav_msg_stop(gettext("all weights should be positive"))
-    }
-  }
+  wt <- lav_uvbv_wt_check(y = y, wt = wt)
 
   # optim.method
-  min_objective <- lav_uvreg_min_objective
-  min_gradient <- lav_uvreg_min_grad
-  min_hessian <- lav_uvreg_min_hessian
-  if (optim_method == "nlminb" || optim_method == "nlminb2") {
-    # nothing to do
-  } else if (optim_method == "nlminb0") {
-    min_gradient <- min_hessian <- NULL
-  } else if (optim_method == "nlminb1") {
-    min_hessian <- NULL
-  }
+  minfns <- lav_uvbv_optim_fns(optim_method, lav_uvreg_min_fns())
 
   # create cache environment
   cache <- lav_uvreg_init_cache(y = y, x = x, wt = wt)
@@ -46,8 +40,8 @@ lav_uvreg_fit <- function(y = NULL,
   control_nlminb <- modifyList(control_nlminb, control)
 
   optim <- nlminb(
-    start = cache$theta, objective = min_objective,
-    gradient = min_gradient, hessian = min_hessian,
+    start = cache$theta, objective = minfns$objective,
+    gradient = minfns$gradient, hessian = minfns$hessian,
     control = control_nlminb, cache = cache
   )
 
@@ -55,7 +49,7 @@ lav_uvreg_fit <- function(y = NULL,
     return(cache)
   }
 
-  # return results as a list (to be compatible with lav_bvbord.R)
+  # return results as a list (to be compatible with lav_bvord.R)
   list(
     theta = optim$par,
     nexo = cache$nexo,
@@ -130,7 +124,7 @@ lav_uvreg_init_cache <- function(y = NULL,
   theta_beta <- unname(fit_lm$coefficients)
   theta <- c(theta_beta, theta_evar)
 
-  out <- list2env(
+  list2env(
     list(
       y = y, x1 = x1, wt = wt, n = n,
       int_idx = int_idx, beta_idx = beta_idx,
@@ -140,8 +134,6 @@ lav_uvreg_init_cache <- function(y = NULL,
     ),
     parent = parent
   )
-
-  out
 }
 
 # compute total (log)likelihood
@@ -220,6 +212,9 @@ lav_uvreg_grad_cache <- function(cache = NULL) {
 }
 
 # compute total Hessian
+# note: this evaluates at the *current* cache state (as left behind by the
+# last nlminb evaluation) -- the beta/evar/yhat/res quantities must already
+# be present in the cache
 lav_uvreg_hessian <- function(y = NULL,
                               x = NULL,
                               wt = rep(1, length(y)),
@@ -248,33 +243,13 @@ lav_uvreg_hessian_cache <- function(cache = NULL) {
   })                    # nolint end
 }
 
-# compute total (log)likelihood, for specific 'x' (nlminb)
-lav_uvreg_min_objective <- function(x, cache = NULL) {
-  cache$theta <- x
-  -1 * lav_uvreg_loglik_cache(cache = cache) / cache$n
-}
-
-# compute gradient, for specific 'x' (nlminb)
-lav_uvreg_min_grad <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_uvreg_loglik_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_uvreg_grad_cache(cache = cache) / cache$n
-}
-
-# compute hessian, for specific 'x' (nlminb)
-lav_uvreg_min_hessian <- function(x, cache = NULL) {
-  # check if x has changed
-  if (!all(x == cache$theta)) {
-    cache$theta <- x
-    tmp <- lav_uvreg_loglik_cache(cache = cache)
-    tmp <- lav_uvreg_grad_cache(cache = cache)
-    rm(tmp)
-  }
-  -1 * lav_uvreg_hessian_cache(cache = cache) / cache$n
+# nlminb objective/gradient/hessian (see lav_uvbv_common.R)
+lav_uvreg_min_fns <- function() {
+  lav_uvbv_min_fns(
+    logl_fun = lav_uvreg_loglik_cache,
+    grad_fun = lav_uvreg_grad_cache,
+    hessian_fun = lav_uvreg_hessian_cache
+  )
 }
 
 # update fit object with new parameters
@@ -292,7 +267,7 @@ lav_uvreg_update_fit <- function(fit_y = NULL,
   }
 
   beta <- fit_y$theta[fit_y$beta_idx]
-  x <- fit_y$X
+  x <- fit_y$x # was fit_y$X (always NULL): yhat lost the slopes
   x1 <- cbind(1, x, deparse.level = 0)
 
   fit_y$yhat <- drop(x1 %*% beta)
