@@ -14,11 +14,14 @@
 
 lav_uvreg_2l_fit <- function(y = NULL,
                              cluster_idx = NULL,
+                             between = TRUE, # vb free? (FALSE for
+                                             # within-only variables)
                              optim_method = "nlminb1",
                              control = list(),
                              output = "list") {
   # create cache environment
-  cache <- lav_uvreg_2l_init_cache(y = y, cluster_idx = cluster_idx)
+  cache <- lav_uvreg_2l_init_cache(y = y, cluster_idx = cluster_idx,
+                                   between = between)
 
   # optim
   minfns <- lav_uvbv_optim_fns(optim_method, lav_uvreg_2l_min_fns())
@@ -29,11 +32,19 @@ lav_uvreg_2l_fit <- function(y = NULL,
   )
   control_nlminb <- modifyList(control_nlminb, control)
 
+  lower <- c(-Inf, .Machine$double.eps^0.75, 0)
+  upper <- c(+Inf, +Inf, +Inf)
+  if (!between) {
+    # pin vb at zero
+    lower[3] <- upper[3] <- 0
+    cache$theta[3] <- 0
+  }
+
   optim <- nlminb(
     start = cache$theta, objective = minfns$objective,
     gradient = minfns$gradient, hessian = minfns$hessian,
     control = control_nlminb,
-    lower = c(-Inf, .Machine$double.eps^0.75, 0),
+    lower = lower, upper = upper,
     cache = cache
   )
 
@@ -44,6 +55,7 @@ lav_uvreg_2l_fit <- function(y = NULL,
   list(
     theta = optim$par,
     mu_idx = 1L, wvar_idx = 2L, bvar_idx = 3L,
+    between = between,
     y = cache$y,
     cluster_idx = cache$cluster_idx,
     cs = cache$cs,
@@ -59,6 +71,7 @@ lav_uvreg_2l_fit <- function(y = NULL,
 # prepare cache environment
 lav_uvreg_2l_init_cache <- function(y = NULL,
                                     cluster_idx = NULL,
+                                    between = TRUE,
                                     parent = parent.frame()) {
   y <- as.numeric(y)
   if (anyNA(y)) {
@@ -76,6 +89,10 @@ lav_uvreg_2l_init_cache <- function(y = NULL,
   msb <- sum(njs * (cs$ybar[, 1] - mu0)^2) / (nclusters - 1)
   n0 <- (nobs - sum(njs^2) / nobs) / (nclusters - 1)
   vb0 <- max((msb - vw0) / n0, 0.01 * vw0)
+  if (!between) {
+    vb0 <- 0
+    vw0 <- sum((y - mu0)^2) / nobs
+  }
   theta <- c(mu0, vw0, vb0)
 
   list2env(

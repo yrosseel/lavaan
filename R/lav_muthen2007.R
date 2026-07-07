@@ -36,6 +36,8 @@ lav_muthen2007 <- function(y = NULL,
                            ov_names = NULL,
                            ov_types = NULL,
                            cluster_idx = NULL,
+                           between_flag = NULL, # per variable: does it
+                                                # have a between part?
                            ngh = 21L, # stage 1 + mixed pairs
                            ngh2 = 13L, # ordinal pairs (per dimension)
                            wls_w = TRUE) {
@@ -48,6 +50,14 @@ lav_muthen2007 <- function(y = NULL,
     }
   }
   ord_flag <- (ov_types == "ordered")
+  if (is.null(between_flag)) {
+    between_flag <- rep(TRUE, nvar)
+  }
+  if (any(ord_flag & !between_flag)) {
+    lav_msg_stop(gettext(
+      "within-only ORDINAL variables are not supported (yet) in the
+      two-level stage-wise estimation."))
+  }
 
   # ---- stage 1: univariate fits ----
   fit <- vector("list", nvar)
@@ -58,7 +68,8 @@ lav_muthen2007 <- function(y = NULL,
       )
     } else {
       fit[[p]] <- lav_uvreg_2l_fit(
-        y = y[, p], cluster_idx = cluster_idx
+        y = y[, p], cluster_idx = cluster_idx,
+        between = between_flag[p]
       )
     }
   }
@@ -84,7 +95,8 @@ lav_muthen2007 <- function(y = NULL,
       mu[p] <- fit[[p]]$theta[fit[[p]]$mu_idx]
       vw[p] <- fit[[p]]$theta[fit[[p]]$wvar_idx]
       vb[p] <- fit[[p]]$theta[fit[[p]]$bvar_idx]
-      npar_uni[p] <- 3L
+      # within-only variables: vb is fixed at 0 (not a parameter)
+      npar_uni[p] <- if (between_flag[p]) 3L else 2L
     }
   }
 
@@ -95,6 +107,9 @@ lav_muthen2007 <- function(y = NULL,
   pair_theta <- matrix(0, pstar, 2L) # (cw, cb) per pair
   pair_vars <- matrix(0L, pstar, 2L) # (j, i) with j < i
   pair_type <- character(pstar)
+  # pairs involving a within-only variable have cb fixed at 0: only cw
+  # is a free parameter
+  pair_neta <- integer(pstar)
   pp <- 0L
   for (j in seq_len(nvar - 1L)) {
     for (i in (j + 1L):nvar) {
@@ -127,6 +142,7 @@ lav_muthen2007 <- function(y = NULL,
         )
       }
       pair_theta[pp, ] <- est
+      pair_neta[pp] <- if (between_flag[j] && between_flag[i]) 2L else 1L
       sigma_w[i, j] <- sigma_w[j, i] <- est[1]
       sigma_b[i, j] <- sigma_b[j, i] <- est[2]
     }
@@ -136,26 +152,37 @@ lav_muthen2007 <- function(y = NULL,
   s_uni <- unlist(lapply(seq_len(nvar), function(p) {
     if (ord_flag[p]) {
       c(th[[p]], vb[p])
-    } else {
+    } else if (between_flag[p]) {
       c(mu[p], vw[p], vb[p])
+    } else {
+      c(mu[p], vw[p])
     }
   }))
-  s_all <- c(s_uni, t(pair_theta)) # pairs appended as (cw, cb) each
+  s_pair <- unlist(lapply(seq_len(pstar), function(pp) {
+    pair_theta[pp, seq_len(pair_neta[pp])]
+  }))
+  s_all <- c(s_uni, s_pair)
   par_names <- c(
     unlist(lapply(seq_len(nvar), function(p) {
       if (ord_flag[p]) {
         c(paste0(ov_names[p], "|t", seq_along(th[[p]])),
           paste0(ov_names[p], "~b~", ov_names[p]))
-      } else {
+      } else if (between_flag[p]) {
         c(paste0(ov_names[p], "~1"),
           paste0(ov_names[p], "~w~", ov_names[p]),
           paste0(ov_names[p], "~b~", ov_names[p]))
+      } else {
+        c(paste0(ov_names[p], "~1"),
+          paste0(ov_names[p], "~w~", ov_names[p]))
       }
     })),
     unlist(lapply(seq_len(pstar), function(pp) {
       j <- pair_vars[pp, 1]; i <- pair_vars[pp, 2]
-      c(paste0(ov_names[i], "~w~", ov_names[j]),
-        paste0(ov_names[i], "~b~", ov_names[j]))
+      nm <- paste0(ov_names[i], "~w~", ov_names[j])
+      if (pair_neta[pp] == 2L) {
+        nm <- c(nm, paste0(ov_names[i], "~b~", ov_names[j]))
+      }
+      nm
     }))
   )
   names(s_all) <- par_names
@@ -165,7 +192,8 @@ lav_muthen2007 <- function(y = NULL,
     TH = th, TH.IDX = th_idx,
     MU = mu, SIGMA.W = sigma_w, SIGMA.B = sigma_b,
     pair.theta = pair_theta, pair.vars = pair_vars,
-    pair.type = pair_type,
+    pair.type = pair_type, pair.neta = pair_neta,
+    between.flag = between_flag,
     theta = s_all, npar.uni = npar_uni,
     ord.flag = ord_flag,
     WLS.W = NULL, SC = NULL
@@ -180,7 +208,9 @@ lav_muthen2007 <- function(y = NULL,
   uni_end <- cumsum(npar_uni)
   uni_start <- uni_end - npar_uni + 1L
   ntheta <- sum(npar_uni)
-  neta <- 2L * pstar
+  eta_end <- cumsum(pair_neta)
+  eta_start <- eta_end - pair_neta + 1L
+  neta <- sum(pair_neta)
   npar_all <- ntheta + neta
   nclusters <- length(unique(cluster_idx))
 
@@ -191,6 +221,10 @@ lav_muthen2007 <- function(y = NULL,
       sc_p <- lav_uvord_2l_sc(fit[[p]])
     } else {
       sc_p <- lav_uvreg_2l_sc(fit[[p]])
+      if (!between_flag[p]) {
+        # vb is fixed at 0: (mu, wvar) columns only
+        sc_p <- sc_p[, c("mu", "wvar"), drop = FALSE]
+      }
     }
     sc_all[, uni_start[p]:uni_end[p]] <- sc_p
   }
@@ -220,6 +254,9 @@ lav_muthen2007 <- function(y = NULL,
       free_idx <- match(c("wcov", "bcov"), colnames(sc_pair))
       var1_idx <- match(c("mu_y1", "wvar_y1", "bvar_y1"), colnames(sc_pair))
       var2_idx <- match(c("mu_y2", "wvar_y2", "bvar_y2"), colnames(sc_pair))
+      # within-only members: drop their (fixed) bvar column
+      if (!between_flag[j]) var1_idx <- var1_idx[1:2]
+      if (!between_flag[i]) var2_idx <- var2_idx[1:2]
     } else if (type == "bvord") {
       sc_pair <- lav_bvord_2l_sc(
         fit_y1 = fit[[j]], fit_y2 = fit[[i]], rho_w = cw, cb = cb,
@@ -241,6 +278,7 @@ lav_muthen2007 <- function(y = NULL,
       var1_idx <- match(c("mu_a", "vw_a", "vb_a"), colnames(sc_pair))
       var2_idx <- c(3L + seq_len(nth_i), # tau_c
                     match("vb_c", colnames(sc_pair)))
+      if (!between_flag[j]) var1_idx <- var1_idx[1:2]
     } else { # bvmix.swap: y1 = continuous (i), y2 = ordinal (j)
       sc_pair <- lav_bvmix_2l_sc(
         fit_y1 = fit[[i]], fit_y2 = fit[[j]], cw = cw, cb = cb, ngh = ngh
@@ -250,12 +288,16 @@ lav_muthen2007 <- function(y = NULL,
       # variable j is the ordinal one here (the 'c' side of the module)
       var1_idx <- c(3L + seq_len(nth_j), match("vb_c", colnames(sc_pair)))
       var2_idx <- match(c("mu_a", "vw_a", "vb_a"), colnames(sc_pair))
+      if (!between_flag[i]) var2_idx <- var2_idx[1:2]
     }
 
-    eidx <- (pp - 1L) * 2L + 1:2 # position within the eta block
+    # pairs with a within-only member: cb is fixed at 0, cw only
+    free_idx <- free_idx[seq_len(pair_neta[pp])]
+
+    eidx <- eta_start[pp]:eta_end[pp] # position within the eta block
     sc_all[, ntheta + eidx] <- sc_pair[, free_idx, drop = FALSE]
 
-    # A22 block (2 x 2) and its inverse
+    # A22 block and its inverse
     a22_pp <- crossprod(sc_pair[, free_idx, drop = FALSE])
     a22_inv[eidx, eidx] <- solve(a22_pp)
 

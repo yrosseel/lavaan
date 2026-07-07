@@ -1,7 +1,7 @@
 # model-implied statistics + Jacobian for TWO-LEVEL WLS with categorical
 # data (the model-side counterpart of lav_samp_wls_2l_cat)
 #
-# YR 2026 (two-level WLS, phase 5)
+# YR 2026 (two-level WLS, phase 5/6)
 #
 # The unrestricted (stage-wise) statistics live on the scale where the
 # WITHIN-level latent responses have variance 1. The structured model
@@ -19,10 +19,13 @@
 #
 # statistic vector layout (per group; matches lav_samp_wls_2l_cat):
 #   1. th: thresholds (ordinal, standardized); 0 for continuous variables
-#   2. within variances of the continuous variables
-#   3. within covariances/'correlations' (vech, no diagonal), standardized
-#   4. between means (continuous; standardized 0 for ordinal)
-#   5. vech(Sigma_b, diagonal = TRUE), standardized
+#   2. within means of the within-only (continuous) variables
+#   3. within variances of the continuous variables
+#   4. within covariances/'correlations' (vech, no diagonal), standardized
+#   5. between means (continuous; standardized 0 for ordinal) -- between
+#      variables only
+#   6. vech(Sigma_b, diagonal = TRUE), standardized -- between variables
+#      only
 #
 # The Jacobian is assembled as H %*% Delta_raw, where Delta_raw contains
 # the raw (unstandardized) derivative rows
@@ -83,6 +86,49 @@ lav_m07_implied_raw <- function(lavmodel = NULL, glist = NULL) {
   imp
 }
 
+# per-group block info: the within (b1) variable layout, the ordinal
+# positions, and the between (b2) -> within (b1) variable mapping
+lav_m07_block_info <- function(lavmodel = NULL, g = NULL,
+                               nw = NULL, nb = NULL) {
+  b1 <- (g - 1L) * 2L + 1L
+  b2 <- (g - 1L) * 2L + 2L
+
+  # ordinal variables at the within level (level-1 threshold rows exist,
+  # fixed to zero, with the same variable-major structure as level 2)
+  th_idx_1 <- lavmodel@th.idx[[b1]]
+  ord_1 <- sort(unique(th_idx_1[th_idx_1 > 0L]))
+
+  # between -> within variable mapping
+  if (nb == nw) {
+    w2b <- seq_len(nw)
+  } else {
+    # from the dimNames of the (ov x ov) theta matrices per block
+    mm_idx <- lav_model_group_mm_indices(lavmodel@nmat)
+    nm <- names(lavmodel@GLIST)
+    t1 <- mm_idx[[b1]][which(nm[mm_idx[[b1]]] == "theta")]
+    t2 <- mm_idx[[b2]][which(nm[mm_idx[[b2]]] == "theta")]
+    ov1 <- lavmodel@dimNames[[t1]][[1]]
+    ov2 <- lavmodel@dimNames[[t2]][[1]]
+    if (is.null(ov1) || is.null(ov2)) {
+      lav_msg_stop(gettext(
+        "cannot map the between-level variables to the within level
+        (no dimNames); this should not happen."))
+    }
+    w2b <- match(ov2, ov1)
+    if (anyNA(w2b)) {
+      lav_msg_stop(gettext(
+        "between-only variables are not supported (yet) for two-level
+        (D)WLS estimation with categorical data."))
+    }
+  }
+
+  between_flag <- seq_len(nw) %in% w2b
+  list(
+    b1 = b1, b2 = b2, th_idx_1 = th_idx_1, ord_1 = ord_1,
+    w2b = w2b, between_flag = between_flag
+  )
+}
+
 # model-implied (standardized) statistic vector; one vector per GROUP
 lav_m07_wls_est <- function(lavmodel = NULL, glist = NULL) {
   nlevels <- 2L
@@ -91,42 +137,49 @@ lav_m07_wls_est <- function(lavmodel = NULL, glist = NULL) {
 
   out <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
-    b1 <- (g - 1L) * nlevels + 1L
-    b2 <- (g - 1L) * nlevels + 2L
-    sigma_w <- imp$cov[[b1]]
-    sigma_b <- imp$cov[[b2]]
-    mu_b <- imp$mean[[b2]]
-    # note: the thresholds are between-level parameters (the level-1
-    # thresholds are fixed to zero); numeric entries of th are ignored
-    # (the between means enter separately, unnegated)
-    th_raw <- imp$th.raw[[b2]]
-    th_idx <- lavmodel@th.idx[[b2]]
-
+    sigma_w <- imp$cov[[(g - 1L) * 2L + 1L]]
+    sigma_b <- imp$cov[[(g - 1L) * 2L + 2L]]
     nvar <- NROW(sigma_w)
-    ord <- (seq_len(nvar) %in% th_idx)
-    num_idx <- which(!ord)
+    nb <- NROW(sigma_b)
+    bi <- lav_m07_block_info(lavmodel, g = g, nw = nvar, nb = nb)
+
+    mean_w <- imp$mean[[bi$b1]]
+    mu_b <- imp$mean[[bi$b2]]
+    th_raw2 <- imp$th.raw[[bi$b2]]
+    th_idx_2 <- lavmodel@th.idx[[bi$b2]]
+
+    ord <- (seq_len(nvar) %in% bi$ord_1)
 
     # within scale factors
     delta_1 <- ifelse(ord, 1 / sqrt(diag(sigma_w)), 1.0)
 
     # 1. thresholds (standardized); 0 entries for continuous variables
-    th_std <- numeric(length(th_idx))
-    ord_th <- which(th_idx > 0L)
-    th_std[ord_th] <- th_raw[ord_th] * delta_1[th_idx[ord_th]]
+    # (the k-th ordinal threshold at level 1 corresponds to the k-th
+    #  threshold parameter at level 2)
+    th_std <- numeric(length(bi$th_idx_1))
+    ord_pos_1 <- which(bi$th_idx_1 > 0L)
+    ord_pos_2 <- which(th_idx_2 > 0L)
+    th_std[ord_pos_1] <- th_raw2[ord_pos_2] *
+      delta_1[bi$th_idx_1[ord_pos_1]]
 
-    # 2. within variances of the continuous variables
-    vw <- diag(sigma_w)[num_idx]
+    # 2. within means of the within-only (continuous) variables
+    mu_w <- mean_w[!bi$between_flag]
 
-    # 3. standardized within covariances (vech, no diagonal)
+    # 3. within variances of the continuous variables
+    vw <- diag(sigma_w)[!ord]
+
+    # 4. standardized within covariances (vech, no diagonal)
     sw_std <- diag(delta_1) %*% sigma_w %*% diag(delta_1)
     cw <- lav_mat_vech(sw_std, diagonal = FALSE)
 
-    # 4./5. standardized between means + covariance matrix
-    mub_std <- delta_1 * mu_b
-    sb_std <- diag(delta_1) %*% sigma_b %*% diag(delta_1)
+    # 5./6. standardized between means + covariance matrix
+    delta_b <- delta_1[bi$w2b]
+    mub_std <- delta_b * mu_b
+    sb_std <- diag(delta_b, nrow = nb) %*% sigma_b %*%
+      diag(delta_b, nrow = nb)
 
     out[[g]] <- c(
-      th_std, vw, cw, mub_std,
+      th_std, mu_w, vw, cw, mub_std,
       lav_mat_vech(sb_std, diagonal = TRUE)
     )
   }
@@ -135,56 +188,76 @@ lav_m07_wls_est <- function(lavmodel = NULL, glist = NULL) {
 }
 
 # the standardization map H (per group): rows = statistics, columns = raw
-# rows [ th (nth) ; mean_w (nvar) ; vech(Sigma_w) ; mean_b ; vech(Sigma_b) ]
+# rows [ th (nth) ; mean_w (nvar) ; vech(Sigma_w) ; mean_b (nb) ;
+#        vech(Sigma_b) (nb*) ]
 lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
-                         th_raw = NULL, th_idx = NULL) {
+                         th_raw2 = NULL, th_idx_1 = NULL,
+                         th_idx_2 = NULL, w2b = NULL) {
   nvar <- NROW(sigma_w)
-  ord <- (seq_len(nvar) %in% th_idx)
+  nb <- NROW(sigma_b)
+  between_flag <- seq_len(nvar) %in% w2b
+  ord <- (seq_len(nvar) %in% th_idx_1[th_idx_1 > 0L])
   num_idx <- which(!ord)
-  nth <- length(th_idx)
-  pstar_d <- nvar * (nvar + 1L) / 2L # vech with diagonal
+  nth1 <- length(th_idx_1) # output th rows (within-block layout)
+  nth2 <- length(th_idx_2) # raw th rows (between-block tau vector)
+  pstar_d <- nvar * (nvar + 1L) / 2L # vech with diagonal (within)
   pstar <- nvar * (nvar - 1L) / 2L # vech without diagonal
+  pstar_b <- nb * (nb + 1L) / 2L # vech with diagonal (between)
 
   delta_1 <- ifelse(ord, 1 / sqrt(diag(sigma_w)), 1.0)
   # d delta_p / d sigma_w,pp = -0.5 * delta_p^3 (ordinal only)
   ddelta <- ifelse(ord, -0.5 * delta_1^3, 0.0)
 
   # raw row indices
-  r_th <- seq_len(nth)
-  r_muw <- nth + seq_len(nvar)
-  r_sw <- nth + nvar + seq_len(pstar_d)
-  r_mub <- nth + nvar + pstar_d + seq_len(nvar)
-  r_sb <- nth + nvar + pstar_d + nvar + seq_len(pstar_d)
-  nraw <- nth + 2L * (nvar + pstar_d)
+  r_th <- seq_len(nth2)
+  r_muw <- nth2 + seq_len(nvar)
+  r_sw <- nth2 + nvar + seq_len(pstar_d)
+  r_mub <- nth2 + nvar + pstar_d + seq_len(nb)
+  r_sb <- nth2 + nvar + pstar_d + nb + seq_len(pstar_b)
+  nraw <- nth2 + nvar + pstar_d + nb + pstar_b
 
   # position of sigma[i,j] (i >= j) within vech(, diagonal = TRUE)
   vech_pos <- matrix(0L, nvar, nvar)
   vech_pos[lower.tri(vech_pos, diag = TRUE)] <- seq_len(pstar_d)
   vech_pos[upper.tri(vech_pos)] <- t(vech_pos)[upper.tri(vech_pos)]
   diag_pos <- diag(vech_pos)
+  # ... and for the between block
+  vech_pos_b <- matrix(0L, nb, nb)
+  vech_pos_b[lower.tri(vech_pos_b, diag = TRUE)] <- seq_len(pstar_b)
+  vech_pos_b[upper.tri(vech_pos_b)] <- t(vech_pos_b)[upper.tri(vech_pos_b)]
 
-  nstat <- nth + length(num_idx) + pstar + nvar + pstar_d
+  nstat <- nth1 + sum(!between_flag) + length(num_idx) + pstar + nb +
+    pstar_b
   h <- matrix(0, nstat, nraw)
   row <- 0L
 
   # 1. thresholds: th*_k = delta_p th_k
-  for (k in seq_len(nth)) {
+  ord_pos_2 <- which(th_idx_2 > 0L)
+  kk <- 0L
+  for (k in seq_len(nth1)) {
     row <- row + 1L
-    p <- th_idx[k]
+    p <- th_idx_1[k]
     if (p > 0L) {
-      h[row, r_th[k]] <- delta_1[p]
-      h[row, r_sw[diag_pos[p]]] <- th_raw[k] * ddelta[p]
+      kk <- kk + 1L
+      h[row, r_th[ord_pos_2[kk]]] <- delta_1[p]
+      h[row, r_sw[diag_pos[p]]] <- th_raw2[ord_pos_2[kk]] * ddelta[p]
     }
     # continuous entries: fixed at zero (zero row)
   }
 
-  # 2. within variances of continuous variables
+  # 2. within means of the within-only (continuous) variables
+  for (p in which(!between_flag)) {
+    row <- row + 1L
+    h[row, r_muw[p]] <- 1
+  }
+
+  # 3. within variances of continuous variables
   for (p in num_idx) {
     row <- row + 1L
     h[row, r_sw[diag_pos[p]]] <- 1
   }
 
-  # 3. standardized within covariances (i > j)
+  # 4. standardized within covariances (i > j)
   for (j in seq_len(nvar - 1L)) {
     for (i in (j + 1L):nvar) {
       row <- row + 1L
@@ -197,23 +270,25 @@ lav_m07_hmat <- function(sigma_w = NULL, sigma_b = NULL, mu_b = NULL,
     }
   }
 
-  # 4. standardized between means
-  for (p in seq_len(nvar)) {
+  # 5. standardized between means (between variables only)
+  for (k in seq_len(nb)) {
     row <- row + 1L
-    h[row, r_mub[p]] <- delta_1[p]
-    h[row, r_sw[diag_pos[p]]] <- mu_b[p] * ddelta[p]
+    p <- w2b[k]
+    h[row, r_mub[k]] <- delta_1[p]
+    h[row, r_sw[diag_pos[p]]] <- mu_b[k] * ddelta[p]
   }
 
-  # 5. standardized between covariances (vech with diagonal, i >= j)
-  for (j in seq_len(nvar)) {
-    for (i in j:nvar) {
+  # 6. standardized between covariances (vech with diagonal, i >= j)
+  for (jj in seq_len(nb)) {
+    for (ii in jj:nb) {
       row <- row + 1L
-      s_ij <- sigma_b[i, j]
-      h[row, r_sb[vech_pos[i, j]]] <- delta_1[i] * delta_1[j]
-      h[row, r_sw[diag_pos[i]]] <- h[row, r_sw[diag_pos[i]]] +
-        s_ij * delta_1[j] * ddelta[i]
-      h[row, r_sw[diag_pos[j]]] <- h[row, r_sw[diag_pos[j]]] +
-        s_ij * delta_1[i] * ddelta[j]
+      pi_1 <- w2b[ii]; pj_1 <- w2b[jj]
+      s_ij <- sigma_b[ii, jj]
+      h[row, r_sb[vech_pos_b[ii, jj]]] <- delta_1[pi_1] * delta_1[pj_1]
+      h[row, r_sw[diag_pos[pi_1]]] <- h[row, r_sw[diag_pos[pi_1]]] +
+        s_ij * delta_1[pj_1] * ddelta[pi_1]
+      h[row, r_sw[diag_pos[pj_1]]] <- h[row, r_sw[diag_pos[pj_1]]] +
+        s_ij * delta_1[pi_1] * ddelta[pj_1]
     }
   }
 
@@ -272,20 +347,22 @@ lav_m07_delta <- function(lavmodel = NULL, glist = NULL) {
 
   delta_out <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
-    b1 <- (g - 1L) * nlevels + 1L
-    b2 <- (g - 1L) * nlevels + 2L
-    sigma_w <- imp$cov[[b1]]
-    sigma_b <- imp$cov[[b2]]
-    mu_b <- imp$mean[[b2]]
-    th_raw <- imp$th.raw[[b2]]
-    th_idx <- lavmodel@th.idx[[b2]]
+    sigma_w <- imp$cov[[(g - 1L) * 2L + 1L]]
+    sigma_b <- imp$cov[[(g - 1L) * 2L + 2L]]
+    nvar <- NROW(sigma_w)
+    nb <- NROW(sigma_b)
+    bi <- lav_m07_block_info(lavmodel, g = g, nw = nvar, nb = nb)
+    mu_b <- imp$mean[[bi$b2]]
+    th_raw2 <- imp$th.raw[[bi$b2]]
+    th_idx_2 <- lavmodel@th.idx[[bi$b2]]
 
-    # stack the raw rows: [th; mean_w; vech Sw; mean_b; vech Sb]
-    draw <- rbind(th_jac[[b2]], delta_raw[[g]])
+    # stack the raw rows: [th (b2); mean_w; vech Sw; mean_b; vech Sb]
+    draw <- rbind(th_jac[[bi$b2]], delta_raw[[g]])
 
     h <- lav_m07_hmat(
       sigma_w = sigma_w, sigma_b = sigma_b, mu_b = mu_b,
-      th_raw = th_raw, th_idx = th_idx
+      th_raw2 = th_raw2, th_idx_1 = bi$th_idx_1,
+      th_idx_2 = th_idx_2, w2b = bi$w2b
     )
     delta_out[[g]] <- h %*% draw
   }

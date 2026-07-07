@@ -37,15 +37,6 @@ lav_model <- function(lavpartable = NULL,
     composites_option <- TRUE
   }
   composites <- any(lavpartable$op == "<~") && composites_option
-  categorical <- any(lavpartable$op == "|")
-  if (categorical) {
-    meanstructure <- TRUE
-
-    # handle th.idx if length(th.idx) != nblocks
-    if (nblocks != length(th_idx)) {
-      th_idx <- rep(th_idx, each = nblocks)
-    }
-  }
   group_w_free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
   multilevel <- FALSE
   if (!is.null(lavpartable$level)) {
@@ -55,6 +46,38 @@ lav_model <- function(lavpartable = NULL,
     }
   } else {
     nlevels <- 1L
+  }
+  categorical <- any(lavpartable$op == "|")
+  if (categorical) {
+    meanstructure <- TRUE
+
+    # handle th.idx if length(th.idx) != nblocks
+    if (nblocks != length(th_idx)) {
+      if (multilevel) {
+        # per BLOCK: the levels may span different variable sets, so
+        # rebuild th.idx from the parameter table (in the block's
+        # variable order: ordinal variables contribute their thresholds,
+        # numeric variables a 0 placeholder)
+        th_idx <- vector("list", nblocks)
+        for (b in seq_len(nblocks)) {
+          ov_names_b <- lav_pt_vnames(lavpartable, "ov", block = b)
+          th_lhs_b <- lavpartable$lhs[lavpartable$op == "|" &
+                                      lavpartable$block == b]
+          th_idx_b <- integer(0L)
+          for (v in seq_along(ov_names_b)) {
+            nth_v <- sum(th_lhs_b == ov_names_b[v])
+            if (nth_v > 0L) {
+              th_idx_b <- c(th_idx_b, rep(v, nth_v))
+            } else {
+              th_idx_b <- c(th_idx_b, 0L)
+            }
+          }
+          th_idx[[b]] <- th_idx_b
+        }
+      } else {
+        th_idx <- rep(th_idx, each = nblocks)
+      }
+    }
   }
 
   nefa <- lav_pt_nefa(lavpartable)

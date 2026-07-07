@@ -188,8 +188,9 @@ lav_bvord_2l_init_cache <- function(fit_y1 = NULL,
   )
 }
 
-# pattern x node conditional log-probabilities
-lav_bvord_2l_logp_cache <- function(cache = NULL) {
+# full-grid (pattern x node) rectangle bounds and probabilities; all
+# quantities are stored in the cache (pattern index moves fastest)
+lav_bvord_2l_grid_cache <- function(cache = NULL) {
   with(cache, {          # nolint start
     rho_w <- theta[1]
     cb <- theta[2]
@@ -200,26 +201,30 @@ lav_bvord_2l_logp_cache <- function(cache = NULL) {
     b_a <- s1 * u1
     b_c <- l21 * u1 + l22 * u2
 
-    logp <- matrix(0, npat, nq)
-    for (q in seq_len(nq)) {
-      p_q <- pbinorm(
-        upper_x = z1a0 - b_a[q], upper_y = z1c0 - b_c[q],
-        lower_x = z2a0 - b_a[q], lower_y = z2c0 - b_c[q],
-        rho = rho_w
-      )
-      p_q[p_q < .Machine$double.eps] <- .Machine$double.eps
-      logp[, q] <- log(p_q)
-    }
-    return(logp)
+    ba_g <- rep(b_a, each = npat)
+    bc_g <- rep(b_c, each = npat)
+    z1a_g <- rep(z1a0, times = nq) - ba_g
+    z2a_g <- rep(z2a0, times = nq) - ba_g
+    z1c_g <- rep(z1c0, times = nq) - bc_g
+    z2c_g <- rep(z2c0, times = nq) - bc_g
+
+    p_g <- pbinorm(
+      upper_x = z1a_g, upper_y = z1c_g,
+      lower_x = z2a_g, lower_y = z2c_g, rho = rho_w
+    )
+    p_g[p_g < .Machine$double.eps] <- .Machine$double.eps
+    inv_p_g <- 1 / p_g
+
+    return(invisible(NULL))
   })                     # nolint end
 }
 
 lav_bvord_2l_loglik_cache <- function(cache = NULL) {
   with(cache, {          # nolint start
-    logp <- lav_bvord_2l_logp_cache(cache)
+    tmp <- lav_bvord_2l_grid_cache(cache)
 
     # cluster x node log-likelihood contributions
-    ll <- cmat %*% logp
+    ll <- cmat %*% matrix(log(p_g), npat, nq)
 
     lwll <- sweep(ll, 2L, logw, "+")
     mmax <- apply(lwll, 1L, max)
@@ -232,15 +237,17 @@ lav_bvord_2l_loglik_cache <- function(cache = NULL) {
 }
 
 lav_bvord_2l_grad_cache <- function(cache = NULL) {
-  sc <- lav_bvord_2l_sc_cache(cache = cache)
-  # free parameters: rho_w, cb (last two columns)
-  colSums(sc[, c("rho_w", "cb"), drop = FALSE])
+  sc <- lav_bvord_2l_sc_cache(cache = cache, free_only = TRUE)
+  colSums(sc)
 }
 
-# cluster-wise scores of the loglik w.r.t. ALL parameters
-# columns: tau_a (nth1), tau_c (nth2), vb_a, vb_c, rho_w, cb
-# assumes the loglik has been evaluated at cache$theta (pw available)
-lav_bvord_2l_sc_cache <- function(cache = NULL) {
+# cluster-wise scores of the loglik; assumes the loglik has been
+# evaluated at cache$theta (grid + pw available)
+# free_only = FALSE: columns tau_a (nth1), tau_c (nth2), vb_a, vb_c,
+#                    rho_w, cb
+# free_only = TRUE:  columns rho_w, cb (for the optimizer)
+lav_bvord_2l_sc_cache <- function(cache = NULL, free_only = FALSE) {
+  cache$free_only <- free_only
   with(cache, {          # nolint start
     rho_w <- theta[1]
     cb <- theta[2]
@@ -248,75 +255,71 @@ lav_bvord_2l_sc_cache <- function(cache = NULL) {
 
     l21 <- cb / s1
     l22 <- sqrt(max(vb2 - cb * cb / vb1, 1e-12))
-    b_a <- s1 * u1
-    b_c <- l21 * u1 + l22 * u2
 
     # derivatives of the node positions w.r.t. (vb_a, vb_c, cb)
     # b_a = s1 u1; b_c = (cb/s1) u1 + l22 u2
+    dbc_dcb <- u1 / s1 - u2 * cb / (vb1 * l22)
+
+    # rectangle derivatives w.r.t. the c-bounds (needed for cb)
+    d_z1c_g <- dnorm(z1c_g) * (pnorm((z1a_g - rho_w * z1c_g) / r) -
+                               pnorm((z2a_g - rho_w * z1c_g) / r))
+    d_z2c_g <- dnorm(z2c_g) * (pnorm((z1a_g - rho_w * z2c_g) / r) -
+                               pnorm((z2a_g - rho_w * z2c_g) / r))
+    g_c <- cmat %*% matrix(-(d_z1c_g - d_z2c_g) * inv_p_g, npat, nq)
+
+    # within correlation: four-corner densities
+    phi_rho_g <- (lav_dbinorm(z1a_g, z1c_g, rho_w) -
+                  lav_dbinorm(z2a_g, z1c_g, rho_w) -
+                  lav_dbinorm(z1a_g, z2c_g, rho_w) +
+                  lav_dbinorm(z2a_g, z2c_g, rho_w))
+    g_rho <- cmat %*% matrix(phi_rho_g * inv_p_g, npat, nq)
+
+    sc_rho <- rowSums(pw * g_rho)
+    sc_cb <- rowSums(pw * sweep(g_c, 2L, dbc_dcb, "*"))
+
+    if (free_only) {
+      sc <- cbind(sc_rho, sc_cb)
+      colnames(sc) <- c("rho_w", "cb")
+      return(sc)
+    }
+
+    # remaining node-position derivatives
     dba_dvba <- u1 / (2 * s1)
     dbc_dvba <- -u1 * cb / (2 * vb1 * s1) +
       u2 * (cb * cb / (vb1 * vb1)) / (2 * l22)
     dbc_dvbc <- u2 / (2 * l22)
-    dbc_dcb <- u1 / s1 - u2 * cb / (vb1 * l22)
+
+    # rectangle derivatives w.r.t. the a-bounds
+    d_z1a_g <- dnorm(z1a_g) * (pnorm((z1c_g - rho_w * z1a_g) / r) -
+                               pnorm((z2c_g - rho_w * z1a_g) / r))
+    d_z2a_g <- dnorm(z2a_g) * (pnorm((z1c_g - rho_w * z2a_g) / r) -
+                               pnorm((z2c_g - rho_w * z2a_g) / r))
+    g_a <- cmat %*% matrix(-(d_z1a_g - d_z2a_g) * inv_p_g, npat, nq)
 
     npar <- nth1 + nth2 + 4L
     sc <- matrix(0, nclusters, npar)
-    tau_a_idx <- seq_len(nth1)
-    tau_c_idx <- nth1 + seq_len(nth2)
-    vba_idx <- nth1 + nth2 + 1L
-    vbc_idx <- nth1 + nth2 + 2L
-    rho_idx <- nth1 + nth2 + 3L
-    cb_idx <- nth1 + nth2 + 4L
 
-    for (q in seq_len(nq)) {
-      z1a <- z1a0 - b_a[q]
-      z2a <- z2a0 - b_a[q]
-      z1c <- z1c0 - b_c[q]
-      z2c <- z2c0 - b_c[q]
-
-      p_q <- pbinorm(
-        upper_x = z1a, upper_y = z1c,
-        lower_x = z2a, lower_y = z2c, rho = rho_w
-      )
-      p_q[p_q < .Machine$double.eps] <- .Machine$double.eps
-      inv_p <- 1 / p_q
-
-      # rectangle derivatives w.r.t. the a-bounds
-      d_z1a <- dnorm(z1a) * (pnorm((z1c - rho_w * z1a) / r) -
-                             pnorm((z2c - rho_w * z1a) / r))
-      d_z2a <- dnorm(z2a) * (pnorm((z1c - rho_w * z2a) / r) -
-                             pnorm((z2c - rho_w * z2a) / r))
-      # ... and the c-bounds
-      d_z1c <- dnorm(z1c) * (pnorm((z1a - rho_w * z1c) / r) -
-                             pnorm((z2a - rho_w * z1c) / r))
-      d_z2c <- dnorm(z2c) * (pnorm((z1a - rho_w * z2c) / r) -
-                             pnorm((z2a - rho_w * z2c) / r))
-
-      # pattern-level score pieces -> cluster level via the count matrix
-      # thresholds: dP/dtau_ak = y1a_k d_z1a - y2a_k d_z2a
-      g_tau_a <- cmat %*% ((y1_1 * d_z1a - y1_2 * d_z2a) * inv_p)
-      g_tau_c <- cmat %*% ((y2_1 * d_z1c - y2_2 * d_z2c) * inv_p)
-
-      # cluster effects: dP/db_a = -(d_z1a - d_z2a), same for c
-      g_a <- cmat %*% (-(d_z1a - d_z2a) * inv_p)
-      g_c <- cmat %*% (-(d_z1c - d_z2c) * inv_p)
-
-      # within correlation: four-corner densities
-      phi_rho <- (lav_dbinorm(z1a, z1c, rho_w) -
-                  lav_dbinorm(z2a, z1c, rho_w) -
-                  lav_dbinorm(z1a, z2c, rho_w) +
-                  lav_dbinorm(z2a, z2c, rho_w))
-      g_rho <- cmat %*% (phi_rho * inv_p)
-
-      pwq <- pw[, q]
-      sc[, tau_a_idx] <- sc[, tau_a_idx] + pwq * g_tau_a
-      sc[, tau_c_idx] <- sc[, tau_c_idx] + pwq * g_tau_c
-      sc[, vba_idx] <- sc[, vba_idx] +
-        pwq * (g_a * dba_dvba[q] + g_c * dbc_dvba[q])
-      sc[, vbc_idx] <- sc[, vbc_idx] + pwq * (g_c * dbc_dvbc[q])
-      sc[, rho_idx] <- sc[, rho_idx] + pwq * g_rho
-      sc[, cb_idx] <- sc[, cb_idx] + pwq * (g_c * dbc_dcb[q])
+    # thresholds: dP/dtau_ak = y1a_k d_z1a - y2a_k d_z2a
+    # (the pattern-level indicator columns recycle down the grid columns)
+    m_z1a <- matrix(d_z1a_g * inv_p_g, npat, nq)
+    m_z2a <- matrix(d_z2a_g * inv_p_g, npat, nq)
+    m_z1c <- matrix(d_z1c_g * inv_p_g, npat, nq)
+    m_z2c <- matrix(d_z2c_g * inv_p_g, npat, nq)
+    for (k in seq_len(nth1)) {
+      g_k <- cmat %*% (y1_1[, k] * m_z1a - y1_2[, k] * m_z2a)
+      sc[, k] <- rowSums(pw * g_k)
     }
+    for (k in seq_len(nth2)) {
+      g_k <- cmat %*% (y2_1[, k] * m_z1c - y2_2[, k] * m_z2c)
+      sc[, nth1 + k] <- rowSums(pw * g_k)
+    }
+
+    sc[, nth1 + nth2 + 1L] <-
+      rowSums(pw * (sweep(g_a, 2L, dba_dvba, "*") +
+                    sweep(g_c, 2L, dbc_dvba, "*")))
+    sc[, nth1 + nth2 + 2L] <- rowSums(pw * sweep(g_c, 2L, dbc_dvbc, "*"))
+    sc[, nth1 + nth2 + 3L] <- sc_rho
+    sc[, nth1 + nth2 + 4L] <- sc_cb
 
     colnames(sc) <- c(
       paste0("tau_a", seq_len(nth1)), paste0("tau_c", seq_len(nth2)),

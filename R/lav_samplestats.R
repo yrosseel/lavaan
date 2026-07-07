@@ -371,6 +371,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     if (!is.null(lavoptions$cat.wls.w) && !lavoptions$cat.wls.w) {
       wls_w <- FALSE # perhaps do.fit = FALSE? (eg sam())
     }
+    # two-level categorical: the (single-level, flat) statistics computed
+    # here only provide starting values; the real two-level statistics
+    # (and their Gamma) come from the stage-wise estimation later
+    if (nlevels > 1L) {
+      wls_w <- FALSE
+    }
       if (lav_verbose()) {
         cat("Estimating sample thresholds and correlations ... ")
       }
