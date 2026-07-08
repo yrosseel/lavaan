@@ -94,20 +94,18 @@ lav_object_baseline <- function(object = NULL,
       # nothing to do
     } else {
       lavoptions$estimator.args$dls.GammaNT <- "sample"
-      dls_a <- lavoptions$estimator.args$dls.a
       for (g in 1:lavsamplestats@ngroups) {
-        gamma_nt <- lav_samp_gamma_nt(
-          m_cov          = lavsamplestats@cov[[g]],
-          m_mean         = lavsamplestats@mean[[g]],
-          x_idx          = lavsamplestats@x.idx[[g]],
-          fixed_x        = lavoptions$fixed.x,
-          conditional_x  = lavoptions$conditional.x,
-          meanstructure  = lavoptions$meanstructure,
-          slopestructure = lavoptions$conditional.x
-        )
-        w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
         # overwrite
-        lavsamplestats@WLS.V[[g]] <- lav_mat_sym_inverse(w_dls)
+        lavsamplestats@WLS.V[[g]] <- lav_dls_wls_v_g(
+          m_cov         = lavsamplestats@cov[[g]],
+          m_mean        = lavsamplestats@mean[[g]],
+          nacov_g       = lavsamplestats@NACOV[[g]],
+          dls_a         = lavoptions$estimator.args$dls.a,
+          x_idx         = lavsamplestats@x.idx[[g]],
+          fixed_x       = lavoptions$fixed.x,
+          conditional_x = lavoptions$conditional.x,
+          meanstructure = lavoptions$meanstructure
+        )
       }
     }
   }

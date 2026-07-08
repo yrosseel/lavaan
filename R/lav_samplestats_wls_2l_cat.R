@@ -154,34 +154,13 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
     wls_obs[[g]] <- out$wls_obs
     nacov[[g]] <- nobs * out$acov
 
-    if (estimator == "WLS") {
-      keep <- out$free_idx
-      if (lp$nclusters[[2]] < length(keep)) {
-        lav_msg_stop(gettextf(
-          "estimator WLS for two-level data needs more clusters (%1$s) than
-          sample statistics (%2$s) in group %3$s; use estimator WLSMV
-          (or ULSMV) instead.", lp$nclusters[[2]], length(keep), g))
-      }
-      w_full <- matrix(0, nrow(nacov[[g]]), ncol(nacov[[g]]))
-      w_keep <- try(
-        lav_mat_sym_inverse(nacov[[g]][keep, keep, drop = FALSE]),
-        silent = TRUE
-      )
-      if (inherits(w_keep, "try-error")) {
-        lav_msg_stop(gettextf(
-          "could not invert Gamma (acov of the two-level sample statistics)
-          in group %s; use estimator WLSMV (or ULSMV) instead.", g))
-      }
-      w_full[keep, keep] <- w_keep
-      wls_v[[g]] <- w_full
-    } else if (estimator == "DWLS") {
-      dacov <- diag(nacov[[g]])
-      idacov <- ifelse(dacov > 0, 1 / dacov, 0)
-      wls_v[[g]] <- diag(idacov, nrow = length(idacov))
-      wls_vd[[g]] <- idacov
-    } else if (estimator == "ULS") {
-      wls_v[[g]] <- diag(length(wls_obs[[g]]))
-      wls_vd[[g]] <- rep(1, length(wls_obs[[g]]))
+    w <- lav_samp_wls_v_2l(
+      gamma_1 = nacov[[g]], keep = out$free_idx,
+      estimator = estimator, nclusters = lp$nclusters[[2]], group = g
+    )
+    wls_v[[g]] <- w$wls_v
+    if (!is.null(w$wls_vd)) {
+      wls_vd[[g]] <- w$wls_vd
     }
 
     # store the stage-wise 'sample' statistics for inspection/start values

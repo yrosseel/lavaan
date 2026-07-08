@@ -620,26 +620,21 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     }
   } else {
     if (is.null(gamma)) {
+      # stored NACOV, else recompute with the fit-time settings
       if (!is.null(lavobject)) {
-        gamma <- lavTech(lavobject, "gamma")
+        gamma <- lav_gamma_used(lavobject)
       } else {
-        gamma <- lavsamplestats@NACOV
+        gamma <- lav_gamma_used(
+          lavdata = lavdata,
+          lavoptions = lavoptions,
+          lavsamplestats = lavsamplestats,
+          lavh1 = NULL,
+          lavimplied = lavimplied
+        )
       }
     }
     if (!is.list(gamma)) {
       gamma <- list(gamma)
-    }
-    if (is.null(gamma[[1L]])) {
-      gamma <- lav_object_gamma(
-        lavobject = NULL,
-        lavdata = lavdata,
-        lavoptions = lavoptions,
-        lavsamplestats = lavsamplestats,
-        lavh1 = NULL,
-        lavimplied = lavimplied,
-        adf = TRUE,
-        model_based = FALSE
-      )
     }
   }
 

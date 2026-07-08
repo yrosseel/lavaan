@@ -1,6 +1,93 @@
 
 
 
+# 'the' Gamma (NACOV) of a fitted object: the fit-time stored NACOV when
+# available, otherwise recomputed with the fit-time settings (the recipe).
+# The single entry point for consumers that need "the Gamma that was (or
+# would have been) used by this object" (satorra.bentler/fmg tests, sam,
+# lavInspect "gamma", ...).
+lav_gamma_used <- function(lavobject = NULL,
+                           # or individual slots
+                           lavdata = NULL,
+                           lavoptions = NULL,
+                           lavsamplestats = NULL,
+                           lavh1 = NULL,
+                           lavimplied = NULL) {
+  if (!is.null(lavobject)) {
+    lavdata <- lavobject@Data
+    lavoptions <- lavobject@Options
+    lavsamplestats <- lavobject@SampleStats
+    lavh1 <- lavobject@h1
+    lavimplied <- lavobject@implied
+  }
+
+  # fit-time NACOV?
+  if (length(lavsamplestats@NACOV) > 0L &&
+      !is.null(lavsamplestats@NACOV[[1]])) {
+    return(lavsamplestats@NACOV)
+  }
+
+  # recompute with the fit-time settings
+  lav_object_gamma(
+    lavdata = lavdata,
+    lavoptions = lavoptions,
+    lavsamplestats = lavsamplestats,
+    lavh1 = lavh1,
+    lavimplied = lavimplied,
+    adf = TRUE,
+    model_based = FALSE
+  )
+}
+
+# the ADF 'meat': crossproduct of the (centered) casewise moment
+# contributions zc, divided by n; when cluster_idx is given, the
+# contributions are aggregated within clusters first (the G/(G-1)
+# finite-sample correction is applied by the caller). Shared by the three
+# (plain / fixed.x / conditional.x) branches of lav_samp_gamma().
+lav_samp_gamma_meat <- function(zc, cluster_idx = NULL, n = nrow(zc)) {
+  if (length(cluster_idx) > 0L) {
+    zc <- rowsum(zc, cluster_idx)
+  }
+  if (anyNA(zc)) {
+    lav_mat_crossprod(zc) / n
+  } else {
+    base::crossprod(zc) / n
+  }
+}
+
+# weighted crossproduct of casewise scores (the 'meat' of a sandwich) under
+# sampling weights; "design" weights the crossproduct by wt^2, "frequency"
+# by wt (as if each case were physically replicated wt times). Shared by
+# the ADF Gamma and the (PML) first-order h1 information.
+lav_samp_wt_crossprod <- function(sc, wt, sampling_weights_type = "design") {
+  if (identical(sampling_weights_type, "frequency")) {
+    crossprod(sqrt(wt) * sc)
+  } else {
+    crossprod(wt * sc)
+  }
+}
+
+# DLS with a model-based GammaNT: the (inverted) weight matrix for one
+# group, W_DLS^{-1}, where
+#     W_DLS = (1 - a) * Gamma_ADF (= NACOV) + a * Gamma_NT(m_cov, m_mean)
+# shared by the objective, gradient, h1-information and object-generate code
+lav_dls_wls_v_g <- function(m_cov = NULL, m_mean = NULL,
+                            nacov_g = NULL, dls_a = 1.0,
+                            x_idx = integer(0L), fixed_x = FALSE,
+                            conditional_x = FALSE, meanstructure = FALSE) {
+  gamma_nt <- lav_samp_gamma_nt(
+    m_cov          = m_cov,
+    m_mean         = m_mean,
+    x_idx          = x_idx,
+    fixed_x        = fixed_x,
+    conditional_x  = conditional_x,
+    meanstructure  = meanstructure,
+    slopestructure = conditional_x
+  )
+  w_dls <- (1 - dls_a) * nacov_g + dls_a * gamma_nt
+  lav_mat_sym_inverse(w_dls)
+}
+
 # for internal use -- lavobject or internal slots
 lav_object_gamma <- function(lavobject = NULL,
                              # or individual slots
@@ -311,6 +398,16 @@ lav_object_gamma <- function(lavobject = NULL,
 #       3) conditional.x (conditional.x = TRUE)
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 
+# the E[(1,x)(1,x)'] moment matrix of the (intercept, exo) regressors; the
+# building block of the mean/slope block of the conditional.x NT Gamma
+# (lav_samp_gamma_nt) and of its direct inverse (lav_samp_gamma_inverse_nt)
+lav_samp_gamma_c3 <- function(m_mx, m_c) {
+  rbind(
+    c(1, m_mx),
+    cbind(m_mx, m_c + tcrossprod(m_mx))
+  )
+}
+
 # NORMAL-THEORY
 lav_samp_gamma_nt <- function(m_y = NULL, # should include
                                      # eXo if
@@ -441,10 +538,7 @@ lav_samp_gamma_nt <- function(m_y = NULL, # should include
 
     if (meanstructure || slopestructure) {
       m_mx <- m_m[x_idx]
-      c3 <- rbind(
-        c(1, m_mx),
-        cbind(m_mx, m_c + tcrossprod(m_mx))
-      )
+      c3 <- lav_samp_gamma_c3(m_mx, m_c)
       # B3 <- cbind(m_my, m_b + tcrossprod(m_my,m_mx))
     }
 
@@ -543,11 +637,7 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
     if (!meanstructure) {
       sc <- sc[, -seq_len(p), drop = FALSE]
     }
-    if (identical(sampling_weights_type, "frequency")) {
-      j_mat <- crossprod(sqrt(wt) * sc) / sum(wt)
-    } else {
-      j_mat <- crossprod(wt * sc) / sum(wt)
-    }
+    j_mat <- lav_samp_wt_crossprod(sc, wt, sampling_weights_type) / sum(wt)
     # fixed.x zeroes the x-blocks of I, so use a pseudo-inverse there
     if (length(x_idx) > 0L) {
       i_inv <- MASS::ginv(i_mat)
@@ -634,16 +724,8 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
       zc <- t(t(z) - colMeans(z, na.rm = TRUE))
     }
 
-    # clustered?
-    if (length(cluster_idx) > 0L) {
-      zc <- rowsum(zc, cluster_idx)
-    }
-
-    if (anyNA(zc)) {
-      m_gamma <- lav_mat_crossprod(zc) / n
-    } else {
-      m_gamma <- base::crossprod(zc) / n
-    }
+    # meat (aggregated within clusters first, if clustered)
+    m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
   } else if (!conditional_x && fixed_x) {
     if (model_based) {
       m_yc <- t(t(m_y) - as.numeric(m_mu))
@@ -715,16 +797,8 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
       zc <- t(t(z) - colMeans(z, na.rm = TRUE))
     }
 
-    # clustered?
-    if (length(cluster_idx) > 0L) {
-      zc <- rowsum(zc, cluster_idx)
-    }
-
-    if (anyNA(zc)) {
-      m_gamma <- lav_mat_crossprod(zc) / n
-    } else {
-      m_gamma <- base::crossprod(zc) / n
-    }
+    # meat (aggregated within clusters first, if clustered)
+    m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
   } else {
     # conditional_x
 
@@ -795,16 +869,8 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
       zc <- t(t(z) - colMeans(z, na.rm = TRUE))
     }
 
-    # clustered?
-    if (length(cluster_idx) > 0L) {
-      zc <- rowsum(zc, cluster_idx)
-    }
-
-    if (anyNA(zc)) {
-      m_gamma <- lav_mat_crossprod(zc) / n
-    } else {
-      m_gamma <- base::crossprod(zc) / n
-    }
+    # meat (aggregated within clusters first, if clustered)
+    m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
   }
 
 
@@ -831,9 +897,9 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
     }
   }
 
-  # clustered?
+  # clustered? G/(G-1) finite-sample correction, G = number of clusters
   if (length(cluster_idx) > 0L) {
-    nc <- nrow(zc)
+    nc <- length(unique(cluster_idx))
     m_gamma <- m_gamma * nc / (nc - 1)
   }
 
@@ -940,8 +1006,7 @@ lav_partial_cor_jacobian <- function(m_s, cor_idx = NULL,
 # ADF (sandwich) Gamma for a (partial) correlation structure, via the delta
 # method: Gamma_cor = J %*% Gamma_full %*% t(J), where Gamma_full is the raw
 # ADF Gamma (lav_samp_gamma, which also handles fixed.x via x_idx) and J is
-# the Jacobian above. For cor_idx = all variables (and fixed.x = FALSE) this
-# reduces to lav_samp_cor_gamma().
+# the Jacobian above.
 lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
                                        meanstructure = FALSE,
                                        fixed_x = FALSE,
@@ -960,8 +1025,7 @@ lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
 
 # Normal-theory Gamma for a (partial) correlation structure, via the delta
 # method: Gamma_cor = J %*% Gamma_full_NT %*% t(J), where Gamma_full_NT is the
-# raw NT Gamma (lav_samp_gamma_nt, which also handles fixed.x). For cor_idx =
-# all variables (and fixed.x = FALSE) this reduces to lav_samp_cor_gamma_nt().
+# raw NT Gamma (lav_samp_gamma_nt, which also handles fixed.x).
 lav_samp_partial_cor_gamma_nt <- function(m_cov, cor_idx = NULL,
                                           meanstructure = FALSE,
                                           fixed_x = FALSE,
@@ -972,137 +1036,4 @@ lav_samp_partial_cor_gamma_nt <- function(m_cov, cor_idx = NULL,
                                   x_idx = x_idx, fixed_x = fixed_x)
 
   j_mat %*% gamma_full %*% t(j_mat)
-}
-
-lav_samp_cor_gamma <- function(m_y, meanstructure = FALSE) {
-
-  # coerce to matrix
-  m_y <- unname(as.matrix(m_y))
-  n <- nrow(m_y)
-  p <- ncol(m_y)
-
-  # compute m_s and m_r
-  m_s <- cov(m_y) * (n - 1) / n
-  m_r <- cov2cor(m_s)
-
-  # create z-scores
-  s_sd <- sqrt(diag(m_s))
-  yz <- t((t(m_y) - colMeans(m_y)) / s_sd)
-
-  # create squared z-scores
-  yz2 <- yz * yz
-
-  # find indices so we avoid 1) double subscripts (diagonal!), and
-  #                          2) duplicated subscripts (symmetric!)
-  idx1 <- lav_mat_vech_col_idx(p, diagonal = FALSE)
-  idx2 <- lav_mat_vech_row_idx(p, diagonal = FALSE)
-
-  zr1 <- (yz[, idx1, drop = FALSE] * yz[, idx2, drop = FALSE])
-  zr2 <- (yz2[, idx1, drop = FALSE] + yz2[, idx2, drop = FALSE])
-  zr2 <- t(t(zr2) * lav_mat_vech(m_r, diagonal = FALSE))
-  zrr <- zr1 - 0.5 * zr2
-  if (meanstructure) {
-      zrr <- cbind(yz, zrr)
-  }
-  m_gamma <- crossprod(zrr) / n
-
-  m_gamma
-}
-
-# normal theory version
-# 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
-lav_samp_cor_gamma_nt <- function(m_y = NULL,
-                                         wt = NULL,
-                                         m_cov = NULL, # joint!
-                                         m_mean = NULL, # joint!
-                                         rescale = FALSE,
-                                         x_idx = integer(0L),
-                                         fixed_x = FALSE,
-                                         conditional_x = FALSE,
-                                         meanstructure = FALSE,
-                                         slopestructure = FALSE) {
-  # check arguments
-  if (length(x_idx) == 0L) {
-    conditional_x <- FALSE
-    fixed_x <- FALSE
-  } else {
-    lav_msg_stop(gettext("x_idx not supported (yet) for correlations; use
-                          fixed_x = FALSE (for now)"))
-  }
-  if (conditional_x) {
-    lav_msg_stop(gettext("conditional_x = TRUE not supported (yet) for
-                          correlations"))
-  }
-
-  # compute m_cov from m_y
-  if (is.null(m_cov)) {
-    stopifnot(!is.null(m_y))
-
-    # coerce to matrix
-    m_y <- unname(as.matrix(m_y))
-    n <- nrow(m_y)
-    if (is.null(wt)) {
-      m_cov <- cov(m_y)
-      if (rescale) {
-        m_cov <- m_cov * (n - 1) / n # (normal) ML version
-      }
-    } else {
-      out <- stats::cov.wt(m_y, wt = wt, method = "ML")
-      m_cov <- out$cov
-    }
-  } else {
-    if (!missing(rescale)) {
-      lav_msg_warn(gettext("rescale= argument has no effect if m_cov is given"))
-    }
-    if (!missing(wt)) {
-      lav_msg_warn(gettext("wt= argument has no effect if m_cov is given"))
-    }
-  }
-
-  # if needed, compute m_mean from m_y
-  if (conditional_x && length(x_idx) > 0L && is.null(m_mean) &&
-    (meanstructure || slopestructure)) {
-    stopifnot(!is.null(m_y))
-    if (is.null(wt)) {
-      m_mean <- colMeans(m_y, na.rm = TRUE)
-    } else {
-      m_mean <- out$center
-    }
-  }
-
-  # rename
-  m_s <- m_cov
-  m_r <- cov2cor(m_s)
-  s_p <- nrow(m_s)
-
-  # unconditional
-  if (!conditional_x) {
-    # unconditional - stochastic x
-    if (!fixed_x) {
-      m_ip <- diag(s_p) %x% m_r
-      m_rr <- m_r %x% m_r
-      gamma_z_nt <- m_rr + lav_mat_com_pre(m_rr)
-      tmp <- (m_ip + lav_mat_com_pre(m_ip)) / 2
-      zero_idx <- seq_len(s_p * s_p)[-lav_mat_diag_idx(s_p)]
-      tmp[, zero_idx] <- 0
-      m_a <- -tmp
-      diag(m_a) <- 1 - diag(tmp)
-      gamma_nt_big <- m_a %*% gamma_z_nt %*% t(m_a)
-      r_idx <- lav_mat_vech_idx(s_p, diagonal = FALSE)
-      v_gamma <- gamma_nt_big[r_idx, r_idx, drop = FALSE]
-
-      if (meanstructure) {
-        v_gamma <- lav_mat_bdiag(m_r, v_gamma)
-      }
-
-      # unconditional - fixed x
-    } else {
-      # TODO
-    }
-  } else {
-    # conditional_x
-    # TODO
-  }
-
-  v_gamma
 }

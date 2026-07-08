@@ -379,18 +379,16 @@ lav_model_grad <- function(lavmodel = NULL,
           if (estimator_args$dls.GammaNT == "sample") {
             wls_v <- lavsamplestats@WLS.V[[g]] # for now
           } else {
-            dls_a <- estimator_args$dls.a
-            gamma_nt <- lav_samp_gamma_nt(
-              m_cov          = sigma_hat[[g]],
-              m_mean         = mu_hat[[g]],
-              x_idx          = lavsamplestats@x.idx[[g]],
-              fixed_x        = lavmodel@fixed.x,
-              conditional_x  = lavmodel@conditional.x,
-              meanstructure  = lavmodel@meanstructure,
-              slopestructure = lavmodel@conditional.x
+            wls_v <- lav_dls_wls_v_g(
+              m_cov         = sigma_hat[[g]],
+              m_mean        = mu_hat[[g]],
+              nacov_g       = lavsamplestats@NACOV[[g]],
+              dls_a         = estimator_args$dls.a,
+              x_idx         = lavsamplestats@x.idx[[g]],
+              fixed_x       = lavmodel@fixed.x,
+              conditional_x = lavmodel@conditional.x,
+              meanstructure = lavmodel@meanstructure
             )
-            w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-            wls_v <- lav_mat_sym_inverse(w_dls)
           }
           group_dx <- -1 * crossprod(
             delta[[g]],

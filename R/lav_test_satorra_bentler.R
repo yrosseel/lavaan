@@ -157,23 +157,17 @@ lav_test_sb <- function(lavobject = NULL,
 
   # Gamma
   if (is.null(m_gamma)) {
-    m_gamma <- lavsamplestats@NACOV
-    # still NULL? (perhaps estimator = ML)
-    if (is.null(m_gamma[[1]])) {
-      if (!is.null(lavobject)) {
-        m_gamma <- lav_object_gamma(lavobject, model_based = FALSE)
-      } else {
-        m_gamma <- lav_object_gamma(
-          lavobject = NULL,
-          lavdata = lavdata,
-          lavoptions = lavoptions,
-          lavsamplestats = lavsamplestats,
-          lavh1 = NULL,
-          lavimplied = NULL,
-          adf = TRUE,
-          model_based = FALSE
-        )
-      }
+    # stored NACOV, else recompute with the fit-time settings
+    if (!is.null(lavobject)) {
+      m_gamma <- lav_gamma_used(lavobject)
+    } else {
+      m_gamma <- lav_gamma_used(
+        lavdata = lavdata,
+        lavoptions = lavoptions,
+        lavsamplestats = lavsamplestats,
+        lavh1 = NULL,
+        lavimplied = NULL
+      )
     }
   }
 

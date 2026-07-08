@@ -131,10 +131,7 @@ lav_samp_gamma_inverse_nt <- function(m_y = NULL,
     if (meanstructure || slopestructure) {
       m_c <- m_s[x_idx, x_idx, drop = FALSE]
       m_mx <- m_m[x_idx]
-      c3 <- rbind(
-        c(1, m_mx),
-        cbind(m_mx, m_c + tcrossprod(m_mx))
-      )
+      c3 <- lav_samp_gamma_c3(m_mx, m_c)
     }
 
     if (meanstructure) {

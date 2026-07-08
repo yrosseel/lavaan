@@ -2267,11 +2267,7 @@ lav_inspect_wls_v <- function(object,
 lav_inspect_sampstat_gamma <- function(object,
     add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
-  if (!is.null(object@SampleStats@NACOV[[1]])) {
-    return_value <- object@SampleStats@NACOV
-  } else {
-    return_value <- lav_object_gamma(object)
-  }
+  return_value <- lav_gamma_used(object)
 
   if (add_labels) {
     tmp_names <- lav_inspect_delta_rownames(object,

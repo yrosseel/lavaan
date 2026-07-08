@@ -900,31 +900,25 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
       step1_free_idx <- step1$step1.free.idx
       step2_free_idx <- step2$step2.free.idx
 
-      # ingredients of the full (joint) model
-      if (!is.null(joint@SampleStats@NACOV[[1]])) {
-        gamma <- joint@SampleStats@NACOV
-      } else {
-        # default: the (unbiased) ADF Gamma. This is unavailable for the
-        # fixed.x / conditional.x setting (lav_samp_gamma() with unbiased =
-        # TRUE stops), so fall back to the *biased* ADF Gamma there
-        # (gamma.unbiased = FALSE) -- exactly the Gamma that simultaneous
-        # sem(test = "satorra.bentler") uses for such models. Asymptotically
-        # equivalent; the simple (no-x) cases keep the unbiased Gamma so their
-        # values are unchanged.
-        gamma <- tryCatch(lavTech(joint, "gamma"),
-                          error = function(e) NULL)
-        if (is.null(gamma)) {
-          opts <- joint@Options
-          opts$gamma.unbiased <- FALSE
-          gamma <- lav_object_gamma(
-            lavdata        = joint@Data,
-            lavoptions     = opts,
-            lavsamplestats = joint@SampleStats,
-            lavh1          = joint@h1,
-            lavimplied     = joint@implied,
-            model_based    = FALSE
-          )
-        }
+      # ingredients of the full (joint) model:
+      # stored NACOV, else recompute with the fit-time settings. The
+      # (unbiased) ADF Gamma is unavailable for the fixed.x / conditional.x
+      # setting (lav_samp_gamma() with unbiased = TRUE stops), so fall back
+      # to the *biased* ADF Gamma there (gamma.unbiased = FALSE) -- exactly
+      # the Gamma that simultaneous sem(test = "satorra.bentler") uses for
+      # such models. Asymptotically equivalent; the simple (no-x) cases keep
+      # the unbiased Gamma so their values are unchanged.
+      gamma <- tryCatch(lav_gamma_used(joint), error = function(e) NULL)
+      if (is.null(gamma) || is.null(gamma[[1]])) {
+        opts <- joint@Options
+        opts$gamma.unbiased <- FALSE
+        gamma <- lav_gamma_used(
+          lavdata        = joint@Data,
+          lavoptions     = opts,
+          lavsamplestats = joint@SampleStats,
+          lavh1          = joint@h1,
+          lavimplied     = joint@implied
+        )
       }
       delta <- lavTech(joint, "Delta")
       wls_v <- lavTech(joint, "WLS.V")

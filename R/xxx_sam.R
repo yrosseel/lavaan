@@ -346,23 +346,20 @@ sam <- function(model = NULL,
           if (se == "local.nt") {
             gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
           } else {
-            gamma <- fit@SampleStats@NACOV
+            # stored NACOV, else recompute with the fit-time settings. The
+            # (unbiased) ADF Gamma is unavailable for fixed.x / conditional.x
+            # (lav_samp_gamma() stops), which the default se = "twostep" can
+            # hit (its default is fixed.x = TRUE); fall back to the *biased*
+            # ADF Gamma there, exactly as the global yuan.chan test does.
+            gamma <- tryCatch(lav_gamma_used(fit), error = function(e) NULL)
             if (is.null(gamma) || is.null(gamma[[1]])) {
-              # NACOV not stored (skipped in step 0) -> compute on demand. The
-              # (unbiased) ADF Gamma is unavailable for fixed.x / conditional.x
-              # (lav_samp_gamma() stops), which the default se = "twostep" can
-              # hit (its default is fixed.x = TRUE); fall back to the *biased*
-              # ADF Gamma there, exactly as the global yuan.chan test does.
-              gamma <- tryCatch(lavTech(fit, "gamma"), error = function(e) NULL)
-              if (is.null(gamma) || is.null(gamma[[1]])) {
-                opts <- fit@Options
-                opts$gamma.unbiased <- FALSE
-                gamma <- lav_object_gamma(
-                  lavdata = fit@Data, lavoptions = opts,
-                  lavsamplestats = fit@SampleStats, lavh1 = fit@h1,
-                  lavimplied = fit@implied, model_based = FALSE
-                )
-              }
+              opts <- fit@Options
+              opts$gamma.unbiased <- FALSE
+              gamma <- lav_gamma_used(
+                lavdata = fit@Data, lavoptions = opts,
+                lavsamplestats = fit@SampleStats, lavh1 = fit@h1,
+                lavimplied = fit@implied
+              )
             }
           }
           for (g in seq_len(fit@Data@ngroups)) {

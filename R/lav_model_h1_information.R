@@ -143,18 +143,16 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
     } else {
       a1 <- vector("list", length = lavsamplestats@ngroups)
       for (g in seq_len(lavsamplestats@ngroups)) {
-        dls_a <- lavmodel@estimator.args$dls.a
-        gamma_nt <- lav_samp_gamma_nt(
-          m_cov          = lavimplied$cov[[g]],
-          m_mean         = lavimplied$mean[[g]],
-          x_idx          = lavsamplestats@x.idx[[g]],
-          fixed_x        = lavmodel@fixed.x,
-          conditional_x  = lavmodel@conditional.x,
-          meanstructure  = lavmodel@meanstructure,
-          slopestructure = lavmodel@conditional.x
+        a1[[g]] <- lav_dls_wls_v_g(
+          m_cov         = lavimplied$cov[[g]],
+          m_mean        = lavimplied$mean[[g]],
+          nacov_g       = lavsamplestats@NACOV[[g]],
+          dls_a         = lavmodel@estimator.args$dls.a,
+          x_idx         = lavsamplestats@x.idx[[g]],
+          fixed_x       = lavmodel@fixed.x,
+          conditional_x = lavmodel@conditional.x,
+          meanstructure = lavmodel@meanstructure
         )
-        w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-        a1[[g]] <- lav_mat_sym_inverse(w_dls)
       }
     }
 
@@ -380,18 +378,16 @@ lav_model_h1_info_observed <- function(lavobject = NULL,
     } else {
       a1 <- vector("list", length = lavsamplestats@ngroups)
       for (g in seq_len(lavsamplestats@ngroups)) {
-        dls_a <- lavmodel@estimator.args$dls.a
-        gamma_nt <- lav_samp_gamma_nt(
-          m_cov          = lavimplied$cov[[g]],
-          m_mean         = lavimplied$mean[[g]],
-          x_idx          = lavsamplestats@x.idx[[g]],
-          fixed_x        = lavmodel@fixed.x,
-          conditional_x  = lavmodel@conditional.x,
-          meanstructure  = lavmodel@meanstructure,
-          slopestructure = lavmodel@conditional.x
+        a1[[g]] <- lav_dls_wls_v_g(
+          m_cov         = lavimplied$cov[[g]],
+          m_mean        = lavimplied$mean[[g]],
+          nacov_g       = lavsamplestats@NACOV[[g]],
+          dls_a         = lavmodel@estimator.args$dls.a,
+          x_idx         = lavsamplestats@x.idx[[g]],
+          fixed_x       = lavmodel@fixed.x,
+          conditional_x = lavmodel@conditional.x,
+          meanstructure = lavmodel@meanstructure
         )
-        w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-        a1[[g]] <- lav_mat_sym_inverse(w_dls)
       }
     }
   # 2. DWLS/ULS diagonal @WLS.VD slot
@@ -744,11 +740,7 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
           } else {
             "design"
           }
-          if (identical(swt_type, "frequency")) {
-            b1[[g]] <- crossprod(sqrt(wt) * sc)
-          } else {
-            b1[[g]] <- crossprod(wt * sc)
-          }
+          b1[[g]] <- lav_samp_wt_crossprod(sc, wt, swt_type)
         }
       }
 
