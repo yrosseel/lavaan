@@ -73,6 +73,12 @@ lav_options_est_gls <- function(opt) {
     lav_msg_stop(gettext(
       "ordered categorical data is not supported when estimator is GLS."))
   }
+  if (opt$.multilevel) {
+    # no two-level normal-theory weight matrix (yet); before 0.7-2 this
+    # failed silently during estimation
+    lav_msg_stop(gettext(
+      "multilevel data is not supported when estimator is GLS."))
+  }
   # two-stage missing data: estimation uses the (EM) saturated moments, while
   # the SEs use the robust.sem sandwich (with the two-stage NACOV) and the
   # scaled (satorra.bentler) test; se/test/missing are set in lav_options()

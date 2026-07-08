@@ -224,6 +224,19 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     # FIXME: check dimension of wls_v!!
   }
 
+  # a user-provided WLS.V is not used by the GLS estimation machinery
+  # (since 0.6-10 the objective/gradient are direct functions of the
+  # sample moments); ignore it altogether (and warn), rather than using
+  # it inconsistently
+  if (wls_v_user && estimator == "GLS") {
+    lav_msg_warn(gettext(
+      "WLS.V is ignored when estimator = \"GLS\"; use estimator = \"WLS\" to
+      estimate with a user-provided weight matrix."))
+    wls_v <- vector("list", length = ngroups)
+    wls_vd <- vector("list", length = ngroups)
+    wls_v_user <- FALSE
+  }
+
   nacov_compute <- FALSE # since 0.6-6
   if (is.null(nacov)) {
     nacov <- vector("list", length = ngroups)
@@ -1252,7 +1265,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       }
 
       # group.w.free (only if categorical)
-      if (group_w_free && categorical) {
+      # (continuous WLS gets its group-weight row via the bdiag'ed NACOV
+      #  before inversion, see above; the GLS weight matrix is built
+      #  directly from the sample moments, so add the row here)
+      # FIXME: DLS + group.w.free: the (1 - a)*NACOV + a*GammaNT mix is
+      #        non-conformable when group.w.free = TRUE
+      if (group_w_free && (categorical || estimator == "GLS")) {
         if (!is.null(wls_v[[g]])) {
           # unweight!!
           a <- group_w[[g]] * sum(unlist(nobs)) / nobs[[g]]
@@ -1558,6 +1576,19 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
     wls_v_user <- TRUE
     # FIXME: check dimension of wls_v!!
+  }
+
+  # a user-provided WLS.V is not used by the GLS estimation machinery
+  # (since 0.6-10 the objective/gradient are direct functions of the
+  # sample moments); ignore it altogether (and warn), rather than using
+  # it inconsistently
+  if (wls_v_user && estimator == "GLS") {
+    lav_msg_warn(gettext(
+      "WLS.V is ignored when estimator = \"GLS\"; use estimator = \"WLS\" to
+      estimate with a user-provided weight matrix."))
+    wls_v <- vector("list", length = ngroups)
+    wls_vd <- vector("list", length = ngroups)
+    wls_v_user <- FALSE
   }
 
   if (is.null(nacov)) {

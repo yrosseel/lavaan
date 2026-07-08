@@ -51,7 +51,8 @@ lav_model_objective <- function(lavmodel = NULL,
 
   # do we need WLS.est?
   if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS") ||
-      (estimator == "GLS" && partial_cor)) {
+      (estimator == "GLS" &&
+        (partial_cor || conditional_x || group_w_free))) {
     lavimplied <- lav_model_implied(lavmodel, glist = glist)
     # check for COV with negative diagonal elements?
     # (note: all blocks, not groups -- multilevel has 2 blocks per group)
@@ -237,8 +238,14 @@ lav_model_objective <- function(lavmodel = NULL,
 
       ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
-      if (partial_cor) {
-        # canonical GLS quadratic form in the partial moment space
+      if (partial_cor || conditional_x || group_w_free) {
+        # canonical GLS quadratic form; needed when the trace shortcut
+        # below does not apply:
+        # - partial_cor: partial moment space
+        # - conditional.x: residual moment space (WLS.obs/WLS.V are in
+        #   the [res.int|res.slopes, vech(res.cov)] metric, while
+        #   sigma_hat/data_cov would mix residual and joint moments)
+        # - group.w.free: the group weight discrepancy must be included
         group_fx <- lav_model_objective_wls(
           wls_est = wls_est[[g]],
           wls_obs = lavsamplestats@WLS.obs[[g]],

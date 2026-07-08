@@ -226,16 +226,22 @@ lav_samp_gamma_inverse_nt <- function(m_y = NULL,
       c3 <- lav_samp_gamma_c3(m_mx, m_c)
     }
 
+    # the [int|slopes] block of Gamma is cov_ybarx %x% solve(c3) (see
+    # lav_samp_gamma_nt): the statistics are in vecr(cbind(res.int,
+    # res.slopes)) order (all coefficients of y1, all coefficients of
+    # y2, ...), so the fast-running index is the coefficient index;
+    # the inverse is then s11 %x% c3 (idem for the sub-cases)
     if (meanstructure) {
       if (slopestructure) {
-        a11 <- c3 %x% s11
+        a11 <- s11 %x% c3
       } else {
         c11 <- 1 / solve(c3)[1, 1, drop = FALSE]
-        a11 <- c11 %x% s11
+        a11 <- s11 %x% c11
       }
     } else {
       if (slopestructure) {
-        a11 <- m_c %x% s11
+        # (solve(c3)[-1, -1])^{-1} == m_c (Schur complement)
+        a11 <- s11 %x% m_c
       } else {
         a11 <- matrix(0, 0, 0)
       }
