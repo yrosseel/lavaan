@@ -98,8 +98,13 @@ the independence model) (if available).}
       \code{NA} values for the standardized residuals.}
     \item{resid}{\code{signature(object = "lavaan")}: an alias
       for \code{residuals}}
-    \item{vcov}{\code{signature(object = "lavaan")}: returns the
-      covariance matrix of the estimated parameters.}
+    \item{vcov}{\code{signature(object = "lavaan", type = "free")}: returns
+      the covariance matrix of the estimated parameters. If
+      \code{type = "free"} (the default), only the free parameters are
+      included. If \code{type = "user"} (or \code{"joint"}), the joint
+      covariance matrix of the free and the user-defined (\code{:=})
+      parameters is returned; the parameter names are the same as those
+      used by \code{coef()}.}
     \item{predict}{\code{signature(object = "lavaan")}: compute
       factor scores for all cases that are provided in the data frame. For
       complete data only.}
