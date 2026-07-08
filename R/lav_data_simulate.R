@@ -191,7 +191,14 @@ lav_data_simulate_ml <- function(model = NULL,
   }
 
   # extract model implied statistics and data slot
-  lavimplied  <- fit.con@implied # take continuous mean/cov
+  # NOTE: use delta = FALSE so that (for categorical data) we obtain the
+  # *unscaled* latent-response covariances. The delta scaling standardizes
+  # each block's variances to 1 for the WLS sample statistics, but for data
+  # generation we need the actual within/between latent-response covariances,
+  # so that y* = y*(within) + y*(between) has the correct variance
+  # decomposition and the thresholds cut it correctly. For continuous data,
+  # delta is the identity and this has no effect.
+  lavimplied  <- lav_model_implied(fit.con@Model, delta = FALSE)
   lavdata     <- fit.pop@Data
   lavmodel    <- fit.pop@Model
   lavpartable <- fit.pop@ParTable
@@ -332,7 +339,11 @@ lav_data_simulate_ml <- function(model = NULL,
       bb <- (g - 1) * nlevels + 1L
 
       # th/names
-      TH.VAL <- as.numeric(fit.pop@implied$th[[bb]])
+      # use delta = FALSE: the thresholds must be on the same (unscaled)
+      # latent-response scale as the generated y* data (see the delta = FALSE
+      # note where lavimplied is computed above)
+      TH.VAL <- as.numeric(lav_model_th(lavmodel = fit.pop@Model,
+                                        delta = FALSE)[[bb]])
       if (length(lavmodel@num.idx[[bb]]) > 0L) {
         NUM.idx <- which(lavmodel@th.idx[[bb]] == 0)
         TH.VAL <- TH.VAL[-NUM.idx]

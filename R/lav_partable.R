@@ -180,6 +180,26 @@ lav_model_pt  <- function(
     meanstructure <- TRUE
   }
 
+  # if there is no data (no var_table) and no explicit nthresholds= argument,
+  # but the syntax specifies thresholds (the "|" operator), derive the number
+  # of thresholds per ordered variable from the syntax. This is needed to set
+  # up ordered variables at blocks/levels where the thresholds are not given
+  # explicitly (e.g. the between level of a two-level categorical model, which
+  # inherits its thresholds from the within level), for instance when
+  # simulating data from a model without a dataset (sample.nobs= only).
+  if (is.null(var_table) && is.null(nthresholds) && any(flat$op == "|")) {
+    th_idx <- which(flat$op == "|")
+    # count the *distinct* thresholds per variable; the same threshold may
+    # appear more than once in 'flat' (e.g. once per group in a multiple-group
+    # model), and should not be counted twice
+    tmp_th_pairs <- unique(data.frame(lhs = flat$lhs[th_idx],
+                                      rhs = flat$rhs[th_idx],
+                                      stringsAsFactors = FALSE))
+    tmp_th_tab <- table(tmp_th_pairs$lhs)
+    nthresholds <- as.integer(tmp_th_tab)
+    names(nthresholds) <- names(tmp_th_tab)
+  }
+
   # check for block identifiers in the syntax (op = ":")
   n_block_flat <- length(which(flat$op == ":"))
   # this is NOT the number of blocks (eg group 1: level 1: -> 1 block)
