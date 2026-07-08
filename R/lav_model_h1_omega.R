@@ -24,27 +24,7 @@ lav_model_h1_omega <- function(lavobject = NULL,
                                lavh1 = NULL,
                                lavcache = NULL,
                                lavoptions = NULL) {
-  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavsamplestats <- lavobject@SampleStats
-    lavdata <- lavobject@Data
-    lavimplied <- lavobject@implied
-    lavh1 <- lavobject@h1
-    lavcache <- lavobject@Cache
-    lavoptions <- lavobject@Options
-  }
-
-  # sanity check
-  if (length(lavh1) == 0L) {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = lavdata,
-      lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions
-    )
-  }
-  if (length(lavimplied) == 0L) {
-    lavimplied <- lav_model_implied(lavmodel = lavmodel)
-  }
+  lav_model_h1_unpack(lavobject, need_h1 = TRUE, need_implied = TRUE)
 
   # set options for A
   a1_options <- lavoptions
@@ -55,32 +35,13 @@ lav_model_h1_omega <- function(lavobject = NULL,
   b1_options$information <- lavoptions$omega.information.meat # unused
   b1_options$h1.information <- lavoptions$omega.h1.information.meat
 
-  # information
-  information <- lavoptions$omega.information
-
   # compute A1 (per group)
-  if (information == "observed") {
-    a1_1 <- lav_model_h1_info_observed(
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = a1_options
-    )
-  } else if (information == "expected") {
-    a1_1 <- lav_model_h1_info_expected(
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = a1_options
-    )
-  } else if (information == "first.order") { # not needed?
-    a1_1 <- lav_model_h1_info_firstorder(
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = a1_options
-    )
-  }
+  a1_1 <- lav_model_h1_info(
+    lavmodel = lavmodel,
+    lavsamplestats = lavsamplestats, lavdata = lavdata,
+    lavimplied = lavimplied, lavh1 = lavh1,
+    lavcache = lavcache, lavoptions = a1_options
+  )
 
   # compute B1 (per group)
   b1 <- lav_model_h1_info_firstorder(

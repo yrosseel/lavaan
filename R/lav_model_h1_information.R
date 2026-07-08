@@ -13,6 +13,8 @@
 #                   add support for clustered data: first.order
 # - YR 03 Jan 2018: add support for clustered data: expected
 # - YR 23 Aug 2018: lav_model_h1_acov (0.6-3)
+# - YR 08 Jul 2026: merge the (almost fully parallel) expected/observed
+#                   scaffolding into a single worker (lav_model_h1_info_ed)
 
 
 ## For the lavaan.mi package, TDJ provides pooled versions of all the
@@ -23,6 +25,37 @@
 ## lavaan.mi::lavResiduals.mi() needs to be updated accordingly.
 
 
+# all lav_model_h1_* functions accept either a fitted lavaan object
+# (lavobject) or the individual slots; this helper unpacks the object into
+# the slot variables of the CALLER's frame, and (optionally) fills in
+# lavh1/lavimplied when they were not supplied
+lav_model_h1_unpack <- function(lavobject = NULL, env = parent.frame(),
+                                need_h1 = FALSE, need_implied = FALSE) {
+  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
+    env$lavmodel <- lavobject@Model
+    env$lavsamplestats <- lavobject@SampleStats
+    env$lavdata <- lavobject@Data
+    env$lavimplied <- lavobject@implied
+    env$lavh1 <- lavobject@h1
+    env$lavcache <- lavobject@Cache
+    env$lavoptions <- lavobject@Options
+  }
+
+  # sanity check
+  if (need_h1 && length(env$lavh1) == 0L) {
+    env$lavh1 <- lav_h1_implied_logl(
+      lavdata = env$lavdata,
+      lavsamplestats = env$lavsamplestats,
+      lavoptions = env$lavoptions
+    )
+  }
+  if (need_implied && length(env$lavimplied) == 0L) {
+    env$lavimplied <- lav_model_implied(lavmodel = env$lavmodel)
+  }
+
+  invisible(NULL)
+}
+
 
 lav_model_h1_info <- function(lavobject = NULL,
                                      lavmodel = NULL,
@@ -32,27 +65,7 @@ lav_model_h1_info <- function(lavobject = NULL,
                                      lavh1 = NULL,
                                      lavcache = NULL,
                                      lavoptions = NULL) {
-  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavsamplestats <- lavobject@SampleStats
-    lavdata <- lavobject@Data
-    lavimplied <- lavobject@implied
-    lavh1 <- lavobject@h1
-    lavcache <- lavobject@Cache
-    lavoptions <- lavobject@Options
-  }
-
-  # sanity check
-  if (length(lavh1) == 0L) {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = lavdata,
-      lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions
-    )
-  }
-  if (length(lavimplied) == 0L) {
-    lavimplied <- lav_model_implied(lavmodel = lavmodel)
-  }
+  lav_model_h1_unpack(lavobject, need_h1 = TRUE, need_implied = TRUE)
 
   # information
   information <- lavoptions$information[1] # ALWAYS take the first one
@@ -87,24 +100,20 @@ lav_model_h1_info <- function(lavobject = NULL,
   i1
 }
 
-# fisher/expected information of H1
-lav_model_h1_info_expected <- function(lavobject = NULL,
-                                              lavmodel = NULL,
-                                              lavsamplestats = NULL,
-                                              lavdata = NULL,
-                                              lavoptions = NULL,
-                                              lavimplied = NULL,
-                                              lavh1 = NULL,
-                                              lavcache = NULL) {
-  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavsamplestats <- lavobject@SampleStats
-    lavdata <- lavobject@Data
-    lavimplied <- lavobject@implied
-    lavh1 <- lavobject@h1
-    lavcache <- lavobject@Cache
-    lavoptions <- lavobject@Options
-  }
+# shared worker for the expected and observed h1 information: the two are
+# structurally identical (same estimator dispatch, same structured /
+# unstructured moment selection, same group.w.free handling) -- only the
+# innermost kernel calls differ. Returns NULL for unsupported estimators
+# (the named wrappers below raise the error, so the message carries their
+# name).
+lav_model_h1_info_ed <- function(what = "expected",
+                                 lavmodel = NULL,
+                                 lavsamplestats = NULL,
+                                 lavdata = NULL,
+                                 lavoptions = NULL,
+                                 lavimplied = NULL,
+                                 lavh1 = NULL) {
+  observed <- (what == "observed")
 
   # sanity check
   # (not needed for the estimators that read the precomputed WLS.V/WLS.VD
@@ -121,9 +130,7 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
     lavimplied <- lav_model_implied(lavmodel = lavmodel)
   }
 
-  # estimator <- lavmodel@estimator
-
-  # structured of unstructured? (since 0.5-23)
+  # structured or unstructured? (since 0.5-23)
   if (!is.null(lavoptions) &&
     !is.null(lavoptions$h1.information[1]) &&
     lavoptions$h1.information[1] == "unstructured") {
@@ -132,11 +139,22 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
     structured <- TRUE
   }
 
+  # which single-level ML-family estimators are handled by branch 3a below?
+  # the observed h1 information is only available for "ML" itself
+  # (estimator "DLS" is caught by the dedicated branch 1b)
+  if (observed) {
+    ml_family <- "ML"
+  } else {
+    ml_family <- c("ML", "NTRLS", "catML", "IV")
+  }
+
   # 1. WLS.V (=A1) for GLS/WLS
   if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS") {
     a1 <- lavsamplestats@WLS.V
 
-  # 1b.
+  # 1b. DLS: for dls.GammaNT = "model", the weight matrix is a function of
+  #     the model-implied moments and must be recomputed here (the @WLS.V
+  #     slot only holds the plain inv(NACOV) fallback)
   } else if (lavmodel@estimator == "DLS") {
     if (lavmodel@estimator.args$dls.GammaNT == "sample") {
       a1 <- lavsamplestats@WLS.V
@@ -162,38 +180,32 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
     a1 <- lavsamplestats@WLS.VD
 
   # 3a. ML single level
-  } else if (lavmodel@estimator %in% c("ML", "NTRLS", "DLS", "catML", "IV") &&
-    lavdata@nlevels == 1L) {
+  } else if (lavmodel@estimator %in% ml_family && lavdata@nlevels == 1L) {
     a1 <- vector("list", length = lavsamplestats@ngroups)
 
-    # structured? compute model-implied statistics
-    if (structured && length(lavimplied) == 0L) {
-      lavimplied <- lav_model_implied(lavmodel)
-    }
-
     for (g in 1:lavsamplestats@ngroups) {
-      wt <- lavdata@weights[[g]]
-
       if (lavsamplestats@missing.flag) {
-        # mvnorm
+        # mvnorm, missing data
         # FIXME: allow for meanstructure = FALSE
         # FIXME: allow for conditional.x = TRUE
         if (lavmodel@meanstructure && structured) {
           mean_1 <- lavimplied$mean[[g]]
         } else {
-          #MEAN <- lavsamplestats@missing.h1[[g]]$mu
           mean_1 <- lavh1$implied$mean[[g]]
         }
-
         if (structured) {
+          sigma_1 <- lavimplied$cov[[g]]
+        } else {
+          sigma_1 <- lavh1$implied$cov[[g]]
+        }
+
+        if (observed) {
           a1[[g]] <-
-            lav_mvn_mi_info_expected(
-              y = lavdata@X[[g]],
-              mp = lavdata@Mp[[g]],
-              wt = wt,
+            lav_mvnorm_missing_information_observed_samplestats(
+              yp = lavsamplestats@missing[[g]],
+              # wt not needed
               mu = mean_1,
-              # meanstructure = lavmodel@meanstructure,
-              sigma_1 = lavimplied$cov[[g]],
+              sigma_1 = sigma_1,
               x_idx = lavsamplestats@x.idx[[g]]
             )
         } else {
@@ -201,78 +213,94 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
             lav_mvn_mi_info_expected(
               y = lavdata@X[[g]],
               mp = lavdata@Mp[[g]],
-              wt = wt,
+              wt = lavdata@weights[[g]],
               mu = mean_1,
-              # meanstructure = lavmodel@meanstructure,
-              #Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-              sigma_1 = lavh1$implied$cov[[g]],
+              sigma_1 = sigma_1,
               x_idx = lavsamplestats@x.idx[[g]]
             )
         }
-      } else {
-        if (lavmodel@conditional.x) {
-          # mvreg
-          if (lavmodel@meanstructure && structured) {
-            res_int <- lavimplied$res.int[[g]]
-            res_slopes <- lavimplied$res.slopes[[g]]
-          } else {
-            res_int <- lavsamplestats@res.int[[g]]
-            res_slopes <- lavsamplestats@res.slopes[[g]]
-          }
-
-          if (structured) {
-            a1[[g]] <- lav_mvreg_info_expected(
-              sample_mean_x     = lavsamplestats@mean.x[[g]],
-              sample_cov_x      = lavsamplestats@cov.x[[g]],
-              sample_nobs       = lavsamplestats@nobs[[g]],
-              res_int           = res_int,
-              res_slopes        = res_slopes,
-              # wt               = WT,
-              # meanstructure    = lavmodel@meanstructure,
-              res_cov           = lavimplied$res.cov[[g]]
-            )
-          } else {
-            a1[[g]] <- lav_mvreg_info_expected(
-              sample_mean_x     = lavsamplestats@mean.x[[g]],
-              sample_cov_x      = lavsamplestats@cov.x[[g]],
-              sample_nobs       = lavsamplestats@nobs[[g]],
-              res_int           = lavsamplestats@res.int[[g]],
-              res_slopes        = lavsamplestats@res.slopes[[g]],
-              # wt               = WT,
-              # meanstructure    = lavmodel@meanstructure,
-              res_cov           = lavsamplestats@res.cov[[g]]
-            )
-          }
+      } else if (lavmodel@conditional.x) {
+        # mvreg
+        if (lavmodel@meanstructure && structured) {
+          res_int <- lavimplied$res.int[[g]]
+          res_slopes <- lavimplied$res.slopes[[g]]
         } else {
-          # conditional.x = FALSE
-          # mvnorm
+          res_int <- lavsamplestats@res.int[[g]]
+          res_slopes <- lavsamplestats@res.slopes[[g]]
+        }
+        if (structured) {
+          res_cov <- lavimplied$res.cov[[g]]
+        } else {
+          res_cov <- lavsamplestats@res.cov[[g]]
+        }
+
+        if (observed) {
+          a1[[g]] <- lav_mvreg_information_observed_samplestats(
+            sample_res_int    = lavsamplestats@res.int[[g]],
+            sample_res_slopes = lavsamplestats@res.slopes[[g]],
+            sample_res_cov    = lavsamplestats@res.cov[[g]],
+            sample_mean_x     = lavsamplestats@mean.x[[g]],
+            sample_cov_x      = lavsamplestats@cov.x[[g]],
+            res_int           = res_int,
+            res_slopes        = res_slopes,
+            res_cov           = res_cov
+          )
+        } else {
+          a1[[g]] <- lav_mvreg_info_expected(
+            sample_mean_x     = lavsamplestats@mean.x[[g]],
+            sample_cov_x      = lavsamplestats@cov.x[[g]],
+            sample_nobs       = lavsamplestats@nobs[[g]],
+            res_int           = res_int,
+            res_slopes        = res_slopes,
+            res_cov           = res_cov
+          )
+        }
+      } else {
+        # complete data, conditional.x = FALSE
+        # mvnorm
+        if (observed) {
           if (lavmodel@meanstructure && structured) {
             mean_1 <- lavimplied$mean[[g]]
           } else {
             mean_1 <- lavsamplestats@mean[[g]]
           }
 
-          correlation_flag <- lavmodel@correlation
-
+          if (structured) {
+            a1[[g]] <- lav_mvn_info_observed_samp(
+              sample_mean   = lavsamplestats@mean[[g]],
+              sample_cov    = lavsamplestats@cov[[g]],
+              mu            = mean_1,
+              sigma_1       = lavimplied$cov[[g]],
+              x_idx         = lavsamplestats@x.idx[[g]],
+              meanstructure = lavmodel@meanstructure
+            )
+          } else {
+            a1[[g]] <- lav_mvn_h1_info_observed_samp(
+              sample_mean    = lavsamplestats@mean[[g]],
+              sample_cov     = lavsamplestats@cov[[g]],
+              sample_cov_inv = lavsamplestats@icov[[g]],
+              x_idx          = lavsamplestats@x.idx[[g]],
+              meanstructure  = lavmodel@meanstructure
+            )
+          }
+        } else {
           if (structured) {
             a1[[g]] <- lav_mvn_info_expected(
-              sigma_1         = lavimplied$cov[[g]],
-              # wt = WT, # not needed
+              sigma_1       = lavimplied$cov[[g]],
               x_idx         = lavsamplestats@x.idx[[g]],
               meanstructure = lavmodel@meanstructure,
-              correlation   = correlation_flag
+              correlation   = lavmodel@correlation
             )
           } else {
             a1[[g]] <- lav_mvn_h1_info_expected(
               sample_cov_inv = lavsamplestats@icov[[g]],
-              # wt = WT, not needed
               x_idx          = lavsamplestats@x.idx[[g]],
               meanstructure  = lavmodel@meanstructure,
-              correlation    = correlation_flag
+              correlation    = lavmodel@correlation
             )
           }
-        } # conditional.x
-      } # missing
+        }
+      } # complete/missing, conditional.x
 
       # stochastic group weight
       if (lavmodel@group.w.free) {
@@ -281,16 +309,10 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
         a1[[g]] <- lav_mat_bdiag(matrix(a, 1L, 1L), a1[[g]])
       }
     } # g
-  # ML
 
   # 3b. ML + multilevel
   } else if (lavmodel@estimator == "ML" && lavdata@nlevels > 1L) {
     a1 <- vector("list", length = lavsamplestats@ngroups)
-
-    # structured? compute model-implied statistics
-    if (structured && length(lavimplied) == 0L) {
-      lavimplied <- lav_model_implied(lavmodel)
-    }
 
     # structured? lavimplied vs lavh1
     if (structured) {
@@ -305,19 +327,67 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
       sigma_w <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
       sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
 
-      # clustered data
-      a1[[g]] <- lav_mvn_cl_info_expected(
-        lp           = lavdata@Lp[[g]],
-        mu_w         = mu_w,
-        sigma_w      = sigma_w,
-        mu_b         = mu_b,
-        sigma_b      = sigma_b,
-        x_idx        = lavsamplestats@x.idx[[g]]
-      )
+      if (observed && lavdata@missing == "ml") {
+        a1[[g]] <- lav_mvn_cl_mi_info_observed(
+          y1            = lavdata@X[[g]],
+          y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
+          lp            = lavdata@Lp[[g]],
+          mp            = lavdata@Mp[[g]],
+          mu_w          = mu_w,
+          sigma_w       = sigma_w,
+          mu_b          = mu_b,
+          sigma_b       = sigma_b,
+          x_idx         = lavsamplestats@x.idx[[g]]
+        )
+      } else if (observed) {
+        a1[[g]] <- lav_mvn_cl_info_observed(
+          lp           = lavdata@Lp[[g]],
+          ylp          = lavsamplestats@YLp[[g]],
+          mu_w         = mu_w,
+          sigma_w      = sigma_w,
+          mu_b         = mu_b,
+          sigma_b      = sigma_b,
+          x_idx        = lavsamplestats@x.idx[[g]]
+        )
+      } else {
+        a1[[g]] <- lav_mvn_cl_info_expected(
+          lp           = lavdata@Lp[[g]],
+          mu_w         = mu_w,
+          sigma_w      = sigma_w,
+          mu_b         = mu_b,
+          sigma_b      = sigma_b,
+          x_idx        = lavsamplestats@x.idx[[g]]
+        )
+      }
     } # g
-  } else { # ML + multilevel
-    # no branch matched (e.g. PML): fail with a clear message instead of
-    # an obscure "object 'a1' not found"
+  } else {
+    # no branch matched (e.g. PML): the wrappers raise the error
+    return(NULL)
+  }
+
+  a1
+}
+
+# fisher/expected information of H1
+lav_model_h1_info_expected <- function(lavobject = NULL,
+                                              lavmodel = NULL,
+                                              lavsamplestats = NULL,
+                                              lavdata = NULL,
+                                              lavoptions = NULL,
+                                              lavimplied = NULL,
+                                              lavh1 = NULL,
+                                              lavcache = NULL) {
+  lav_model_h1_unpack(lavobject)
+
+  a1 <- lav_model_h1_info_ed(
+    what = "expected",
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+    lavdata = lavdata, lavoptions = lavoptions,
+    lavimplied = lavimplied, lavh1 = lavh1
+  )
+  if (is.null(a1)) {
+    # unsupported estimator (e.g. PML): fail with a clear message instead
+    # of an obscure "object 'a1' not found"
     lav_msg_stop(gettextf(
       "the (expected) h1 information matrix is not available for
        estimator %s.", lavmodel@estimator))
@@ -334,238 +404,17 @@ lav_model_h1_info_observed <- function(lavobject = NULL,
                                               lavh1 = NULL,
                                               lavcache = NULL,
                                               lavoptions = NULL) {
-  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavsamplestats <- lavobject@SampleStats
-    lavdata <- lavobject@Data
-    lavimplied <- lavobject@implied
-    lavh1 <- lavobject@h1
-    lavcache <- lavobject@Cache
-    lavoptions <- lavobject@Options
-  }
+  lav_model_h1_unpack(lavobject)
 
-  # sanity check
-  if (length(lavh1) == 0L) {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = lavdata,
-      lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions
-    )
-  }
-  if (length(lavimplied) == 0L) {
-    lavimplied <- lav_model_implied(lavmodel = lavmodel)
-  }
-
-  # estimator <- lavmodel@estimator
-
-  # structured?
-  if (!is.null(lavoptions) &&
-    !is.null(lavoptions$h1.information[1]) &&
-    lavoptions$h1.information[1] == "unstructured") {
-    structured <- FALSE
-  } else {
-    structured <- TRUE
-  }
-
-  # 1. WLS.V (=A1) for GLS/WLS
-  if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS") {
-    a1 <- lavsamplestats@WLS.V
-  # 1b. DLS: for dls.GammaNT = "model", the weight matrix is a function of
-  #     the model-implied moments and must be recomputed here (the @WLS.V
-  #     slot only holds the plain inv(NACOV) fallback); same as the
-  #     expected-information branch above
-  } else if (lavmodel@estimator == "DLS") {
-    if (lavmodel@estimator.args$dls.GammaNT == "sample") {
-      a1 <- lavsamplestats@WLS.V
-    } else {
-      a1 <- vector("list", length = lavsamplestats@ngroups)
-      for (g in seq_len(lavsamplestats@ngroups)) {
-        a1[[g]] <- lav_dls_wls_v_g(
-          m_cov         = lavimplied$cov[[g]],
-          m_mean        = lavimplied$mean[[g]],
-          nacov_g       = lavsamplestats@NACOV[[g]],
-          dls_a         = lavmodel@estimator.args$dls.a,
-          x_idx         = lavsamplestats@x.idx[[g]],
-          fixed_x       = lavmodel@fixed.x,
-          conditional_x = lavmodel@conditional.x,
-          meanstructure = lavmodel@meanstructure
-        )
-      }
-    }
-  # 2. DWLS/ULS diagonal @WLS.VD slot
-  } else if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
-    # diagonal only!!
-    a1 <- lavsamplestats@WLS.VD
-  # 3a. ML single level
-  } else if (lavmodel@estimator == "ML" && lavdata@nlevels == 1L) {
-    a1 <- vector("list", length = lavsamplestats@ngroups)
-
-    # structured? compute model-implied statistics
-    if (structured && length(lavimplied) == 0L) {
-      lavimplied <- lav_model_implied(lavmodel)
-    }
-
-    for (g in 1:lavsamplestats@ngroups) {
-      if (lavsamplestats@missing.flag) {
-        # mvnorm
-        # FIXME: allow for meanstructure = FALSE
-        # FIXME: allow for conditional.x = TRUE
-        if (lavmodel@meanstructure && structured) {
-          mean_1 <- lavimplied$mean[[g]]
-        } else {
-          #MEAN <- lavsamplestats@missing.h1[[g]]$mu
-          mean_1 <- lavh1$implied$mean[[g]]
-        }
-
-        if (structured) {
-          a1[[g]] <-
-            lav_mvnorm_missing_information_observed_samplestats(
-              yp = lavsamplestats@missing[[g]],
-              # wt not needed
-              mu = mean_1,
-              # meanstructure = lavmodel@meanstructure,
-              sigma_1 = lavimplied$cov[[g]],
-              x_idx = lavsamplestats@x.idx[[g]]
-            )
-        } else {
-          a1[[g]] <-
-            lav_mvnorm_missing_information_observed_samplestats(
-              yp = lavsamplestats@missing[[g]],
-              # wt not needed
-              mu = mean_1,
-              # meanstructure = lavmodel@meanstructure,
-              #Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-              sigma_1 = lavh1$implied$cov[[g]],
-              x_idx = lavsamplestats@x.idx[[g]]
-            )
-        }
-      } else {
-        if (lavmodel@conditional.x) {
-          # mvreg
-          if (lavmodel@meanstructure && structured) {
-            res_int <- lavimplied$res.int[[g]]
-            res_slopes <- lavimplied$res.slopes[[g]]
-          } else {
-            res_int <- lavsamplestats@res.int[[g]]
-            res_slopes <- lavsamplestats@res.slopes[[g]]
-          }
-
-          if (structured) {
-            a1[[g]] <- lav_mvreg_information_observed_samplestats(
-              sample_res_int    = lavsamplestats@res.int[[g]],
-              sample_res_slopes = lavsamplestats@res.slopes[[g]],
-              sample_res_cov    = lavsamplestats@res.cov[[g]],
-              sample_mean_x     = lavsamplestats@mean.x[[g]],
-              sample_cov_x      = lavsamplestats@cov.x[[g]],
-              res_int           = res_int,
-              res_slopes        = res_slopes,
-              # wt               = WT,
-              # meanstructure    = lavmodel@meanstructure,
-              res_cov           = lavimplied$res.cov[[g]]
-            )
-          } else {
-            a1[[g]] <- lav_mvreg_information_observed_samplestats(
-              sample_res_int    = lavsamplestats@res.int[[g]],
-              sample_res_slopes = lavsamplestats@res.slopes[[g]],
-              sample_res_cov    = lavsamplestats@res.cov[[g]],
-              sample_mean_x     = lavsamplestats@mean.x[[g]],
-              sample_cov_x      = lavsamplestats@cov.x[[g]],
-              res_int           = lavsamplestats@res.int[[g]],
-              res_slopes        = lavsamplestats@res.slopes[[g]],
-              # wt               = WT,
-              # meanstructure    = lavmodel@meanstructure,
-              res_cov           = lavsamplestats@res.cov[[g]]
-            )
-          }
-        } else {
-          # conditional.x = FALSE
-          # mvnorm
-          if (lavmodel@meanstructure && structured) {
-            mean_1 <- lavimplied$mean[[g]]
-          } else {
-            mean_1 <- lavsamplestats@mean[[g]]
-          }
-
-          if (structured) {
-            a1[[g]] <- lav_mvn_info_observed_samp(
-              sample_mean   = lavsamplestats@mean[[g]],
-              sample_cov    = lavsamplestats@cov[[g]],
-              mu            = mean_1,
-              sigma_1       = lavimplied$cov[[g]],
-              # wt           = WT, # not needed
-              x_idx         = lavsamplestats@x.idx[[g]],
-              meanstructure = lavmodel@meanstructure
-            )
-          } else {
-            a1[[g]] <- lav_mvn_h1_info_observed_samp(
-              sample_mean    = lavsamplestats@mean[[g]],
-              sample_cov     = lavsamplestats@cov[[g]],
-              sample_cov_inv = lavsamplestats@icov[[g]],
-              # wt            = WT, not needed
-              x_idx          = lavsamplestats@x.idx[[g]],
-              meanstructure  = lavmodel@meanstructure
-            )
-          }
-        } # conditional.x
-      } # missing
-
-      # stochastic group weight
-      if (lavmodel@group.w.free) {
-        # unweight!!
-        a <- exp(lavimplied$group.w[[g]]) / lavsamplestats@nobs[[g]]
-        a1[[g]] <- lav_mat_bdiag(matrix(a, 1, 1), a1[[g]])
-      }
-    } # g
-  # ML
-  # 3b. ML + multilevel
-  } else if (lavmodel@estimator == "ML" && lavdata@nlevels > 1L) {
-    a1 <- vector("list", length = lavsamplestats@ngroups)
-
-    # structured? compute model-implied statistics
-    if (structured && length(lavimplied) == 0L) {
-      lavimplied <- lav_model_implied(lavmodel)
-    }
-
-    # structured? lavimplied vs lavh1
-    if (structured) {
-      implied <- lavimplied
-    } else {
-      implied <- lavh1$implied
-    }
-
-    for (g in 1:lavsamplestats@ngroups) {
-      mu_w <- implied$mean[[(g - 1) * lavdata@nlevels + 1L]]
-      mu_b <- implied$mean[[(g - 1) * lavdata@nlevels + 2L]]
-      sigma_w <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
-      sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
-
-      if (lavdata@missing == "ml") {
-          a1[[g]] <- lav_mvn_cl_mi_info_observed(
-            y1            = lavdata@X[[g]],
-            y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
-            lp            = lavdata@Lp[[g]],
-            mp            = lavdata@Mp[[g]],
-            mu_w          = mu_w,
-            sigma_w       = sigma_w,
-            mu_b          = mu_b,
-            sigma_b       = sigma_b,
-            x_idx         = lavsamplestats@x.idx[[g]]
-          )
-      } else {
-        a1[[g]] <- lav_mvn_cl_info_observed(
-          lp           = lavdata@Lp[[g]],
-          ylp          = lavsamplestats@YLp[[g]],
-          mu_w         = mu_w,
-          sigma_w      = sigma_w,
-          mu_b         = mu_b,
-          sigma_b      = sigma_b,
-          x_idx        = lavsamplestats@x.idx[[g]]
-        )
-      }
-    } # g
-  } else { # ML + multilevel
-    # no branch matched (e.g. PML): fail with a clear message instead of
-    # an obscure "object 'a1' not found"
+  a1 <- lav_model_h1_info_ed(
+    what = "observed",
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+    lavdata = lavdata, lavoptions = lavoptions,
+    lavimplied = lavimplied, lavh1 = lavh1
+  )
+  if (is.null(a1)) {
+    # unsupported estimator (e.g. PML): fail with a clear message instead
+    # of an obscure "object 'a1' not found"
     lav_msg_stop(gettextf(
       "the (observed) h1 information matrix is not available for
        estimator %s.", lavmodel@estimator))
@@ -585,27 +434,7 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
                                                 lavh1 = NULL,
                                                 lavcache = NULL,
                                                 lavoptions = NULL) {
-  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavsamplestats <- lavobject@SampleStats
-    lavdata <- lavobject@Data
-    lavimplied <- lavobject@implied
-    lavh1 <- lavobject@h1
-    lavcache <- lavobject@Cache
-    lavoptions <- lavobject@Options
-  }
-
-  # sanity check
-  if (length(lavh1) == 0L) {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = lavdata,
-      lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions
-    )
-  }
-  if (length(lavimplied) == 0L) {
-    lavimplied <- lav_model_implied(lavmodel = lavmodel)
-  }
+  lav_model_h1_unpack(lavobject, need_h1 = TRUE, need_implied = TRUE)
 
   estimator <- lavmodel@estimator
   if (!estimator %in% c("ML", "PML")) {
@@ -921,28 +750,7 @@ lav_model_h1_acov <- function(lavobject = NULL,
                               meanstructure = NULL, # if specified, use it
                               h1_information = NULL, # if specified, use it
                               se = NULL) { # if specified, use it
-
-  if (!is.null(lavobject) && inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavsamplestats <- lavobject@SampleStats
-    lavdata <- lavobject@Data
-    lavimplied <- lavobject@implied
-    lavh1 <- lavobject@h1
-    lavcache <- lavobject@Cache
-    lavoptions <- lavobject@Options
-  }
-
-  # sanity check
-  if (length(lavh1) == 0L) {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = lavdata,
-      lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions
-    )
-  }
-  if (length(lavimplied) == 0L) {
-    lavimplied <- lav_model_implied(lavmodel = lavmodel)
-  }
+  lav_model_h1_unpack(lavobject, need_h1 = TRUE, need_implied = TRUE)
 
   # override
   if (!is.null(meanstructure)) {
@@ -956,32 +764,13 @@ lav_model_h1_acov <- function(lavobject = NULL,
   }
 
 
-  # information
-  information <- lavoptions$information[1] # ALWAYS used the first
-
-  # compute information matrix
-  if (information == "observed") {
-    i1 <- lav_model_h1_info_observed(
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = lavoptions
-    )
-  } else if (information == "expected") {
-    i1 <- lav_model_h1_info_expected(
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = lavoptions
-    )
-  } else if (information == "first.order") {
-    i1 <- lav_model_h1_info_firstorder(
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = lavoptions
-    )
-  }
+  # compute information matrix (dispatch on lavoptions$information[1])
+  i1 <- lav_model_h1_info(
+    lavmodel = lavmodel,
+    lavsamplestats = lavsamplestats, lavdata = lavdata,
+    lavimplied = lavimplied, lavh1 = lavh1,
+    lavcache = lavcache, lavoptions = lavoptions
+  )
 
   if (lavoptions$se %in% c("robust.huber.white", "robust.sem",
                            "robust.cluster", "robust.cluster.sem")) {
