@@ -1146,7 +1146,16 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         }
       }
 
-      if (estimator == "GLS" ||
+      # GLS: since 0.7-2 the estimation machinery no longer needs the
+      # (large) WLS.V matrix (the objective uses the trace shortcut, the
+      # gradient the omega approach, and the expected information is
+      # streamed); when a consumer does need the full matrix (robust
+      # SEs/tests, lavInspect), it is built on demand in
+      # lav_model_h1_information. Only the variants below still
+      # pre-compute it here.
+      gls_v_lazy <- (estimator == "GLS" && !correlation &&
+        !conditional_x && !group_w_free && missing == "listwise")
+      if ((estimator == "GLS" && !gls_v_lazy) ||
         (estimator == "DLS" && dls_gamma_nt == "sample" &&
           dls_a == 1.0)) {
         # Note: we need the 'original' COV/MEAN/ICOV
@@ -1869,7 +1878,13 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
     # wls_v
     if (!wls_v_user) {
-      if (estimator == "GLS") {
+      # GLS: build WLS.V lazily (see lav_samp_from_data); note that this
+      # moments-based branch never applied the gls.v11.mplus rescale, and
+      # the on-demand build in lav_model_h1_information preserves that
+      # (it checks lavdata@data.type)
+      gls_v_lazy <- (estimator == "GLS" && !correlation &&
+        !conditional_x && !group_w_free)
+      if (estimator == "GLS" && !gls_v_lazy) {
         # FIXME: in <0.5-21, we had
         # V11 <- icov[[g]]
         #    if(mimic == "Mplus") { # is this a bug in Mplus?

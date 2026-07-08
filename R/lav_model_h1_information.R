@@ -151,6 +151,34 @@ lav_model_h1_info_ed <- function(what = "expected",
   # 1. WLS.V (=A1) for GLS/WLS
   if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS") {
     a1 <- lavsamplestats@WLS.V
+    # GLS: since 0.7-2 the NT weight matrix is no longer pre-computed at
+    # the samplestats stage (estimation does not need it); build it here
+    # on demand. Only reached for the 'plain' single-level variant: the
+    # correlation/conditional.x/group.w.free/two.stage variants still
+    # store WLS.V eagerly (see lav_samp_from_data).
+    if (lavmodel@estimator == "GLS" && is.null(a1[[1]])) {
+      for (g in seq_len(lavsamplestats@ngroups)) {
+        a1[[g]] <- lav_samp_wls_v_nt_g(
+          m_cov         = lavsamplestats@cov[[g]],
+          m_mean        = lavsamplestats@mean[[g]],
+          m_icov        = lavsamplestats@icov[[g]],
+          correlation   = FALSE,
+          x_idx         = lavsamplestats@x.idx[[g]],
+          fixed_x       = lavmodel@fixed.x,
+          conditional_x = FALSE,
+          meanstructure = lavmodel@meanstructure
+        )
+        # mimic Mplus: V11 rescale (only for full-data input; the
+        # moments-based lav_samp_from_moments never applied it)
+        if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&
+          lavmodel@meanstructure &&
+          !is.null(lavdata) && lavdata@data.type == "full") {
+          nvar <- NCOL(lavsamplestats@cov[[g]])
+          a1[[g]][1:nvar, 1:nvar] <- a1[[g]][1:nvar, 1:nvar, drop = FALSE] *
+            (lavsamplestats@nobs[[g]] / (lavsamplestats@nobs[[g]] - 1))
+        }
+      }
+    }
 
   # 1b. DLS: for dls.GammaNT = "model", the weight matrix is a function of
   #     the model-implied moments and must be recomputed here (the @WLS.V

@@ -407,16 +407,34 @@ lav_sc_ls <- function(ntab = 0L,
     # compute Zc
     zc <- t(t(z) - sigma)
 
-    # weight matrix
-    if (estimator == "ULS") {
-      m_w <- diag(ncol(z))
-    } else {
-      m_w <- lavsamplestats@WLS.V[[g]]
-    }
-
     # combine matrices
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- zc %*% m_w %*% delta[[g]]
+    if (estimator == "ULS") {
+      # identity weight matrix
+      score_matrix[wi, ] <- zc %*% delta[[g]]
+    } else if (estimator == "GLS" &&
+      is.null(lavsamplestats@WLS.V[[g]])) {
+      # GLS: WLS.V is no longer pre-computed (0.7-2); stream
+      # WLS.V %*% Delta without forming the matrix
+      v11_scale <- 1.0
+      if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&
+        lavmodel@meanstructure && lavdata@data.type == "full") {
+        v11_scale <- lavsamplestats@nobs[[g]] /
+          (lavsamplestats@nobs[[g]] - 1)
+      }
+      wd <- lav_samp_wls_v_nt_prod(
+        m_icov = lavsamplestats@icov[[g]],
+        x = delta[[g]],
+        meanstructure = lavmodel@meanstructure,
+        fixed_x = lavmodel@fixed.x,
+        x_idx = lavsamplestats@x.idx[[g]],
+        v11_scale = v11_scale
+      )
+      score_matrix[wi, ] <- zc %*% wd
+    } else {
+      m_w <- lavsamplestats@WLS.V[[g]]
+      score_matrix[wi, ] <- zc %*% m_w %*% delta[[g]]
+    }
   } # g
 
   score_matrix

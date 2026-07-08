@@ -149,12 +149,27 @@ lav_model_info_expected <- function(lavmodel = NULL,
   wls_2l <- (lavdata@nlevels > 1L &&
     lavmodel@estimator %in% c("WLS", "DWLS", "ULS"))
 
+  # GLS: A1 is the normal-theory weight matrix, a simple function of the
+  # sample moments; when the caller does not need the full matrix
+  # (extra = FALSE) and no pre-computed WLS.V is stored (see
+  # lav_samp_from_data), stream A1 %*% Delta column-wise instead of
+  # forming the (large) A1 -- O(nvar^3) per free parameter instead of
+  # O(nvar^4)
+  gls_stream <- (lavmodel@estimator == "GLS" && !extra &&
+    lavdata@nlevels == 1L &&
+    is.null(lavsamplestats@WLS.V[[1]]) &&
+    !lavmodel@correlation &&
+    !lavmodel@conditional.x &&
+    !lavmodel@group.w.free)
+
   # 2. H1 information (single level, or two-level least-squares)
   # for two-level ML there is no pstar-space A1 here (the information is
   # computed directly in parameter space below); a1 stays NULL and the
   # extra = TRUE attribute "WLS.V" is simply absent
   a1 <- NULL
-  if (lavdata@nlevels == 1L || wls_2l) {
+  if (gls_stream) {
+    # no A1 needed
+  } else if (lavdata@nlevels == 1L || wls_2l) {
     a1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
@@ -170,7 +185,30 @@ lav_model_info_expected <- function(lavmodel = NULL,
   }
 
   # 3. compute Information per group + assemble over groups
-  if (lavdata@nlevels > 1L && !wls_2l) {
+  if (gls_stream) {
+    info_group <- vector("list", length = lavsamplestats@ngroups)
+    for (g in 1:lavsamplestats@ngroups) {
+      fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+      v11_scale <- 1.0
+      # mimic Mplus: V11 rescale (full-data input only, see
+      # lav_model_h1_information)
+      if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&
+        lavmodel@meanstructure && lavdata@data.type == "full") {
+        v11_scale <- lavsamplestats@nobs[[g]] /
+          (lavsamplestats@nobs[[g]] - 1)
+      }
+      wd <- lav_samp_wls_v_nt_prod(
+        m_icov = lavsamplestats@icov[[g]],
+        x = delta[[g]],
+        meanstructure = lavmodel@meanstructure,
+        fixed_x = lavmodel@fixed.x,
+        x_idx = lavsamplestats@x.idx[[g]],
+        v11_scale = v11_scale
+      )
+      info_group[[g]] <- fg * crossprod(delta[[g]], wd)
+    }
+    information <- lav_model_info_group_sum(info_group)
+  } else if (lavdata@nlevels > 1L && !wls_2l) {
     # multilevel (ML): the information is computed directly in parameter
     # space (no pstar-space A1)
     info_group <- vector("list", length = lavsamplestats@ngroups)
