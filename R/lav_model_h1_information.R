@@ -317,8 +317,13 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
         x_idx        = lavsamplestats@x.idx[[g]]
       )
     } # g
-  } # ML + multilevel
-
+  } else { # ML + multilevel
+    # no branch matched (e.g. PML): fail with a clear message instead of
+    # an obscure "object 'a1' not found"
+    lav_msg_stop(gettextf(
+      "the (expected) h1 information matrix is not available for
+       estimator %s.", lavmodel@estimator))
+  }
 
   a1
 }
@@ -560,7 +565,13 @@ lav_model_h1_info_observed <- function(lavobject = NULL,
         )
       }
     } # g
-  } # ML + multilevel
+  } else { # ML + multilevel
+    # no branch matched (e.g. PML): fail with a clear message instead of
+    # an obscure "object 'a1' not found"
+    lav_msg_stop(gettextf(
+      "the (observed) h1 information matrix is not available for
+       estimator %s.", lavmodel@estimator))
+  }
 
   a1
 }

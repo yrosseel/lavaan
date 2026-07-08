@@ -463,7 +463,7 @@ lav_lavaan_lavinspect <- function(object,
 
 
     #### NACOV samplestats ####
-  } else if (what == "gamma") {
+  } else if (what == "gamma" || what == "sampstat.nacov") {
     lav_inspect_sampstat_gamma(object,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)

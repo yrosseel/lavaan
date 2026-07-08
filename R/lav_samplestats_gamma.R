@@ -26,9 +26,6 @@ lav_object_gamma <- function(lavobject = NULL,
                              nacov_compute = TRUE)
 
   missing <- recipe$missing
-  if (!missing %in% c("listwise", "pairwise")) {
-    model_based <- TRUE
-  }
   fixed_x <- recipe$fixed.x
   conditional_x <- recipe$conditional.x
   meanstructure <- recipe$meanstructure
@@ -40,18 +37,153 @@ lav_object_gamma <- function(lavobject = NULL,
     mplus_wls <- recipe$mplus.wls
   }
 
-  # settings for which recomputing Gamma is not supported (yet); the stored
-  # fit-time @SampleStats@NACOV (if any) is the only Gamma for these
+  # output container
+  out <- vector("list", length = lavdata@ngroups)
+
+  # ---- two-level data: cluster sandwich at the h1 estimates --------------
   if (recipe$multilevel) {
-    lav_msg_stop(gettext(
-      "Gamma can not be (re)computed for multilevel models; the Gamma matrix
-       used at fit time (if any) is stored in the NACOV slot."))
+    if (recipe$categorical) {
+      lav_msg_stop(gettext(
+        "Gamma can not be (re)computed for two-level categorical data; the
+         (stage-wise) Gamma used at fit time (if any) is stored in the
+         NACOV slot."))
+    }
+    if (model_based || !adf) {
+      lav_msg_stop(gettext(
+        "only the sandwich-type Gamma (at the saturated h1 estimates) is
+         available for two-level data."))
+    }
+    if (is.null(lavh1) || length(lavh1$implied) == 0L) {
+      lav_msg_stop(gettext(
+        "the h1 (saturated) estimates are needed to compute the two-level
+         Gamma, but they are not available in this object."))
+    }
+    for (g in seq_len(lavdata@ngroups)) {
+      gamma_g <- lav_samp_gamma_2l_g(
+        lavsamplestats = lavsamplestats,
+        lavh1 = lavh1,
+        lavdata = lavdata,
+        g = g
+      )
+      attr(gamma_g, "keep") <- NULL
+      out[[g]] <- gamma_g
+    }
+    return(out)
   }
+
+  # ---- categorical data (single-level): muthen1984 three-stage -----------
   if (recipe$categorical) {
-    lav_msg_stop(gettext(
-      "Gamma can not be (re)computed for categorical data; the Gamma matrix
-       used at fit time (if any) is stored in the NACOV slot."))
+    if (!adf || model_based) {
+      lav_msg_stop(gettext(
+        "only the sample-based (ADF-type) Gamma is available for
+         categorical data."))
+    }
+    data_ov <- lavdata@ov
+    for (g in seq_len(lavdata@ngroups)) {
+      ov_names_g <- lavdata@ov.names[[g]]
+      ov_types_g <- data_ov$type[match(ov_names_g, data_ov$name)]
+      ov_levels_g <- data_ov$nlev[match(ov_names_g, data_ov$name)]
+      if (length(lavdata@cluster) > 0L) {
+        cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+      } else {
+        cluster_idx <- NULL
+      }
+      cat_1 <- muthen1984(
+        data_1 = lavdata@X[[g]],
+        wt = lavdata@weights[[g]],
+        sampling_weights_type = recipe$swt.type,
+        ov_names = ov_names_g,
+        ov_types = ov_types_g,
+        ov_levels = ov_levels_g,
+        ov_names_x = if (conditional_x) lavdata@ov.names.x[[g]] else NULL,
+        exo = if (conditional_x) lavdata@eXo[[g]] else NULL,
+        group = g, # for error messages only
+        wls_w = TRUE,
+        zero_add = lavoptions$zero.add,
+        zero_keep_margins = lavoptions$zero.keep.margins,
+        zero_cell_warn = FALSE,
+        zero_cell_tables = TRUE,
+        allow_empty_cell = lavoptions$allow.empty.cell,
+        cluster_idx = cluster_idx
+      )
+      nobs_g <- lavsamplestats@nobs[[g]]
+      if (!is.null(cat_1$WLS.W.cluster)) {
+        # cluster-robust meat + G/(G-1) correction, as at fit time
+        nc <- lavdata@Lp[[g]]$nclusters[[2]]
+        gamma_g <- cat_1$WLS.W.cluster * nobs_g * (nc / (nc - 1))
+      } else {
+        gamma_g <- cat_1$WLS.W * nobs_g
+        if (gamma_n_minus_one) {
+          gamma_g <- gamma_g * (nobs_g / (nobs_g - 1L))
+        }
+      }
+      if (lavoptions$estimator == "catML") {
+        # remove all but the correlation part, as at fit time
+        ntotal <- nrow(gamma_g)
+        pstar <- nrow(cat_1$A22)
+        nocor <- ntotal - pstar
+        if (length(nocor) > 0L) {
+          gamma_g <- gamma_g[-seq_len(nocor), -seq_len(nocor)]
+        }
+      }
+      if (recipe$group.w.free) {
+        gamma_g <- lav_mat_bdiag(matrix(1, 1, 1), gamma_g)
+      }
+      out[[g]] <- gamma_g
+    }
+    return(out)
   }
+
+  # ---- incomplete data (ml / two.stage / robust.two.stage) ---------------
+  # Gamma = N x acov of the saturated estimates under missingness, from the
+  # missing-data h1 information at the EM estimates (or at the model-implied
+  # moments if model_based): the sandwich I^{-1} J I^{-1} (adf) or the
+  # inverted observed information I^{-1} (not adf). This mirrors both the
+  # fit-time NACOV of the two.stage least-squares estimators and the
+  # two-stage robust vcov machinery.
+  if (!missing %in% c("listwise", "pairwise")) {
+    if (conditional_x) {
+      lav_msg_stop(gettext(
+        "Gamma is not available for conditional.x = TRUE with missing data."))
+    }
+    sandwich <- adf
+    if (missing == "two.stage") {
+      sandwich <- FALSE
+    } else if (missing == "robust.two.stage") {
+      sandwich <- TRUE
+    }
+    for (g in seq_len(lavdata@ngroups)) {
+      if (model_based) {
+        mu_g <- lavimplied$mean[[g]]
+        sigma_g <- lavimplied$cov[[g]]
+      } else {
+        mu_g <- lavsamplestats@missing.h1[[g]]$mu
+        sigma_g <- lavsamplestats@missing.h1[[g]]$sigma
+      }
+      x_idx_g <- if (fixed_x) lavsamplestats@x.idx[[g]] else integer(0L)
+      if (sandwich) {
+        gamma_g <- lav_mvn_mi_h1_omega_sw(
+          y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
+          yp = lavsamplestats@missing[[g]], wt = lavdata@weights[[g]],
+          mu = mu_g, sigma_1 = sigma_g, x_idx = x_idx_g,
+          information = "observed"
+        )
+      } else {
+        i1 <- lav_mvnorm_missing_information_observed_samplestats(
+          yp = lavsamplestats@missing[[g]],
+          mu = mu_g, sigma_1 = sigma_g, x_idx = x_idx_g
+        )
+        gamma_g <- lav_mat_sym_inverse(i1)
+      }
+      if (recipe$group.w.free) {
+        gamma_g <- lav_mat_bdiag(matrix(1, 1, 1), gamma_g)
+      }
+      out[[g]] <- gamma_g
+    }
+    return(out)
+  }
+
+  # ---- continuous, complete-data, single-level ----------------------------
   if (adf && lavdata@data.type != "full") {
     lav_msg_stop(gettext(
       "the (ADF) Gamma matrix can not be computed without full data; please
@@ -65,9 +197,6 @@ lav_object_gamma <- function(lavobject = NULL,
     lav_msg_stop(gettext(
       "ADF + model.based is not supported yet for correlation structures."))
   }
-
-  # output container
-  out <- vector("list", length = lavdata@ngroups)
 
   # compute Gamma matrix for each group
   for (g in seq_len(lavdata@ngroups)) {
