@@ -44,6 +44,65 @@ lav_samp_wls_v_nt_g <- function(m_cov = NULL, m_mean = NULL, m_icov = NULL,
   }
 }
 
+# GLS: compute WLS.V %*% x -- where WLS.V is the (unconditional)
+# normal-theory weight matrix lav_samp_wls_v_nt_g() would return --
+# WITHOUT constructing WLS.V. The cov block of WLS.V is
+#   0.5 t(D) (S.inv %x% S.inv) D
+# so for each column a of x (in vech metric) we have
+#   0.5 t(D) vec(S.inv A S.inv)   with A = vech.reverse(a)
+# and the (optional) mean block is S.inv itself (rescaled by v11_scale
+# for gls.v11.mplus). Cost is O(nvar^3) per column instead of O(nvar^4).
+# note: correlation = TRUE and conditional.x are NOT supported here;
+# their weight matrices are not this simple Kronecker sandwich
+lav_samp_wls_v_nt_prod <- function(m_icov = NULL, x = NULL,
+                                   meanstructure = FALSE,
+                                   fixed_x = FALSE,
+                                   x_idx = integer(0L),
+                                   v11_scale = 1.0) {
+  x <- as.matrix(x)
+  out <- matrix(0, nrow = NROW(x), ncol = NCOL(x))
+  nvar <- NROW(m_icov)
+  pstar <- (nvar * (nvar + 1L)) %/% 2L
+
+  # mean block: V11 = S.inv (zero rows/cols for the x-variables if fixed.x)
+  if (meanstructure) {
+    m_v11 <- m_icov * v11_scale
+    if (fixed_x && length(x_idx) > 0L) {
+      m_v11[x_idx, ] <- 0
+      m_v11[, x_idx] <- 0
+    }
+    out[seq_len(nvar), ] <- m_v11 %*% x[seq_len(nvar), , drop = FALSE]
+    cov_idx <- nvar + seq_len(pstar)
+  } else {
+    cov_idx <- seq_len(pstar)
+  }
+
+  # fixed.x: WLS.V has zero rows/cols for the x/x combinations
+  # (see lav_samp_gamma_inverse_nt); emulate by zeroing the corresponding
+  # elements of x (the zero columns) and of the result (the zero rows)
+  zero_idx <- integer(0L)
+  if (fixed_x && length(x_idx) > 0L) {
+    m_tmp <- matrix(0L, nvar, nvar)
+    m_tmp[lav_mat_vech_idx(nvar)] <- seq_len(pstar)
+    zero_idx <- lav_mat_vech(m_tmp[x_idx, x_idx, drop = FALSE])
+  }
+
+  x_cov <- x[cov_idx, , drop = FALSE]
+  if (length(zero_idx) > 0L) {
+    x_cov[zero_idx, ] <- 0
+  }
+  for (j in seq_len(NCOL(x))) {
+    m_a <- lav_mat_vech_rev(x_cov[, j])
+    out[cov_idx, j] <- 0.5 * lav_mat_dup_pre(
+      matrix(m_icov %*% m_a %*% m_icov, ncol = 1L))
+  }
+  if (length(zero_idx) > 0L) {
+    out[cov_idx[zero_idx], ] <- 0
+  }
+
+  out
+}
+
 # NORMAL-THEORY
 lav_samp_gamma_inverse_nt <- function(m_y = NULL,
                                              m_cov = NULL,

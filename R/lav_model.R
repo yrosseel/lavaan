@@ -486,6 +486,14 @@ lav_model <- function(lavpartable = NULL,
     m_free_idx = m_free_idx
   )
 
+  # GLS: the gradient reconstructs the (possibly rescaled) V11 block of
+  # the normal-theory weight matrix without forming WLS.V, so it needs
+  # this flag (see lav_model_omega)
+  estimator_args <- lavoptions$estimator.args
+  if (lavoptions$estimator == "GLS") {
+    estimator_args$gls.v11.mplus <- lavoptions$gls.v11.mplus
+  }
+
   tmp_model <- new("lavModel",
     GLIST = tmp_glist,
     dimNames = dim_names,
@@ -558,7 +566,7 @@ lav_model <- function(lavpartable = NULL,
     rv.lv = rv_lv,
     rv.ov = rv_ov,
     estimator = lavoptions$estimator,
-    estimator.args = lavoptions$estimator.args
+    estimator.args = estimator_args
   )
 
   if (lav_debug()) {

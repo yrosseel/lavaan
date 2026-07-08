@@ -103,14 +103,37 @@ lav_model_grad <- function(lavmodel = NULL,
     group_w <- rep(1.0, lavmodel@nblocks)
   }
 
+  # GLS: for single-level complete-data unconditional GLS, the weight
+  # matrix is a simple function of the sample moments:
+  #   WLS.V = bdiag(S.inv,  0.5 t(D) (S.inv %x% S.inv) D)
+  # so the gradient never needs the full WLS.V matrix:
+  # - gls_omega_flag: use the same Omega ('POST') approach as ML
+  #   (see lav_model_omega); no Delta needed at all
+  # - gls_stream_flag: keep the Delta-based *LS route, but compute
+  #   WLS.V %*% diff without forming WLS.V (composites, type != "free")
+  # excluded (not this simple Kronecker sandwich, or broken/rare):
+  # multilevel, conditional.x, (partial) correlation structures,
+  # group.w.free, missing data
+  gls_stream_flag <- (estimator == "GLS" &&
+    !lavmodel@multilevel &&
+    !conditional_x &&
+    !lavmodel@correlation &&
+    !group_w_free &&
+    !lavsamplestats@missing.flag)
+  gls_omega_flag <- (gls_stream_flag &&
+    type == "free" &&
+    !lavmodel@composites)
+
   # do we need WLS.est?
-  if (estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS", "DLS")) {
+  if (estimator %in% c("WLS", "DWLS", "ULS", "NTRLS", "DLS") ||
+    (estimator == "GLS" && !gls_omega_flag)) {
     # always compute WLS.est
     wls_est <- lav_model_wls_est(lavmodel = lavmodel, glist = glist) # ,
     # cov.x = lavsamplestats@cov.x)
   }
 
-  if (estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML")) {
+  if (estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML") ||
+    gls_omega_flag) {
     # compute moments for all groups
     # if(conditional.x) {
     #    Sigma.hat <- lav_model_cond2joint_sigma(lavmodel = lavmodel,
@@ -170,16 +193,17 @@ lav_model_grad <- function(lavmodel = NULL,
   # composites?
   composites_flag <- lavmodel@composites
 
-  # 1. ML approach
-  if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
+  # 1. ML approach (also GLS since 0.7-2, see gls_omega_flag above)
+  if (((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
     lavdata@nlevels == 1L && !composites_flag &&
-    !lavmodel@conditional.x) {
+    !lavmodel@conditional.x) || gls_omega_flag) {
   correlation <- lavmodel@correlation
     if (meanstructure) {
       omega <- lav_model_omega(
         sigma_hat = sigma_hat, mu_hat = mu_hat,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
+        estimator_args = estimator_args,
         meanstructure = TRUE,
         conditional_x = conditional_x,
     correlation = correlation, num_idx = num_idx
@@ -190,6 +214,7 @@ lav_model_grad <- function(lavmodel = NULL,
         sigma_hat = sigma_hat, mu_hat = NULL,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
+        estimator_args = estimator_args,
         meanstructure = FALSE,
         conditional_x = conditional_x,
     correlation = correlation, num_idx = num_idx
@@ -234,7 +259,9 @@ lav_model_grad <- function(lavmodel = NULL,
       }
 
       # weight by group
-      if (lavmodel@nblocks > 1L) {
+      # (also for a single group when group_w != 1; for ML the single-group
+      #  weight is always nobs/ntotal == 1, but for GLS it is (nobs-1)/ntotal)
+      if (lavmodel@nblocks > 1L || group_w[g] != 1.0) {
         for (mm in mm_in_group) {
           dx_1[[mm]] <- group_w[g] * dx_1[[mm]]
         }
@@ -368,8 +395,25 @@ lav_model_grad <- function(lavmodel = NULL,
         # full weight matrix
         diff <- lavsamplestats@WLS.obs[[g]] - wls_est[[g]]
 
-        # full weight matrix
-        if (estimator == "GLS" || estimator == "WLS") {
+        if (estimator == "GLS" && gls_stream_flag) {
+          # compute WLS.V %*% diff without forming WLS.V
+          v11_scale <- 1.0
+          if (meanstructure && isTRUE(estimator_args$gls.v11.mplus)) {
+            v11_scale <- lavsamplestats@nobs[[g]] /
+              (lavsamplestats@nobs[[g]] - 1)
+          }
+          wv_diff <- lav_samp_wls_v_nt_prod(
+            m_icov = lavsamplestats@icov[[g]],
+            x = diff,
+            meanstructure = meanstructure,
+            fixed_x = lavmodel@fixed.x,
+            x_idx = lavsamplestats@x.idx[[g]],
+            v11_scale = v11_scale
+          )
+          group_dx <- -1 * crossprod(delta[[g]], wv_diff)
+
+          # full weight matrix
+        } else if (estimator == "GLS" || estimator == "WLS") {
           wls_v <- lavsamplestats@WLS.V[[g]]
           group_dx <- -1 * crossprod(
             delta[[g]],
@@ -1075,6 +1119,7 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
 
 lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
                          lavsamplestats = NULL, estimator = "ML",
+                         estimator_args = list(),
                          meanstructure = FALSE, conditional_x = FALSE,
              correlation = FALSE, num_idx = NULL) {
   # nblocks
@@ -1159,13 +1204,20 @@ lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
 
       # GLS
     } else if (estimator == "GLS") {
+      # rides the same 'POST' convention as ML; the caller weights each
+      # group by (nobs - 1)/ntotal (see group_w in lav_model_grad), so
+      # omega itself is the unweighted S.inv (S - Sigma) S.inv
       w_inv <- lavsamplestats@icov[[g]]
       m_w <- lavsamplestats@cov[[g]]
-      omega[[g]] <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]] *
-        (w_inv %*% (m_w - sigma_hat[[g]]) %*% w_inv)
+      omega[[g]] <- w_inv %*% (m_w - sigma_hat[[g]]) %*% w_inv
       if (meanstructure) {
         diff <- as.matrix(lavsamplestats@mean[[g]] - mu_hat[[g]])
-        omega_mu[[g]] <- t(t(diff) %*% w_inv)
+        omega_mu[[g]] <- w_inv %*% diff
+        if (isTRUE(estimator_args$gls.v11.mplus)) {
+          # V11 was rescaled by n/(n-1) (see lav_samp_from_data)
+          omega_mu[[g]] <- omega_mu[[g]] * lavsamplestats@nobs[[g]] /
+            (lavsamplestats@nobs[[g]] - 1)
+        }
       }
     }
 
