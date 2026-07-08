@@ -79,13 +79,15 @@ lav_data_simulate <- function(model = NULL,
     }
     return_value <- do.call(lav_data_simulate_ml, c(
       list(model = model, cmd_pop = model_type,
-      # forward the model modifiers to the population-model fit
-      int_ov_free = int_ov_free, int_lv_free = int_lv_free,
-      marker_int_zero = marker_int_zero, conditional_x = conditional_x,
-      composites = composites, fixed_x = fixed_x, orthogonal = orthogonal,
-      std_lv = std_lv, auto_fix_first = auto_fix_first,
-      auto_fix_single = auto_fix_single, auto_var = auto_var,
-      auto_cov_lv_x = auto_cov_lv_x, auto_cov_y = auto_cov_y),
+      # forward the model modifiers to the population-model fit; the ML worker
+      # forwards these straight to cmd_pop (sem/cfa/lavaan), which expect the
+      # dotted lavOptions names (not the snake_case local variable names)
+      "int.ov.free" = int_ov_free, "int.lv.free" = int_lv_free,
+      "marker.int.zero" = marker_int_zero, "conditional.x" = conditional_x,
+      composites = composites, "fixed.x" = fixed_x, orthogonal = orthogonal,
+      "std.lv" = std_lv, "auto.fix.first" = auto_fix_first,
+      "auto.fix.single" = auto_fix_single, "auto.var" = auto_var,
+      "auto.cov.lv.x" = auto_cov_lv_x, "auto.cov.y" = auto_cov_y),
       dotdotdot,
       list(sample_nobs = sample_nobs, cluster_idx = cluster_idx,
       seed = seed, empirical = empirical, ordered_center = ordered_center,
@@ -226,8 +228,8 @@ lav_data_simulate_ml <- function(model = NULL,
 
   # generate data per BLOCK
   for (b in seq_len(nblocks)) {
-    if (lavoptions$conditional_x) {
-      lav_msg_stop(gettext("conditional_x = TRUE is not supported (yet) by the
+    if (lavoptions$conditional.x) {
+      lav_msg_stop(gettext("conditional.x = TRUE is not supported (yet) by the
                             multilevel data simulation"))
     } else {
       COV <- lavimplied$cov[[b]]
@@ -622,7 +624,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     #                - use lav_lisrel_comp_set_intresvar
     dotdotdot <- list(...)
     dotdotdot$sample_nobs <- sample_nobs
-    dotdotdot$fixed_x <- FALSE # for now
+    dotdotdot[["fixed.x"]] <- FALSE # for now (lavOptions name, not snake_case)
     dotdotdot$representation <- "LISREL"
     dotdotdot$composites <- composites
     dotdotdot$correlation <- TRUE # this is the trick

@@ -409,7 +409,8 @@ lavaan <- function(
   # and their acov (Gamma) is the cluster-based sandwich; both can only be
   # computed once the h1 model has been estimated
   if (lavdata@nlevels > 1L &&
-    lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
+    lavoptions$estimator %in% c("WLS", "DWLS", "ULS") &&
+    lavdata@data.type != "none") {
     if (lavoptions$.categorical) {
       # stage-wise (univariate + bivariate) estimation; this also
       # provides the 'h1' (unrestricted) implied statistics
