@@ -105,6 +105,10 @@ lav_model_info_expected <- function(lavmodel = NULL,
     lavmodel@estimator %in% c("WLS", "DWLS", "ULS"))
 
   # 2. H1 information (single level, or two-level least-squares)
+  # for two-level ML there is no pstar-space A1 here (the information is
+  # computed directly in parameter space below); a1 stays NULL and the
+  # extra = TRUE attribute "WLS.V" is simply absent
+  a1 <- NULL
   if (lavdata@nlevels == 1L || wls_2l) {
     a1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
