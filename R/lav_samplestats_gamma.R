@@ -1,5 +1,25 @@
-
-
+# Gamma: N times the asymptotic variance matrix of the sample statistics
+# (means/thresholds/slopes first, then vech of the (co)variances).
+#
+# Two computational routes exist, tied together by the identity
+#
+#     Gamma_ADF = A1^{-1} %*% J1 %*% A1^{-1}
+#
+# with A1 the expected h1 information (A1^{-1} = Gamma_NT) and J1 the
+# first-order h1 information (crossprod of the casewise h1 scores / n),
+# both at the saturated sample moments:
+#
+# - the DIRECT route (lav_samp_gamma below): crossprod of the casewise
+#   moment contributions. Since sc_i = A1 %*% zc_i, this equals the
+#   sandwich exactly (machine precision) and is 1.5-3x faster (the
+#   sandwich adds two pstar x pstar multiplications); it is the canonical
+#   engine for complete single-level data.
+# - the SANDWICH route: needed whenever the casewise contributions are not
+#   iid draws of a simple moment vector -- sampling weights (the wt branch
+#   of lav_samp_gamma below), missing data (lav_mvn_mi_h1_omega_sw), and
+#   two-level data (lav_samp_gamma_2l_g), where it is the only route.
+#
+# (evidence + benchmarks: aja_identity.R in the gamma-refactor test dir)
 
 # 'the' Gamma (NACOV) of a fitted object: the fit-time stored NACOV when
 # available, otherwise recomputed with the fit-time settings (the recipe).
