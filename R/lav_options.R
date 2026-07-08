@@ -929,7 +929,7 @@ lav_options_set <- function(opt = NULL) {
   # to support the model (e.g., multiple groups, conditional.x), we
   # quietly fall back to "nlminb" later (see lav_lavaan_step11_optim)
   if (opt$optim.method == "default") {
-    if (opt$.multilevel && opt$missing == "ml" &&
+    if (opt$.multilevel && opt$missing %in% c("ml", "ml.x") &&
         lav_options_estimatorgroup(opt$estimator) == "ML") {
       opt$optim.method <- "em"
       opt$.optim.em.fallback <- TRUE

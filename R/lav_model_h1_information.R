@@ -327,7 +327,7 @@ lav_model_h1_info_ed <- function(what = "expected",
       sigma_w <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
       sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
 
-      if (observed && lavdata@missing == "ml") {
+      if (observed && lavdata@missing %in% c("ml", "ml.x")) {
         a1[[g]] <- lav_mvn_cl_mi_info_observed(
           y1            = lavdata@X[[g]],
           y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
@@ -581,7 +581,7 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
       # if not-structured, we use lavh1, and that is always
       # 'unconditional' (for now)
       if (lavmodel@conditional.x && structured) {
-      if (lavdata@missing == "ml") {
+      if (lavdata@missing %in% c("ml", "ml.x")) {
       lav_msg_stop(gettext("firstorder information matrix not available
                                 (yet) if conditional.x + fiml"))
     }
@@ -609,7 +609,7 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
         mu_b <- implied$mean[[(g - 1) * lavdata@nlevels + 2L]]
         sigma_w <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
         sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
-    if (lavdata@missing == "ml") {
+    if (lavdata@missing %in% c("ml", "ml.x")) {
           b1[[g]] <- lav_mvn_cl_mi_info_firstorder(
             y1            = lavdata@X[[g]],
             y2            = lavsamplestats@YLp[[g]][[2]]$Y2,

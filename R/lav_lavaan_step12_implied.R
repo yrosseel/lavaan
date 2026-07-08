@@ -30,8 +30,9 @@ lav_step12_loglik <- function(lavoptions = NULL,
   # #  12. lavloglik  # #
   # # # # # # # # # # # #
 
-  # only when missing = "ml" and zero coverage
-  if (lavoptions$missing == "ml" && lavoptions$model.type == "unrestricted" &&
+  # only when missing = "ml" (or "ml.x") and zero coverage
+  if (lavoptions$missing %in% c("ml", "ml.x") &&
+      lavoptions$model.type == "unrestricted" &&
       length(lavh1) == 0L) {
     lavh1 <- list(implied = lavimplied,
                   logl = list())
