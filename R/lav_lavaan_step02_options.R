@@ -291,6 +291,21 @@ lav_step02_options <- function(slot_options = NULL,
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
 
+    # correlation = TRUE with observed product (interaction) terms: the
+    # product of standardized variables does not have unit variance, so the
+    # product terms must keep a free variance (github issue #427). We turn
+    # the full correlation structure into a partial one that standardizes
+    # all observed variables except the product terms. (If the user listed
+    # the variables explicitly, we leave that choice alone.)
+    if (isTRUE(lavoptions$correlation) &&
+        length(lavoptions$.correlation.ov) == 0L) {
+      ov_int <- unique(unlist(lav_pt_vnames(flat_model, "ov.interaction")))
+      if (length(ov_int) > 0L) {
+        ov_all <- unique(unlist(lav_pt_vnames(flat_model, "ov")))
+        lavoptions$.correlation.ov <- setdiff(ov_all, ov_int)
+      }
+    }
+
     # store check.sigma.pd in lavaan_cache_env
     assign("opt_check_sigma_pd", opt$check.sigma.pd, lavaan_cache_env)
 
