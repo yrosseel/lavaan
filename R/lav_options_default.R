@@ -513,7 +513,7 @@ lav_options_default <- function() {
   elm(c("em.h1.args", "min_variance"), 1e-05, nm = "]0, 0.01]")
   elm(c("em.h1.args", "warn"), TRUE, bl = TRUE)
   # what to do if an EM estimated covariance matrix is (near) singular?
-  elm(c("em.h1.args", "non_pd_action"), "stop",
+  elm(c("em.h1.args", "non_pd_action"), "warn", # "stop" breaks jmv
       chr = c("stop", "warn", "none"))
   elm(c("em.h1.args", "non_pd_tol"), 1e-05, nm = "]0, 0.01]")
   # accelerate the EM iterations?
