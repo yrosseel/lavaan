@@ -58,24 +58,49 @@ lav_samp_gamma_2l_g <- function(lavsamplestats = NULL,
   mu_b <- lavh1$implied$mean[[(g - 1) * nlevels + 2L]]
   sigma_b <- lavh1$implied$cov[[(g - 1) * nlevels + 2L]]
 
-  # expected h1 information (per cluster) at the h1 estimates
-  i1 <- lav_mvn_cl_info_expected(
-    lp = lp,
-    mu_w = mu_w, sigma_w = sigma_w,
-    mu_b = mu_b, sigma_b = sigma_b,
-    x_idx = lavsamplestats@x.idx[[g]]
-  )
-
-  # first-order information (per cluster) from the cluster-wise scores
-  j1 <- lav_mvn_cl_info_firstorder(
-    y1 = lavdata@X[[g]],
-    ylp = lavsamplestats@YLp[[g]],
-    lp = lp,
-    mu_w = mu_w, sigma_w = sigma_w,
-    mu_b = mu_b, sigma_b = sigma_b,
-    x_idx = lavsamplestats@x.idx[[g]],
-    divide_by_two = TRUE
-  )
+  # h1 information matrices (per cluster) at the h1 estimates: I1 (the
+  # bread) and the first-order J1 from the cluster-wise scores. With
+  # missing data (fiml) we use the pattern-based kernels, and (as in
+  # lav_model_h1_information, and as in the single-level missing-data
+  # Gamma) the bread is the observed -- rather than the expected --
+  # information; the h1 estimates then come from EM.
+  if (lavdata@missing %in% c("ml", "ml.x")) {
+    i1 <- lav_mvn_cl_mi_info_observed(
+      y1 = lavdata@X[[g]],
+      y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+      lp = lp,
+      mp = lavdata@Mp[[g]],
+      mu_w = mu_w, sigma_w = sigma_w,
+      mu_b = mu_b, sigma_b = sigma_b,
+      x_idx = lavsamplestats@x.idx[[g]]
+    )
+    j1 <- lav_mvn_cl_mi_info_firstorder(
+      y1 = lavdata@X[[g]],
+      y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+      lp = lp,
+      mp = lavdata@Mp[[g]],
+      mu_w = mu_w, sigma_w = sigma_w,
+      mu_b = mu_b, sigma_b = sigma_b,
+      x_idx = lavsamplestats@x.idx[[g]],
+      divide_by_two = TRUE
+    )
+  } else {
+    i1 <- lav_mvn_cl_info_expected(
+      lp = lp,
+      mu_w = mu_w, sigma_w = sigma_w,
+      mu_b = mu_b, sigma_b = sigma_b,
+      x_idx = lavsamplestats@x.idx[[g]]
+    )
+    j1 <- lav_mvn_cl_info_firstorder(
+      y1 = lavdata@X[[g]],
+      ylp = lavsamplestats@YLp[[g]],
+      lp = lp,
+      mu_w = mu_w, sigma_w = sigma_w,
+      mu_b = mu_b, sigma_b = sigma_b,
+      x_idx = lavsamplestats@x.idx[[g]],
+      divide_by_two = TRUE
+    )
+  }
 
   # invert I1, dropping the structurally-fixed (zero-information)
   # entries (cfr. lav_model_h1_acov)
