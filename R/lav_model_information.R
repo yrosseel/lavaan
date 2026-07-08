@@ -149,15 +149,20 @@ lav_model_info_expected <- function(lavmodel = NULL,
   wls_2l <- (lavdata@nlevels > 1L &&
     lavmodel@estimator %in% c("WLS", "DWLS", "ULS"))
 
-  # GLS: A1 is the normal-theory weight matrix, a simple function of the
-  # sample moments; when the caller does not need the full matrix
-  # (extra = FALSE) and no pre-computed WLS.V is stored (see
-  # lav_samp_from_data), stream A1 %*% Delta column-wise instead of
-  # forming the (large) A1 -- O(nvar^3) per free parameter instead of
-  # O(nvar^4)
+  # GLS/ML: A1 is bdiag(W, 0.5 t(D) (W %x% W) D) with W the inverse of
+  # the sample (GLS, ML-unstructured) or model-implied (ML-structured)
+  # covariance matrix; when the caller does not need the full matrix
+  # (extra = FALSE), stream A1 %*% Delta column-wise instead of forming
+  # the (large) A1 -- O(nvar^3) per free parameter instead of O(nvar^4)
   gls_stream <- (lavmodel@estimator == "GLS" && !extra &&
     lavdata@nlevels == 1L &&
     is.null(lavsamplestats@WLS.V[[1]]) &&
+    !lavmodel@correlation &&
+    !lavmodel@conditional.x &&
+    !lavmodel@group.w.free)
+  ml_stream <- (lavmodel@estimator == "ML" && !extra &&
+    lavdata@nlevels == 1L &&
+    !lavsamplestats@missing.flag &&
     !lavmodel@correlation &&
     !lavmodel@conditional.x &&
     !lavmodel@group.w.free)
@@ -167,7 +172,7 @@ lav_model_info_expected <- function(lavmodel = NULL,
   # computed directly in parameter space below); a1 stays NULL and the
   # extra = TRUE attribute "WLS.V" is simply absent
   a1 <- NULL
-  if (gls_stream) {
+  if (gls_stream || ml_stream) {
     # no A1 needed
   } else if (lavdata@nlevels == 1L || wls_2l) {
     a1 <- lav_model_h1_info_expected(
@@ -185,20 +190,43 @@ lav_model_info_expected <- function(lavmodel = NULL,
   }
 
   # 3. compute Information per group + assemble over groups
-  if (gls_stream) {
+  if (gls_stream || ml_stream) {
+    # ML: structured (default) evaluates W at the model-implied moments,
+    # unstructured at the sample moments (mirroring the corresponding
+    # branch in lav_model_h1_information); GLS is always sample-based
+    ml_structured <- TRUE
+    if (!is.null(lavoptions) &&
+      !is.null(lavoptions$h1.information[1]) &&
+      lavoptions$h1.information[1] == "unstructured") {
+      ml_structured <- FALSE
+    }
+    if (ml_stream && ml_structured && length(lavimplied) == 0L) {
+      lavimplied <- lav_model_implied(lavmodel = lavmodel)
+    }
     info_group <- vector("list", length = lavsamplestats@ngroups)
     for (g in 1:lavsamplestats@ngroups) {
       fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
       v11_scale <- 1.0
-      # mimic Mplus: V11 rescale (full-data input only, see
-      # lav_model_h1_information)
-      if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&
-        lavmodel@meanstructure && lavdata@data.type == "full") {
-        v11_scale <- lavsamplestats@nobs[[g]] /
-          (lavsamplestats@nobs[[g]] - 1)
+      if (gls_stream) {
+        w_inv <- lavsamplestats@icov[[g]]
+        # mimic Mplus: V11 rescale (full-data input only, see
+        # lav_model_h1_information)
+        if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&
+          lavmodel@meanstructure && lavdata@data.type == "full") {
+          v11_scale <- lavsamplestats@nobs[[g]] /
+            (lavsamplestats@nobs[[g]] - 1)
+        }
+      } else if (ml_structured) {
+        # same inversion route as lav_mvn_info_expected
+        w_inv <- lav_mvn_sigma_inv(
+          sigma_1 = lavimplied$cov[[g]],
+          sinv_method = "eigen"
+        )
+      } else {
+        w_inv <- lavsamplestats@icov[[g]]
       }
       wd <- lav_samp_wls_v_nt_prod(
-        m_icov = lavsamplestats@icov[[g]],
+        m_icov = w_inv,
         x = delta[[g]],
         meanstructure = lavmodel@meanstructure,
         fixed_x = lavmodel@fixed.x,
