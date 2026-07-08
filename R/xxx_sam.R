@@ -578,7 +578,7 @@ sam <- function(model = NULL,
       sam_object = sam_object, bootstrap = bootstrap
     )
     joint@boot$coef <- boot_out$boot.coef
-    joint@Options$bootstrap <- boot_out$R
+    joint@Options$bootstrap <- list(R = boot_out$R)
     vcov_1 <- list(se = "bootstrap", VCOV = boot_out$VCOV)
 
     if (lav_verbose()) {
