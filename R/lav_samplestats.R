@@ -1138,34 +1138,18 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           dls_a == 1.0)) {
         # Note: we need the 'original' COV/MEAN/ICOV
         #        sample statistics; not the 'residual' version
-        if (correlation) {
-          # (partial) correlation structure: normal-theory weight matrix is
-          # the NT Gamma of the (partial) correlation moments, obtained via
-          # the delta method (this also handles fixed.x). cor_idx lists the
-          # variables that are standardized to unit variance (all, unless a
-          # subset was requested via correlation = c(...)).
-          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
-          gamma_nt <- lav_samp_partial_cor_gamma_nt(
-            m_cov         = cov[[g]],
-            cor_idx       = cor_idx_g,
-            meanstructure = meanstructure,
-            fixed_x       = fixed_x,
-            x_idx         = x_idx[[g]]
-          )
-          wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
-        } else {
-          wls_v[[g]] <- lav_samp_gamma_inverse_nt(
-            m_icov         = icov[[g]],
-            m_cov          = cov[[g]],
-            m_mean         = mean[[g]],
-            rescale        = FALSE,
-            x_idx          = x_idx[[g]],
-            fixed_x        = fixed_x,
-            conditional_x  = conditional_x,
-            meanstructure  = meanstructure,
-            slopestructure = conditional_x
-          )
-        }
+        wls_v[[g]] <- lav_samp_wls_v_nt_g(
+          m_cov         = cov[[g]],
+          m_mean        = mean[[g]],
+          m_icov        = icov[[g]],
+          cor_idx       = lav_gamma_recipe_cor_idx(gamma_recipe,
+                                                   ov_names[[g]]),
+          correlation   = correlation,
+          x_idx         = x_idx[[g]],
+          fixed_x       = fixed_x,
+          conditional_x = conditional_x,
+          meanstructure = meanstructure
+        )
         if (lavoptions$gls.v11.mplus && !conditional_x && meanstructure) {
           # bug in Mplus? V11 rescaled by nobs[[g]]/(nobs[[g]]-1)
           nvar <- NCOL(cov[[g]])
@@ -1860,33 +1844,21 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         #    if(mimic == "Mplus") { # is this a bug in Mplus?
         #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
         #    }
-        if (correlation) {
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
+        wls_v[[g]] <- lav_samp_wls_v_nt_g(
+          m_cov         = cov[[g]],
+          m_mean        = mean[[g]],
+          m_icov        = icov[[g]],
+          cor_idx       = if (length(correlation_ov) > 0L) {
             which(ov_names[[g]] %in% correlation_ov)
           } else {
             seq_along(ov_names[[g]])
-          }
-          gamma_nt <- lav_samp_partial_cor_gamma_nt(
-            m_cov         = cov[[g]],
-            cor_idx       = cor_idx_g,
-            meanstructure = meanstructure,
-            fixed_x       = fixed_x,
-            x_idx         = x_idx[[g]]
-          )
-          wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
-        } else {
-          wls_v[[g]] <- lav_samp_gamma_inverse_nt(
-            m_icov = icov[[g]],
-            m_cov = cov[[g]],
-            m_mean = mean[[g]],
-            rescale = FALSE,
-            x_idx = x_idx[[g]],
-            fixed_x = fixed_x,
-            conditional_x = conditional_x,
-            meanstructure = meanstructure,
-            slopestructure = conditional_x
-          )
-        }
+          },
+          correlation   = correlation,
+          x_idx         = x_idx[[g]],
+          fixed_x       = fixed_x,
+          conditional_x = conditional_x,
+          meanstructure = meanstructure
+        )
       } else if (estimator == "ULS") {
         wls_v[[g]] <- diag(length(wls_obs[[g]]))
         wls_vd[[g]] <- rep(1, length(wls_obs[[g]]))

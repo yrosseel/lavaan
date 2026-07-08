@@ -20,6 +20,41 @@
 #   two-level data (lav_samp_gamma_2l_g), where it is the only route.
 #
 # (evidence + benchmarks: aja_identity.R in the gamma-refactor test dir)
+#
+# SCALING CONVENTIONS
+# - @SampleStats@NACOV[[g]] stores Gamma_g = n_g * acov(s_g)
+#   = Cov(sqrt(n_g) * s_g), per group. (For two-level data n_g is the
+#   number of OBSERVATIONS, even though the clusters are the independent
+#   units: Gamma_g = n_g * acov always holds.)
+# - the h1 information matrices (lav_model_h1_information.R) are UNIT
+#   (per-observation single-level, per-cluster two-level); acov versions
+#   (lav_model_h1_acov) carry the 1/n_g; the categorical WLS.W is stored
+#   as Gamma/n and rescaled at consumption.
+# - multigroup consumers stack per-group blocks into one 'global' Gamma.
+#   Two equivalent conventions are in use:
+#     (a) Gamma_g / fg  (= Cov(sqrt(ntotal) * s_g)) with fg-weighted
+#         information/weight blocks appearing TWICE in U
+#         (satorra.bentler, yuan.bentler, catml_dwls fit indices);
+#     (b) fg * Gamma_g with UNweighted U blocks (lav_test_diff).
+#   These give identical tr(U Gamma) and tr((U Gamma)^2): every (g,h)
+#   cross-term picks up exactly one fg and one fh under either placement
+#   (verified numerically in fg_convention_check.R, gamma-refactor dir).
+
+# rescale a per-group Gamma list from the Cov(sqrt(n_g) s_g) convention
+# (as stored in @NACOV) to the Cov(sqrt(ntotal) s_g) convention
+# (Gamma_g / fg); convention (a) above, used when stacking the per-group
+# blocks into one 'global' Gamma
+lav_gamma_rescale_ntotal <- function(gamma, nobs, ntotal = NULL) {
+  nobs <- unlist(nobs)
+  if (is.null(ntotal)) {
+    ntotal <- sum(nobs)
+  }
+  fg <- nobs / ntotal
+  for (g in seq_along(gamma)) {
+    gamma[[g]] <- gamma[[g]] / fg[g]
+  }
+  gamma
+}
 
 # 'the' Gamma (NACOV) of a fitted object: the fit-time stored NACOV when
 # available, otherwise recomputed with the fit-time settings (the recipe).

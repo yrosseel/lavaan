@@ -11,6 +11,39 @@
 #       3) conditional_x (conditional_x = TRUE)
 #  - if conditional_x = TRUE, we ignore fixed_x (can be TRUE or FALSE)
 
+# GLS (and DLS with dls.a = 1): the normal-theory weight matrix for one
+# group -- the inverse of the NT Gamma, in the (partial) correlation metric
+# when correlation = TRUE. Shared by lav_samp_from_data() and
+# lav_samp_from_moments().
+lav_samp_wls_v_nt_g <- function(m_cov = NULL, m_mean = NULL, m_icov = NULL,
+                                cor_idx = NULL, correlation = FALSE,
+                                x_idx = integer(0L), fixed_x = FALSE,
+                                conditional_x = FALSE,
+                                meanstructure = FALSE) {
+  if (correlation) {
+    gamma_nt <- lav_samp_partial_cor_gamma_nt(
+      m_cov         = m_cov,
+      cor_idx       = cor_idx,
+      meanstructure = meanstructure,
+      fixed_x       = fixed_x,
+      x_idx         = x_idx
+    )
+    lav_mat_sym_inverse(gamma_nt)
+  } else {
+    lav_samp_gamma_inverse_nt(
+      m_icov         = m_icov,
+      m_cov          = m_cov,
+      m_mean         = m_mean,
+      rescale        = FALSE,
+      x_idx          = x_idx,
+      fixed_x        = fixed_x,
+      conditional_x  = conditional_x,
+      meanstructure  = meanstructure,
+      slopestructure = conditional_x
+    )
+  }
+}
+
 # NORMAL-THEORY
 lav_samp_gamma_inverse_nt <- function(m_y = NULL,
                                              m_cov = NULL,

@@ -180,7 +180,10 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
     # but for trace_ugamma2, we can no longer compute the trace per group
     trace_ugamma2 <- as.numeric(NA)
     if (satterthwaite) {
-      # global approach (not group-specific)
+      # global approach (not group-specific).
+      # NOTE: fg * Gamma_g with UNweighted V blocks -- trace-equivalent to
+      # the Gamma_g / fg + fg-weighted-V convention used elsewhere (see the
+      # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
       gamma_f <- m_gamma
       for (g in seq_along(m_gamma)) {
         gamma_f[[g]] <- fg[g] * m_gamma[[g]]

@@ -345,10 +345,11 @@ lav_test_yb_trace <- function(lavsamplestats = lavsamplestats,
     }
     b1_all <- lav_mat_bdiag(b1_f)
 
-    gamma_f <- omega
-    for (g in 1:ngroups) {
-      gamma_f[[g]] <- 1 / fg[g] * omega[[g]]
-    }
+    # Omega_g / fg: the Cov(sqrt(ntotal) s_g) stacking convention (see the
+    # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
+    gamma_f <- lav_gamma_rescale_ntotal(omega,
+      nobs = lavsamplestats@nobs, ntotal = lavsamplestats@ntotal
+    )
     gamma_all <- lav_mat_bdiag(gamma_f)
     delta_all <- do.call("rbind", delta)
 

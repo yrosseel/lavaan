@@ -190,11 +190,11 @@ lav_test_sb <- function(lavobject = NULL,
   if (npar == 0) {
     # catch npar == 0 (eg baseline model if correlation structure)
     trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
-    fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-    gamma_f <- m_gamma
-    for (g in 1:ngroups) {
-      gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
-    }
+    # Gamma_g / fg: the Cov(sqrt(ntotal) s_g) stacking convention (see the
+    # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
+    gamma_f <- lav_gamma_rescale_ntotal(m_gamma,
+      nobs = lavsamplestats@nobs, ntotal = lavsamplestats@ntotal
+    )
     gamma_all <- lav_mat_bdiag(gamma_f)
     ug <- gamma_all
     trace_ugamma <- sum(diag(gamma_all))
@@ -482,10 +482,11 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
       }
       v_all <- lav_mat_bdiag(v_g)
       if (is.null(gamma_full)) {
-        gamma_f <- m_gamma
-        for (g in 1:ngroups) {
-          gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
-        }
+        # Gamma_g / fg, paired with the fg-weighted V blocks above (see the
+        # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
+        gamma_f <- lav_gamma_rescale_ntotal(m_gamma,
+          nobs = nobs, ntotal = ntotal
+        )
         gamma_all <- lav_mat_bdiag(gamma_f)
       } else {
         # full (possibly cross-group) Gamma, supplied by the caller
