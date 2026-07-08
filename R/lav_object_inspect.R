@@ -2313,7 +2313,11 @@ lav_inspect_sampstat_gamma <- function(object,
       }
     } else if (object@Data@nlevels > 1L &&
       length(object@Data@group.label) == 0L) {
-      names(return_value) <- object@Data@level.label
+      # two-level: NACOV/Gamma is stored per group (one matrix covering both
+      # levels), not per level; only add level labels if the lengths match
+      if (length(return_value) == length(object@Data@level.label)) {
+        names(return_value) <- object@Data@level.label
+      }
     }
   }
 

@@ -11,7 +11,7 @@ lav_object_gamma <- function(lavobject = NULL,
                              lavimplied = NULL,
                              # other options
                              adf = TRUE, model_based = FALSE,
-                             mplus_wls = FALSE) {
+                             mplus_wls = NULL) {
   # extract slots
   if (!is.null(lavobject)) {
     lavdata <- lavobject@Data
@@ -21,19 +21,49 @@ lav_object_gamma <- function(lavobject = NULL,
     lavimplied <- lavobject@implied
   }
 
-  missing <- lavoptions$missing
+  # the Gamma recipe: the same settings as used at fit time
+  recipe <- lav_gamma_recipe(lavoptions = lavoptions, lavdata = lavdata,
+                             nacov_compute = TRUE)
+
+  missing <- recipe$missing
   if (!missing %in% c("listwise", "pairwise")) {
     model_based <- TRUE
   }
-  fixed_x <- lavoptions$fixed.x
-  conditional_x <- lavoptions$conditional.x
-  meanstructure <- lavoptions$meanstructure
-  gamma_n_minus_one <- lavoptions$gamma.n.minus.one
-  gamma_unbiased <- lavoptions$gamma.unbiased
+  fixed_x <- recipe$fixed.x
+  conditional_x <- recipe$conditional.x
+  meanstructure <- recipe$meanstructure
+  gamma_n_minus_one <- recipe$n.minus.one
+  gamma_unbiased <- recipe$unbiased
+  if (is.null(mplus_wls)) {
+    # gamma.wls.mplus, but only where fit time applies it (plain ADF Gamma
+    # for the (D)WLS-family estimators)
+    mplus_wls <- recipe$mplus.wls
+  }
 
+  # settings for which recomputing Gamma is not supported (yet); the stored
+  # fit-time @SampleStats@NACOV (if any) is the only Gamma for these
+  if (recipe$multilevel) {
+    lav_msg_stop(gettext(
+      "Gamma can not be (re)computed for multilevel models; the Gamma matrix
+       used at fit time (if any) is stored in the NACOV slot."))
+  }
+  if (recipe$categorical) {
+    lav_msg_stop(gettext(
+      "Gamma can not be (re)computed for categorical data; the Gamma matrix
+       used at fit time (if any) is stored in the NACOV slot."))
+  }
+  if (adf && lavdata@data.type != "full") {
+    lav_msg_stop(gettext(
+      "the (ADF) Gamma matrix can not be computed without full data; please
+       provide the NACOV= argument."))
+  }
   if (adf && model_based && conditional_x) {
     lav_msg_stop(gettext(
       "ADF + model.based + conditional.x is not supported yet."))
+  }
+  if (adf && model_based && recipe$correlation) {
+    lav_msg_stop(gettext(
+      "ADF + model.based is not supported yet for correlation structures."))
   }
 
   # output container
@@ -81,35 +111,58 @@ lav_object_gamma <- function(lavobject = NULL,
       } else {
         cluster_idx <- NULL
       }
-      out[[g]] <- lav_samp_gamma(
-        m_y = y,
-        m_mu = mean_1,
-        m_sigma = cov_1,
-        x_idx = x_idx,
-        cluster_idx = cluster_idx,
-        fixed_x = fixed_x,
-        conditional_x = conditional_x,
-        meanstructure = meanstructure,
-        slopestructure = conditional_x,
-        gamma_n_minus_one = gamma_n_minus_one,
-        unbiased = gamma_unbiased,
-        mplus_wls = mplus_wls
-      )
+      if (recipe$correlation) {
+        # (partial) correlation ADF Gamma via the delta method, as at fit
+        # time (no cluster/weights support in the leaf function)
+        cor_idx_g <- lav_gamma_recipe_cor_idx(recipe, lavdata@ov.names[[g]])
+        out[[g]] <- lav_samp_partial_cor_gamma(
+          m_y = y, cor_idx = cor_idx_g,
+          meanstructure = meanstructure,
+          fixed_x = fixed_x, x_idx = x_idx
+        )
+      } else {
+        out[[g]] <- lav_samp_gamma(
+          m_y = y,
+          m_mu = mean_1,
+          m_sigma = cov_1,
+          x_idx = x_idx,
+          cluster_idx = cluster_idx,
+          fixed_x = fixed_x,
+          conditional_x = conditional_x,
+          meanstructure = meanstructure,
+          slopestructure = conditional_x,
+          gamma_n_minus_one = gamma_n_minus_one,
+          unbiased = gamma_unbiased,
+          mplus_wls = mplus_wls,
+          wt = lavdata@weights[[g]],
+          sampling_weights_type = recipe$swt.type
+        )
+      }
     } else {
-      out[[g]] <- lav_samp_gamma_nt(
-        m_cov = cov_1, # joint!
-        m_mean = mean_1, # joint!
-        x_idx = x_idx,
-        fixed_x = fixed_x,
-        conditional_x = conditional_x,
-        meanstructure = meanstructure,
-        slopestructure = conditional_x
-      )
+      if (recipe$correlation) {
+        cor_idx_g <- lav_gamma_recipe_cor_idx(recipe, lavdata@ov.names[[g]])
+        out[[g]] <- lav_samp_partial_cor_gamma_nt(
+          m_cov = cov_1, cor_idx = cor_idx_g,
+          meanstructure = meanstructure,
+          fixed_x = fixed_x, x_idx = x_idx
+        )
+      } else {
+        out[[g]] <- lav_samp_gamma_nt(
+          m_cov = cov_1, # joint!
+          m_mean = mean_1, # joint!
+          x_idx = x_idx,
+          fixed_x = fixed_x,
+          conditional_x = conditional_x,
+          meanstructure = meanstructure,
+          slopestructure = conditional_x
+        )
+      }
     }
 
-    # group.w.free
-    if (lavoptions$group.w.free) {
-      # checkme!
+    # group.w.free: prepend the group-weight element; the fit-time weight
+    # a = group_w * ntotal / nobs is identically 1, so this matches the
+    # NACOV stored at fit time
+    if (recipe$group.w.free) {
       out[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), out[[g]])
     }
 

@@ -87,12 +87,6 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   allow_empty_cell <- lavoptions$allow.empty.cell
   dls_a <- lavoptions$estimator.args$dls.a
   dls_gamma_nt <- lavoptions$estimator.args$dls.GammaNT
-  # design vs frequency weighting of the (categorical/continuous) Gamma
-  swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
-    lavoptions$sampling.weights.type
-  } else {
-    "design"
-  }
 
   # sample.icov (new in 0.6-9; ensure it exists, for older objects)
   sample_icov <- TRUE
@@ -113,6 +107,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
   # check lavdata
   stopifnot(!is.null(lavdata))
+
+  # the Gamma (NACOV) recipe: the single source of truth for which Gamma
+  # this analysis uses, shared with the post-fit lav_object_gamma()
+  gamma_recipe <- lav_gamma_recipe(lavoptions = lavoptions, lavdata = lavdata)
+  # design vs frequency weighting of the (categorical/continuous) Gamma
+  swt_type <- gamma_recipe$swt.type
 
   # lavdata slots (FIXME: keep lavdata@ names)
   x <- lavdata@X
@@ -228,33 +228,9 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   if (is.null(nacov)) {
     nacov <- vector("list", length = ngroups)
     nacov_user <- FALSE
-    if (se %in% c("robust.sem", "robust.sem.nt", "robust.cluster.sem") &&
-                                                    missing == "listwise") {
-      nacov_compute <- TRUE
-    }
-    # note: test can be a vector...
-    if (missing == "listwise" && any(test %in% c(
-      "satorra.bentler",
-      "mean.var.adjusted",
-      "scaled.shifted"
-    ))) {
-      nacov_compute <- TRUE
-    }
-    if (missing == "listwise" &&
-        any(vapply(test, lav_test_fmg_is_fmg, logical(1L)))) {
-      nacov_compute <- TRUE
-    }
-    if (estimator == "IV" &&
-        lavoptions$estimator.args$iv_vcov_stage1 == "gamma") {
-      nacov_compute <- TRUE
-    }
-    # two-stage missing data for the (continuous) least-squares estimators:
-    # the robust.sem SEs (and satorra.bentler test) need the two-stage NACOV
-    # of the EM moments (computed below, see lav_mvn_mi_* functions)
-    if (any(missing == c("two.stage", "robust.two.stage")) &&
-        estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
-      nacov_compute <- TRUE
-    }
+    # default policy (se/test/missing/estimator triggers): see
+    # lav_gamma_recipe() in lav_samplestats_gamma_recipe.R
+    nacov_compute <- gamma_recipe$compute
   } else if (is.logical(nacov)) {
     if (!nacov) {
       nacov_compute <- FALSE
@@ -985,11 +961,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           # (partial) correlation ADF Gamma via the delta method (handles
           # fixed.x); cor_idx lists the unit-variance variables (all, unless
           # a subset was requested via correlation = c(...))
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
-          } else {
-            seq_along(ov_names[[g]])
-          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
           nacov[[g]] <- lav_samp_partial_cor_gamma(
             m_y = y, cor_idx = cor_idx_g,
             meanstructure = meanstructure,
@@ -1005,10 +977,9 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
               conditional_x = conditional_x,
               meanstructure = meanstructure,
               slopestructure = conditional_x,
-              gamma_n_minus_one =
-                lavoptions$gamma.n.minus.one,
-              unbiased = lavoptions$gamma.unbiased,
-              mplus_wls = FALSE,
+              gamma_n_minus_one = gamma_recipe$n.minus.one,
+              unbiased = gamma_recipe$unbiased,
+              mplus_wls = FALSE, # never for ML/GLS (see recipe)
               wt = wt[[g]],
               sampling_weights_type = swt_type
             )
@@ -1050,11 +1021,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (correlation) {
             # (partial) correlation ADF Gamma via the delta method (handles
             # fixed.x)
-            cor_idx_g <- if (length(correlation_ov) > 0L) {
-              which(ov_names[[g]] %in% correlation_ov)
-            } else {
-              seq_along(ov_names[[g]])
-            }
+            cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
             nacov[[g]] <- lav_samp_partial_cor_gamma(
               m_y = y, cor_idx = cor_idx_g,
               meanstructure = meanstructure,
@@ -1085,11 +1052,9 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                   conditional_x = conditional_x,
                   meanstructure = meanstructure,
                   slopestructure = conditional_x,
-                  gamma_n_minus_one =
-                    lavoptions$gamma.n.minus.one,
-                  unbiased =
-                    lavoptions$gamma.unbiased,
-                  mplus_wls = lavoptions$gamma.wls.mplus,
+                  gamma_n_minus_one = gamma_recipe$n.minus.one,
+                  unbiased = gamma_recipe$unbiased,
+                  mplus_wls = gamma_recipe$mplus.wls,
                   wt = wt[[g]],
                   sampling_weights_type = swt_type
                 )
@@ -1110,7 +1075,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
               nacov[[g]] <- nacov[[g]] * (nc / (nc - 1))
             } else {
               nacov[[g]] <- cat_1$WLS.W * nobs[[g]]
-              if (lavoptions$gamma.n.minus.one) {
+              if (gamma_recipe$n.minus.one) {
                 nacov[[g]] <- nacov[[g]] * (nobs[[g]] / (nobs[[g]] - 1L))
               }
             }
@@ -1146,11 +1111,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (estimator == "DLS" && dls_gamma_nt == "sample" && dls_a < 1.0) {
         # compute GammaNT here
         if (correlation) {
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
-          } else {
-            seq_along(ov_names[[g]])
-          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
           gamma_nt <- lav_samp_partial_cor_gamma_nt(
             m_cov         = cov[[g]],
             cor_idx       = cor_idx_g,
@@ -1183,11 +1144,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           # the delta method (this also handles fixed.x). cor_idx lists the
           # variables that are standardized to unit variance (all, unless a
           # subset was requested via correlation = c(...)).
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
-          } else {
-            seq_along(ov_names[[g]])
-          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
           gamma_nt <- lav_samp_partial_cor_gamma_nt(
             m_cov         = cov[[g]],
             cor_idx       = cor_idx_g,
