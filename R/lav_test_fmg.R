@@ -681,7 +681,7 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     Gamma_all <- lav_mat_bdiag(Gamma_scaled)
     ugamma <- U %*% Gamma_all
   } else {
-    ugamma <- out$ugamma
+    ugamma <- out$UGamma # field name as returned by lav_test_sb()
   }
 
   ugamma
