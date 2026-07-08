@@ -19,6 +19,13 @@
 # as well. These entries have zero rows/columns in Gamma and in Delta, and
 # get zero weight; their residuals are identically zero.
 #
+# The same mechanism handles fixed.x = TRUE: the lav_mvn_cl_* kernels zero
+# the rows/columns of the entries that only involve exogenous covariates
+# (their means and their (co)variances, at each level), just as for the
+# two-level robust ML standard errors; those entries drop out of the
+# sandwich (zero rows/columns in Gamma), while the y-x covariances remain
+# part of s.
+#
 # The asymptotic covariance matrix of s treats the CLUSTERS as the
 # independent units (sandwich):
 #
@@ -44,13 +51,6 @@ lav_samp_gamma_2l_g <- function(lavsamplestats = NULL,
   lp <- lavdata@Lp[[g]]
   nobs <- lavsamplestats@nobs[[g]]
   nclusters <- lp$nclusters[[2]]
-
-  # no fixed.x exogenous covariates (yet)
-  if (length(lavsamplestats@x.idx[[g]]) > 0L) {
-    lav_msg_stop(gettext(
-      "fixed.x = TRUE is not supported (yet) for the two-level Gamma;
-      use fixed.x = FALSE."))
-  }
 
   # h1 (saturated) estimates for this group
   mu_w <- lavh1$implied$mean[[(g - 1) * nlevels + 1L]]
