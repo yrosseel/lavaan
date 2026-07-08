@@ -3024,16 +3024,20 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
                                    group_w_free    = FALSE,
                                    parameterization = "delta") {
 
+  # model matrices in this block
+  mnames <- names(mlist)
+
   delta_flag <- beta_flag <- FALSE
-  if (!is.null(mlist$delta) && any(mlist$delta[, 1] != 1)) {
-    delta_flag <- TRUE
+  if (!is.null(mlist$delta)) {
+    mm_delta_idx0 <- which(mnames == "delta")
+    delta_is_free <- length(m_free_idx[[mm_delta_idx0]]) > 0L
+    if (any(mlist$delta[, 1] != 1) || delta_is_free) {
+      delta_flag <- TRUE
+    }
   }
   if (!is.null(mlist$beta)) {
     beta_flag <- TRUE
   }
-
-  # model matrices in this block
-  mnames <- names(mlist)
 
   mm_lambda_idx <- which(mnames == "lambda")
   x_lambda_idx <- x_free_idx[[mm_lambda_idx]]
