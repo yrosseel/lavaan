@@ -2945,14 +2945,16 @@ lav_inspect_vcov_def <- function(object, joint = FALSE,
     }
   }
 
-  # labels
+  # labels: the same parameter names as coef()/vcov() (user labels override
+  # the lhs-op-rhs default; := rows keep their name) (github issue #504)
   if (add_labels) {
+    tmp_names <- lav_pt_labels(lavpartable, type = "user")
     if (joint) {
-      lhs_names <- lavpartable$lhs[joint_idx]
+      tmp_names <- tmp_names[joint_idx]
     } else {
-      lhs_names <- lavpartable$lhs[def_idx]
+      tmp_names <- tmp_names[def_idx]
     }
-    colnames(return_value) <- rownames(return_value) <- lhs_names
+    colnames(return_value) <- rownames(return_value) <- tmp_names
   }
 
   # class
