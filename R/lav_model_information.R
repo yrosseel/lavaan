@@ -72,6 +72,51 @@ lav_model_info <- function(lavmodel = NULL,
   m_e
 }
 
+# sum a list of per-group information blocks
+lav_model_info_group_sum <- function(info_group) {
+  information <- info_group[[1]]
+  if (length(info_group) > 1L) {
+    for (g in 2:length(info_group)) {
+      information <- information + info_group[[g]]
+    }
+  }
+  information
+}
+
+# assemble the parameter-space information from the h1 information:
+#
+#     Info = sum_g fg * t(Delta_g) %*% A1_g %*% Delta_g
+#
+# with a diagonal shortcut when A1_g is stored as the diagonal vector of
+# the weight matrix (the DWLS/ULS @WLS.VD slot); note that
+# lav_model_info_expected_mlm() passes diagonal = FALSE, as its A1 is
+# always a full matrix, whatever the estimator
+lav_model_info_assemble <- function(lavmodel = NULL,
+                                    lavsamplestats = NULL,
+                                    delta = NULL,
+                                    a1 = NULL,
+                                    diagonal =
+                                      lavmodel@estimator %in%
+                                        c("DWLS", "ULS")) {
+  info_group <- vector("list", length = lavsamplestats@ngroups)
+  for (g in 1:lavsamplestats@ngroups) {
+    # note LISREL documentation suggests (Ng - 1) instead of Ng...
+    fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+    # compute information for this group
+    if (diagonal) {
+      # diagonal weight matrix
+      delta2 <- sqrt(a1[[g]]) * delta[[g]]
+      info_group[[g]] <- fg * crossprod(delta2)
+    } else {
+      # full weight matrix
+      info_group[[g]] <- fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
+    }
+  }
+
+  # assemble over groups
+  lav_model_info_group_sum(info_group)
+}
+
 # fisher/expected information
 #
 # information = Delta' I1 Delta, where I1 is the unit information of
@@ -124,31 +169,28 @@ lav_model_info_expected <- function(lavmodel = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
 
-  # 3. compute Information per group
-  info_group <- vector("list", length = lavsamplestats@ngroups)
-  for (g in 1:lavsamplestats@ngroups) {
-    # note LISREL documentation suggests (Ng - 1) instead of Ng...
-    fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+  # 3. compute Information per group + assemble over groups
+  if (lavdata@nlevels > 1L && !wls_2l) {
+    # multilevel (ML): the information is computed directly in parameter
+    # space (no pstar-space A1)
+    info_group <- vector("list", length = lavsamplestats@ngroups)
+    for (g in 1:lavsamplestats@ngroups) {
+      fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
 
-    # multilevel (ML)
-    if (lavdata@nlevels > 1L && !wls_2l) {
       # here, we assume only 2 levels, at [[1]] and [[2]]
       if (lavoptions$h1.information[1] == "structured") {
-        sigma_w <- lavimplied$cov[[(g - 1) * 2 + 1]]
-        mu_w <- lavimplied$mean[[(g - 1) * 2 + 1]]
-        sigma_b <- lavimplied$cov[[(g - 1) * 2 + 2]]
-        mu_b <- lavimplied$mean[[(g - 1) * 2 + 2]]
+        implied <- lavimplied
       } else {
-        sigma_w <- lavh1$implied$cov[[(g - 1) * 2 + 1]]
-        mu_w <- lavh1$implied$mean[[(g - 1) * 2 + 1]]
-        sigma_b <- lavh1$implied$cov[[(g - 1) * 2 + 2]]
-        mu_b <- lavh1$implied$mean[[(g - 1) * 2 + 2]]
+        implied <- lavh1$implied
       }
-      lp <- lavdata@Lp[[g]]
+      sigma_w <- implied$cov[[(g - 1) * 2 + 1]]
+      mu_w <- implied$mean[[(g - 1) * 2 + 1]]
+      sigma_b <- implied$cov[[(g - 1) * 2 + 2]]
+      mu_b <- implied$mean[[(g - 1) * 2 + 2]]
 
       info_g <-
         lav_mvn_cl_info_expected_delta(
-          lp = lp,
+          lp = lavdata@Lp[[g]],
           delta = delta[[g]],
           mu_w = mu_w,
           sigma_w = sigma_w,
@@ -157,37 +199,13 @@ lav_model_info_expected <- function(lavmodel = NULL,
           sinv_method = "eigen"
         )
       info_group[[g]] <- fg * info_g
-    } else {
-      # compute information for this group
-      if (lavmodel@estimator %in% c("DWLS", "ULS")) {
-        # diagonal weight matrix
-        delta2 <- sqrt(a1[[g]]) * delta[[g]]
-        info_group[[g]] <- fg * crossprod(delta2)
-      } else {
-        # full weight matrix
-        # if (lav_use_lavaanC()) {
-        # # (i) use of m_crossprod with sparse matrix on the left:
-        # # Info.group[[g]] <- fg * lavaanC::m_crossprod(Delta[[g]],
-        # #                     lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
-        # #
-        # # (ii) use of m_prod on transposed sparse first matrix,
-        # #                                                 faster than (i):
-        #   Info.group[[g]] <- fg * lavaanC::m_prod(t(Delta[[g]]),
-        #                       lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
-        # } else {
-          info_group[[g]] <-
-            fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
-        # }
-      }
-    }
-  } # g
-
-  # 4. assemble over groups
-  information <- info_group[[1]]
-  if (lavsamplestats@ngroups > 1) {
-    for (g in 2:lavsamplestats@ngroups) {
-      information <- information + info_group[[g]]
-    }
+    } # g
+    information <- lav_model_info_group_sum(info_group)
+  } else {
+    information <- lav_model_info_assemble(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+      delta = delta, a1 = a1
+    )
   }
 
   # 5. augmented information?
@@ -246,21 +264,11 @@ lav_model_info_expected_mlm <- function(lavmodel = NULL,
     }
   }
 
-  # compute Information per group
-  info_group <- vector("list", length = lavsamplestats@ngroups)
-  for (g in 1:lavsamplestats@ngroups) {
-    fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
-    # compute information for this group
-    info_group[[g]] <- fg * (t(m_delta[[g]]) %*% a1[[g]] %*% m_delta[[g]])
-  }
-
-  # assemble over groups
-  information <- info_group[[1]]
-  if (lavsamplestats@ngroups > 1) {
-    for (g in 2:lavsamplestats@ngroups) {
-      information <- information + info_group[[g]]
-    }
-  }
+  # compute Information per group + assemble over groups
+  information <- lav_model_info_assemble(
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+    delta = m_delta, a1 = a1, diagonal = FALSE
+  )
 
   # augmented information?
   if (augmented) {
@@ -370,29 +378,11 @@ lav_model_info_observed <- function(lavmodel = NULL,
   }
 
   if (observed_information == "h1") {
-    # compute Information per group
-    info_group <- vector("list", length = lavsamplestats@ngroups)
-    for (g in 1:lavsamplestats@ngroups) {
-      fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
-      # compute information for this group
-      if (lavmodel@estimator %in% c("DWLS", "ULS")) {
-        # diagonal weight matrix
-        delta2 <- sqrt(a1[[g]]) * delta[[g]]
-        info_group[[g]] <- fg * crossprod(delta2)
-      } else {
-        # full weight matrix
-        info_group[[g]] <-
-          fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
-      }
-    }
-
-    # assemble over groups
-    information <- info_group[[1]]
-    if (lavsamplestats@ngroups > 1) {
-      for (g in 2:lavsamplestats@ngroups) {
-        information <- information + info_group[[g]]
-      }
-    }
+    # compute Information per group + assemble over groups
+    information <- lav_model_info_assemble(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+      delta = delta, a1 = a1
+    )
   }
 
   # augmented information?
@@ -518,12 +508,7 @@ lav_model_info_firstorder <- function(lavmodel = NULL,
   }
 
   # 4. assemble over groups
-  information <- info_group[[1]]
-  if (lavsamplestats@ngroups > 1) {
-    for (g in 2:lavsamplestats@ngroups) {
-      information <- information + info_group[[g]]
-    }
-  }
+  information <- lav_model_info_group_sum(info_group)
 
   # NOTE: for MML and PML, we get 'total' information (instead of unit) divide
   # by 'N' for MML and PML. For weighted sample, use the sum of weights
