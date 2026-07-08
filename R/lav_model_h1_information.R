@@ -368,10 +368,12 @@ lav_model_h1_info_observed <- function(lavobject = NULL,
   }
 
   # 1. WLS.V (=A1) for GLS/WLS
-  if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS" ||
-    lavmodel@estimator == "DLS") {
+  if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS") {
     a1 <- lavsamplestats@WLS.V
-  # 1b.
+  # 1b. DLS: for dls.GammaNT = "model", the weight matrix is a function of
+  #     the model-implied moments and must be recomputed here (the @WLS.V
+  #     slot only holds the plain inv(NACOV) fallback); same as the
+  #     expected-information branch above
   } else if (lavmodel@estimator == "DLS") {
     if (lavmodel@estimator.args$dls.GammaNT == "sample") {
       a1 <- lavsamplestats@WLS.V
