@@ -983,7 +983,12 @@ lav_model_h1_acov <- function(lavobject = NULL,
     )
   }
 
-  if (lavoptions$se %in% c("robust.huber.white", "robust.sem")) {
+  if (lavoptions$se %in% c("robust.huber.white", "robust.sem",
+                           "robust.cluster", "robust.cluster.sem")) {
+    # for clustered data (robust.cluster[.sem]), the first-order kernels
+    # aggregate the casewise scores within clusters (they receive
+    # cluster_idx whenever lavdata@cluster is set), so the same sandwich
+    # below yields the cluster-robust ACOV
     j1 <- lav_model_h1_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
@@ -1034,8 +1039,12 @@ lav_model_h1_acov <- function(lavobject = NULL,
     # which type of se?
     if (lavoptions$se %in% c("standard", "none")) {
       acov[[g]] <- 1 / ng * i1_g_inv
-    } else if (lavoptions$se %in% c("robust.huber.white", "robust.sem")) {
+    } else if (lavoptions$se %in% c("robust.huber.white", "robust.sem",
+                                    "robust.cluster", "robust.cluster.sem")) {
       acov[[g]] <- 1 / ng * (i1_g_inv %*% j1[[g]] %*% i1_g_inv)
+    } else {
+      lav_msg_stop(gettextf(
+        "h1 ACOV not available for se = %s.", dQuote(lavoptions$se)))
     }
   }
 
