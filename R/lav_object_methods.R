@@ -1565,9 +1565,17 @@ setMethod(
 
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
     tmp_logl <- object@loglik
-    logl <- tmp_logl$loglik
-    attr(logl, "df") <- tmp_logl$npar ### note: must be npar, not df!!
-    attr(logl, "nobs") <- tmp_logl$ntotal
+    if (is.null(tmp_logl$loglik)) {
+      # empty @loglik slot (eg loglik = FALSE, or estimator != ML):
+      # return NA instead of crashing (AIC/BIC then also return NA)
+      logl <- as.numeric(NA)
+      attr(logl, "df") <- object@optim$npar
+      attr(logl, "nobs") <- object@SampleStats@ntotal
+    } else {
+      logl <- tmp_logl$loglik
+      attr(logl, "df") <- tmp_logl$npar ### note: must be npar, not df!!
+      attr(logl, "nobs") <- tmp_logl$ntotal
+    }
     class(logl) <- "logLik"
     logl
   }
