@@ -6,8 +6,18 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # create dotdotdot0 for dummy fit
   dotdotdot0 <- dotdotdot
 
-  # parse model, so we can inspect a few features
-  flat_model <- lavParseModelString(model)
+  # 'parse' the model, so we can inspect a few features; accept the same
+  # model= input types as a regular call to lavaan(): model syntax (character),
+  # a formula, a fitted lavaan object, a flat model, or a parameter table
+  # (issue #514)
+  if (is.null(dotdotdot$parser)) {
+    useparser <- lav_options_default()$parser
+  } else {
+    useparser <- dotdotdot$parser
+  }
+  flat_model <- lav_step01_ovnames_initflat(
+    model = model, dotdotdot_parser = useparser
+  )
 
   # remove do.fit option if present
   dotdotdot0$do.fit <- NULL
@@ -29,6 +39,12 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # robust (sandwich) variant, which picks up the cluster-robust Gamma
   multilevel_flag <- any(flat_model$op == ":" &
                          tolower(flat_model$lhs) == "level")
+  # if model= was a parameter table, the "level:" rows are absent, but the
+  # level column is available
+  if (!multilevel_flag && !is.null(flat_model$level)) {
+    multilevel_flag <-
+      length(unique(flat_model$level[flat_model$level > 0L])) > 1L
+  }
   if (se == "twostep" && !multilevel_flag && !is.null(dotdotdot$cluster)) {
     se <- "twostep.robust"
   }
