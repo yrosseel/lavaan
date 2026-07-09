@@ -445,13 +445,13 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       p <- lav_sam_step1_local_jac(step1 = step1, fit = fit, p_only = TRUE)
       p_row_idx <- match(step1_free_idx, attr(p, "free.idx"))
       if (anyNA(p_row_idx)) {
-        # P cannot be aligned with the step 1 free parameters (eg a measurement
-        # model with within-block equality constraints): the robust correction
-        # is not available -> fall back to (non-robust) twostep SEs.
+        # P cannot be aligned with the step 1 free parameters: the robust
+        # correction is not available -> fall back to (non-robust) twostep
+        # SEs. (Should not happen: within-block and across-group equality
+        # constraints are handled; this is a defensive guard.)
         lav_msg_warn(gettext(
           "robust standard errors (se = \"twostep.robust\") are not available
-           for this model (eg a measurement model with within-block equality
-           constraints); twostep standard errors are reported instead."))
+           for this model; twostep standard errors are reported instead."))
         robust <- FALSE
         lavoptions$se <- "twostep"
       }

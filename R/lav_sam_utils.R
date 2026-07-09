@@ -1027,16 +1027,15 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   )
 
   if (inherits(out, "try-error")) {
-    # the Yuan-Chan correction reuses the same step-1 jacobian (P) as the robust
-    # SEs, so it shares their current limitations: it is not available for
-    # models with within-block equality constraints (the P-row alignment then
-    # fails). Exogenous covariates ARE supported, both with the default
-    # fixed.x = TRUE and with conditional.x = TRUE (the biased ADF Gamma is
-    # used). Fall back to the unscaled test, with a note.
+    # the Yuan-Chan correction reuses the same step-1 jacobian (P) as the
+    # robust SEs, so it shares their current limitations. Equality constraints
+    # (within-block and across-group) and exogenous covariates (fixed.x, and
+    # conditional.x with the biased ADF Gamma) ARE supported. Fall back to the
+    # unscaled test, with a note.
     lav_msg_warn(gettext(
       "the Yuan & Chan (2002) scaled test statistic (test = \"yuan.chan\") is
-       not available for this model (eg models with within-block equality
-       constraints); the standard (unscaled) test is reported instead."))
+       not available for this model; the standard (unscaled) test is reported
+       instead."))
     return(fallback) # fall back to the unscaled standard test
   }
 

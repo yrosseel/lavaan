@@ -1102,8 +1102,20 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     # full (unfiltered) influence: needed for the psi channel below
     mm_jac_full <- mm_jac
 
-    # keep only rows that are also in FIT@ParTable
-    mm_keep_idx <- fit_mm_block@ParTable$free[step1$block.ptm.idx[[mm]]]
+    # keep only rows that are also in FIT@ParTable. The rows of mm_jac are in
+    # the *unconstrained* parameter order (Delta and the augmented inverted
+    # information keep one column/row per unconstrained parameter), so under
+    # within-block (ceq.simple) equality constraints the block's constrained
+    # 'free' numbering must be remapped to the unconstrained numbering first
+    # (the constrained members then each select their own -- identical --
+    # influence row); indexing by the constrained numbering would shift every
+    # row after the first constrained pair by one. (Same remap as the
+    # Sigma.11 assembly in lav_sam_step1().)
+    mm_ptm_free <- fit_mm_block@ParTable$free
+    if (fit_mm_block@Model@ceq.simple.only) {
+      mm_ptm_free[mm_ptm_free > 0L] <- seq_len(fit_mm_block@Model@nx.unco)
+    }
+    mm_keep_idx <- mm_ptm_free[step1$block.ptm.idx[[mm]]]
     mm_jac <- mm_jac[mm_keep_idx, , drop = FALSE]
 
     # map the columns of mm_jac (the sample statistics of this
@@ -1146,7 +1158,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
                     bpt$free > 0L & !duplicated(bpt$free))
       for (k in bpsi) {
         ja_row <- numeric(ncol(jaca))
-        ja_row[mm_col_idx] <- mm_jac_full[bpt$free[k], ]
+        ja_row[mm_col_idx] <- mm_jac_full[mm_ptm_free[k], ]
         # joint partable row for this factor (co)variance (canonical pair)
         jrow <- which(step1$PT$op == "~~" &
           ((step1$PT$lhs == bpt$lhs[k] & step1$PT$rhs == bpt$rhs[k]) |
@@ -1164,14 +1176,23 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   lv_ind <- unlist(lavpta$vnames$lv.ind)
   keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
                                     lavmodel@meanstructure)
-  jaca <- jaca[keep_idx, , drop = FALSE]
   if (p_only) {
     # the rows of P are in ascending free-parameter order; return the
     # free indices, so the caller can align them with step1.free.idx
-    # (which is ordered per measurement block)
-    attr(jaca, "free.idx") <- step1$PT.free[keep_idx]
+    # (which is ordered per measurement block). Under (within-block)
+    # ceq.simple equality constraints, step1.free.idx is in the
+    # *unconstrained* numbering (one entry per constrained member), so
+    # de-duplicate on step1$PT.free instead of pt_1$free: the constrained
+    # members then each keep their own (identical) influence row, exactly
+    # as in the multigroup (_mg) path.
+    p_keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                        lavmodel@meanstructure,
+                                        dedup_key = step1$PT.free)
+    jaca <- jaca[p_keep_idx, , drop = FALSE]
+    attr(jaca, "free.idx") <- step1$PT.free[p_keep_idx]
     return(jaca)
   }
+  jaca <- jaca[keep_idx, , drop = FALSE]
 
   # JACb: jacobian of the function vech(VETA) = f(vech(S), theta.mm)
   #       (treating theta.mm as fixed)
