@@ -103,8 +103,11 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
       flavor <- "cat"
     } else if (correlation) {
       flavor <- "adf.cor"
-    } else if ("robust.sem.nt" %in% se ||
-               "browne.residual.nt" %in% test) {
+    } else if (estimator %in% c("ULS", "DWLS") &&
+               "robust.sem.nt" %in% se) {
+      # only for ULS/DWLS (their continuous default se): for WLS/DLS
+      # the (full) weight matrix is derived from the NACOV, which must
+      # remain ADF
       flavor <- "nt"
     } else {
       flavor <- "adf"

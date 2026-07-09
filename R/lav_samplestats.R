@@ -1001,12 +1001,14 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         # ULS (continuous): the weight matrix is the identity, so Gamma
         # is not needed for estimation; skip the (expensive) ADF/NT Gamma
         # unless a consumer requests it: robust/scaled se or test (via
-        # nacov_compute), or the browne.residual tests (which read the
-        # stored NACOV). Note lavInspect(fit, "gamma") will then return
-        # nothing, just as for estimator ML with standard se/test.
+        # nacov_compute), or the browne.residual.adf test (the only
+        # browne variant that reads the stored NACOV; the NT and
+        # model-based variants use the fast kernel or recompute at test
+        # time). Note lavInspect(fit, "gamma") will then return nothing,
+        # just as for estimator ML with standard se/test.
         uls_gamma_skip <- (estimator == "ULS" && !categorical &&
           !nacov_compute &&
-          !any(grepl("browne.residual", lavoptions$test)))
+          !("browne.residual.adf" %in% lavoptions$test))
         if (uls_gamma_skip) {
           # no Gamma needed
         } else if (!categorical) {
@@ -1052,8 +1054,19 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
               fixed_x = fixed_x, x_idx = x_idx[[g]]
             )
       } else {
-            if ("robust.sem.nt" %in% lavoptions$se ||
-                "browne.residual.nt" %in% lavoptions$test) {
+            # the NT flavor may only replace the ADF Gamma for the
+            # ULS/DWLS(-continuous) estimators when the robust.sem.nt
+            # sandwich needs it (their default se since 0.6-21; for
+            # DWLS the diagonal weights then also derive from the NT
+            # Gamma, by design): for WLS/DLS the (full) weight matrix is
+            # derived from this NACOV, and storing the NT Gamma instead
+            # silently turned WLS into GLS (before 0.7-2, when
+            # test = "browne.residual.nt" was combined with
+            # estimator = "WLS"); note that the browne.residual.nt test
+            # itself never reads this slot (it uses the fast kernel, or
+            # recomputes via lav_object_gamma -- see lav_test_browne)
+            if (estimator %in% c("ULS", "DWLS") &&
+                "robust.sem.nt" %in% lavoptions$se) {
               nacov[[g]] <-
                 lav_samp_gamma_nt(
                   m_y = y,
@@ -1936,15 +1949,15 @@ lav_samp_from_moments <- function(sample_cov = NULL,
     }
 
     # NACOV: nothing can be computed from moments alone, except the
-    # normal-theory Gamma; compute it when the se/test ask for it
-    # (se = "robust.sem.nt" -- the default for continuous ULS -- or a
-    # browne.residual.nt test); before 0.7-2, these requests failed
-    # with a cryptic error
+    # normal-theory Gamma; compute it when the robust.sem.nt sandwich
+    # asks for it (the default se for continuous ULS) -- before 0.7-2,
+    # this failed with a cryptic error. (The browne.residual.nt test
+    # does not read this slot: it uses the fast kernel, or recomputes
+    # at test time.)
     if (!nacov_user && is.null(nacov[[g]]) &&
       !categorical && !correlation &&
       estimator %in% c("WLS", "DWLS", "ULS", "DLS") &&
-      ("robust.sem.nt" %in% lavoptions$se ||
-        "browne.residual.nt" %in% lavoptions$test)) {
+      "robust.sem.nt" %in% lavoptions$se) {
       nacov[[g]] <- lav_samp_gamma_nt(
         m_cov          = cov[[g]],
         m_mean         = mean[[g]],
