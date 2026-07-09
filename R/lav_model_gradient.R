@@ -124,16 +124,31 @@ lav_model_grad <- function(lavmodel = NULL,
     type == "free" &&
     !lavmodel@composites)
 
+  # ULS (continuous): the weight matrix is the identity, so the same
+  # Omega approach applies, with omega = (S - Sigma) with a doubled
+  # diagonal -- so that 0.5 t(D) vec(omega) == vech(S - Sigma) -- and
+  # omega_mu = (ybar - mu); no Delta needed at all
+  uls_omega_flag <- (estimator == "ULS" &&
+    type == "free" &&
+    !categorical &&
+    !lavmodel@multilevel &&
+    !conditional_x &&
+    !lavmodel@correlation &&
+    !lavmodel@composites &&
+    !group_w_free &&
+    !lavsamplestats@missing.flag)
+
   # do we need WLS.est?
-  if (estimator %in% c("WLS", "DWLS", "ULS", "NTRLS", "DLS") ||
-    (estimator == "GLS" && !gls_omega_flag)) {
+  if (estimator %in% c("WLS", "DWLS", "NTRLS", "DLS") ||
+    (estimator == "GLS" && !gls_omega_flag) ||
+    (estimator == "ULS" && !uls_omega_flag)) {
     # always compute WLS.est
     wls_est <- lav_model_wls_est(lavmodel = lavmodel, glist = glist) # ,
     # cov.x = lavsamplestats@cov.x)
   }
 
   if (estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML") ||
-    gls_omega_flag) {
+    gls_omega_flag || uls_omega_flag) {
     # compute moments for all groups
     # if(conditional.x) {
     #    Sigma.hat <- lav_model_cond2joint_sigma(lavmodel = lavmodel,
@@ -193,10 +208,10 @@ lav_model_grad <- function(lavmodel = NULL,
   # composites?
   composites_flag <- lavmodel@composites
 
-  # 1. ML approach (also GLS since 0.7-2, see gls_omega_flag above)
+  # 1. ML approach (also GLS/ULS since 0.7-2, see the omega flags above)
   if (((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
     lavdata@nlevels == 1L && !composites_flag &&
-    !lavmodel@conditional.x) || gls_omega_flag) {
+    !lavmodel@conditional.x) || gls_omega_flag || uls_omega_flag) {
   correlation <- lavmodel@correlation
     if (meanstructure) {
       omega <- lav_model_omega(
@@ -1218,6 +1233,17 @@ lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
           omega_mu[[g]] <- omega_mu[[g]] * lavsamplestats@nobs[[g]] /
             (lavsamplestats@nobs[[g]] - 1)
         }
+      }
+
+      # ULS
+    } else if (estimator == "ULS") {
+      # identity weight matrix: the 'POST' convention requires
+      # 0.5 t(D) vec(omega) == vech(S - Sigma), so double the diagonal
+      omega[[g]] <- lavsamplestats@cov[[g]] - sigma_hat[[g]]
+      diag(omega[[g]]) <- 2 * diag(omega[[g]])
+      if (meanstructure) {
+        omega_mu[[g]] <- as.matrix(
+          lavsamplestats@mean[[g]] - mu_hat[[g]])
       }
     }
 

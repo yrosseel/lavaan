@@ -998,7 +998,18 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             )
         }
       } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")) {
-        if (!categorical) {
+        # ULS (continuous): the weight matrix is the identity, so Gamma
+        # is not needed for estimation; skip the (expensive) ADF/NT Gamma
+        # unless a consumer requests it: robust/scaled se or test (via
+        # nacov_compute), or the browne.residual tests (which read the
+        # stored NACOV). Note lavInspect(fit, "gamma") will then return
+        # nothing, just as for estimator ML with standard se/test.
+        uls_gamma_skip <- (estimator == "ULS" && !categorical &&
+          !nacov_compute &&
+          !any(grepl("browne.residual", lavoptions$test)))
+        if (uls_gamma_skip) {
+          # no Gamma needed
+        } else if (!categorical) {
           # sample size large enough?
           nvar <- ncol(x[[g]])
           # if(conditional.x && nexo > 0L) {
@@ -1906,7 +1917,8 @@ lav_samp_from_moments <- function(sample_cov = NULL,
           meanstructure = meanstructure
         )
       } else if (estimator == "ULS") {
-        wls_v[[g]] <- diag(length(wls_obs[[g]]))
+        # only the diagonal is stored (as in lav_samp_from_data); no
+        # consumer needs the (pstar x pstar) identity matrix
         wls_vd[[g]] <- rep(1, length(wls_obs[[g]]))
       } else if (estimator == "WLS" || estimator == "DWLS") {
         if (is.null(wls_v[[g]])) {
