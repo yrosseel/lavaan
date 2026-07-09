@@ -21,7 +21,11 @@ If \code{"std.all"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables.
 If \code{"std.nox"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables,
-but not the variances of exogenous covariates.
+but not the variances of exogenous covariates. Note that \code{"std.nox"}
+only differs from \code{"std.all"} if \code{fixed.x = TRUE}; if
+\code{fixed.x = FALSE}, the exogenous covariates are treated as random
+variables (and standardized) just like any other variable, and a warning
+is issued.
 Alternatively, \code{type} may be a vector of (observed) variable names
 (for example \code{type = c("x1", "x2")}); in that case only the parameters
 involving these variables are standardized (the other observed variables are

@@ -481,12 +481,13 @@ lav_effects_std_types <- function(object, standardized) {
       types <- tolower(standardized)
       if ("std.nox" %in% types) {
         if (length(lavNames(object, "ov.x")) == 0L) {
-          lav_msg_note(gettext(
-            "`std.nox' unavailable without fixed exogenous predictors"))
-          types <- setdiff(types, "std.nox")
+          lav_msg_warn(gettext(
+            "`std.nox' values are identical to `std.all' values in the
+             absence of exogenous covariates."))
         } else if (!object@Options$fixed.x) {
-          lav_msg_note(gettext("`std.nox' unavailable when fixed.x = FALSE"))
-          types <- setdiff(types, "std.nox")
+          lav_msg_warn(gettext(
+            "`std.nox' values are identical to `std.all' values when
+             fixed.x = FALSE."))
         }
       }
     }
@@ -559,7 +560,13 @@ lav_effects_add_standardized <- function(eff_df, object, lavmodel, specs,
       sd_col_all[[b]] <- sd_eta
     }
     lv_names[[b]] <- lav_pt_vnames(partable, "lv", block = b)
-    ovx_names[[b]] <- lav_pt_vnames(partable, "ov.x", block = b)
+    if (lavmodel@fixed.x) {
+      ovx_names[[b]] <- lav_pt_vnames(partable, "ov.x", block = b)
+    } else {
+      # if fixed.x = FALSE, the exogenous 'x' are treated as random
+      # variables like any other, and std.nox reduces to std.all
+      ovx_names[[b]] <- character(0L)
+    }
   }
 
   nr_rows <- nrow(eff_df)

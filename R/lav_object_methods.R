@@ -277,6 +277,18 @@ standardizedSolution <- function(object,                     # nolint
     } else {
       type <- tolower(type)
       stopifnot(type %in% std_types)
+      if (type == "std.nox") {
+        # sanity checks (same as in parameterEstimates())
+        if (length(lav_object_vnames(object, "ov.x")) == 0) {
+          lav_msg_warn(gettext(
+            "`std.nox' values are identical to `std.all' values in the
+             absence of exogenous covariates."))
+        } else if (!object@Options$fixed.x) {
+          lav_msg_warn(gettext(
+            "`std.nox' values are identical to `std.all' values when
+             fixed.x = FALSE."))
+        }
+      }
     }
 
     # check output= argument
@@ -1023,12 +1035,13 @@ lavParameterEstimates <- function(object,                      # nolint
         if ("std.nox" %in% standardized) {
           # sanity checks
           if (length(lav_object_vnames(object, "ov.x")) == 0) {
-            lav_msg_note(gettext(
-              "`std.nox' unavailable without fixed exogenous predictors"))
-            standardized <- setdiff(standardized, "std.nox")
+            lav_msg_warn(gettext(
+              "`std.nox' values are identical to `std.all' values in the
+               absence of exogenous covariates."))
           } else if (!object@Options$fixed.x) {
-            lav_msg_note(gettext("`std.nox' unavailable when fixed.x = FALSE"))
-            standardized <- setdiff(standardized, "std.nox")
+            lav_msg_warn(gettext(
+              "`std.nox' values are identical to `std.all' values when
+               fixed.x = FALSE."))
           }
         }
       }

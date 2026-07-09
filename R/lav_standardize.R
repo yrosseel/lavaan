@@ -574,7 +574,13 @@ lav_standardize_all <- function(lavobject = NULL,
     # which observed variables should NOT be standardized in this block?
     # (std.all: none; std.nox: the exogenous 'x'; user: all but 'ov_std')
     if (nox) {
-      ov_nostd <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+      if (lavmodel@fixed.x) {
+        ov_nostd <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+      } else {
+        # if fixed.x = FALSE, the exogenous 'x' are treated as random
+        # variables like any other, and std.nox reduces to std.all
+        ov_nostd <- character(0L)
+      }
     } else if (is.null(ov_std)) {
       ov_nostd <- character(0L)
     } else {
