@@ -33,7 +33,7 @@ sam <- function(model = NULL,
   # object (if output = "lavaan"), so that update() and getCall() work
   mc <- match.call()
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
 
   # auxiliary variables: forward via dotdotdot, so they reach the
   # underlying measurement-block (and structural) lavaan() calls

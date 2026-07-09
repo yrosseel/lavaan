@@ -536,17 +536,35 @@ lav_snake_case <- function(old) {
     varnames_new
   }
 }
+# ----------------------- lav_option_names -------------------------------- #
+# function to transform specified names of options to valid option names
+# this function is used to accept uppercase and dots or underscores in
+# option names where the real option name has lowercase, underscores or dots
+# if input is a list, the names of the list are transformed.
+lav_option_names <- function(old) {
+  if (is.list(old)) old_names <- names(old) else old_names <- old
+  # transform dot.case and CamelCase to snake_case
+  varnames_new <- chartr("A-Z_", "a-z.", old_names)
+  varnames_new[varnames_new == "optim.init.nelder.mead"] <- "optim.init_nelder_mead"
+  if (is.list(old)) {
+    names(old) <- varnames_new
+    old
+  } else {
+    varnames_new
+  }
+}
 # ------------------------- lav_adapt_func --------------------------------- #
 # function to put arguments with old names (in ...) in the new named argument
 # the function to adapt must have a ... argument and call this function in the
 # beginning as follows :
 #   dotdotdot <- list(...)
 #   lav_adapt_func(environment(), dotdotdot, TRUE/FALSE/NULL)
-# The argument snake_ddd if set to TRUE transforms the names of dotdotdot also.
-# If snake_ddd is set to NULL an error "unused argument(s)" is generated when
-# there are items left in dotdotdot. If dotdotdot is empty and snake_ddd is
+# The argument options_ddd if set to TRUE transforms the names of dotdotdot to
+# valid option names (if possible).
+# If options_ddd is set to NULL an error "unused argument(s)" is generated when
+# there are items left in dotdotdot. If dotdotdot is empty and options_ddd is
 # NULL, dotdotdot is removed from the environment!
-lav_adapt_func <- function(envir, dotdotdot, snake_ddd = TRUE) {
+lav_adapt_func <- function(envir, dotdotdot, options_ddd) {
   lijst <- ls(pos = envir)
   if (length(dotdotdot) > 0L) {
     dddnames <- names(dotdotdot)
@@ -557,18 +575,18 @@ lav_adapt_func <- function(envir, dotdotdot, snake_ddd = TRUE) {
       dotdotdot[[dddnames[j]]] <- NULL
     }
     if (length(dotdotdot) > 0L) {
-      if (is.null(snake_ddd)) {
+      if (is.null(options_ddd)) {
         lav_msg_stop(ngettext(length(dotdotdot),
                      "unused argument:", "unused arguments:"),
                      lav_msg_view(names(dotdotdot), "none", FALSE)
         )
       }
-      if (snake_ddd && length(dotdotdot) > 0L) {
-        names(dotdotdot) <- lav_snake_case(names(dotdotdot))
+      if (options_ddd && length(dotdotdot) > 0L) {
+        dotdotdot <- lav_option_names(dotdotdot)
       }
     }
     assign("dotdotdot", dotdotdot, envir)
   } else {
-    if (is.null(snake_ddd)) rm("dotdotdot", pos = envir)
+    if (is.null(options_ddd)) rm("dotdotdot", pos = envir)
   }
 }

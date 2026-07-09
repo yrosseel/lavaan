@@ -602,8 +602,8 @@ lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") { # nolint
   # selection only
   if (!is.null(x)) {
     if (is.character(x)) {
-      # lower case only
-      x <- tolower(x)
+      # lower case and dots only
+      x <- lav_option_names(x)
 
       # check if x is in names(lavoptions)
       not_ok <- which(!x %in% names(lavoptions))
@@ -621,7 +621,7 @@ lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") { # nolint
         lavoptions[x]
       }
     } else {
-      lav_msg_stop(gettext("`x' must be a character string"))
+      lav_msg_stop(gettext("x= must be of type character"))
     }
   } else {
     lavoptions

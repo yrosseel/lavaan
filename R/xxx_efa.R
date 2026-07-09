@@ -20,7 +20,7 @@ efa <- function(data = NULL,
                 ...,
                 output = "efa") {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
   # rotation.args deprecation handling
   if (!missing(rotation_args)) {
     lav_deprecated_args("rotation", "rotation_args")

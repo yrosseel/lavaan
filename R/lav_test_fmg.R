@@ -92,25 +92,25 @@ lav_test_fmg_parse <- function(string) {
   method <- NULL
   param <- 2L # default for j (eba/peba) or gamma (pols)
   unbiased <- FALSE
-  unbiased.explicit <- FALSE
+  unbiased_explicit <- FALSE
   chisq <- "default"
-  chisq.explicit <- FALSE
+  chisq_explicit <- FALSE
 
   type <- splitted[1]
 
   # Parse unbiased and chisq from suffix parts
   if (length(splitted) == 3L) {
     unbiased <- (splitted[2] == "ug")
-    unbiased.explicit <- TRUE
+    unbiased_explicit <- TRUE
     chisq <- splitted[3]
-    chisq.explicit <- TRUE
+    chisq_explicit <- TRUE
   } else if (length(splitted) == 2L) {
     if (splitted[2] %in% c("rls", "ml")) {
       chisq <- splitted[2]
-      chisq.explicit <- TRUE
+      chisq_explicit <- TRUE
     } else if (splitted[2] == "ug") {
       unbiased <- TRUE
-      unbiased.explicit <- TRUE
+      unbiased_explicit <- TRUE
     }
   }
 
@@ -141,13 +141,13 @@ lav_test_fmg_parse <- function(string) {
     param = param,
     unbiased = unbiased,
     chisq = chisq,
-    unbiased.explicit = unbiased.explicit,
-    chisq.explicit = chisq.explicit
+    unbiased_explicit = unbiased_explicit,
+    chisq_explicit = chisq_explicit
   )
 }
 
 lav_test_fmg_resolve_unbiased <- function(parsed, lavoptions = NULL) {
-  if (isTRUE(parsed$unbiased.explicit)) {
+  if (isTRUE(parsed$unbiased_explicit)) {
     return(parsed$unbiased)
   }
   if (!is.null(lavoptions$gamma.unbiased)) {
@@ -157,25 +157,25 @@ lav_test_fmg_resolve_unbiased <- function(parsed, lavoptions = NULL) {
 }
 
 lav_test_fmg_resolve_chisq <- function(parsed, lavoptions = NULL) {
-  if (isTRUE(parsed$chisq.explicit)) {
+  if (isTRUE(parsed$chisq_explicit)) {
     return(parsed$chisq)
   }
 
-  scaled.test <- "standard"
+  scaled_test <- "standard"
   if (!is.null(lavoptions$scaled.test)) {
-    scaled.test <- lavoptions$scaled.test[1L]
+    scaled_test <- lavoptions$scaled.test[1L]
   }
 
-  if (scaled.test %in% c("default", "standard", "none")) {
+  if (scaled_test %in% c("default", "standard", "none")) {
     return("ml")
-  } else if (scaled.test == "browne.residual.nt.model") {
+  } else if (scaled_test == "browne.residual.nt.model") {
     return("rls")
   }
 
   lav_msg_stop(gettextf(
     "FMG tests require scaled.test= %1$s or %2$s; found %3$s.",
     dQuote("standard"), dQuote("browne.residual.nt.model"),
-    dQuote(scaled.test)
+    dQuote(scaled_test)
   ))
 }
 
@@ -203,13 +203,13 @@ lav_test_fmg_check_estimator <- function(lavoptions = NULL,
   }
 
   estimator <- lavoptions$estimator
-  estimator.orig <- lavoptions$estimator.orig
+  estimator_orig <- lavoptions$estimator.orig
   if (isTRUE(estimator == "ML") &&
-      isTRUE(estimator.orig %in% c("ML", "MLM"))) {
+      isTRUE(estimator_orig %in% c("ML", "MLM"))) {
     return(invisible(TRUE))
   }
 
-  reported <- if (!is.null(estimator.orig)) estimator.orig else estimator
+  reported <- if (!is.null(estimator_orig)) estimator_orig else estimator
   lav_msg_stop(gettextf(
     "%1$s require estimator= %2$s or %3$s; found %4$s.",
     context, dQuote("ML"), dQuote("MLM"), dQuote(reported)
@@ -322,10 +322,10 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   }
 
   if (!is.logical(lavoptions$gamma.n.minus.one)) {
-    n.minus.one <- !(lavoptions$estimator == "ML" &&
+    n_minus_one <- !(lavoptions$estimator == "ML" &&
       lavoptions$likelihood == "normal")
   } else {
-    n.minus.one <- lavoptions$gamma.n.minus.one
+    n_minus_one <- lavoptions$gamma.n.minus.one
   }
 
   delta <- lav_model_delta(lavmodel)
@@ -339,53 +339,53 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
     adf = FALSE,
     model_based = TRUE
   )
-  WLS.obs <- lavsamplestats@WLS.obs
-  WLS.est <- lav_model_wls_est(lavmodel)
+  wls_obs <- lavsamplestats@WLS.obs
+  wls_est <- lav_model_wls_est(lavmodel)
   nobs <- lavsamplestats@nobs
   ntotal <- lavsamplestats@ntotal
-  ngroups <- length(WLS.obs)
-  stat.group <- numeric(ngroups)
+  ngroups <- length(wls_obs)
+  stat_group <- numeric(ngroups)
 
-  lineq.flag <- lavmodel@eq.constraints || lavmodel@ceq.simple.only
+  lineq_flag <- lavmodel@eq.constraints || lavmodel@ceq.simple.only
 
-  if (!lineq.flag) {
+  if (!lineq_flag) {
     for (g in seq_len(ngroups)) {
-      RES <- WLS.obs[[g]] - WLS.est[[g]]
-      Delta.c <- lav_mat_ortho_complement(delta[[g]])
-      t_dgd <- crossprod(Delta.c, gamma[[g]]) %*% Delta.c
+      RES <- wls_obs[[g]] - wls_est[[g]]
+      delta_c <- lav_mat_ortho_complement(delta[[g]])
+      t_dgd <- crossprod(delta_c, gamma[[g]]) %*% delta_c
       t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
-      Ng <- if (n.minus.one) nobs[[g]] - 1L else nobs[[g]]
-      t_res_delta_c <- crossprod(RES, Delta.c)
-      stat.group[g] <-
+      Ng <- if (n_minus_one) nobs[[g]] - 1L else nobs[[g]]
+      t_res_delta_c <- crossprod(RES, delta_c)
+      stat_group[g] <-
         Ng * drop(t_res_delta_c %*% t_dgd_inv %*% t(t_res_delta_c))
     }
-    STAT <- sum(stat.group)
+    STAT <- sum(stat_group)
   } else {
-    RES.all <- do.call("c", WLS.obs) - do.call("c", WLS.est)
-    Delta.all <- do.call("rbind", delta)
+    res_all <- do.call("c", wls_obs) - do.call("c", wls_est)
+    delta_all <- do.call("rbind", delta)
     if (lavmodel@eq.constraints) {
-      Delta.g <- Delta.all %*% lavmodel@eq.constraints.K
+      delta_g <- delta_all %*% lavmodel@eq.constraints.K
     } else {
-      Delta.g <- Delta.all %*% lavmodel@ceq.simple.K
+      delta_g <- delta_all %*% lavmodel@ceq.simple.K
     }
-    Gamma.inv.weighted <- vector("list", ngroups)
+    gamma_inv_weighted <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      Ng <- if (n.minus.one) nobs[[g]] - 1L else nobs[[g]]
-      Gamma.inv.temp <- try(solve(gamma[[g]]), silent = TRUE)
-      if (inherits(Gamma.inv.temp, "try-error")) {
-        Gamma.inv.temp <- MASS::ginv(gamma[[g]])
+      Ng <- if (n_minus_one) nobs[[g]] - 1L else nobs[[g]]
+      gamma_inv_temp <- try(solve(gamma[[g]]), silent = TRUE)
+      if (inherits(gamma_inv_temp, "try-error")) {
+        gamma_inv_temp <- MASS::ginv(gamma[[g]])
       }
-      Gamma.inv.weighted[[g]] <- Gamma.inv.temp * Ng / ntotal
+      gamma_inv_weighted[[g]] <- gamma_inv_temp * Ng / ntotal
     }
-    GI <- lav_mat_bdiag(Gamma.inv.weighted)
-    t_dgid <- t(Delta.g) %*% GI %*% Delta.g
+    GI <- lav_mat_bdiag(gamma_inv_weighted)
+    t_dgid <- t(delta_g) %*% GI %*% delta_g
     t_dgid_inv <- MASS::ginv(t_dgid)
-    q1 <- drop(t(RES.all) %*% GI %*% RES.all)
-    q2 <- drop(t(RES.all) %*%
-      GI %*% Delta.g %*% t_dgid_inv %*% t(Delta.g) %*% GI %*%
-      RES.all)
+    q1 <- drop(t(res_all) %*% GI %*% res_all)
+    q2 <- drop(t(res_all) %*%
+      GI %*% delta_g %*% t_dgid_inv %*% t(delta_g) %*% GI %*%
+      res_all)
     STAT <- ntotal * (q1 - q2)
-    stat.group <- STAT * unlist(nobs) / ntotal
+    stat_group <- STAT * unlist(nobs) / ntotal
   }
 
   if (!is.null(lavobject)) {
@@ -393,9 +393,9 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   } else {
     DF <- lav_pt_df(lavpartable)
     if (!lavmodel@cin.simple.only && nrow(lavmodel@con.jac) > 0L) {
-      ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
-      if (length(ceq.idx) > 0L) {
-        DF <- DF + qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank
+      ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
+      if (length(ceq_idx) > 0L) {
+        DF <- DF + qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
       }
     } else if (lavmodel@ceq.simple.only) {
       DF <- lav_pt_ndat(lavpartable) - max(lavpartable$free)
@@ -405,7 +405,7 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   list(
     test = "browne.residual.nt.model",
     stat = STAT,
-    stat.group = stat.group,
+    stat.group = stat_group,
     df = DF,
     refdistr = "chisq",
     pvalue = 1 - stats::pchisq(STAT, DF),
@@ -546,7 +546,7 @@ lav_test_fmg <- function(lavobject = NULL,
   # Ensure p-value is in valid range
   pvalue <- max(0, min(1, pvalue))
   stat <- lav_test_fmg_chisq_equivalent(pvalue, df)
-  stat.group <- lav_test_fmg_stat_group_equivalent(
+  stat_group <- lav_test_fmg_stat_group_equivalent(
     stat_group = test_chisq$stat.group,
     source_stat = chisq_stat,
     stat = stat
@@ -556,7 +556,7 @@ lav_test_fmg <- function(lavobject = NULL,
   list(
     test = test,
     stat = stat,
-    stat.group = stat.group,
+    stat.group = stat_group,
     source.stat = chisq_stat,
     source.stat.group = test_chisq$stat.group,
     df = df,
@@ -743,10 +743,10 @@ lav_test_fmg_imhof <- function(q, lambda, h = rep(1, length(lambda)),
 
       theta <- 0.5 * sum(h * atan(lu) + delta * lu / (1 + lu2)) -
         0.5 * q * ui
-      log.rho <- sum(0.25 * h * log1p(lu2) +
+      log_rho <- sum(0.25 * h * log1p(lu2) +
         0.5 * delta * lu2 / (1 + lu2))
 
-      sin(theta) / (ui * exp(log.rho))
+      sin(theta) / (ui * exp(log_rho))
     }, numeric(1L))
   }
 
@@ -1060,9 +1060,9 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
 
   wls_v <- lavTech(m1, "WLS.V")
   PI <- lav_model_delta(m1@Model)
-  P.inv <- lavTech(m1, "inverted.information")
+  p_inv <- lavTech(m1, "inverted.information")
 
-  if (is.null(P.inv)) {
+  if (is.null(p_inv)) {
     return(NULL)
   }
 
@@ -1076,13 +1076,13 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
   }
 
   # Safety check: remove zero rows/columns
-  APA <- A %*% P.inv %*% t(A)
+  APA <- A %*% p_inv %*% t(A)
   col_sums <- colSums(APA)
   row_sums <- rowSums(APA)
-  empty.idx <- which(abs(col_sums) < .Machine$double.eps^0.5 &
+  empty_idx <- which(abs(col_sums) < .Machine$double.eps^0.5 &
     abs(row_sums) < .Machine$double.eps^0.5)
-  if (length(empty.idx) > 0L) {
-    A <- A[-empty.idx, , drop = FALSE]
+  if (length(empty_idx) > 0L) {
+    A <- A[-empty_idx, , drop = FALSE]
   }
 
   if (nrow(A) == 0L) {
@@ -1090,8 +1090,8 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
   }
 
   # PAAPAAP projection
-  PAAPAAP <- P.inv %*% t(A) %*% MASS::ginv(A %*% P.inv %*% t(A)) %*%
-    A %*% P.inv
+  PAAPAAP <- p_inv %*% t(A) %*% MASS::ginv(A %*% p_inv %*% t(A)) %*%
+    A %*% p_inv
 
   # Build global matrices
   fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal

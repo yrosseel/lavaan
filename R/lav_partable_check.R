@@ -13,7 +13,7 @@ lav_pt_check <- function(partable, categorical = FALSE) {
   lv_names <- lav_pt_vnames(partable, "lv")
   lv_names_c <- lav_pt_vnames(partable, "lv.composite")
   lv_names_noc <- lv_names[!lv_names %in% lv_names_c]
-  all.names <- c(ov_names, lv_names_noc)
+  all_names <- c(ov_names, lv_names_noc)
   ov_names_ord <- lav_pt_vnames(partable, "ov.ord")
 
   nlevels <- lav_pt_nlevels(partable)
@@ -50,13 +50,13 @@ lav_pt_check <- function(partable, categorical = FALSE) {
   # note: if lav_model_pt() has been used, this is always TRUE
   var_idx <- which(partable$op == "~~" &
     partable$lhs == partable$rhs & !partable$lhs %in% lv_names_c)
-  missing_idx <- which(is.na(match(all.names, partable$lhs[var_idx])))
+  missing_idx <- which(is.na(match(all_names, partable$lhs[var_idx])))
   if (length(missing_idx) > 0L) {
     check <- FALSE
     lav_msg_warn(gettextf(
       "parameter table does not contain (residual) variances for
       one or more variables: %s",
-      lav_msg_view(all.names[missing_idx])))
+      lav_msg_view(all_names[missing_idx])))
   }
 
   # meanstructure?
@@ -67,13 +67,13 @@ lav_pt_check <- function(partable, categorical = FALSE) {
   if (meanstructure) {
     # we should have an intercept for *each* ov/lv
     int_idx <- which(partable$op == "~1")
-    missing_idx <- which(is.na(match(all.names, partable$lhs[int_idx])))
+    missing_idx <- which(is.na(match(all_names, partable$lhs[int_idx])))
     if (length(missing_idx) > 0L) {
       check <- FALSE
       lav_msg_warn(gettextf(
         "parameter table does not contain intercepts
         for one or more variables: %s",
-        lav_msg_view(all.names[missing_idx])))
+        lav_msg_view(all_names[missing_idx])))
     }
   }
 

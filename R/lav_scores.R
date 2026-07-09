@@ -442,4 +442,4 @@ lav_sc_ls <- function(ntab = 0L,
 
 # estfun method for the sandwich package (thin forwarder; see lav_alias
 # in 00alias.R)
-estfun.lavaan <- lav_alias("lavScores")
+estfun.lavaan <- lav_alias("lavScores")        # nolint

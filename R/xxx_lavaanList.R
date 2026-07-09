@@ -20,7 +20,7 @@ lavaanList <- function(model = NULL, # model                    # nolint
                        cl = NULL,
                        iseed = NULL) {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
 
   # store_slots call
   mc <- match.call()
