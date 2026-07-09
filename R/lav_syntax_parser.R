@@ -125,10 +125,10 @@ lav_parse_text_tokens <- function(modelsrc, types) {
       substr(modelsrcw, comments[i], comments[i] + comment_lengths[i] - 1L) <-
         strrep(" ", comment_lengths[i] - 1L)
       # check for stringliterals in comment
-      str.in.comment <- (elem_pos > comments[i] &
+      str_in_comment <- (elem_pos > comments[i] &
         elem_pos < comments[i] + comment_lengths[i])
-      if (any(str.in.comment)) {
-        elem_type[str.in.comment] <- 0
+      if (any(str_in_comment)) {
+        elem_type[str_in_comment] <- 0
       }
     }
   }
@@ -661,20 +661,20 @@ assign("equal", function(...) {
   }
   formulalist <- lav_parse_tokens_formulas(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat_-----
-  max.mono.formulas <- length(formulalist)
-  flat_lhs <- character(max.mono.formulas)
-  flat_op <- character(max.mono.formulas)
-  flat_rhs <- character(max.mono.formulas)
-  flat_rhs_mod_idx <- integer(max.mono.formulas)
-  flat_block <- integer(max.mono.formulas) # keep track of groups using ":" opr
-  flat_fixed <- character(max.mono.formulas) # only for display purposes!
-  flat_start <- character(max.mono.formulas) # only for display purposes!
-  flat_lower <- character(max.mono.formulas) # only for display purposes!
-  flat_upper <- character(max.mono.formulas) # only for display purposes!
-  flat_label <- character(max.mono.formulas) # only for display purposes!
-  flat_prior <- character(max.mono.formulas)
-  flat_efa <- character(max.mono.formulas)
-  flat_rv <- character(max.mono.formulas)
+  max_mono_formulas <- length(formulalist)
+  flat_lhs <- character(max_mono_formulas)
+  flat_op <- character(max_mono_formulas)
+  flat_rhs <- character(max_mono_formulas)
+  flat_rhs_mod_idx <- integer(max_mono_formulas)
+  flat_block <- integer(max_mono_formulas) # keep track of groups using ":" opr
+  flat_fixed <- character(max_mono_formulas) # only for display purposes!
+  flat_start <- character(max_mono_formulas) # only for display purposes!
+  flat_lower <- character(max_mono_formulas) # only for display purposes!
+  flat_upper <- character(max_mono_formulas) # only for display purposes!
+  flat_label <- character(max_mono_formulas) # only for display purposes!
+  flat_prior <- character(max_mono_formulas)
+  flat_efa <- character(max_mono_formulas)
+  flat_rv <- character(max_mono_formulas)
   flat_idx <- 0L
   mod_idx <- 0L
   constraints <- list()

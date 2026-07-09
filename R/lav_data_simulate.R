@@ -152,7 +152,7 @@ lav_data_simulate_ml <- function(model = NULL,
 
   # dotdotdot
   dotdotdot <- list(...)
-  dotdotdot.orig <- dotdotdot
+  dotdotdot_orig <- dotdotdot
 
   # remove/override some options
   dotdotdot$verbose <- FALSE
@@ -179,15 +179,15 @@ lav_data_simulate_ml <- function(model = NULL,
 
   # 'fit' population model: first pretend we generate continuous data only
   # (so the model-implied moments are the latent-response moments)
-  dotdotdot.con <- dotdotdot
-  dotdotdot.con$ordered <- NULL
-  fit.con <- fit_pop_model(dotdotdot.con)
+  dotdotdot_con <- dotdotdot
+  dotdotdot_con$ordered <- NULL
+  fit_con <- fit_pop_model(dotdotdot_con)
 
   # categorical? refit keeping the 'ordered' argument, to obtain thresholds
-  if (!is.null(dotdotdot.orig$ordered) || fit.con@Model@categorical) {
-    fit.pop <- fit_pop_model(dotdotdot)
+  if (!is.null(dotdotdot_orig$ordered) || fit_con@Model@categorical) {
+    fit_pop <- fit_pop_model(dotdotdot)
   } else {
-    fit.pop <- fit.con
+    fit_pop <- fit_con
   }
 
   # extract model implied statistics and data slot
@@ -198,11 +198,11 @@ lav_data_simulate_ml <- function(model = NULL,
   # so that y* = y*(within) + y*(between) has the correct variance
   # decomposition and the thresholds cut it correctly. For continuous data,
   # delta is the identity and this has no effect.
-  lavimplied  <- lav_model_implied(fit.con@Model, delta = FALSE)
-  lavdata     <- fit.pop@Data
-  lavmodel    <- fit.pop@Model
-  lavpartable <- fit.pop@ParTable
-  lavoptions  <- fit.pop@Options
+  lavimplied  <- lav_model_implied(fit_con@Model, delta = FALSE)
+  lavdata     <- fit_pop@Data
+  lavmodel    <- fit_pop@Model
+  lavpartable <- fit_pop@ParTable
+  lavoptions  <- fit_pop@Options
 
   # number of groups/levels/blocks
   ngroups <- lav_pt_ngroups(lavpartable)
@@ -287,12 +287,12 @@ lav_data_simulate_ml <- function(model = NULL,
 
   # if multilevel, make a copy, and create X[[g]] per group
   if (nlevels > 1L) {
-    X.block <- X
+    x_block <- X
     X <- vector("list", length = ngroups)
   }
 
   # assemble data per group
-  group.values <- lav_pt_group_values(lavpartable)
+  group_values <- lav_pt_group_values(lavpartable)
   for (g in 1:ngroups) {
     # multilevel?
     if (nlevels > 1L) {
@@ -300,21 +300,21 @@ lav_data_simulate_ml <- function(model = NULL,
       bb <- (g - 1) * nlevels + 1L
 
       Lp <- lavdata@Lp[[g]]
-      p.tilde <- length(lavdata@ov.names[[g]])
-      tmp1 <- matrix(0, nrow(X.block[[bb]]), p.tilde + 1L) # one extra column
-      tmp2 <- matrix(0, nrow(X.block[[bb]]), p.tilde + 1L) # for the clus id
+      p_tilde <- length(lavdata@ov.names[[g]])
+      tmp1 <- matrix(0, nrow(x_block[[bb]]), p_tilde + 1L) # one extra column
+      tmp2 <- matrix(0, nrow(x_block[[bb]]), p_tilde + 1L) # for the clus id
 
       # level 1
-      tmp1[, Lp$ov.idx[[1]]] <- X.block[[bb]]
+      tmp1[, Lp$ov.idx[[1]]] <- x_block[[bb]]
 
       # level 2 (expand cluster-level values to the level-1 units)
-      tmp2[, Lp$ov.idx[[2]]] <- X.block[[bb + 1L]][cluster_idx[[g]], ,
+      tmp2[, Lp$ov.idx[[2]]] <- x_block[[bb + 1L]][cluster_idx[[g]], ,
                                                    drop = FALSE]
       # final
       X[[g]] <- tmp1 + tmp2
 
       # cluster id
-      X[[g]][, p.tilde + 1L] <- cluster_idx[[g]]
+      X[[g]][, p_tilde + 1L] <- cluster_idx[[g]]
     }
 
     # add variable names?
@@ -327,13 +327,13 @@ lav_data_simulate_ml <- function(model = NULL,
     }
 
     # any categorical variables?
-    ov.ord <- lav_object_vnames(fit.pop, "ov.ord", group = group.values[g])
-    if (is.list(ov.ord)) {
+    ov_ord <- lav_object_vnames(fit_pop, "ov.ord", group = group_values[g])
+    if (is.list(ov_ord)) {
       # multilevel -> use within level only
-      ov.ord <- ov.ord[[1L]]
+      ov_ord <- ov_ord[[1L]]
     }
-    if (length(ov.ord) > 0L) {
-      ov.names <- lavdata@ov.names[[g]]
+    if (length(ov_ord) > 0L) {
+      ov_names <- lavdata@ov.names[[g]]
 
       # which block?
       bb <- (g - 1) * nlevels + 1L
@@ -342,28 +342,28 @@ lav_data_simulate_ml <- function(model = NULL,
       # use delta = FALSE: the thresholds must be on the same (unscaled)
       # latent-response scale as the generated y* data (see the delta = FALSE
       # note where lavimplied is computed above)
-      TH.VAL <- as.numeric(lav_model_th(lavmodel = fit.pop@Model,
+      th__val <- as.numeric(lav_model_th(lavmodel = fit_pop@Model,
                                         delta = FALSE)[[bb]])
       if (length(lavmodel@num.idx[[bb]]) > 0L) {
-        NUM.idx <- which(lavmodel@th.idx[[bb]] == 0)
-        TH.VAL <- TH.VAL[-NUM.idx]
+        num_idx <- which(lavmodel@th_idx[[bb]] == 0)
+        th__val <- th__val[-num_idx]
       }
-      th.names <- fit.pop@pta$vnames$th[[bb]]
-      TH.NAMES <- sapply(strsplit(th.names, split = "|", fixed = TRUE),
+      th_names <- fit_pop@pta$vnames$th[[bb]]
+      th__names <- sapply(strsplit(th_names, split = "|", fixed = TRUE),
                          "[[", 1L)
 
       # use thresholds to cut
-      for (o in ov.ord) {
-        o.idx  <- which(o == ov.names)
-        th.idx <- which(o == TH.NAMES)
-        th.val <- c(-Inf, sort(TH.VAL[th.idx]), +Inf)
-        tmp <- X[[g]][, o.idx]
+      for (o in ov_ord) {
+        o_idx  <- which(o == ov_names)
+        th_idx <- which(o == th__names)
+        th_val <- c(-Inf, sort(th__val[th_idx]), +Inf)
+        tmp <- X[[g]][, o_idx]
         if (ordered_center) {
           # center first (so the cut also works when the model-implied 'mean'
           # is nonzero); set ordered_center = FALSE for the 'old' behaviour
           tmp <- tmp - mean(tmp, na.rm = TRUE)
         }
-        X[[g]][, o.idx] <- cut(tmp, th.val, labels = FALSE)
+        X[[g]][, o_idx] <- cut(tmp, th_val, labels = FALSE)
       }
     }
   }
@@ -394,7 +394,7 @@ lav_data_simulate_ml <- function(model = NULL,
   }
 
   if (return_fit) {
-    attr(out, "fit") <- fit.pop
+    attr(out, "fit") <- fit_pop
   }
 
   out
@@ -414,9 +414,9 @@ lav_data_simulate_nobs <- function(sample_nobs = 1000L, cluster_idx = NULL,
       if (length(sample_nobs) == 1L) {
         n1 <- as.integer(sample_nobs)
         n2 <- max(2L, as.integer(round(n1 / 10)))
-        nobs.l <- c(n1, n2)
+        nobs_l <- c(n1, n2)
       } else if (length(sample_nobs) == nlevels) {
-        nobs.l <- as.integer(sample_nobs)
+        nobs_l <- as.integer(sample_nobs)
       } else {
         lav_msg_stop(gettext("for the multilevel case, sample_nobs should be a
                              single number, or a vector with one number per
@@ -424,7 +424,7 @@ lav_data_simulate_nobs <- function(sample_nobs = 1000L, cluster_idx = NULL,
       }
       cluster_idx <- vector("list", ngroups)
       for (g in seq_len(ngroups)) {
-        cluster_idx[[g]] <- lav_data_simulate_clusidx(nobs.l[1L], nobs.l[2L])
+        cluster_idx[[g]] <- lav_data_simulate_clusidx(nobs_l[1L], nobs_l[2L])
       }
     } else {
       # cluster_idx given
@@ -683,7 +683,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     #   for (g in 1:ngroups) {
     #     var.group <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
     #       lav$rhs == lav$lhs &
-    #       lav$group == group.values[g])
+    #       lav$group == group_values[g])
     #     eta.idx <- match(lv.nox, lv.names)
     #     lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
     #   }
@@ -702,8 +702,8 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     # for (g in 1:ngroups) {
     #   var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
     #     lav$rhs == lav$lhs &
-    #     lav$group == group.values[g])
-    #   ov.idx <- match(ov.nox, ov.names)
+    #     lav$group == group_values[g])
+    #   ov.idx <- match(ov.nox, ov_names)
     #   lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
     # }
 

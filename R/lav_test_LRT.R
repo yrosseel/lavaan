@@ -324,7 +324,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   stat_delta <- stat_delta_orig <- c(NA, diff(stat_1))
   df_delta <- df_delta_orig <- c(NA, diff(df_1))
 
-  # check for negative values in STAT.delta
+  # check for negative values in stat_delta
   # but with a tolerance (0.6-12)!
   if (any(stat_delta[-1] < -1 * .Machine$double.eps^(1 / 3))) {
     lav_msg_warn(gettextf(
@@ -484,7 +484,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       BIC = bic,
       Chisq = stat_1,
       "Chisq diff" = stat_delta,
-      #"RMSEA" = RMSEA.delta, # if missing, not yet...
+      #"RMSEA" = rmsea_delta, # if missing, not yet...
       "Df diff" = df_delta,
       "Pr(>Chisq)" = pvalue_delta,
       row.names = names(mods),
@@ -492,7 +492,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     )
   }
 
-  # catch Df.delta == 0 cases (reported by Florian Zsok in Zurich)
+  # catch df_delta == 0 cases (reported by Florian Zsok in Zurich)
   # but only if there are no inequality constraints! (0.6-1)
   idx <- which(val[, "Df diff"] == 0)
   if (length(idx) > 0L) {
@@ -691,9 +691,9 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
     STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
   }
 
-  STAT.delta <- STAT.delta.orig <- c(NA, diff(STAT))
-  Df.delta <- Df.delta.orig <- c(NA, diff(Df))
-  Pvalue.delta <- rep(as.numeric(NA), length(mods))
+  stat_delta <- stat_delta_orig <- c(NA, diff(STAT))
+  df_delta <- df_delta_orig <- c(NA, diff(Df))
+  pvalue_delta <- rep(as.numeric(NA), length(mods))
 
   if (length(mods) > 1L) {
     for (m in seq_len(length(mods) - 1L)) {
@@ -702,16 +702,16 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
         m1 = mods[[m]],
         test = test
       )
-      STAT.delta[m + 1L] <- out$stat
-      Df.delta[m + 1L] <- out$df
-      Pvalue.delta[m + 1L] <- out$pvalue
+      stat_delta[m + 1L] <- out$stat
+      df_delta[m + 1L] <- out$df
+      pvalue_delta[m + 1L] <- out$pvalue
     }
   }
 
-  STAT.delta <- round(unname(STAT.delta), 10)
-  Df.delta <- unname(Df.delta)
-  STAT.delta.orig <- unname(STAT.delta.orig)
-  Df.delta.orig <- unname(Df.delta.orig)
+  stat_delta <- round(unname(stat_delta), 10)
+  df_delta <- unname(df_delta)
+  stat_delta_orig <- unname(stat_delta_orig)
+  df_delta_orig <- unname(df_delta_orig)
 
   aic <- bic <- rep(NA, length(mods))
   if (estimator == "ML") {
@@ -724,12 +724,12 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
   }
 
   if (missing == "listwise") {
-    RMSEA.delta <- c(NA, lav_fit_rmsea(
-      x2 = STAT.delta.orig[-1],
-      df = Df.delta.orig[-1],
+    rmsea_delta <- c(NA, lav_fit_rmsea(
+      x2 = stat_delta_orig[-1],
+      df = df_delta_orig[-1],
       n = ntotal,
       g = ngroups,
-      c_hat = rep(1, length(STAT.delta.orig) - 1L)
+      c_hat = rep(1, length(stat_delta_orig) - 1L)
     ))
 
     val <- data.frame(
@@ -737,10 +737,10 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
       AIC = aic,
       BIC = bic,
       Chisq = STAT,
-      "Chisq diff" = STAT.delta,
-      "RMSEA" = RMSEA.delta,
-      "Df diff" = Df.delta,
-      "Pr(>Chisq)" = Pvalue.delta,
+      "Chisq diff" = stat_delta,
+      "RMSEA" = rmsea_delta,
+      "Df diff" = df_delta,
+      "Pr(>Chisq)" = pvalue_delta,
       row.names = names(mods),
       check.names = FALSE
     )
@@ -750,9 +750,9 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
       AIC = aic,
       BIC = bic,
       Chisq = STAT,
-      "Chisq diff" = STAT.delta,
-      "Df diff" = Df.delta,
-      "Pr(>Chisq)" = Pvalue.delta,
+      "Chisq diff" = stat_delta,
+      "Df diff" = df_delta,
+      "Pr(>Chisq)" = pvalue_delta,
       row.names = names(mods),
       check.names = FALSE
     )

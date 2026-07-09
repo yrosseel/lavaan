@@ -537,8 +537,8 @@ lav_snake_case <- function(old) {
   }
 }
 # ----------------------- lav_option_names -------------------------------- #
-# function to transform specified names of options to valid option names 
-# this function is used to accept uppercase and dots or underscores in 
+# function to transform specified names of options to valid option names
+# this function is used to accept uppercase and dots or underscores in
 # option names where the real option name has lowercase, underscores or dots
 # if input is a list, the names of the list are transformed.
 lav_option_names <- function(old) {
