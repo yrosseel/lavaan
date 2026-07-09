@@ -447,15 +447,24 @@ sam <- function(model = NULL,
       vech_keep <- sub_pos[lower.tri(sub_pos, diag = TRUE)]
       # Gamma.eta row order per group is c(EETA (means), vech(VETA))
       ge_keep <- if (meanstr) c(keep, p_full + vech_keep) else vech_keep
+      res_slopes_attr <- attr(step1$VETA, "res.slopes")
       for (g in seq_along(step1$VETA)) {
         step1$VETA[[g]] <- step1$VETA[[g]][keep, keep, drop = FALSE]
         if (meanstr) {
           step1$EETA[[g]] <- step1$EETA[[g]][keep]
         }
+        # conditional.x: keep only the slopes of the retained variables
+        # (the exogenous covariates are unaffected)
+        if (!is.null(res_slopes_attr)) {
+          res_slopes_attr[[g]] <- res_slopes_attr[[g]][keep, , drop = FALSE]
+        }
         if (!is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[g]])) {
           step1$Gamma.eta[[g]] <-
             step1$Gamma.eta[[g]][ge_keep, ge_keep, drop = FALSE]
         }
+      }
+      if (!is.null(res_slopes_attr)) {
+        attr(step1$VETA, "res.slopes") <- res_slopes_attr
       }
     }
   }

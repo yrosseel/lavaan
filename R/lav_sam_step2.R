@@ -104,6 +104,20 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
 
     reg_idx <- attr(pts, "idx")
     attr(pts, "idx") <- NULL
+
+    # edge case: conditional.x = TRUE, but the structural part contains no
+    # exogenous covariates (eg they only affect indicators directly); the
+    # conditional attributes of VETA (res.slopes/cov.x/mean.x) then have no
+    # counterpart in the structural model -> drop them and fit the
+    # structural part unconditionally
+    if (lavoptions_pa$conditional.x &&
+        length(unlist(lav_pt_vnames(pts, type = "ov.x"))) == 0L) {
+      attr(step1$VETA, "res.slopes") <- NULL
+      attr(step1$VETA, "cov.x") <- NULL
+      attr(step1$VETA, "mean.x") <- NULL
+      lavoptions_pa$conditional.x <- FALSE
+      lavoptions_pa$fixed.x <- FALSE
+    }
   } else {
     # global SAM
 

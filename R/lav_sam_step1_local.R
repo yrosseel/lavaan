@@ -206,6 +206,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   }
   m <- vector("list", nblocks)
   lv_names_1 <- vector("list", nblocks)
+  d_std_all <- vector("list", nblocks)
 
   # compute VETA/EETA per block
   for (b in seq_len(nblocks)) {
@@ -409,6 +410,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         veta[[b]] <- t(veta[[b]] / d_std) / d_std
       }
     }
+    d_std_all[[b]] <- d_std
     colnames(veta[[b]]) <- rownames(veta[[b]]) <- lv_names1
 
     # compute model-based RELiability
@@ -515,13 +517,32 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
   # handle conditional.x: add res.slopes, cov.x and mean.x
   if (fit@Model@conditional.x) {
+    if (lv_interaction_flag) {
+      lav_msg_stop(gettext(
+        "sam() does not support latent interactions in combination with
+        conditional.x = TRUE (yet)."))
+    }
     res_slopes <- vector("list", length = nblocks)
+    cov_x  <- fit@h1$implied$cov.x
+    mean_x <- fit@h1$implied$mean.x
     for (b in seq_len(nblocks)) {
-      res_slopes[[b]] <- m[[b]] %*% fit@h1$implied$res.slopes[[b]]
+      x_names <- fit@Data@ov.names.x[[b]]
+      # slopes of the latent variables on the exogenous covariates; if
+      # std.lv = TRUE, put them on the same standardized metric as the
+      # cov2cor() rescaled VETA above
+      res_slopes[[b]] <- (m[[b]] %*% fit@h1$implied$res.slopes[[b]]) /
+                         d_std_all[[b]]
+      # (dim)names, so that the step-2 summary-statistics call can align
+      # these statistics with its own internal variable order
+      rownames(res_slopes[[b]]) <- colnames(veta[[b]])
+      colnames(res_slopes[[b]]) <- x_names
+      dimnames(cov_x[[b]]) <- list(x_names, x_names)
+      mean_x[[b]] <- drop(mean_x[[b]])
+      names(mean_x[[b]]) <- x_names
     }
     attr(veta, "res.slopes") <- res_slopes
-    attr(veta, "cov.x") <- fit@h1$implied$cov.x
-    attr(veta, "mean.x") <- fit@h1$implied$mean.x
+    attr(veta, "cov.x") <- cov_x
+    attr(veta, "mean.x") <- mean_x
   }
 
   # store EETA/VETA/M/alpha/lambda

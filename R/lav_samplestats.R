@@ -1399,6 +1399,71 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   lav_sample_stats
 }
 
+# align a summary statistic that was provided as an attribute of sample.cov
+# (res.slopes, cov.x, mean.x) with the model's internal variable order:
+# sample.cov itself is name-matched against ov.names in
+# lav_samp_from_moments(), but these attributes used to be consumed as-is --
+# silently misaligning them whenever the provided order differs from the
+# internal one (e.g., sam() with conditional.x = TRUE, where VETA is in
+# measurement order, but the structural model is y-variables-first); if
+# (dim)names are present, reorder by name; if absent, assume the statistic
+# is already in the internal order (pre-0.7-2 behavior)
+lav_samp_align_by_names <- function(stat = NULL, row_names = NULL,
+                                    col_names = NULL, what = "res.slopes",
+                                    g = 1L) {
+  if (is.null(stat)) {
+    return(NULL)
+  }
+  # a vector is expected (mean.x); accept a one-row/column matrix
+  if (is.null(col_names)) {
+    stat <- drop(stat)
+    if (length(stat) != length(row_names)) {
+      lav_msg_stop(gettextf(
+        "%1$s attribute of sample.cov in group %2$s should contain %3$s
+        elements.", what, g, length(row_names)))
+    }
+    if (!is.null(names(stat))) {
+      idx <- match(row_names, names(stat))
+      if (anyNA(idx)) {
+        lav_msg_stop(gettextf(
+          "names of the %1$s attribute of sample.cov (group %2$s) do not
+          match the model. found: %3$s expected: %4$s", what, g,
+          lav_msg_view(names(stat)), lav_msg_view(row_names)))
+      }
+      stat <- stat[idx]
+    }
+    return(unclass(unname(stat)))
+  }
+  # matrix
+  if (!is.matrix(stat) || nrow(stat) != length(row_names) ||
+      ncol(stat) != length(col_names)) {
+    lav_msg_stop(gettextf(
+      "%1$s attribute of sample.cov in group %2$s should be a %3$s by %4$s
+      matrix.", what, g, length(row_names), length(col_names)))
+  }
+  if (!is.null(rownames(stat))) {
+    row_idx <- match(row_names, rownames(stat))
+    if (anyNA(row_idx)) {
+      lav_msg_stop(gettextf(
+        "rownames of the %1$s attribute of sample.cov (group %2$s) do not
+        match the model. found: %3$s expected: %4$s", what, g,
+        lav_msg_view(rownames(stat)), lav_msg_view(row_names)))
+    }
+    stat <- stat[row_idx, , drop = FALSE]
+  }
+  if (!is.null(colnames(stat))) {
+    col_idx <- match(col_names, colnames(stat))
+    if (anyNA(col_idx)) {
+      lav_msg_stop(gettextf(
+        "colnames of the %1$s attribute of sample.cov (group %2$s) do not
+        match the model. found: %3$s expected: %4$s", what, g,
+        lav_msg_view(colnames(stat)), lav_msg_view(col_names)))
+    }
+    stat <- stat[, col_idx, drop = FALSE]
+  }
+  unclass(unname(stat))
+}
+
 
 lav_samp_from_moments <- function(sample_cov = NULL,
                                          sample_mean = NULL,
@@ -1752,9 +1817,14 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         res_var[[g]] <- diag(tmp_cov)
         res_int[[g]] <- tmp_mean
 
-        res_slopes[[g]] <- unclass(unname(sample_res_slopes[[g]]))
-        cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
-        mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+        res_slopes[[g]] <- lav_samp_align_by_names(sample_res_slopes[[g]],
+          row_names = ov_names[[g]][-x_idx[[g]]],
+          col_names = ov_names_x[[g]], what = "res.slopes", g = g)
+        cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+          row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+          what = "cov.x", g = g)
+        mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+          row_names = ov_names_x[[g]], what = "mean.x", g = g)
 
         # th.idx and th.names are already ok
 
@@ -1781,8 +1851,11 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
         # fixed.x? (needed?)
         if (fixed_x) {
-          cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
-          mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+          cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+            row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+            what = "cov.x", g = g)
+          mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+            row_names = ov_names_x[[g]], what = "mean.x", g = g)
         }
 
         # th, th.idx and th.names are already ok
@@ -1803,9 +1876,14 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
         res_var[[g]] <- diag(tmp_cov)
         res_int[[g]] <- tmp_mean
-        res_slopes[[g]] <- unclass(unname(sample_res_slopes[[g]]))
-        cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
-        mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+        res_slopes[[g]] <- lav_samp_align_by_names(sample_res_slopes[[g]],
+          row_names = ov_names[[g]][-x_idx[[g]]],
+          col_names = ov_names_x[[g]], what = "res.slopes", g = g)
+        cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+          row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+          what = "cov.x", g = g)
+        mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+          row_names = ov_names_x[[g]], what = "mean.x", g = g)
 
         # no rescale!
 
@@ -1857,12 +1935,15 @@ lav_samp_from_moments <- function(sample_cov = NULL,
               drop = FALSE
             ]
           } else {
-            cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
+            cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+              row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+              what = "cov.x", g = g)
           }
           if (is.null(sample_mean_x)) {
             mean_x[[g]] <- mean[[g]][x_idx[[g]]]
           } else {
-            mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+            mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+              row_names = ov_names_x[[g]], what = "mean.x", g = g)
           }
         }
       }
