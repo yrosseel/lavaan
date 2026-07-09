@@ -38,14 +38,16 @@ lav_mvrnorm <- function(n = 1, mu, sigma_1, tol = 1e-06, empirical = FALSE,
   r <- if (method == "eigen") {
     ev <- eigen(sigma_1, symmetric = TRUE)
     if (!all(ev$values >= -tol * abs(ev$values[1L]))) {
-      warning("sigma is numerically not positive semidefinite")
+      lav_msg_warn(gettext(
+        "sigma is numerically not positive semidefinite."))
     }
     # Q sqrt(Lambda) Q' - invariant to sign flips
     t(ev$vectors %*% (t(ev$vectors) * sqrt(pmax(ev$values, 0))))
   } else if (method == "svd") {
     s <- svd(sigma_1)
     if (!all(s$d >= -tol * abs(s$d[1L]))) {
-      warning("sigma is numerically not positive semidefinite")
+      lav_msg_warn(gettext(
+        "sigma is numerically not positive semidefinite."))
     }
     t(s$v %*% (t(s$u) * sqrt(pmax(s$d, 0))))
   } else if (method == "chol") {

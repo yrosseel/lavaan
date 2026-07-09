@@ -209,7 +209,9 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
            this model (eg a bi-factor measurement model); the standard
            (uncorrected) structural test is reported instead."))
       } else {
-        stop(fit_pa)
+        lav_msg_stop(gettextf(
+          "the structural model could not be fitted: %s",
+          conditionMessage(fit_pa)))
       }
     }
   } else {

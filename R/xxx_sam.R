@@ -400,7 +400,10 @@ sam <- function(model = NULL,
     }, error = function(e) e)
     if (inherits(ge_try, "error")) {
       if (gamma_eta_required) {
-        stop(ge_try) # local / local.nt SEs cannot be computed without Gamma.eta
+        # the local / local.nt SEs cannot be computed without Gamma.eta
+        lav_msg_stop(gettextf(
+          "Gamma.eta (needed for se = %s) could not be computed: %s",
+          dQuote(se, q = FALSE), conditionMessage(ge_try)))
       }
       # twostep / twostep.robust / naive: the SEs do not need Gamma.eta, so a
       # failure is non-fatal -- we simply do not report the corrected structural

@@ -1110,7 +1110,8 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
       )
       logdet_o <- attr(w_o, "logdet")
       if (!is.finite(logdet_o)) {
-        stop("lav_npd")
+        # caught by the enclosing tryCatch() -> objective returns +Inf
+        lav_msg_stop(gettext("sigma.w is not positive definite."))
       }
       # embed in the full p1 x p1 space
       w_mat <- matrix(0, p1, p1)
@@ -1211,7 +1212,8 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
       if (v_psd) {
         dt <- determinant(z_j, logarithm = TRUE)
         if (dt$sign <= 0 || !is.finite(dt$modulus)) {
-          stop("lav_npd")
+          # caught by the enclosing tryCatch() -> objective returns +Inf
+          lav_msg_stop(gettext("Z matrix is not positive definite."))
         }
         logdet_z <- as.numeric(dt$modulus)
       } else {
@@ -1219,7 +1221,8 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
         # (real and) positive
         lambda <- Re(eigen(z_j, only.values = TRUE)$values)
         if (any(lambda < sqrt(.Machine$double.eps))) {
-          stop("lav_npd")
+          # caught by the enclosing tryCatch() -> objective returns +Inf
+          lav_msg_stop(gettext("Z matrix is not positive definite."))
         }
         logdet_z <- sum(log(lambda))
       }
