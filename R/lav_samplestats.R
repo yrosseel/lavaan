@@ -1934,6 +1934,32 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         wls_v[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), wls_v[[g]])
       }
     }
+
+    # NACOV: nothing can be computed from moments alone, except the
+    # normal-theory Gamma; compute it when the se/test ask for it
+    # (se = "robust.sem.nt" -- the default for continuous ULS -- or a
+    # browne.residual.nt test); before 0.7-2, these requests failed
+    # with a cryptic error
+    if (!nacov_user && is.null(nacov[[g]]) &&
+      !categorical && !correlation &&
+      estimator %in% c("WLS", "DWLS", "ULS", "DLS") &&
+      ("robust.sem.nt" %in% lavoptions$se ||
+        "browne.residual.nt" %in% lavoptions$test)) {
+      nacov[[g]] <- lav_samp_gamma_nt(
+        m_cov          = cov[[g]],
+        m_mean         = mean[[g]],
+        x_idx          = x_idx[[g]],
+        fixed_x        = fixed_x,
+        conditional_x  = conditional_x,
+        meanstructure  = meanstructure,
+        slopestructure = conditional_x
+      )
+      # group.w.free: add the group-weight element (weight 1), as for
+      # the Gamma in lav_samp_from_data
+      if (group_w_free) {
+        nacov[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), nacov[[g]])
+      }
+    }
   } # ngroups
 
   # construct SampleStats object
