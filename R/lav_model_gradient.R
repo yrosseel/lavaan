@@ -124,11 +124,12 @@ lav_model_grad <- function(lavmodel = NULL,
     type == "free" &&
     !lavmodel@composites)
 
-  # ULS (continuous): the weight matrix is the identity, so the same
-  # Omega approach applies, with omega = (S - Sigma) with a doubled
-  # diagonal -- so that 0.5 t(D) vec(omega) == vech(S - Sigma) -- and
-  # omega_mu = (ybar - mu); no Delta needed at all
-  uls_omega_flag <- (estimator == "ULS" &&
+  # ULS/DWLS (continuous): the weight matrix is diagonal (the identity
+  # for ULS), so the same Omega approach applies, with
+  # omega = [unvech(WLS.VD) *] (S - Sigma) with a doubled diagonal --
+  # so that 0.5 t(D) vec(omega) == WLS.VD * vech(S - Sigma) -- and
+  # omega_mu = [WLS.VD_mean *] (ybar - mu); no Delta needed at all
+  uls_omega_flag <- (estimator %in% c("ULS", "DWLS") &&
     type == "free" &&
     !categorical &&
     !lavmodel@multilevel &&
@@ -136,12 +137,13 @@ lav_model_grad <- function(lavmodel = NULL,
     !lavmodel@correlation &&
     !lavmodel@composites &&
     !group_w_free &&
-    !lavsamplestats@missing.flag)
+    !lavsamplestats@missing.flag &&
+    (estimator == "ULS" || !is.null(lavsamplestats@WLS.VD[[1]])))
 
   # do we need WLS.est?
-  if (estimator %in% c("WLS", "DWLS", "NTRLS", "DLS") ||
+  if (estimator %in% c("WLS", "NTRLS", "DLS") ||
     (estimator == "GLS" && !gls_omega_flag) ||
-    (estimator == "ULS" && !uls_omega_flag)) {
+    (estimator %in% c("ULS", "DWLS") && !uls_omega_flag)) {
     # always compute WLS.est
     wls_est <- lav_model_wls_est(lavmodel = lavmodel, glist = glist) # ,
     # cov.x = lavsamplestats@cov.x)
@@ -1244,6 +1246,29 @@ lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
       if (meanstructure) {
         omega_mu[[g]] <- as.matrix(
           lavsamplestats@mean[[g]] - mu_hat[[g]])
+      }
+
+      # DWLS (continuous)
+    } else if (estimator == "DWLS") {
+      # diagonal weight matrix (the @WLS.VD vector): the 'POST'
+      # convention requires 0.5 t(D) vec(omega) == WLS.VD * vech(S -
+      # Sigma), so weight the residuals elementwise and double the
+      # diagonal; this also reproduces the structural zero weights of
+      # the x/x combinations when fixed.x = TRUE
+      vd <- lavsamplestats@WLS.VD[[g]]
+      nvar <- NCOL(sigma_hat[[g]])
+      if (meanstructure) {
+        vd_mean <- vd[seq_len(nvar)]
+        vd_cov <- vd[-seq_len(nvar)]
+      } else {
+        vd_cov <- vd
+      }
+      omega[[g]] <- lav_mat_vech_rev(vd_cov) *
+        (lavsamplestats@cov[[g]] - sigma_hat[[g]])
+      diag(omega[[g]]) <- 2 * diag(omega[[g]])
+      if (meanstructure) {
+        omega_mu[[g]] <- as.matrix(
+          vd_mean * (lavsamplestats@mean[[g]] - mu_hat[[g]]))
       }
     }
 
