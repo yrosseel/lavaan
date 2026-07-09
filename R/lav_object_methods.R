@@ -1604,6 +1604,15 @@ setMethod(
     if (is.null(call)) {
       lav_msg_stop(gettext("need an object with call slot"))
     }
+    # sam objects store the original sam() call in the call slot (>= 0.7-1);
+    # in older versions, the call slot contained an internal lavaan() call
+    # that cannot be re-evaluated
+    if (!is.null(object@internal$sam.method) &&
+        !any(as.character(call[[1]]) == "sam")) {
+      lav_msg_stop(gettext(
+        "update() does not work for a sam object created by an older
+         version of lavaan; please rerun sam() first."))
+    }
     current_call_names <- names(call)
     lavaan_formals <- names(formals(lavaan::lavaan))
     current_formals <- lav_snake_case(current_call_names) %in% lavaan_formals

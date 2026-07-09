@@ -29,6 +29,9 @@ sam <- function(model = NULL,
                                       show.progress = FALSE),
                 output = "lavaan",
                 bootstrap_args = bootstrap) {
+  # capture the user's call; it is stored in the @call slot of the returned
+  # object (if output = "lavaan"), so that update() and getCall() work
+  mc <- match.call()
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
 
@@ -653,6 +656,9 @@ sam <- function(model = NULL,
     if (!is.null(mc_keep)) {
       res@internal$monte.carlo <- mc_keep
     }
+    # replace the internal 'joint' lavaan call by the original sam() call,
+    # so that update() and getCall() work (issue #514)
+    res@call <- mc
     if (lav_verbose()) {
       cat("done.\n")
     }
