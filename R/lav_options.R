@@ -1415,12 +1415,10 @@ lav_options_set <- function(opt = NULL) {
         tmp[target != 0] <- 0L # ignore these (non-zero) elements
         opt$rotation.args$target_mask <- target_mask <- tmp
       } else if (is.list(target)) {
-        out <- lapply(seq_along(target), function(g) {
-          tmp <- matrix(1L,
-            nrow = nrow(target[[g]]),
-            ncol = ncol(target[[g]])
-          )
-          tmp[target[[g]] != 0] <- 0L # ignore these (non-zero) elements
+        # lapply preserves the names (if any) of the target list
+        out <- lapply(target, function(tt) {
+          tmp <- matrix(1L, nrow = nrow(tt), ncol = ncol(tt))
+          tmp[tt != 0] <- 0L # ignore these (non-zero) elements
           tmp
         })
         opt$rotation.args$target_mask <- target_mask <- out
@@ -1444,6 +1442,19 @@ lav_options_set <- function(opt = NULL) {
       if (length(target) != length(target_mask)) {
         lav_msg_stop(gettext("length(target) != length(target_mask)"))
       }
+      # a *named* list is keyed by the efa block labels; a *nameless* list
+      # is interpreted per group -- both lists must use the same convention
+      target_named <- !is.null(names(target)) && any(nzchar(names(target)))
+      mask_named <- !is.null(names(target_mask)) &&
+        any(nzchar(names(target_mask)))
+      if (target_named != mask_named) {
+        lav_msg_stop(gettext(
+          "target and target_mask must either both be named lists (with the efa block labels as names), or both be nameless lists (one element per group)."))
+      }
+      if (target_named && !setequal(names(target), names(target_mask))) {
+        lav_msg_stop(gettext(
+          "the names of the target list do not match the names of the target_mask list."))
+      }
     }
   }
 
@@ -1459,24 +1470,16 @@ lav_options_set <- function(opt = NULL) {
       opt$rotation.args$target_mask <- target_mask
 
       # list
-    } else if (is.list(target)) {
-      ngroups <- length(target)
-      for (g in seq_len(ngroups)) {
-        if (anyNA(target[[g]])) {
-          warn_flag <- TRUE
-          # is target_mask just a <0 x 0 matrix>? create list!
-          if (is.matrix(opt$rotation.args$target_mask)) {
-            opt$rotation.args$target_mask <- vector("list", length = ngroups)
-          }
-          opt$rotation <- "pst"
-          target_mask <- matrix(1,
-            nrow = nrow(target[[g]]),
-            ncol = ncol(target[[g]])
-          )
-          target_mask[is.na(target[[g]])] <- 0
-          opt$rotation.args$target_mask[[g]] <- target_mask
-        }
-      }
+    } else if (is.list(target) && any(sapply(target, anyNA))) {
+      warn_flag <- TRUE
+      opt$rotation <- "pst"
+      # create a mask for *every* element (all-ones if no NA values);
+      # lapply preserves the names (if any) of the target list
+      opt$rotation.args$target_mask <- lapply(target, function(tt) {
+        tmp <- matrix(1, nrow = nrow(tt), ncol = ncol(tt))
+        tmp[is.na(tt)] <- 0
+        tmp
+      })
     }
     if (warn_flag) {
       lav_msg_warn(gettext(

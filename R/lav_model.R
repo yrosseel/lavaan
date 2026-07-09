@@ -87,6 +87,15 @@ lav_model <- function(lavpartable = NULL,
   nefa <- lav_pt_nefa(lavpartable)
   if (nefa > 0L) {
     efa_values <- lav_pt_efa_values(lavpartable)
+    # early check of *named* per-set target/target_mask lists (issue #516),
+    # so a name mismatch is caught before the model is estimated
+    if (!is.null(lavoptions$rotation) &&
+        any(lavoptions$rotation == c("target.strict", "pst"))) {
+      lav_model_efa_check_target(
+        ropts = lavoptions$rotation.args,
+        lavpartable = lavpartable, efa_values = efa_values
+      )
+    }
   }
 
   # check for simple equality constraints

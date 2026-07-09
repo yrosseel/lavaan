@@ -52,10 +52,22 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    \code{gpa_tol = 1e-05}, \code{tol = 1e-08}, \code{max_iter = 10000L},
    \code{warn = FALSE}, \code{verbose = FALSE}, \code{reflect = TRUE},
    \code{order_lv_by = "index"} (or \code{"sumofsquares"} or \code{"none"}).
-   Other options are specific for a particular rotation criterion: 
+   Other options are specific for a particular rotation criterion:
    \code{geomin_epsilon = 0.001}, \code{orthomax_gamma = 1},
    \code{promax_kappa = 4},
-   \code{cf_gamma = 0}, and \code{oblimin_gamma = 0}.}
+   \code{cf_gamma = 0}, and \code{oblimin_gamma = 0}.
+
+   For the target rotation methods (\code{target.strict}, \code{target} and
+   \code{pst}), the \code{target} option (and, for \code{pst}, the optional
+   \code{target_mask} option) can take three forms: 1) a single matrix,
+   which is used for all groups and all efa blocks; 2) a \emph{nameless}
+   list of matrices, one per group; or 3) a \emph{named} list of matrices,
+   where the names are the efa block labels used in the model syntax (e.g.,
+   \code{list(a = target.a, b = target.b)} if the model contains the efa
+   blocks \code{efa("a")} and \code{efa("b")}), so that each efa block gets
+   its own target matrix (the same targets are then used in all groups).
+   The latter is only relevant when the model syntax (of \code{sem()} or
+   \code{cfa()}) defines multiple efa blocks (set-ESEM).}
 \item{rotation_args}{List. Options related to the rotation algorithm. DEPRECATED.
    The options should now be given in the \code{rotation} argument as a list.}
 \item{ov_names}{Character vector. The variables names that are needed for
