@@ -128,6 +128,20 @@ lav_sam_step2_se_vcov_pa <- function(fit_pa, step2_rm_idx = integer(0L)) {
   vcov_pa
 }
 
+# the robust (sandwich) vcov of FIT.PA, using the NACOV (= Gamma.eta) it was
+# fitted with -- FIT.PA itself was fitted with se = "standard" (so that the
+# naive vcov is available for the alpha blending), so recompute here
+lav_sam_step2_se_vcov_pa_robust <- function(fit_pa,
+                                            step2_rm_idx = integer(0L)) {
+  fit_pa@Options$se <- "robust.sem"
+  fit_pa@vcov$vcov <- NULL # force recompute
+  vcov_pa <- lavTech(fit_pa, "vcov")
+  if (length(step2_rm_idx) > 0L) {
+    vcov_pa <- vcov_pa[-step2_rm_idx, -step2_rm_idx, drop = FALSE]
+  }
+  vcov_pa
+}
+
 # Standard errors for latent (residual) variances that are 'fixed' (free == 0)
 # in the JOINT model but are in fact data-derived. Under std.lv = TRUE, SAM
 # step 1 fixes the *total* variance of each factor to 1; for an *endogenous*
@@ -267,6 +281,23 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
   }
 
+  # conditional.x + local sam method: the joint-score (Yuan & Chan)
+  # linearization of the twostep.robust branch below describes the
+  # joint-model-given-theta1 estimator, which under conditional.x (with
+  # non-centered exogenous covariates) is NOT asymptotically equivalent to
+  # the local step-2 estimator: the structural fit is saturated in the
+  # latent-on-x slopes and cannot pool information across statistics the way
+  # the joint estimator does, so the joint-score vcov underestimates the
+  # sampling variability (badly so for binary covariates). Compute the
+  # twostep.robust SEs as the structural-space sandwich instead (FIT.PA with
+  # NACOV = Gamma.eta), which linearizes the actual two-step estimator and
+  # makes them identical to se = "local" in this setting. (For sam.method =
+  # "global" step 2 IS the joint estimator, and the branch below applies.)
+  tsrobust_condx_flag <- lavoptions$se == "twostep.robust" &&
+    fit@Model@conditional.x &&
+    isTRUE(step1$sam.method %in% c("local", "fsr", "cfsr")) &&
+    !is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[1]])
+
   if (lavoptions$se %in% c("naive", "twostep", "twostep.robust")) {
     info <- lavInspect(joint, "information")
     i_12 <- info[step1_free_idx, step2_free_idx, drop = FALSE]
@@ -350,7 +381,9 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     out$VCOV <- vcov_1
 
   # se = "naive" or "local": grab VCOV directly from FIT.PA
-  } else if (lavoptions$se %in% c("naive", "local", "local.nt")) {
+  # (also twostep.robust under conditional.x -- see tsrobust_condx_flag above)
+  } else if (lavoptions$se %in% c("naive", "local", "local.nt") ||
+             tsrobust_condx_flag) {
     if (isTRUE(step1$caseB) && lavoptions$se %in% c("local", "local.nt")) {
       # across-group constraints in the measurement model: build the
       # cross-group sandwich (the per-group FIT.PA vcov is incomplete)
@@ -358,6 +391,8 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       if (length(step2_rm_idx) > 0L) {
         vcov_1 <- vcov_1[-step2_rm_idx, -step2_rm_idx, drop = FALSE]
       }
+    } else if (tsrobust_condx_flag) {
+      vcov_1 <- lav_sam_step2_se_vcov_pa_robust(fit_pa, step2_rm_idx)
     } else {
       vcov_1 <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
     }
@@ -389,6 +424,18 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
   } else if (lavoptions$se  == "twostep" || lavoptions$se == "twostep.robust") {
 
     robust <- (lavoptions$se == "twostep.robust")
+    if (robust && fit@Model@conditional.x &&
+        isTRUE(step1$sam.method %in% c("local", "fsr", "cfsr"))) {
+      # only reached when Gamma.eta is unavailable (tsrobust_condx_flag was
+      # FALSE): the joint-score correction below is not valid for the local
+      # step-2 estimator under conditional.x -> plain twostep
+      lav_msg_warn(gettext(
+        "robust standard errors (se = \"twostep.robust\") need Gamma.eta
+         under conditional.x = TRUE, which could not be computed; twostep
+         standard errors are reported instead."))
+      robust <- FALSE
+      lavoptions$se <- "twostep"
+    }
     if (robust) {
       # get P (the influence of the step 1 / measurement parameters on the
       # sample statistics) and align its rows with step1.free.idx (the rows of

@@ -51,7 +51,15 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$sample.icov <- TRUE
-    dotdotdot0$fixed.x <- FALSE
+    # keep the moments of the exogenous covariates in the sample statistics
+    # (their sampling variability is part of Gamma) -- but not when
+    # conditional.x = TRUE, where the x-moments are fixed by design and
+    # fixed.x = FALSE is not supported (see also the retry below, for the
+    # settings where conditional.x = TRUE only emerges during the options
+    # processing, eg categorical data + exogenous covariates)
+    if (!isTRUE(dotdotdot$conditional.x)) {
+      dotdotdot0$fixed.x <- FALSE
+    }
     # ij/twostep.robust need the stored observed Gamma (NACOV); the
     # "force.model" ov_order sentinel keeps it in model order (it is only
     # honored when NACOV is supplied; see lav_lavaan_step00_init()). se =
@@ -70,13 +78,50 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   }
 
   # initial processing of the model, no fitting
-  fit <- do.call(cmd,
-    args = c(list(
-      model  = flat_model,
-      data   = data,
-      do.fit = FALSE
-    ), dotdotdot0)
+  fit <- tryCatch(
+    do.call(cmd,
+      args = c(list(
+        model  = flat_model,
+        data   = data,
+        do.fit = FALSE
+      ), dotdotdot0)
+    ),
+    error = function(e) e
   )
+  if (inherits(fit, "error")) {
+    fit0_error <- fit
+    fit <- NULL
+    if (identical(dotdotdot0$fixed.x, FALSE) ||
+        isTRUE(dotdotdot0$gamma.unbiased)) {
+      # fixed.x = FALSE (set above for se = local/ij/twostep.robust) and the
+      # unbiased Gamma (the sam() default) are both unsupported when
+      # conditional.x = TRUE, which may only emerge during the options
+      # processing (eg categorical data + exogenous covariates, where
+      # conditional.x = TRUE is the default): retry with
+      # conditional.x-compatible settings, and keep the result only if
+      # conditional.x is indeed TRUE
+      dotdotdot0$fixed.x <- NULL
+      dotdotdot0$gamma.unbiased <- FALSE
+      fit <- tryCatch(
+        do.call(cmd,
+          args = c(list(
+            model  = flat_model,
+            data   = data,
+            do.fit = FALSE
+          ), dotdotdot0)
+        ),
+        error = function(e) NULL
+      )
+      if (!is.null(fit) && !fit@Model@conditional.x) {
+        fit <- NULL # not the conditional.x situation: keep the original error
+      }
+    }
+    if (is.null(fit)) {
+      lav_msg_stop(gettextf(
+        "initial processing of the model failed: %s",
+        conditionMessage(fit0_error)))
+    }
+  }
 
   # restore options
 

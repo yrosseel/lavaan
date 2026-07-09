@@ -555,6 +555,11 @@ lav_pt_subset_sm <- function(pt_1 = NULL,
   # if meanstructure, 'free' user=0 intercepts
   if (meanstructure) {
     int_idx <- which(pt_1$op == "~1" & pt_1$user == 0L & pt_1$free == 0L)
+    if (conditional_x) {
+      # the moments of the exogenous covariates are not modeled under
+      # conditional.x: keep their intercepts fixed (exo)
+      int_idx <- int_idx[!pt_1$lhs[int_idx] %in% unlist(lavpta$vnames$ov.x)]
+    }
     if (length(int_idx) > 0L) {
       pt_1$free[int_idx] <- max(pt_1$free) + seq_along(int_idx)
       pt_1$ustart[int_idx] <- as.numeric(NA)

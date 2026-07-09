@@ -136,9 +136,11 @@ sam <- function(model = NULL,
   # check for gamma.unbiased
   if (is.null(dotdotdot$gamma.unbiased)) {
      # put in TRUE in dotdotdot # lavaan default is still FALSE
-     # but not for clustered data: the unbiased Gamma is not available there;
-     # the (biased) cluster-robust Gamma is used instead
-     dotdotdot$gamma.unbiased <- is.null(dotdotdot$cluster)
+     # but not for clustered data or conditional.x = TRUE: the unbiased Gamma
+     # is not available there; the (biased) cluster-robust/conditional Gamma
+     # is used instead
+     dotdotdot$gamma.unbiased <- is.null(dotdotdot$cluster) &&
+       !isTRUE(dotdotdot$conditional.x)
   }
 
 
@@ -445,9 +447,19 @@ sam <- function(model = NULL,
       pos[upper.tri(pos)] <- t(pos)[upper.tri(pos)]
       sub_pos <- pos[keep, keep, drop = FALSE]
       vech_keep <- sub_pos[lower.tri(sub_pos, diag = TRUE)]
-      # Gamma.eta row order per group is c(EETA (means), vech(VETA))
-      ge_keep <- if (meanstr) c(keep, p_full + vech_keep) else vech_keep
+      # Gamma.eta row order per group is c(EETA (means), vech(VETA));
+      # under conditional.x it is c(vecr(cbind(EETA, RS_eta)), vech(VETA)),
+      # i.e. (q+1) interleaved entries per variable, then vech(VETA)
       res_slopes_attr <- attr(step1$VETA, "res.slopes")
+      if (!is.null(res_slopes_attr)) {
+        q_x <- ncol(res_slopes_attr[[1]])
+        ge_mean <- unlist(lapply(keep, function(j) {
+          (j - 1L) * (q_x + 1L) + seq_len(q_x + 1L)
+        }))
+        ge_keep <- c(ge_mean, p_full * (q_x + 1L) + vech_keep)
+      } else {
+        ge_keep <- if (meanstr) c(keep, p_full + vech_keep) else vech_keep
+      }
       for (g in seq_along(step1$VETA)) {
         step1$VETA[[g]] <- step1$VETA[[g]][keep, keep, drop = FALSE]
         if (meanstr) {
@@ -466,6 +478,42 @@ sam <- function(model = NULL,
       if (!is.null(res_slopes_attr)) {
         attr(step1$VETA, "res.slopes") <- res_slopes_attr
       }
+    }
+  }
+
+  # conditional.x: permute Gamma.eta to the structural model's internal order.
+  # VETA/EETA are matched by name in the step-2 lavaan() call, but the NACOV
+  # is consumed as-is, and the structural model's internal variable order
+  # (y-variables first) generally differs from the measurement (VETA) order.
+  # The permutation mirrors the lav_pt_subset_sm() call of lav_sam_step2().
+  if (fit@Model@conditional.x &&
+      sam_method %in% c("local", "fsr", "cfsr") &&
+      !is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[1]])) {
+    perm_ok <- tryCatch({
+      struc_pt <- lav_pt_subset_sm(step1$PT, add_exo_cov = TRUE,
+                    fixed_x = fit@Options$fixed.x,
+                    conditional_x = TRUE,
+                    free_fixed_var = TRUE,
+                    meanstructure = fit@Options$meanstructure)
+      rs <- attr(step1$VETA, "res.slopes")
+      perm <- lav_sam_condx_perm_idx(
+        eta_names  = colnames(step1$VETA[[1]]),
+        x_names    = colnames(rs[[1]]),
+        target_eta = unique(unlist(lav_pt_vnames(struc_pt, type = "ov.nox"))),
+        target_x   = unique(unlist(lav_pt_vnames(struc_pt, type = "ov.x"))))
+      for (g in seq_along(step1$Gamma.eta)) {
+        step1$Gamma.eta[[g]] <- step1$Gamma.eta[[g]][perm, perm, drop = FALSE]
+      }
+      TRUE
+    }, error = function(e) FALSE)
+    if (!isTRUE(perm_ok)) {
+      if (se %in% c("local", "local.nt")) {
+        lav_msg_stop(gettextf(
+          "Gamma.eta (needed for se = %s) could not be aligned with the
+          structural model under conditional.x = TRUE.",
+          dQuote(se, q = FALSE)))
+      }
+      step1$Gamma.eta <- NULL # no corrected structural test
     }
   }
 

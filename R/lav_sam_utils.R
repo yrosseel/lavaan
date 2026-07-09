@@ -1330,6 +1330,36 @@ lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
   c(th_labels, var_labels, cor_labels)
 }
 
+# conditional.x: permutation of the conditional structural-moment vector
+# c( vecr(cbind(EETA, RS_eta)), vech(VETA) ) -- with the variables in
+# VETA (measurement) order and the covariates in data (ov.names.x) order --
+# to the structural model's internal order (target_eta = its ov.nox,
+# target_x = its ov.x). This is the layout of FIT.PA's WLS.obs: the NACOV
+# passed to lavaan() is consumed as-is (no name matching), so Gamma.eta must
+# be permuted with this index before the step-2 handoff.
+lav_sam_condx_perm_idx <- function(eta_names, x_names,
+                                   target_eta, target_x) {
+  ord <- match(target_eta, eta_names)
+  ord_x <- match(target_x, x_names)
+  if (length(ord) != length(eta_names) || anyNA(ord) ||
+      length(ord_x) != length(x_names) || anyNA(ord_x)) {
+    lav_msg_stop(gettext(
+      "internal error: unable to align the conditional structural moments
+      with the structural model (Gamma.eta permutation)"))
+  }
+  p <- length(eta_names)
+  q <- length(x_names)
+  mean_block <- unlist(lapply(ord, function(j) {
+    (j - 1L) * (q + 1L) + c(1L, 1L + ord_x)
+  }))
+  pos <- matrix(0L, p, p)
+  pos[lower.tri(pos, diag = TRUE)] <- seq_len(p * (p + 1L) / 2L)
+  pos[upper.tri(pos)] <- t(pos)[upper.tri(pos)]
+  sub <- pos[ord, ord, drop = FALSE]
+  vech_perm <- sub[lower.tri(sub, diag = TRUE)]
+  c(mean_block, p * (q + 1L) + vech_perm)
+}
+
 # merge the per-block mm clusters (as returned by lav_sam_get_mmlist())
 # into a single mm.list, transitively joining clusters that share a latent
 # variable or an observed indicator; needed for multilevel models, where
