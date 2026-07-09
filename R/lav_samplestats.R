@@ -1022,7 +1022,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           if (conditional_x && nexo > 0L) {
             pstar <- pstar + (nvar * nexo)
           }
-          if (nrow(x[[g]]) < pstar && estimator != "IV") {
+          # only when the (sample-based) ADF Gamma is computed below;
+          # the normal-theory Gamma has no such sample-size requirement
+          gamma_nt_flavor <- (!correlation &&
+            estimator %in% c("ULS", "DWLS") &&
+            "robust.sem.nt" %in% lavoptions$se)
+          if (nrow(x[[g]]) < pstar && estimator != "IV" &&
+              !gamma_nt_flavor) {
             if (ngroups > 1L) {
               lav_msg_warn(gettextf(
               "number of observations (%s) too small to compute Gamma",

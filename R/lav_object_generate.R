@@ -116,19 +116,17 @@ lav_object_baseline <- function(object = NULL,
       lavoptions$se <- "standard"
     }
   } else {
-    # 0.6-18: slower, but safer to just keep it
-
-    # 0.6-20 -- except if se = "bootstrap" -> "none"
-    if (lavoptions$se == "bootstrap") {
+    # the baseline standard errors are never used (only the baseline
+    # test statistics feed CFI/TLI and friends), so skip the vcov step
+    # (since 0.7-2); the scaled/robust tests recompute E.inv, Delta and
+    # WLS.V themselves when no vcov is available -- as has always been
+    # the case for se = "bootstrap", where the baseline was already
+    # fitted with se = "none" since 0.6-20
+    # exception: two.stage/robust.two.stage, where the scaled test
+    # reuses the two-stage vcov ingredients; keep se as-is there
+    if (!any(lavoptions$missing == c("two.stage", "robust.two.stage"))) {
       lavoptions$se <- "none"
     }
-
-    ## FIXME: if test = scaled, we need it anyway?
-    # if(lavoptions$missing %in% c("two.stage", "two.stage.robust")) {
-    # don't touch it
-    # } else {
-    #    lavoptions$se <- "none"
-    # }
   }
 
   # change options
