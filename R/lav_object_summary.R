@@ -224,6 +224,30 @@ lav_object_summary <- function(object, header = TRUE,
             )
         }
         res$test <- test
+      } else if (!identical(fit_measures, "none") &&
+                 !is.null(lav_sam_struc_object(object))) {
+        # 5c. local family + fit.measures: print the (structural) chi-square
+        # test statistic(s) as usual, instead of the one-line
+        # 'Summary Information Structural part:' (issue #517)
+        fit_pa <- lav_sam_struc_object(object)
+        test <- fit_pa@test
+        if (is.null(attr(test, "info"))) {
+          attr(test, "info") <-
+            list(
+              ngroups = fit_pa@Data@ngroups,
+              group.label = fit_pa@Data@group.label,
+              information = fit_pa@Options$information,
+              h1.information = fit_pa@Options$h1.information,
+              observed.information = fit_pa@Options$observed.information
+            )
+        }
+        # the header is printed before the test statistics, making clear
+        # that the model test (and the fit measures below it) concern the
+        # structural part only
+        attr(test, "header") <- gettext(
+          "Fit measures of the structural part (given the measurement model):")
+        res$test <- test
+        res$sam$sam.struc.fit <- NULL
       }
     } else {
       # SEM version
@@ -333,6 +357,11 @@ lav_object_summary <- function(object, header = TRUE,
        fit_measures = c(list(fit.measures = fit_measures), fm_args),
        baseline_model = baseline_model,
        h1_model = h1_model)
+      # local sam objects: the 'structural part' header is already printed
+      # once, before the test statistics (see res$test above)
+      if (!is.null(attr(res$test, "header"))) {
+        attr(fit, "header") <- NULL
+      }
       res$fit <- fit
     }
   }

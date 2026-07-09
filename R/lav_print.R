@@ -1271,16 +1271,25 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         }
       }
 
-      cat("\n")
-      cat("  Summary Information Structural part:\n\n")
-      tmp <- data.frame(as.list(sam_struc_fit))
-      class(tmp) <- c("lavaan.data.frame", "data.frame")
-      print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+      # skipped if fit.measures were requested: the (structural) test
+      # statistics and fit measures are printed in full further below
+      if (!is.null(sam_struc_fit)) {
+        cat("\n")
+        cat("  Summary Information Structural part:\n\n")
+        tmp <- data.frame(as.list(sam_struc_fit))
+        class(tmp) <- c("lavaan.data.frame", "data.frame")
+        print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+      }
     }
   }
 
   # test statistics
   if (!is.null(y$test)) {
+    # optional header (eg for local sam objects, where the model test and
+    # the fit measures concern the structural part only)
+    if (!is.null(attr(y$test, "header"))) {
+      cat("\n", attr(y$test, "header"), "\n", sep = "")
+    }
     cat("\n")
     lav_test_print(y$test, nd = nd)
   }
