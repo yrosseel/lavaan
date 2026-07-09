@@ -470,7 +470,48 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
   } else {
     trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
     fg <- unlist(nobs) / ntotal
-    if (satterthwaite || return_ugamma || return_u || !is.null(gamma_full)) {
+
+    # streamed version for diagonal weight matrices (DWLS/ULS): with
+    # U = V - V Delta E.inv t(Delta) V, both traces can be computed from
+    # WD_g = wls_v_g * Delta_g (pstar x npar) and (npar x npar)
+    # matrices, without ever forming the (pstar x pstar) U or
+    # U %*% Gamma:
+    #   tr(U Gamma) = sum_g [ sum(vd_g * diag(Gamma_g))
+    #                         - fg_g tr(E.inv B_g) ]
+    #   tr((U Gamma)^2) = t1 - 2 t2 + t3, with
+    #     t1 = sum_g t(vd_g) (Gamma_g * Gamma_g) vd_g
+    #     t2 = tr(E.inv sum_g fg_g t(GWD_g) (vd_g * GWD_g))
+    #     t3 = tr((E.inv C)^2),  C = sum_g fg_g B_g
+    #   where GWD_g = Gamma_g %*% WD_g and B_g = t(WD_g) GWD_g
+    # (this matters in the categorical setting, where pstar is large)
+    diag_v <- !any(vapply(wls_v, is.matrix, logical(1L)))
+    if (diag_v && !return_u && !return_ugamma && is.null(gamma_full)) {
+      npar_all <- NCOL(delta[[1]])
+      trace_ugamma_group <- numeric(ngroups)
+      t1 <- 0
+      m_t2 <- m_c <- matrix(0, npar_all, npar_all)
+      for (g in seq_len(ngroups)) {
+        vd <- wls_v[[g]]
+        gamma_g <- m_gamma[[g]]
+        wd <- vd * delta[[g]]
+        gwd <- gamma_g %*% wd
+        b_g <- crossprod(wd, gwd)
+        # tr(E.inv B): B is symmetric
+        trace_ugamma_group[g] <- sum(vd * diag(gamma_g)) -
+          fg[g] * sum(e_inv * b_g)
+        if (satterthwaite) {
+          t1 <- t1 + drop(crossprod(vd, (gamma_g * gamma_g) %*% vd))
+          m_t2 <- m_t2 + fg[g] * crossprod(gwd, vd * gwd)
+          m_c <- m_c + fg[g] * b_g
+        }
+      }
+      trace_ugamma <- sum(trace_ugamma_group)
+      if (satterthwaite) {
+        m_ec <- e_inv %*% m_c
+        trace_ugamma2 <- t1 - 2 * sum(e_inv * m_t2) + sum(m_ec * t(m_ec))
+      }
+    } else if (satterthwaite || return_ugamma || return_u ||
+               !is.null(gamma_full)) {
       # for trace.UGamma2, we can no longer compute the trace per group
       v_g <- wls_v
       for (g in 1:ngroups) {
