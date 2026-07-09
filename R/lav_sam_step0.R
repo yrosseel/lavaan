@@ -128,6 +128,13 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # do.fit
   fit@Options$do.fit <- TRUE
 
+  # conditional.x: the unbiased Gamma does not exist -- make sure no
+  # downstream fit (measurement blocks, structural part, lav_gamma_used())
+  # ever requests it (the sam() default is gamma.unbiased = TRUE)
+  if (fit@Model@conditional.x && isTRUE(fit@Options$gamma.unbiased)) {
+    fit@Options$gamma.unbiased <- FALSE
+  }
+
   # sample.icov
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     fit@Options$sample.icov <- TRUE
@@ -165,6 +172,17 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   pt_1$est <- pt_1$ustart
   if (any(pt_1$exo > 0L)) {
     pt_1$est[pt_1$exo > 0L] <- pt_1$start[pt_1$exo > 0L]
+  }
+  # thresholds: fill in the sample-based starting values. Thresholds of
+  # observed (dummy) variables that are not part of any measurement block
+  # (eg an ordered endogenous variable in the structural part) are never
+  # (re)estimated in step 1 or step 2 and keep these h1 values; leaving
+  # them NA breaks every computation that evaluates the joint model
+  # matrices (information, Gamma.eta) before the final assembly. Block
+  # thresholds are simply overwritten by the step-1 estimates.
+  th_idx <- which(pt_1$op == "|" & is.na(pt_1$est))
+  if (length(th_idx) > 0L) {
+    pt_1$est[th_idx] <- pt_1$start[th_idx]
   }
 
   # clear se values (needed here?) only for global approach to compute SE

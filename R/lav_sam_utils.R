@@ -1161,11 +1161,13 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
   # containers
   cov_list  <- vector("list", nblocks)
   ybar_list <- vector("list", nblocks)
+  slopes_list <- vector("list", nblocks)
 
   # label
   if (nblocks > 1L) {
     names(cov_list)  <- fit@Data@block.label
     names(ybar_list) <- fit@Data@block.label
+    names(slopes_list) <- fit@Data@block.label
   }
 
   # collect COV/YBAR per block
@@ -1218,6 +1220,7 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
       if (fit@Model@conditional.x) {
         ybar <- h1implied$res.int[[b]]
         cov_1  <- h1implied$res.cov[[b]]
+        slopes_list[[b]] <- h1implied$res.slopes[[b]]
       } else {
         ybar <- h1implied$mean[[b]] # EM version if missing="ml"
         cov_1  <- h1implied$cov[[b]]
@@ -1228,7 +1231,7 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
     ybar_list[[b]] <- ybar
   }
 
-  list(COV = cov_list, YBAR = ybar_list)
+  list(COV = cov_list, YBAR = ybar_list, SLOPES = slopes_list)
 }
 
 # automatically generate mm.list; we create measurement blocks so that:
@@ -1285,11 +1288,13 @@ lav_sam_get_mmlist <- function(lavobject) {
 }
 
 # labels for the elements of the WLS.obs statistics vector in the
-# categorical, conditional.x = FALSE case: 1) thresholds and (negative)
-# means, interleaved per variable, 2) variances (numeric variables only),
-# 3) correlations (vech, no diagonal); used to map the statistics of a
-# measurement block into the statistics vector of the joint model
-lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
+# categorical case: 1) thresholds and (negative) means, interleaved per
+# variable, 2) [conditional.x only] the slopes of the y-variables on the
+# exogenous covariates, column-major (lav_mat_vec(SLOPES): all y for x1,
+# then x2, ...), 3) variances (numeric variables only), 4) correlations
+# (vech, no diagonal); used to map the statistics of a measurement block
+# into the statistics vector of the joint model
+lav_sam_wls_obs_labels <- function(ov_names, th_idx, ov_names_x = NULL) {
   nvar <- length(ov_names)
 
   # variable of each th element: ordered variables have th_idx > 0; the
@@ -1305,6 +1310,13 @@ lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
     v <- v_of[k]
     count[v] <- count[v] + 1L
     th_labels[k] <- paste0(ov_names[v], "|t", count[v])
+  }
+
+  # slopes (conditional.x only), column-major over the nvar x nexo matrix
+  slope_labels <- character(0L)
+  if (length(ov_names_x) > 0L) {
+    slope_labels <- paste0(rep(ov_names, times = length(ov_names_x)), "~",
+                           rep(ov_names_x, each = nvar))
   }
 
   # variances (numeric variables only)
@@ -1327,7 +1339,7 @@ lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
     }, character(1L))
   }
 
-  c(th_labels, var_labels, cor_labels)
+  c(th_labels, slope_labels, var_labels, cor_labels)
 }
 
 # conditional.x: permutation of the conditional structural-moment vector

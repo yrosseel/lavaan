@@ -276,6 +276,9 @@ sam <- function(model = NULL,
     out <- lav_sam_get_cov_ybar(fit = fit, local_options = local_options)
     step1$COV  <- out$COV
     step1$YBAR <- out$YBAR
+    if (fit@Model@conditional.x) {
+      step1$SLOPES <- out$SLOPES # res.slopes of y on x
+    }
 
     # compute EETA/VETA
     step1 <- lav_sam_step1_local(

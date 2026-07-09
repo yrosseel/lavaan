@@ -113,11 +113,20 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   lavoptions_mm$baseline <- FALSE
   lavoptions_mm$bounds <- "wide.zerovar"
 
-  # ALWAYS conditional.x = FALSE!
-  # even if global model uses conditional.x = TRUE
-  # this should not affect the measurement models (if the covariates act on
-  # the structural part only)
-  lavoptions_mm$conditional.x <- FALSE
+  # conditional.x: for CONTINUOUS data the measurement models are always
+  # fitted unconditionally -- this does not affect the measurement parameters
+  # (if the covariates act on the structural part only). For CATEGORICAL
+  # data, however, the latent-response scale differs between the marginal
+  # (Var(y*) = 1) and the conditional (Var(y*|x) = 1) parameterization, and
+  # the marginal polychorics are misspecified when the covariates are
+  # non-normal (eg binary). The measurement blocks are then fitted on the
+  # same conditional scale as the joint model: conditional.x = TRUE, with
+  # saturated eta ~ x regressions (added via lav_pt_subset_mm() below).
+  if (fit@Model@categorical && lavoptions$conditional.x) {
+    lavoptions_mm$conditional.x <- TRUE
+  } else {
+    lavoptions_mm$conditional.x <- FALSE
+  }
 
   # override with user-specified mm.args
   lavoptions_mm <- modifyList(lavoptions_mm, mm_args)
@@ -162,6 +171,8 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       add_lv_cov = add_lv_cov,
       add_idx = TRUE,
       lv_names = mm_list[[mm]],
+      add_exo_reg = slot_options_mm$conditional.x,
+      ov_names_x = fit@pta$vnames$ov.x
     )
     mm_idx <- attr(ptm, "idx")
     attr(ptm, "idx") <- NULL
@@ -170,24 +181,43 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     block_mm_idx[[mm]] <- mm_idx
 
     # check for categorical in PTM in this mm-block
+    # (a fully continuous block is also fitted with conditional.x = TRUE
+    # when the joint model is categorical + conditional.x: its statistics
+    # must live in the same conditional space as the joint model)
     if (!any(ptm$op == "|")) {
       slot_options_mm$categorical <- FALSE
       slot_options_mm$.categorical <- FALSE
     }
 
     # update slot_data for this measurement block
+    # (under conditional.x, lavData keeps the exogenous covariates OUT of
+    # ov.names/X -- they live in ov.names.x/eXo -- so the block ov.names
+    # must be the indicators only)
     ov_names_block <- lapply(1:ngroups, function(g) {
-      unique(unlist(lav_pt_vnames(ptm, type = "ov", group = g)))
+      if (slot_options_mm$conditional.x) {
+        unique(unlist(lav_pt_vnames(ptm, type = "ov.nox", group = g)))
+      } else {
+        unique(unlist(lav_pt_vnames(ptm, type = "ov", group = g)))
+      }
     })
     slot_data_block <- lav_data_update_subset(fit@Data,
       ov_names = ov_names_block
     )
-    # get rid of ov.names.x
     if (!slot_options_mm$conditional.x) {
+      # get rid of ov.names.x
       slot_data_block@ov.names.x <-
         lapply(seq_len(nblocks), function(x) character(0L))
       slot_data_block@eXo <-
         lapply(seq_len(nblocks), function(x) NULL)
+    } else {
+      # keep ALL exogenous covariates for the conditional block
+      # (lav_data_update_subset() dropped them, as they are not part of
+      # ov_names_block); also restore their entries in the ov table
+      slot_data_block@ov.names.x <- fit@Data@ov.names.x
+      slot_data_block@eXo <- fit@Data@eXo
+      ov_keep_idx <- which(fit@Data@ov$name %in%
+        unique(c(unlist(ov_names_block), unlist(fit@Data@ov.names.x))))
+      slot_data_block@ov <- lapply(fit@Data@ov, "[", ov_keep_idx)
     }
 
     # if data.type == "moment", (re)create sample.cov and sample.nobs
@@ -213,7 +243,15 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     }
 
     # handle single block 1-factor CFA with (only) two indicators
-    if (length(unlist(ov_names_block)) == 2L && ngroups == 1L) {
+    # (under conditional.x the block variables include the exogenous
+    # covariates -- count the indicators only)
+    n_ind_block <- length(unlist(ov_names_block))
+    if (slot_options_mm$conditional.x) {
+      n_ind_block <- length(unlist(lapply(1:ngroups, function(g) {
+        unique(unlist(lav_pt_vnames(ptm, type = "ov.nox", group = g)))
+      })))
+    }
+    if (n_ind_block == 2L && ngroups == 1L) {
       lambda_idx <- which(ptm$op == "=~")
       # check if both factor loadings are fixed
       # (note: this assumes std.lv = FALSE)
