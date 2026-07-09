@@ -497,6 +497,11 @@ sam <- function(model = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     joint@optim <- step2$FIT.PA@optim
     joint@test <- step2$FIT.PA@test
+    # keep @Options$test consistent with the (structural) tests that ended up
+    # in @test, just like the global branch below does (the joint itself was
+    # fitted with test = "none")
+    joint@Options$test <- unname(vapply(joint@test, `[[`,
+                                        character(1L), "test"))
   } else {
     # global SAM: if requested (the default for sam.method = "global"), augment
     # the standard full-model test with the Yuan & Chan (2002) rescaled GLOBAL

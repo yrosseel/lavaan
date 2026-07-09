@@ -26,6 +26,27 @@ modindices <- function(object,
   # check object
   object <- lav_object_check_version(object)
 
+  # sam objects (issue #517)
+  if (!is.null(object@internal$sam.method)) {
+    if (lav_sam_local_flag(object)) {
+      # delegate to the stored step-2 structural fit: modification indices
+      # for a local SAM model concern the structural part only
+      fit_pa <- lav_sam_struc_object(object)
+      if (is.null(fit_pa)) {
+        lav_msg_stop(gettext(
+          "no stored structural fit found: this sam object was created by an
+           older version of lavaan; please rerun sam()."))
+      }
+      lav_msg_note(gettext(
+        "the modification indices are computed for the structural part only,
+         conditional on the (fixed) measurement model of step 1."))
+      object <- fit_pa
+    } else {
+      lav_msg_stop(gettext(
+        "modification indices are not available if sam.method = \"global\"."))
+    }
+  }
+
   # check if model has converged
   if (object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_warn(gettext("model did not converge"))

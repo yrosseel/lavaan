@@ -142,6 +142,49 @@ lav_fit <- function(object, fit_measures = "all",
   # check object
   object <- lav_object_check_version(object)
 
+  # sam objects (issue #517)
+  if (!is.null(object@internal$sam.method)) {
+    if (lav_sam_local_flag(object)) {
+      # delegate to the stored step-2 structural fit: the only meaningful
+      # fit measures for a local SAM model are those of the structural part,
+      # conditional on the (fixed) step-1 measurement model
+      fit_pa <- lav_sam_struc_object(object)
+      if (is.null(fit_pa)) {
+        lav_msg_stop(gettext(
+          "no stored structural fit found: this sam object was created by an
+           older version of lavaan; please rerun sam()."))
+      }
+      lav_msg_note(gettext(
+        "the fit measures are computed for the structural part only,
+         conditional on the (fixed) measurement model of step 1."))
+      if (missing(fm_args)) {
+        out <- lav_fit(
+          object = fit_pa, fit_measures = fit_measures,
+          baseline_model = baseline_model, h1_model = h1_model,
+          output = output
+        )
+      } else {
+        out <- lav_fit(
+          object = fit_pa, fit_measures = fit_measures,
+          baseline_model = baseline_model, h1_model = h1_model,
+          fm_args = fm_args, output = output
+        )
+      }
+      if (output %in% c("vector", "text")) {
+        attr(out, "header") <- gettext(
+          "Fit measures of the structural part (given the measurement model):")
+      }
+      return(out)
+    } else {
+      # sam.method = "global": the fit measures are computed from the joint
+      # model, but the parameters were estimated in two steps
+      lav_msg_warn(gettext(
+        "the parameters of this model were estimated using a two-step (sam)
+         procedure; the behavior of fit measures in this context has not
+         been studied, and they should be interpreted with caution."))
+    }
+  }
+
   # default fm_args
   default_fm_args <- list(
     standard.test = "default",
@@ -854,6 +897,12 @@ lav_fit_rv <- function(object, fit_measures = "all",
 lav_fitmeasures_print <- function(x, ..., nd = 3L, add_h0 = TRUE) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
+
+  # optional header (eg for sam objects, where the fit measures refer to the
+  # structural part only)
+  if (!is.null(attr(x, "header"))) {
+    cat("\n", attr(x, "header"), "\n", sep = "")
+  }
 
   names_x <- names(x)
 

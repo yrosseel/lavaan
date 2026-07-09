@@ -62,6 +62,14 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
   # check object
   object <- lav_object_check_version(object)
 
+  # sam objects: the score test needs the (joint) information/scores, which
+  # a two-step (sam) procedure does not provide (issue #517)
+  if (!is.null(object@internal$sam.method)) {
+    lav_msg_stop(gettext(
+      "lavTestScore() is not available for models fitted with sam();
+       consider modindices() to inspect the structural part."))
+  }
+
   if (!missing(warn)) {
     current_warn <- lav_warn()
     if (lav_warn(warn))

@@ -137,6 +137,14 @@ FMG p-values can be selected through the existing \code{standard.test}
 mechanism, for example
 \code{fitMeasures(fit, "pvalue", fm_args = list(standard.test = "peba4"))}.
 No separate FMG-specific fit-measure names are needed.
+
+For models fitted with \code{\link{sam}} using a local \code{sam.method}
+(\code{"local"}, \code{"fsr"} or \code{"cfsr"}), the fit measures are
+computed for the step-2 structural model only, conditional on the (fixed)
+measurement model of step 1; loglikelihood-based measures (aic, bic, ...)
+are not available. If \code{sam.method = "global"}, the fit measures are
+based on the joint model; since the parameters were estimated using a
+two-step procedure, they should be interpreted with caution.
 }
 \references{
 Brosseau-Liard, P. E., Savalei, V., & Li, L. (2012). An investigation of the

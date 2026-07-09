@@ -312,6 +312,11 @@ lav_object_summary <- function(object, header = TRUE,
     if (object@Data@data.type == "none") {
       lav_msg_warn(gettext(
         "fit measures not available if there is no data"))
+    } else if (lav_sam_local_flag(object) &&
+      is.null(lav_sam_struc_object(object))) {
+      lav_msg_warn(gettext(
+        "fit measures not available: this sam object was created by an
+         older version of lavaan; please rerun sam()"))
     } else if (length(object@Options$test) == 1L &&
       object@Options$test == "none" &&
       length(object@Model@rv.ov) == 0L &&
@@ -339,6 +344,23 @@ lav_object_summary <- function(object, header = TRUE,
     lav_msg_warn(gettext("residuals not available if model did not converge"))
     residuals <- FALSE
   }
+  # sam objects: warn-and-skip where lavResiduals() would stop (see the
+  # sam branch in lavResiduals())
+  if ((is.list(residuals) || isTRUE(residuals)) &&
+      !is.null(object@internal$sam.method)) {
+    if (lav_sam_local_flag(object) &&
+        is.null(lav_sam_struc_object(object))) {
+      lav_msg_warn(gettext(
+        "residuals not available: this sam object was created by an older
+         version of lavaan; please rerun sam()"))
+      residuals <- FALSE
+    } else if (!lav_sam_local_flag(object)) {
+      lav_msg_warn(gettext(
+        "residual summary statistics are not available if sam.method =
+        \"global\"; use residuals() to inspect the raw residuals"))
+      residuals <- FALSE
+    }
+  }
   if (is.list(residuals) || isTRUE(residuals)) {
     res_args <- if (is.list(residuals)) residuals else list()
     # defaults (overridable via the list form), matching lavResiduals()
@@ -357,10 +379,16 @@ lav_object_summary <- function(object, header = TRUE,
     res_list <- do.call(lavResiduals, res_args)
     res$residuals <- res_list
 
+    # for local sam objects, lavResiduals() delegated to the structural part
+    res_pt <- object@ParTable
+    if (lav_sam_local_flag(object)) {
+      res_pt <- lav_sam_struc_object(object)@ParTable
+    }
+
     # pre-build the text representation used by lav_summary_print()
     res_text <- lav_residuals_list_to_text(
       res_list, type = res_args$type,
-      nblocks = lav_pt_nblocks(object@ParTable), drop_single = TRUE,
+      nblocks = lav_pt_nblocks(res_pt), drop_single = TRUE,
       n_largest = res_args$n.largest, show_se = isTRUE(res_args$se),
       show_z = isTRUE(res_args$zstat), ci_level = res_args$usrmr.ci.level,
       combine = isTRUE(res_args$combine), do_summary = TRUE, do_largest = TRUE

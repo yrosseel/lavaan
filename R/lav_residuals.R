@@ -341,6 +341,33 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
                         ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
+
+  # sam objects (issue #517)
+  if (!is.null(object@internal$sam.method)) {
+    if (lav_sam_local_flag(object)) {
+      # delegate to the stored step-2 structural fit: the residuals of a
+      # local SAM model are the residuals of the structural part (the
+      # estimated latent moments vs the structural model)
+      fit_pa <- lav_sam_struc_object(object)
+      if (is.null(fit_pa)) {
+        lav_msg_stop(gettext(
+          "no stored structural fit found: this sam object was created by an
+           older version of lavaan; please rerun sam()."))
+      }
+      lav_msg_note(gettext(
+        "the residuals are computed for the structural part only (the
+         estimated latent moments), conditional on the (fixed) measurement
+         model of step 1."))
+      object <- fit_pa
+    } else {
+      lav_msg_stop(gettext(
+        "lavResiduals() is not available if sam.method = \"global\": the
+         standard errors of the residuals require an h1 ACOV that a two-step
+         (sam) procedure does not provide; use residuals() to inspect the
+         raw residuals."))
+    }
+  }
+
   # normalize output argument ("pretty" is an alias for "text")
   output <- tolower(output)[1]
   if (output == "pretty") {

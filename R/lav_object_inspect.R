@@ -664,6 +664,19 @@ lav_lavaan_lavinspect <- function(object,
     lav_inspect_sargan(object,
       drop_list_single_group = drop_list_single_group)
 
+    # sam: the stored step-2 structural fit (local sam.method only)
+  } else if (what %in% c("sam.struc.fit.object", "sam.struc")) {
+    if (is.null(object@internal$sam.method)) {
+      lav_msg_stop(gettext("this model was not fitted with sam()."))
+    }
+    fit_pa <- lav_sam_struc_object(object)
+    if (is.null(fit_pa)) {
+      lav_msg_stop(gettext(
+        "no stored structural fit found: either sam.method = \"global\" was
+         used, or this sam object was created by an older version of lavaan."))
+    }
+    fit_pa
+
     # post-checking
   } else if (what == "post.check" || what == "post") {
     lav_object_post_check(object)

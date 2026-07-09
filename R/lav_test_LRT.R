@@ -57,6 +57,46 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   # check models in dotdotdot
   dotdotdot[modp] <- lapply(dotdotdot[modp], lav_object_check_version)
 
+  # sam objects (issue #517): when comparing multiple models that were all
+  # fitted with sam() and a local sam.method, delegate to the stored step-2
+  # structural fits: the LRT then compares the structural parts, assuming
+  # identical (fixed) step-1 measurement models. (A single local sam object
+  # needs no special treatment: its @test slot already holds the structural
+  # test statistics.)
+  if (any(modp)) {
+    all_mods <- c(list(object), dotdotdot[modp])
+    local_flags <- vapply(all_mods, lav_sam_local_flag, logical(1L))
+    if (all(local_flags)) {
+      struc_list <- lapply(all_mods, lav_sam_struc_object)
+      if (any(vapply(struc_list, is.null, logical(1L)))) {
+        lav_msg_stop(gettext(
+          "no stored structural fit found for at least one model: sam
+           object(s) created by an older version of lavaan; please rerun
+           sam()."))
+      }
+      # the comparison only makes sense if the measurement part is the same
+      mm_1 <- all_mods[[1]]@internal$sam.mm.table
+      same_mm <- vapply(all_mods[-1], function(x) {
+        isTRUE(all.equal(x@internal$sam.mm.table, mm_1))
+      }, logical(1L))
+      if (!all(same_mm)) {
+        lav_msg_warn(gettext(
+          "the models do not share the same measurement blocks; the
+           chi-square difference test of the structural parts may not be
+           meaningful"))
+      }
+      lav_msg_note(gettext(
+        "the chi-square difference test compares the structural parts only,
+         conditional on identical (fixed) step-1 measurement models."))
+      object <- struc_list[[1]]
+      dotdotdot[modp] <- struc_list[-1]
+    } else if (any(local_flags)) {
+      lav_msg_stop(gettext(
+        "lavTestLRT() cannot compare a model fitted with sam() (using a
+         local sam.method) with other models."))
+    }
+  }
+
   # some general properties (taken from the first model)
   estimator <- object@Options$estimator
   ngroups <- object@Data@ngroups

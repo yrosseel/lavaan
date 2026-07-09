@@ -92,9 +92,31 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     Note that in the current implementation, all indicators of latent
     variables must be observed. As a result, second-order factor structures
     are not yet supported.
+
+    If \code{sam.method} is \code{"local"}, \code{"fsr"} or \code{"cfsr"},
+    the structural part of the model is fitted to the estimated latent
+    (co)variances (and means) from step 1. This step-2 structural model is
+    stored in the \code{@internal} slot of the returned object, and can be
+    retrieved by \code{lavInspect(fit, "sam.struc.fit.object")}. The
+    functions \code{\link{fitMeasures}} (and
+    \code{summary(fit, fit.measures = TRUE)}), \code{\link{lavResiduals}}
+    (and \code{summary(fit, residuals = TRUE)}), \code{\link{modindices}}
+    and \code{\link{lavTestLRT}} (when all compared models are local SAM
+    models) operate on this structural model: the reported quantities
+    describe the fit of the structural part only, conditional on the (fixed)
+    measurement model of step 1. When available, the reported (scaled) test
+    statistic and the robust fit measures are corrected for the estimation
+    of the measurement model in step 1.
+
+    If \code{sam.method} is \code{"global"}, the returned object is an
+    ordinary (joint) lavaan object, and \code{fitMeasures} returns the usual
+    fit measures of the joint model. Note, however, that the parameters were
+    estimated using a two-step procedure; the behavior of fit measures in
+    this setting has not been studied, and they should be interpreted with
+    caution.
 }
 \value{
-  If \code{output = "lavaan"}, an object of class 
+  If \code{output = "lavaan"}, an object of class
   \code{\linkS4class{lavaan}}, for which several methods
   are available, including a \code{summary} method. If \code{output = "list"},
   a list.

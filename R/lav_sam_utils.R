@@ -22,6 +22,19 @@ lav_sam_lvnames2 <- function(lv_names) {
   list(idx1 = idx1, idx2 = idx2, names = names2)
 }
 
+# is this a sam object created with sam.method = "local", "fsr" or "cfsr"?
+lav_sam_local_flag <- function(object) {
+  sam_method <- object@internal$sam.method
+  !is.null(sam_method) && sam_method %in% c("local", "fsr", "cfsr")
+}
+
+# the stored step-2 structural fit of a local SAM object (with the two-step
+# corrected test/baseline injected, if available); NULL for global sam
+# objects, and for sam objects created by older versions of lavaan
+lav_sam_struc_object <- function(object) {
+  object@internal$sam.struc.fit.object
+}
+
 # construct 'mapping matrix' M using either "ML", "GLS" or "ULS" method
 #
 # by construction, M %*% LAMBDA = I (the identity matrix)
@@ -706,7 +719,7 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
   joint
 }
 
-# (two-step robust) fit measures for the structural part of a local SAM model.
+# the (two-step robust) STRUCTURAL fit object of a local SAM model.
 #
 # The structural model FIT.PA is fitted with se = "robust.sem" using the
 # step-1 induced NACOV (Gamma.eta) of the latent (co)variances/means. Its
@@ -720,20 +733,12 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
 # step-1 variability couples the groups, so the relevant Gamma has nonzero
 # cross-group blocks (step1$Gamma.eta.full) that a per-group NACOV list cannot
 # represent. We then recompute the Satorra-Bentler scaled chi-square ourselves
-# -- for the model AND the baseline -- using that full Gamma, and read off the
-# robust fit measures.
-lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
-  measures <- c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")
-
-  fallback <- function() {
-    out <- try(fitMeasures(fit_pa, measures), silent = TRUE)
-    if (inherits(out, "try-error")) {
-      out <- "(unable to obtain fit measures)"
-      names(out) <- "warning"
-    }
-    out
-  }
-
+# -- for the model AND the baseline -- using that full Gamma.
+#
+# The corrected FIT.PA is stored in the @internal slot of the final sam
+# object (element sam.struc.fit.object), so that fitMeasures(), lavResiduals()
+# and modindices() can delegate to it (issue #517).
+lav_sam_struc_fit_object <- function(fit_pa = NULL, step1 = NULL) {
   # do we have a (local) Gamma.eta and a non-saturated structural model?
   have_gamma <- !is.null(step1$Gamma.eta) &&
     length(step1$Gamma.eta) > 0L && !is.null(step1$Gamma.eta[[1]])
@@ -742,15 +747,16 @@ lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
     !is.null(fit_pa@baseline$partable)
 
   if (!have_gamma || df_struc < 1L || !has_baseline) {
-    return(fallback())
+    return(fit_pa)
   }
 
   out <- try(
     {
-      ng <- fit_pa@Data@ngroups
-      ntot <- fit_pa@SampleStats@ntotal
-      fg <- unlist(fit_pa@SampleStats@nobs) / ntot
-      meanstr <- fit_pa@Model@meanstructure
+      fp <- fit_pa
+      ng <- fp@Data@ngroups
+      ntot <- fp@SampleStats@ntotal
+      fg <- unlist(fp@SampleStats@nobs) / ntot
+      meanstr <- fp@Model@meanstructure
 
       # full Gamma of the stacked structural statistics (cross-group blocks
       # for Case B; block-diagonal otherwise)
@@ -764,54 +770,78 @@ lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
 
       # model: Satorra-Bentler scaled test using the full Gamma
       test_model <- lav_test_sb(
-        lavobject = fit_pa, test = "satorra.bentler",
+        lavobject = fp, test = "satorra.bentler",
         gamma_full = gamma_all
       )
 
       # baseline: refit the independence model on the latent (co)variances,
       # then apply the same Satorra-Bentler correction with the full Gamma
       fit_base <- lavaan::lavaan(
-        model = fit_pa@baseline$partable,
+        model = fp@baseline$partable,
         sample.cov = step1$VETA,
         sample.mean = if (meanstr) step1$EETA else NULL,
-        sample.nobs = as.list(unlist(fit_pa@SampleStats@nobs)),
+        sample.nobs = as.list(unlist(fp@SampleStats@nobs)),
         nacov = step1$Gamma.eta,
-        slot_options = fit_pa@Options
+        slot_options = fp@Options
       )
       test_base <- lav_test_sb(
         lavobject = fit_base, test = "satorra.bentler",
         gamma_full = gamma_all
       )
 
-      # inject the corrected scaled tests, then read the robust fit measures
-      fit_pa@test[["satorra.bentler"]] <- test_model[["satorra.bentler"]]
-      base_idx <- which(vapply(fit_pa@baseline$test,
+      # inject the corrected scaled tests
+      fp@test[["satorra.bentler"]] <- test_model[["satorra.bentler"]]
+      base_idx <- which(vapply(fp@baseline$test,
         function(x) x$test, character(1L)) == "satorra.bentler")
       if (length(base_idx) > 0L) {
-        fit_pa@baseline$test[[base_idx[1]]] <- test_base[["satorra.bentler"]]
+        fp@baseline$test[[base_idx[1]]] <- test_base[["satorra.bentler"]]
       }
-
-      # use the fitMeasures() labels for the SCALED/ROBUST measures, so the
-      # printed header makes clear these are the two-step corrected values
-      # (chisq.scaled / pvalue.scaled / cfi.robust / rmsea.robust), exactly as
-      # fitMeasures() reports them. (The naive fallback() above keeps the plain
-      # chisq/pvalue/cfi/rmsea labels.)
-      scaled_labels <- c(
-        "chisq.scaled", "df", "pvalue.scaled",
-        "cfi.robust", "rmsea.robust", "srmr"
-      )
-      fm <- fitMeasures(fit_pa, scaled_labels)
-      fm <- as.numeric(fm)
-      names(fm) <- scaled_labels
-      fm
+      fp@external$sam.struc.corrected <- TRUE
+      fp
     },
     silent = TRUE
   )
 
   if (inherits(out, "try-error")) {
-    return(fallback())
+    return(fit_pa) # the untouched original
   }
   out
+}
+
+# (two-step robust) fit measures for the structural part of a local SAM model,
+# extracted from the (corrected) structural fit object
+lav_sam_struc_fit <- function(fit_pa = NULL) {
+  measures <- c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")
+
+  fallback <- function() {
+    out <- try(fitMeasures(fit_pa, measures), silent = TRUE)
+    if (inherits(out, "try-error")) {
+      out <- "(unable to obtain fit measures)"
+      names(out) <- "warning"
+    }
+    out
+  }
+
+  if (!isTRUE(fit_pa@external$sam.struc.corrected)) {
+    return(fallback())
+  }
+
+  # use the fitMeasures() labels for the SCALED/ROBUST measures, so the
+  # printed header makes clear these are the two-step corrected values
+  # (chisq.scaled / pvalue.scaled / cfi.robust / rmsea.robust), exactly as
+  # fitMeasures() reports them. (The naive fallback() above keeps the plain
+  # chisq/pvalue/cfi/rmsea labels.)
+  scaled_labels <- c(
+    "chisq.scaled", "df", "pvalue.scaled",
+    "cfi.robust", "rmsea.robust", "srmr"
+  )
+  fm <- try(fitMeasures(fit_pa, scaled_labels), silent = TRUE)
+  if (inherits(fm, "try-error")) {
+    return(fallback())
+  }
+  fm <- as.numeric(fm)
+  names(fm) <- scaled_labels
+  fm
 }
 
 # Yuan & Chan (2002) rescaled GLOBAL test statistic for sam.method = "global".
@@ -1055,15 +1085,23 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
 
   # extra info for @internal slot
   if (sam_method %in% c("local", "fsr", "cfsr")) {
-    # (two-step robust) fit measures for the structural part; for multigroup
-    # models with across-group measurement constraints (Case B) these are
-    # recomputed with the full cross-group Gamma
-    sam_struc_fit <- lav_sam_struc_fit(fit_pa = fit_pa, step1 = step1)
+    # the structural fit object, with the (two-step robust) corrected test
+    # and baseline injected; for multigroup models with across-group
+    # measurement constraints (Case B) these are recomputed with the full
+    # cross-group Gamma. The object is stored in the @internal slot, so that
+    # fitMeasures(), lavResiduals() and modindices() can delegate to it
+    # (issue #517)
+    sam_struc_fit_object <- lav_sam_struc_fit_object(
+      fit_pa = fit_pa, step1 = step1
+    )
+    # (two-step robust) fit measures for the structural part
+    sam_struc_fit <- lav_sam_struc_fit(fit_pa = sam_struc_fit_object)
     sam_mm_rel <- step1$REL
   } else {
     sam_struc_fit <- paste0("no local fit measures available for",
                     "structural part if sam.method is global")
     names(sam_struc_fit) <- "warning"
+    sam_struc_fit_object <- NULL
     sam_mm_rel <- numeric(0L)
   }
 
@@ -1084,6 +1122,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     sam.struc.estimator = fit_pa@Model@estimator,
     sam.struc.args = struc_args,
     sam.struc.fit = sam_struc_fit,
+    sam.struc.fit.object = sam_struc_fit_object,
     sam.lavoptions = lavoptions
   )
   sam_1

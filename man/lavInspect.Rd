@@ -504,6 +504,13 @@ Miscellaneous:
         data. \code{"hansen"} is an alias. Only available when
         \code{estimator = "IV"}. In the case of multiple groups: a list of
         data.frames.}
+    \item{\code{"sam.struc.fit.object"}:}{The (internal) step-2 structural
+        model of a model fitted with \code{\link{sam}} using a local
+        \code{sam.method} (\code{"local"}, \code{"fsr"} or \code{"cfsr"}):
+        a lavaan object, fitted to the estimated latent (co)variances (and
+        means) of step 1. \code{fitMeasures()}, \code{lavResiduals()} and
+        \code{modindices()} operate on this object when they are called with
+        the sam object itself. \code{"sam.struc"} is an alias.}
     \item{\code{"version"}:}{The lavaan version number that was used to
         construct the fitted lavaan object.}
 }
