@@ -22,9 +22,9 @@
 #                           method="satorra.bentler.2001/2010"
 
 
-lavTestLRT <- function(object, ..., method = "default", test = "default",   # nolint start
+lavTestLRT <- function(object, ..., method = "default", test = "default",   # nolint
                        a_method = "delta", scaled_shifted = TRUE, # only when method="Satorra.2000"
-                       type = "Chisq", model_names = NULL) {                # nolint end
+                       type = "Chisq", model_names = NULL) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
   type <- tolower(type[1])

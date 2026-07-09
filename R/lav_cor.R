@@ -24,7 +24,7 @@ lav_object_cor <- function(object,
                    cor_smooth_tol = 1e-04, # was 1e-06 in <0.6-14
                    output = "cor") {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
   # shortcut if object = lavaan object
   if (inherits(object, "lavaan")) {
     # check object

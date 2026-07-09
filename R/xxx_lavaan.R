@@ -54,7 +54,7 @@ lavaan <- function(
     # options (dotdotdot)
     ...) {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
   # start timer
   start_time0 <- proc.time()[3]
   timing <- list()

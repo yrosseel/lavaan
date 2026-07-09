@@ -30,7 +30,7 @@ sam <- function(model = NULL,
                 output = "lavaan",
                 bootstrap_args = bootstrap) {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
 
   # auxiliary variables: forward via dotdotdot, so they reach the
   # underlying measurement-block (and structural) lavaan() calls
