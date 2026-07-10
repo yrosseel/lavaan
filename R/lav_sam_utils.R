@@ -710,9 +710,39 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
   # set ustart values
   pt_1$ustart <- pt_1$est # as this is used if optim.method == "none"
 
+  # the step-0 dummy fit of the local methods skips the inverse of S
+  # (sample.icov = FALSE: the inverse may not exist when N < nvar), but the
+  # joint-model computations of some estimators need S^-1 (eg the GLS
+  # information/objective). Backfill it here when it is missing; if S cannot
+  # be inverted it simply stays missing, exactly as before.
+  lavsamplestats_joint <- fit@SampleStats
+  if (fit@Data@nlevels == 1L && !fit@Model@categorical &&
+      !lavsamplestats_joint@missing.flag) { # core lavaan skips icov for
+                                            # missing = "ml" on purpose
+    for (g in seq_len(lavsamplestats_joint@ngroups)) {
+      if (is.null(lavsamplestats_joint@icov[[g]]) &&
+          !is.null(lavsamplestats_joint@cov[[g]])) {
+        # quietly: the inverse is optional here (only some estimators need
+        # it), so a non-PD S must not surface a warning at this point
+        current_warn <- lav_warn()
+        lav_warn(FALSE)
+        out <- try(lav_samp_icov(
+          cov_1 = lavsamplestats_joint@cov[[g]], ridge = 1e-05,
+          x_idx = lavsamplestats_joint@x.idx[[g]],
+          ngroups = fit@Data@ngroups, g = g
+        ), silent = TRUE)
+        lav_warn(current_warn)
+        if (!inherits(out, "try-error")) {
+          lavsamplestats_joint@icov[[g]] <- out$icov
+          lavsamplestats_joint@cov.log.det[[g]] <- out$cov.log.det
+        }
+      }
+    }
+  }
+
   joint <- lavaan::lavaan(pt_1,
     slot_options = lavoptions_joint,
-    slot_sample_stats = fit@SampleStats,
+    slot_sample_stats = lavsamplestats_joint,
     slot_data = fit@Data,
     verbose = FALSE
   )
@@ -1050,24 +1080,33 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   # scaled test while its baseline does not).
   baseline_test <- NULL
   if (!is.null(joint@baseline$partable)) {
-    baseline_test <- try(
-      {
-        opts <- fit@Options
-        opts$se       <- "none"
-        opts$test     <- test
-        opts$baseline <- FALSE
-        opts$estimator <- joint@Model@estimator
-        fit_base <- lavaan::lavaan(
-          model             = joint@baseline$partable,
-          slot_data         = joint@Data,
-          slot_sample_stats = joint@SampleStats,
-          slot_options      = opts,
-          verbose           = FALSE
-        )
-        rename_yc(fit_base@test)
-      },
-      silent = TRUE
-    )
+    refit_baseline <- function(gamma_unbiased = NULL) {
+      opts <- fit@Options
+      opts$se       <- "none"
+      opts$test     <- test
+      opts$baseline <- FALSE
+      opts$estimator <- joint@Model@estimator
+      if (!is.null(gamma_unbiased)) {
+        opts$gamma.unbiased <- gamma_unbiased
+      }
+      fit_base <- lavaan::lavaan(
+        model             = joint@baseline$partable,
+        slot_data         = joint@Data,
+        slot_sample_stats = joint@SampleStats,
+        slot_options      = opts,
+        verbose           = FALSE
+      )
+      rename_yc(fit_base@test)
+    }
+    baseline_test <- try(refit_baseline(), silent = TRUE)
+    if (inherits(baseline_test, "try-error")) {
+      # the unbiased ADF Gamma (the sam default) is not available for eg
+      # fixed.x models: retry with the biased ADF Gamma, exactly as the
+      # model test above does (lav_gamma_used() fallback). Without a scaled
+      # baseline the scaled/robust incremental fit measures would be NA.
+      baseline_test <- try(refit_baseline(gamma_unbiased = FALSE),
+                           silent = TRUE)
+    }
     if (inherits(baseline_test, "try-error")) {
       baseline_test <- NULL
     }

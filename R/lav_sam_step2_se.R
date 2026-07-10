@@ -347,8 +347,15 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     if (nrow(fit_pa@Model@con.jac) > 0L) {
       n_jac_cols <- ncol(fit_pa@Model@con.jac)
       n_step2 <- length(step2_free_idx)
-      if (n_jac_cols > n_step2) {
-        aug_rm_idx <- union(step2_rm_idx, (n_step2 + 1):n_jac_cols)
+      # 'extra' FIT.PA parameters that are not free in the JOINT model are
+      # already in step2_rm_idx; only columns BEYOND n_step2 + those extras
+      # are rotation-identification columns that must be removed in
+      # addition. (Comparing n_jac_cols against n_step2 alone wrongly
+      # trimmed legitimate constraint columns whenever FIT.PA had extra
+      # parameters, eg multigroup group.equal = "regressions".)
+      n_expected <- n_step2 + length(step2_rm_idx)
+      if (n_jac_cols > n_expected) {
+        aug_rm_idx <- union(step2_rm_idx, (n_expected + 1):n_jac_cols)
       }
     }
     i_22_inv <-

@@ -78,7 +78,9 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
 \item{bootstrap}{List. Only used when \code{se = "bootstrap"}. Typical
      elements of this list are \code{R}: the number of bootstrap samples, and
      \code{type}, which can be set to \code{"ordinary"} (the default) or
-     \code{"parametric"}.}
+     \code{"parametric"}. A single number is also accepted (as in
+     \code{sem()}) and is interpreted as \code{R}, the number of bootstrap
+     draws.}
 \item{output}{Character. If \code{"lavaan"}, a lavaan object is returned. If
     \code{"list"}, a list is returned with all the ingredients from the 
     different stages.}

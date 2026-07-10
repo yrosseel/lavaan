@@ -92,15 +92,17 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     # the data contains a cluster variable
     clustered_flag <- fit@Data@nlevels == 1L && length(fit@Data@cluster) > 0L
     # categorical?
-    if (fit@Model@categorical) {
+    # (PML first: it is a categorical estimator, but se = "robust.sem" is
+    # not valid for PML -- it needs the huber-white sandwich)
+    if (lavoptions$estimator.orig == "PML") {
+      lavoptions_mm$se <- "robust.huber.white"
+    } else if (fit@Model@categorical) {
       lavoptions_mm$se <- "robust.sem"
     } else if (lavoptions$estimator.orig == "MLM") {
       lavoptions_mm$se <- "robust.sem"
     } else if (lavoptions$estimator.orig == "MLR") {
       lavoptions_mm$se <- if (clustered_flag) "robust.cluster"
                           else "robust.huber.white"
-    } else if (lavoptions$estimator.orig == "PML") {
-      lavoptions_mm$se <- "robust.huber.white"
     } else if (clustered_flag) {
       lavoptions_mm$se <- "robust.cluster"
     } else {
@@ -296,6 +298,26 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
         lav_msg_view(mm_list[[mm]], "none")))
     }
 
+    # check that this measurement block is identified on its own: in the
+    # SAM approach every block is estimated in isolation, so a block with
+    # more free parameters than sample statistics (negative degrees of
+    # freedom) cannot be estimated, even if the full (joint) model is
+    # identified (eg a factor with three indicators plus a residual
+    # covariance between two of them). Without this check the block fit
+    # produces garbage and downstream computations fail cryptically.
+    blk_df <- fit_mm_block@test[[1]]$df
+    if (!is.null(blk_df) && !is.na(blk_df) && blk_df < 0L) {
+      lav_msg_stop(gettextf(
+        "measurement block %1$s is not identified on its own: it has more
+         free parameters than sample statistics (df = %2$d). The SAM
+         approach estimates each measurement block in isolation, so every
+         block must be identified by itself, even if the full model is
+         identified. Consider simplifying the measurement block (eg
+         removing residual covariances), combining blocks via mm.list, or
+         using sem() instead.",
+        lav_msg_view(mm_list[[mm]], "none"), blk_df))
+    }
+
     # store fitted measurement model
     mm_fit[[mm]] <- fit_mm_block
 
@@ -342,6 +364,18 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
       # fill in variance matrix for this measurement block
       sigma_11 <- mm_fit[[mm]]@vcov$vcov
+      if (is.null(sigma_11)) {
+        # the block vcov could not be computed (eg the block information
+        # matrix could not be inverted, typically an identification issue
+        # that the df >= 0 check above cannot catch)
+        lav_msg_stop(gettextf(
+          "the variance matrix of measurement block %s could not be
+           computed (its information matrix could not be inverted); the
+           block may not be identified on its own (empirically). Consider
+           simplifying the measurement block, combining blocks via
+           mm.list, or using sem() instead.",
+          lav_msg_view(mm_list[[mm]], "none")))
+      }
       keep_idx <- ptm_free[ptm_idx]
       sigma_11_1[par_idx, par_idx] <-
         sigma_11[keep_idx, keep_idx, drop = FALSE]

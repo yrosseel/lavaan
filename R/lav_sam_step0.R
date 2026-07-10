@@ -19,6 +19,14 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
     model = model, dotdotdot_parser = useparser
   )
 
+  # composites (<~) have no reflective measurement model, so there is no
+  # measurement block that step 1 could estimate in isolation
+  if (any(flat_model$op == "<~")) {
+    lav_msg_stop(gettext(
+      "composites (defined by the <~ operator) are not supported by the
+       SAM approach (yet); consider using sem() instead."))
+  }
+
   # remove do.fit option if present
   dotdotdot0$do.fit <- NULL
 
@@ -141,6 +149,23 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   }
 
   # se
+  # PML: the two-step (robust) corrections need ingredients (eg the h1
+  # information, the block influence P) that are not available for the
+  # pairwise likelihood; only the naive (structural-fit) standard errors
+  # can be computed, and only for the local methods
+  if (identical(fit@Options$estimator.orig, "PML")) {
+    if (sam_method == "global") {
+      lav_msg_stop(gettext(
+        "sam(sam.method = \"global\") does not support estimator PML (yet);
+         use sam.method = \"local\" or sem() instead."))
+    }
+    if (se %in% c("twostep", "twostep.robust", "local", "local.nt")) {
+      lav_msg_warn(gettextf(
+        "se = \"%s\" is not available (yet) for estimator PML; naive
+         standard errors are reported instead.", se))
+      se <- "naive"
+    }
+  }
   if (fit@Model@categorical && se == "twostep") {
     # for categorical data, the classic ('global') two-step correction uses
     # the model-based information matrix, which underestimates the standard

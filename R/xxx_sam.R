@@ -47,6 +47,16 @@ sam <- function(model = NULL,
       "'bootstrap_args' is deprecated; please use 'bootstrap' instead."))
     bootstrap <- bootstrap_args
   }
+  # plugin compatibility with sem()/cfa(): bootstrap = <number of draws>
+  if (!is.list(bootstrap) && is.numeric(bootstrap) &&
+      length(bootstrap) == 1L && is.finite(bootstrap)) {
+    bootstrap <- list(R = as.integer(bootstrap))
+  }
+  if (!is.list(bootstrap)) {
+    lav_msg_stop(gettext(
+      "the bootstrap= argument must be a list (eg list(R = 1000L)) or a
+       single number (the number of bootstrap draws)."))
+  }
 
   # check model= argument
   has_sam_object_flag <- FALSE
@@ -116,12 +126,25 @@ sam <- function(model = NULL,
       se <- "twostep.robust"
     } else if (se %in% c("ij", "local")) {
       se <- "local"
+    } else if (se %in% c("robust", "robust.sem", "robust.huber.white",
+                         "robust.cluster", "robust.cluster.sem")) {
+      # plugin compatibility with sem()/cfa(): map the robust se= variants
+      # to the SAM analogue (the robust two-step correction); clustering is
+      # picked up automatically when cluster= is set
+      lav_msg_note(gettextf(
+        "se = \"%s\" is not a sam() option; using the SAM analogue
+         se = \"twostep.robust\" instead.", se))
+      se <- "twostep.robust"
     }
     # check if valid
     if (!se %in% c("standard", "naive", "twostep", "local", "local.nt",
                    "twostep.robust", "bootstrap", "none")) {
-      lav_msg_stop(gettext(
-        "se= argument must be twostep, twostep.robust, bootstrap, or local"))
+      lav_msg_stop(gettextf(
+        "invalid se= argument (%1$s) for sam(); valid options are %2$s.",
+        se,
+        lav_msg_view(c("twostep", "twostep.robust", "local", "local.nt",
+                       "naive", "standard", "bootstrap", "none"),
+                     log_sep = "or")))
     }
     # check for local
     if (se %in% c("local", "local.nt")) {
@@ -672,6 +695,21 @@ sam <- function(model = NULL,
     if (lavoptions$se == "bootstrap") {
       joint@vcov$vcov <- vcov_1$VCOV
     } else {
+      # sanity check: the step-2 vcov must match the number of structural
+      # parameters; a mismatch means the structural vcov could not be
+      # computed properly (typically an identification problem that
+      # slipped through, eg an empirically under-identified structural
+      # part) -- give a clear error instead of a cryptic assignment
+      # failure
+      n2 <- length(step2$step2.free.idx)
+      if (is.null(vcov_1$VCOV) || is.null(dim(vcov_1$VCOV)) ||
+          !all(dim(vcov_1$VCOV) == c(n2, n2))) {
+        lav_msg_stop(gettext(
+          "the variance matrix of the structural (step 2) parameters could
+           not be computed; the structural part may not be identified given
+           the (fixed) measurement part. Consider simplifying the
+           structural part, or using sem() instead."))
+      }
       joint@vcov$vcov[step2$step2.free.idx, step2$step2.free.idx] <- vcov_1$VCOV
     }
 

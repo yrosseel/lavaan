@@ -65,6 +65,12 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     lavoptions_pa$missing <- "listwise"
     lavoptions_pa$sample.cov.rescale <- FALSE
     lavoptions_pa$loglik <- FALSE
+    # first.order information (eg estimator = "MLF") needs raw data, which
+    # the structural fit does not have (it is fitted from the estimated
+    # latent moments VETA/EETA only); use the expected information instead
+    if (any(lavoptions_pa$information == "first.order")) {
+      lavoptions_pa$information <- rep.int("expected", 2L)
+    }
   } else {
     lavoptions_pa$h1 <- FALSE
     lavoptions_pa$loglik <- FALSE
@@ -239,6 +245,25 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   }
   if (lav_verbose()) {
     cat("Fitting the structural part ... done.\n")
+  }
+
+  # check that the structural part is identified from the latent moments
+  # alone: in the SAM approach the structural model is estimated from the
+  # (estimated) latent variable moments, so it cannot borrow identification
+  # from the measurement part (eg a non-recursive system without
+  # instruments may 'fit' in sem() but has more structural parameters than
+  # latent moments). Without this check the step-2 vcov machinery fails
+  # cryptically further down.
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
+    pa_df <- fit_pa@test[[1]]$df
+    if (!is.null(pa_df) && !is.na(pa_df) && pa_df < 0L) {
+      lav_msg_stop(gettextf(
+        "the structural part of the model is not identified: it has more
+         free parameters than there are (estimated) latent variable moments
+         (df = %d). In the SAM approach the structural model must be
+         identified from the latent variable moments alone. Consider
+         simplifying the structural part, or using sem() instead.", pa_df))
+    }
   }
 
   # which parameters from PTS do we wish to fill in:
