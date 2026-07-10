@@ -422,8 +422,12 @@ lav_options_default <- function() {
     "default", "structured", "unstructured"))
 
   # information for 'Omega' (yuan-benter test only)
+  # ("first.order" is what omega.information becomes when information[2] is
+  #  "first.order", eg estimator = "MLF"; it must be accepted here so that
+  #  already-processed options can be fed back into lav_options_set(), as
+  #  sam() does)
   elm("omega.information", "default", chr = c(
-    "default", "expected", "observed"
+    "default", "expected", "observed", "first.order"
   ))
   elm("omega.h1.information", "default", chr = c(
     "default", "structured", "unstructured"

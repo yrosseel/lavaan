@@ -136,8 +136,14 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
       "nonlinear constraints not supported (yet) with optim.method = \"GN\"."))
   }
 
-  # no support (yet) for inequality constraints
-  if (!is.null(body(lavmodel@cin.function))) {
+  # no support (yet) for general inequality constraints. Simple ones are
+  # fine: when cin.simple.only is TRUE, every inequality constraint (and
+  # every bounds= bound, which is encoded as a cin.function too) has been
+  # lowered into the lower/upper columns of the parameter table, which the
+  # Gauss-Newton iterations below honor natively. Without this exception,
+  # bounds= (any value) made estimation fail for optim.method = "gn" (eg
+  # estimator = "DLS").
+  if (!is.null(body(lavmodel@cin.function)) && !lavmodel@cin.simple.only) {
     lav_msg_stop(gettext(
       "inequality constraints not supported (yet) with optim.method = \"GN\"."))
   }

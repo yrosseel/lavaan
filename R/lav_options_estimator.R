@@ -128,7 +128,7 @@ lav_options_est_gls <- function(opt) {
 lav_options_est_ntrls <- function(opt) {
   # NTRLS (experimental)                                           ####
   # optim.gradient
-  opt$optim.gradien <- "numerical"
+  opt$optim.gradient <- "numerical"
   # se
   if (opt$se == "default") {
     opt$se <- "standard"

@@ -472,16 +472,26 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
 
   # baseline_test_idx
   baseline_test_idx <- which(names(baseline_test) == standard_test)[1]
+  baseline_scaled_ok <- FALSE
   if (scaled_flag) {
     baseline_scaled_idx <- which(names(baseline_test) == scaled_test)[1]
+    # the baseline model may lack the scaled test entry (eg a user-provided
+    # baseline model that was fitted without the scaled test, or a baseline
+    # that could not be refitted with the scaled test): degrade to NA for
+    # the scaled/robust baseline quantities instead of failing
+    baseline_scaled_ok <- !is.na(baseline_scaled_idx)
   }
 
   if (!is.null(baseline_test)) {
     x2_null <- baseline_test[[baseline_test_idx]]$stat
     df_null <- baseline_test[[baseline_test_idx]]$df
     if (scaled_flag) {
-      x2_null_scaled <- baseline_test[[baseline_scaled_idx]]$stat
-      df_null_scaled <- baseline_test[[baseline_scaled_idx]]$df
+      if (baseline_scaled_ok) {
+        x2_null_scaled <- baseline_test[[baseline_scaled_idx]]$stat
+        df_null_scaled <- baseline_test[[baseline_scaled_idx]]$df
+      } else {
+        x2_null_scaled <- df_null_scaled <- as.numeric(NA)
+      }
     }
     if (robust_flag) {
       xx3_null <- x2_null
@@ -505,6 +515,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
       } else if (fiml_flag) {
         xx3_null <- fiml$XX3.null
         c_hat_null <- fiml$c.hat3.null
+      } else if (!baseline_scaled_ok) {
+        c_hat_null <- as.numeric(NA)
       } else if (scaled_test == "scaled.shifted") {
         # compute c.hat from a and b
         a_null <-
@@ -538,10 +550,15 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
     if (scaled_flag) {
       indices["baseline.chisq.scaled"] <- x2_null_scaled
       indices["baseline.df.scaled"] <- df_null_scaled
-      indices["baseline.pvalue.scaled"] <-
-        baseline_test[[baseline_scaled_idx]]$pvalue
-      indices["baseline.chisq.scaling.factor"] <-
-        baseline_test[[baseline_scaled_idx]]$scaling.factor
+      if (baseline_scaled_ok) {
+        indices["baseline.pvalue.scaled"] <-
+          baseline_test[[baseline_scaled_idx]]$pvalue
+        indices["baseline.chisq.scaling.factor"] <-
+          baseline_test[[baseline_scaled_idx]]$scaling.factor
+      } else {
+        indices["baseline.pvalue.scaled"] <- as.numeric(NA)
+        indices["baseline.chisq.scaling.factor"] <- as.numeric(NA)
+      }
     }
   }
 
