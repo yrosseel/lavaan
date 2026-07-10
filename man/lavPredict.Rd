@@ -39,7 +39,10 @@ variables provided by the \code{eta} argument.}
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
 the Empirical Bayes Modal approach, and \code{"ML"} for the maximum
-likelihood approach.}
+likelihood approach. For higher-order factors (which have no observed
+indicators of their own), the \code{"Bartlett"} scores are computed from the
+collapsed measurement model (regressing the observed indicators of the
+lower-order factors on the higher-order factors), as in \code{\link{sam}}.}
 \item{transform}{Logical. If \code{TRUE}, transform the factor scores (per
 group) so that their mean and variance-covariance matrix matches the
 model-implied mean and variance-covariance matrix. This may be useful if the
