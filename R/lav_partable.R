@@ -42,6 +42,7 @@ lav_model_pt  <- function(
                           auto_fix_single = FALSE,
                           auto_var = FALSE,
                           auto_cov_lv_x = FALSE,
+                          auto_cov_x = FALSE,
                           auto_cov_y = FALSE,
                           auto_th = FALSE,
                           auto_delta = FALSE,
@@ -149,6 +150,7 @@ lav_model_pt  <- function(
   # }
 
   # auto=TRUE?
+  auto_cov_x_explicit <- auto_cov_x # was auto.cov.x requested explicitly?
   if (auto) { # mimic sem/cfa auto behavior
     if (model_type == "sem") {
       int_ov_free <- TRUE
@@ -172,6 +174,24 @@ lav_model_pt  <- function(
       auto_th <- TRUE
       auto_delta <- TRUE
       auto_efa <- TRUE
+    }
+  }
+
+  # auto.cov.x implies auto.cov.lv.x; but the covariances between the
+  # exogenous latent variables and the observed exogenous covariates cannot
+  # be represented if conditional.x = TRUE (the covariates are conditioned
+  # out); in that case, auto.cov.x is switched off again -- with a warning,
+  # but only if the user asked for auto.cov.x = TRUE explicitly
+  if (auto_cov_x) {
+    auto_cov_lv_x <- TRUE
+    if (conditional_x) {
+      auto_cov_x <- FALSE
+      if (auto_cov_x_explicit) {
+        lav_msg_warn(gettext(
+          "auto.cov.x = TRUE has no effect if conditional.x = TRUE;
+          covariances between exogenous latent variables and observed
+          exogenous covariates will not be added."))
+      }
     }
   }
 
@@ -413,6 +433,7 @@ lav_model_pt  <- function(
         auto_fix_first = auto_fix_first, marker = marker,
         auto_fix_single = auto_fix_single,
         auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+        auto_cov_x = auto_cov_x,
         auto_cov_y = auto_cov_y, auto_th = auto_th,
         auto_delta = auto_delta, auto_efa = auto_efa,
         var_table = var_table, group_equal = NULL,
@@ -464,6 +485,7 @@ lav_model_pt  <- function(
       auto_fix_first = auto_fix_first, marker = marker,
       auto_fix_single = auto_fix_single,
       auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+      auto_cov_x = auto_cov_x,
       auto_cov_y = auto_cov_y, auto_th = auto_th,
       auto_delta = auto_delta, auto_efa = auto_efa,
       var_table = var_table, group_equal = group_equal,
@@ -1416,6 +1438,7 @@ lavaanify <- function(                             # nolint
                       auto_fix_single = FALSE,
                       auto_var = FALSE,
                       auto_cov_lv_x = FALSE,
+                      auto_cov_x = FALSE,
                       auto_cov_y = FALSE,
                       auto_th = FALSE,
                       auto_delta = FALSE,
@@ -1459,6 +1482,7 @@ lavaanify <- function(                             # nolint
               auto_fix_single = auto_fix_single,
               auto_var = auto_var,
               auto_cov_lv_x = auto_cov_lv_x,
+              auto_cov_x = auto_cov_x,
               auto_cov_y = auto_cov_y,
               auto_th = auto_th,
               auto_delta = auto_delta,

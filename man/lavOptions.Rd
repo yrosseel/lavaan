@@ -141,8 +141,14 @@ Model features:
       indicator of a latent variable.}
     \item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
       and latent variables are set free.}
-    \item{\code{auto.cov.lv.x}:}{If \code{TRUE}, the covariances of exogenous 
+    \item{\code{auto.cov.lv.x}:}{If \code{TRUE}, the covariances of exogenous
       latent variables are included in the model and set free.}
+    \item{\code{auto.cov.x}:}{If \code{TRUE}, the covariances between
+      exogenous latent variables and observed exogenous covariates are also
+      included in the model and set free (this implies
+      \code{auto.cov.lv.x = TRUE}). Ignored if \code{conditional.x = TRUE},
+      as these covariances cannot be represented when the model is
+      conditioned on the exogenous covariates.}
     \item{\code{auto.cov.y}:}{If \code{TRUE}, the covariances of dependent 
       variables (both observed and latent) are included in the model and set 
       free.}

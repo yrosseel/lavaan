@@ -20,8 +20,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
     auto_fix_first = FALSE, marker = NULL,
     auto_fix_single = FALSE, auto_var = FALSE,
-    auto_cov_lv_x = FALSE, auto_cov_y = FALSE, auto_th = FALSE,
-    auto_delta = FALSE, auto_efa = FALSE,
+    auto_cov_lv_x = FALSE, auto_cov_x = FALSE, auto_cov_y = FALSE,
+    auto_th = FALSE, auto_delta = FALSE, auto_efa = FALSE,
     var_table = NULL, ngroups = 1L, nthresholds = NULL,
     group_equal = NULL, group_partial = NULL, group_w_free = FALSE,
     debug = FALSE, warn = TRUE, as_data_frame = TRUE, ...)
@@ -36,8 +36,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
     auto_fix_first = FALSE, marker = NULL,
     auto_fix_single = FALSE, auto_var = FALSE,
-    auto_cov_lv_x = FALSE, auto_cov_y = FALSE, auto_th = FALSE,
-    auto_delta = FALSE, auto_efa = FALSE,
+    auto_cov_lv_x = FALSE, auto_cov_x = FALSE, auto_cov_y = FALSE,
+    auto_th = FALSE, auto_delta = FALSE, auto_efa = FALSE,
     var_table = NULL, ngroups = 1L, nthresholds = NULL,
     group_equal = NULL, group_partial = NULL, group_w_free = FALSE,
     debug = FALSE, warn = TRUE, as_data_frame = TRUE, ...)
@@ -140,6 +140,10 @@ the model for both observed and latent variables.}
     and latent variables are set free.}
 \item{auto_cov_lv_x}{If \code{TRUE}, the covariances of exogenous latent
     variables are included in the model and set free.}
+\item{auto_cov_x}{If \code{TRUE}, the covariances between exogenous latent
+    variables and observed exogenous covariates are also included in the
+    model and set free (this implies \code{auto_cov_lv_x = TRUE}). Ignored
+    (with a warning) if \code{conditional_x = TRUE}.}
 \item{auto_cov_y}{If \code{TRUE}, the covariances of dependent variables
     (both observed and latent) are included in the model and set free.}
 \item{auto_th}{If \code{TRUE}, thresholds for limited dependent variables

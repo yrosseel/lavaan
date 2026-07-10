@@ -20,6 +20,7 @@ lav_pt_flat <- function(flat = NULL,
                               auto_fix_single = FALSE,
                               auto_var = FALSE,
                               auto_cov_lv_x = FALSE,
+                              auto_cov_x = FALSE,
                               auto_cov_y = FALSE,
                               auto_th = FALSE,
                               auto_delta = FALSE,
@@ -31,6 +32,11 @@ lav_pt_flat <- function(flat = NULL,
                               nthresholds = NULL,
                               ov_names_x_block = NULL) {
   categorical <- FALSE
+
+  # auto.cov.x implies auto.cov.lv.x
+  if (auto_cov_x) {
+    auto_cov_lv_x <- TRUE
+  }
 
   ### tmp.default elements: parameters that are typically not specified by
   ###                   users, but should typically be considered,
@@ -223,6 +229,16 @@ lav_pt_flat <- function(flat = NULL,
     tmp <- utils::combn(lv_names_x, 2)
     lhs <- c(lhs, tmp[1, ]) # to fill upper.tri
     rhs <- c(rhs, tmp[2, ])
+  }
+
+  # b2) COVARIANCES between `independent` latent variables (lv.names.x)
+  #     and observed exogenous covariates (ov.names.x) -- new in 0.7-2
+  #     (not if conditional.x: the covariates are conditioned out, so these
+  #      covariances cannot be represented)
+  if (auto_cov_x && !conditional_x &&
+      length(lv_names_x) > 0L && length(ov_names_x_block) > 0L) {
+    lhs <- c(lhs, rep(lv_names_x, each = length(ov_names_x_block)))
+    rhs <- c(rhs, rep(ov_names_x_block, times = length(lv_names_x)))
   }
 
   # c) `dependent` latent variables COVARIANCES (lv.y.idx + ov.y.lv.idx)
@@ -628,9 +644,11 @@ lav_pt_flat <- function(flat = NULL,
   }
   # 3c. orthogonal.x = TRUE?
   if (orthogonal_x) {
+    # note: the rhs may also be an observed exogenous covariate
+    # (only if auto.cov.x = TRUE)
     lv_cov_idx <- which(op == "~~" &
       lhs %in% lv_names_x &
-      rhs %in% lv_names_x &
+      rhs %in% c(lv_names_x, ov_names_x_block) &
       lhs != rhs &
       user == 0L)
     ustart[lv_cov_idx] <- 0.0

@@ -1117,6 +1117,10 @@ lav_options_set <- function(opt = NULL) {
   # if conditional.x, always use a meanstructure
   if (opt$conditional.x) {
     opt$meanstructure <- TRUE
+    # auto.cov.x has no effect if conditional.x = TRUE: the exogenous
+    # covariates are conditioned out, so their covariances with exogenous
+    # latent variables cannot be represented
+    opt$auto.cov.x <- FALSE
   }
 
   # fixed.x

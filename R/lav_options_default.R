@@ -237,6 +237,9 @@ lav_options_default <- function() {
   elm("auto.fix.single", FALSE, bl = TRUE)
   elm("auto.var", FALSE, bl = TRUE)
   elm("auto.cov.lv.x", FALSE, bl = TRUE)
+  # if TRUE, also add covariances between exogenous latent variables and
+  # observed exogenous covariates (and imply auto.cov.lv.x = TRUE)
+  elm("auto.cov.x", FALSE, bl = TRUE)
   elm("auto.cov.y", FALSE, bl = TRUE)
   elm("auto.th", FALSE, bl = TRUE)
   elm("auto.delta", FALSE, bl = TRUE)
