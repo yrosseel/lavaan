@@ -526,9 +526,13 @@ lav_options_default <- function() {
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.h1.args", "fused"), TRUE, bl = TRUE)
-  elm("optim.gn.max.iter", 200L, nm = "[100, 1e8]", num2int = TRUE)
-  elm("optim.gn.stephalf.max", 10L, nm = "[1, 1e8]", num2int = TRUE)
-  elm("optim.gn.tol.x", 1e-05, nm = "]0, 0.01]")
+  # gn-args sublist (Gauss-Newton; optim.method = "gn")
+  # (< 0.7-2 these lived at the top level, as optim.gn.max.iter,
+  #  optim.gn.tol.x and optim.gn.stephalf.max; the latter is gone: the
+  #  Levenberg-Marquardt damping replaces the step-halving)
+  elm(c("gn.args", "max_iter"), 200L, nm = "[100, 1e8]", num2int = TRUE)
+  elm(c("gn.args", "tol_x"), 1e-05, nm = "]0, 0.01]")
+  elm(c("gn.args", "tol_g"), 1e-06, nm = "]0, 0.01]")
 
   # numerical integration
   elm("integration.ngh", 21L, nm = "[1, 1000]", num2int = TRUE)

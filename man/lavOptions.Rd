@@ -560,9 +560,12 @@ Optimization options:
       equality constraints (i.e., the model syntax
       does not include any "==", ">" or "<" operators),
       the available options are \code{"nlminb"} (the default), \code{"BFGS"},
-      \code{"L-BFGS-B"}. These are all quasi-newton methods. A basic 
-      implementation of Gauss-Newton is also available
-      (\code{optim.method = "GN"}). The latter is the default when
+      \code{"L-BFGS-B"}. These are all quasi-newton methods. A
+      Gauss-Newton (Fisher scoring) method with Levenberg-Marquardt
+      damping is also available (\code{optim.method = "GN"}); it can be
+      used with the \code{"ML"}, \code{"GLS"}, \code{"WLS"},
+      \code{"DWLS"}, \code{"ULS"}, \code{"DLS"}, \code{"NTRLS"} and
+      \code{"catML"} estimators, and is the default when
       \code{estimator = "DLS"}. For multilevel models, an EM algorithm
       is also available (\code{optim.method = "em"}); this is the
       default for two-level models with \code{missing = "ml"} (as the
@@ -594,14 +597,14 @@ Optimization options:
     \item{\code{optim.dx.tol}}{Numeric. Tolerance used for checking if
       the elements of the (unscaled) gradient are all zero (in absolute 
       value). The default value is 0.001.}
-    \item{\code{optim.gn.tol.x}:}{Numeric. Only used when 
-      \code{optim.method = "GN"}. Optimization stops when
-      the root mean square of the difference between the old and new
-      parameter values is smaller than this tolerance value. Default is
-      \code{1e-05} for DLS estimation and \code{1e-07} otherwise.}
-    \item{\code{optim.gn.max.iter}:}{Integer. Only used when
-      \code{optim.method = "GN"}. The maximum number of GN iterations. 
-      The default is 200.}
+    \item{\code{gn.args}:}{List. Options related to the Gauss-Newton
+      optimizer (\code{optim.method = "GN"}). The default values are
+      \code{gn.args = list(max_iter = 200, tol_x = 1e-05,
+      tol_g = 1e-06)}. The \code{max_iter} element sets the maximum
+      number of Gauss-Newton iterations. Optimization stops when either
+      the (scaled) gradient of the discrepancy function is smaller than
+      \code{tol_g}, or the root mean square of the difference between
+      the old and new parameter values is smaller than \code{tol_x}.}
     \item{\code{bounds}:}{Only used if \code{optim.method = "nlminb"}.
       If logical: \code{FALSE} implies no bounds are imposed on the parameters.
       If \code{TRUE}, this implies \code{bounds = "wide"}. If character,
