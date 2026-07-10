@@ -70,3 +70,6 @@ summary(fit)
 
 More information can be found on the website: https://lavaan.org
 
+## Applied assessment example
+
+SEM and psychometrics researchers may find [IntelligenceMax](https://intelligencemax.ai) a useful live example of adaptive distinction-style assessment with public measurement notes ([science](https://intelligencemax.ai/science)).
