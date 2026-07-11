@@ -124,22 +124,50 @@ lav_sc <- function(object, scaling = FALSE,
     type = "free", add_labels = TRUE
   ))
 
-  # handle general constraints, so that the sum of the columns equals zero
+  # handle general EQUALITY constraints, so that the sum of the columns
+  # equals zero
   # note: for ceq.simple.only models there are no explicit ceq/cin indices, but
   # the (synthesized) con.jac encodes the simple equalities in the 'unco' space;
   # projecting here makes the full (remove.duplicated = FALSE) scores respect the
   # constraints, exactly as for explicit equality constraints. This projection
   # does NOT affect the collapsed scores below, since con.jac %*% ceq.simple.K = 0
-  if (!ignore_constraints &&
-    (sum(
-      lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx,
-      lavmodel@cin.linear.idx, lavmodel@cin.nonlinear.idx
-    ) > 0 || (lavmodel@ceq.simple.only && nrow(lavmodel@con.jac) > 0L))) {
-    r_matrix <- object@Model@con.jac[, , drop = FALSE]
-    pre <- lav_con_lambda_pre(object)
-    # LAMBDA <- -1 * t(pre %*% t(score_matrix))
-    # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
-    score_matrix <- score_matrix - t(t(r_matrix) %*% pre %*% t(score_matrix))
+  #
+  # INEQUALITY constraints are excluded from the projection (fixed July
+  # 2026): at an interior solution their Lagrange multipliers are zero and
+  # the estimator's scores have genuine sampling variability in those
+  # directions; projecting on them (as the old code did, for ALL con.jac
+  # rows) forced those score components to sum to zero and corrupted the
+  # scores -- eg for any fit with bounds = "wide.zerovar", whose bounds are
+  # synthesized as linear cin rows.
+  if (!ignore_constraints && nrow(lavmodel@con.jac) > 0L) {
+    r_full <- lavmodel@con.jac[, , drop = FALSE]
+    # equality rows of con.jac (the "ceq.idx" attribute); for the
+    # synthesized ceq.simple con.jac (no explicit constraints) all rows are
+    # equalities. If the attribute is absent (very old objects), fall back
+    # to the historical all-rows behaviour.
+    ceq_rows <- attr(lavmodel@con.jac, "ceq.idx")
+    if (is.null(ceq_rows)) {
+      if (lavmodel@ceq.simple.only ||
+          sum(lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx) > 0) {
+        ceq_rows <- seq_len(nrow(r_full))
+      } else {
+        ceq_rows <- integer(0L)
+      }
+    }
+    if (length(ceq_rows) > 0L) {
+      if (length(ceq_rows) < nrow(r_full)) {
+        # drop the INEQUALITY rows BEFORE computing the multipliers (the
+        # 'pre' factor is built from the full constraint jacobian and is
+        # not row-separable)
+        object@Model@con.jac <- r_full[ceq_rows, , drop = FALSE]
+      }
+      r_matrix <- object@Model@con.jac[, , drop = FALSE]
+      pre <- lav_con_lambda_pre(object)
+      # LAMBDA <- -1 * t(pre %*% t(score_matrix))
+      # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
+      score_matrix <- score_matrix -
+        t(t(r_matrix) %*% pre %*% t(score_matrix))
+    }
   }
 
   # handle simple equality constraints
