@@ -646,23 +646,53 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
   # handle constraints
   if (nrow(lavmodel@con.jac) > 0L) {
     h <- lavmodel@con.jac
-    if (length(rm_idx) > 0L) {
-      h <- h[, -rm_idx, drop = FALSE]
-    }
+    # read the attribute BEFORE any subsetting: `[` drops attributes, so
+    # reading it after h[, -rm_idx] silently kept the inactive inequality
+    # rows (eg synthesized bounds) and imposed them as active equalities
+    # whenever rm_idx was non-empty (the SAM step-2 path)
     inactive_idx <- attr(h, "inactive.idx")
     lambda <- lavmodel@con.lambda # lagrangean coefs
     if (length(inactive_idx) > 0L) {
       h <- h[-inactive_idx, , drop = FALSE]
       lambda <- lambda[-inactive_idx]
     }
+    if (length(rm_idx) > 0L) {
+      h <- h[, -rm_idx, drop = FALSE]
+    }
+    # normalize the rows of h: the null space of h (and therefore the
+    # returned [1:npar, 1:npar] block) is invariant to row scaling, but
+    # crossprod(h) puts the SQUARED row norms into the spectrum of the
+    # augmented matrix, and MASS::ginv() uses a tolerance RELATIVE to the
+    # largest singular value: a badly scaled constraint (eg
+    # 1000*a == 1000*b) raised the cutoff enough to zero genuine
+    # directions of the information, silently collapsing the standard
+    # errors. Rows that lost all their entries to rm_idx (constraints
+    # involving only removed parameters) are dropped.
+    row_norm <- sqrt(rowSums(h * h))
+    nonzero_idx <- which(row_norm > 0)
+    if (length(nonzero_idx) < nrow(h)) {
+      h <- h[nonzero_idx, , drop = FALSE]
+      lambda <- lambda[nonzero_idx]
+      row_norm <- row_norm[nonzero_idx]
+    }
     if (nrow(h) > 0L) {
+      h <- h / row_norm
+      # the multiplier of a rescaled constraint rescales inversely
+      lambda <- lambda * row_norm
       is_augmented <- TRUE
       h0 <- matrix(0, nrow(h), nrow(h))
       h10 <- matrix(0, ncol(information), nrow(h))
+      # note: this middle block is fully decoupled (zero off-diagonal
+      # blocks on both sides), so it cannot affect the returned
+      # [1:npar, 1:npar] slice of the inverse; it is kept for the shape
+      # of the full augmented matrix (lavInspect "augmented.information").
+      # For the same reason check_pd should never be TRUE when a border
+      # is present: a bordered (KKT) matrix is always indefinite.
       dl <- 2 * diag(lambda, nrow(h), nrow(h))
-      # FIXME: better include inactive + slacks??
-      # INFO <- information
-      # or
+      # adding crossprod(h) leaves the [1:npar, 1:npar] block of the
+      # inverse unchanged (h x = 0 implies (info + h'h) x = info x), but
+      # makes the augmented matrix nonsingular when the information is
+      # singular only along the constraint-normal directions
       info <- information + crossprod(h)
       e3 <- rbind(
         cbind(info, h10, t(h)),
@@ -675,6 +705,11 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
     h <- t(lav_mat_ortho_complement(lavmodel@ceq.simple.K))
     if (length(rm_idx) > 0L) {
       h <- h[, -rm_idx, drop = FALSE]
+      # rows may have lost (some of) their entries; drop empty rows and
+      # re-normalize the rest (see the note above)
+      row_norm <- sqrt(rowSums(h * h))
+      nonzero_idx <- which(row_norm > 0)
+      h <- h[nonzero_idx, , drop = FALSE] / row_norm[nonzero_idx]
     }
     if (nrow(h) > 0L) {
       is_augmented <- TRUE
