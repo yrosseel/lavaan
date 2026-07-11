@@ -113,6 +113,94 @@ lav_sam_step2_se_local_caseB <- function(fit_pa, step1) {
   vcov_1
 }
 
+# Casewise (huber.white) building blocks for the two-step sandwich
+# (se = "twostep.huber.white"): the Yuan & Chan V22/V21/V11 pieces, but with
+# casewise-SCORE crossproducts instead of Gamma-based expressions:
+#
+#   g2_i = casewise score of the JOINT model w.r.t. theta2, at (theta2.hat,
+#          theta1.hat)
+#   h_i  = casewise influence on theta1.hat: per measurement block b,
+#          h_i^(b) = (N/n_b) I_b^{-1} g1_i^(b)   (unit block information I_b,
+#          n_b = cases used by block b; zero rows for cases without data in b)
+#
+#   V22 = (1/N) sum g2_i g2_i',  V21 = (1/N) sum g2_i h_i',
+#   V11 = (1/N) sum h_i h_i'
+#
+# Fed into the same A/B assembly as the twostep.robust branch, this yields the
+# stacked M-estimation (Murphy-Topel) sandwich with first-order meat -- the
+# two-step analogue of se = "robust.huber.white". Because the meat is built
+# from casewise scores, it needs no Gamma: missing = "ml" (FIML scores per
+# missing pattern) and multiple groups (zero scores outside a case's group)
+# are covered by the same expressions.
+#
+# The scores are centered before the crossproducts: an exact no-op for
+# sam.method = "global" (the joint theta2 score is solved: sum_i g2_i = 0, and
+# sum_i g1_i = 0 per block), and the correct removal of the O(1) offset for
+# the local methods (whose step-2 estimator does not solve the joint score
+# exactly -- the same asymptotic-equivalence argument that underlies the
+# twostep.robust linearization).
+lav_sam_step2_se_hw_v <- function(joint = NULL, step1 = NULL,
+                                  step2_free_idx = NULL, ntot = NULL) {
+  npar <- max(joint@ParTable$free)
+  # for the local sam methods, the joint object is assembled without fitting
+  # and carries Options$estimator == "none"; the casewise scores are those of
+  # the (ML) joint likelihood in Model@estimator
+  if (!joint@Options$estimator %in% c("ML", "WLS", "GLS", "ULS")) {
+    joint@Options$estimator <- joint@Model@estimator
+  }
+  # ignore_constraints: the sam models may carry synthesized INEQUALITY
+  # constraints (the measurement blocks are fitted with bounds =
+  # "wide.zerovar", which lavaan represents as linear cin rows in con.jac);
+  # these are inactive at an interior solution, but lav_sc()'s constraint
+  # projection would still project the scores onto them, corrupting the
+  # casewise influences. Equality constraints are excluded from this se
+  # flavour upstream, so skipping the projection is exact here.
+  sc <- lav_sc(joint, remove_empty_cases = FALSE,
+               ignore_constraints = TRUE)
+  sc[is.na(sc)] <- 0 # empty cases contribute a zero score
+  if (ncol(sc) != npar) {
+    lav_msg_stop(gettext(
+      "internal error: the joint casewise scores do not match the free
+       parameters (twostep.huber.white)."))
+  }
+  g2 <- sc[, step2_free_idx, drop = FALSE]
+
+  # step-1 casewise influence, in the joint free-parameter numbering
+  h_full <- matrix(0, nrow(sc), npar)
+  pt_free <- step1$PT.free
+  for (mm in seq_along(step1$MM.FIT)) {
+    fb <- step1$MM.FIT[[mm]]
+    scb <- lav_sc(fb, remove_empty_cases = FALSE,
+                  ignore_constraints = TRUE) # see note above
+    scb[is.na(scb)] <- 0 # cases with no data in this block: zero score
+    if (nrow(scb) != nrow(sc)) {
+      lav_msg_stop(gettext(
+        "internal error: case alignment failure between a measurement block
+         and the joint model (twostep.huber.white)."))
+    }
+    ib <- lavTech(fb, "information") # unit information (honors information=)
+    nb <- fb@SampleStats@ntotal
+    hb <- (ntot / nb) * scb %*% solve(ib)
+    # map the block's free parameters into the joint free numbering (the same
+    # mapping used for the Sigma.11 assembly in lav_sam_step1())
+    mm_idx <- step1$block.mm.idx[[mm]]
+    ptm_idx <- step1$block.ptm.idx[[mm]]
+    par_idx <- pt_free[mm_idx[ptm_idx]]
+    keep_idx <- fb@ParTable$free[ptm_idx]
+    ok <- par_idx > 0L & keep_idx > 0L # drop := etc.
+    h_full[, par_idx[ok]] <- hb[, keep_idx[ok], drop = FALSE]
+  }
+
+  # center (see note above) and build the V pieces
+  g2c <- t(t(g2) - colMeans(g2))
+  h1c <- t(t(h_full) - colMeans(h_full))
+  list(
+    v22 = crossprod(g2c) / ntot,
+    v21 = crossprod(g2c, h1c) / ntot, # cols = FULL joint numbering
+    v11 = crossprod(h1c) / ntot # rows/cols = FULL joint numbering
+  )
+}
+
 # grab the 'naive' vcov from FIT.PA (computing it if absent), removing
 # any rows/cols in step2_rm_idx
 lav_sam_step2_se_vcov_pa <- function(fit_pa, step2_rm_idx = integer(0L)) {
@@ -266,7 +354,7 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
   if (!lavoptions$se %in%
     c("none", "standard", "naive", "twostep", "twostep.robust",
-      "local", "local.nt")) {
+      "twostep.huber.white", "local", "local.nt")) {
     lav_msg_warn(gettextf(
       "unknown se= argument: %s. Switching to twostep.",
       lavoptions$se
@@ -298,7 +386,32 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     isTRUE(step1$sam.method %in% c("local", "fsr", "cfsr")) &&
     !is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[1]])
 
-  if (lavoptions$se %in% c("naive", "twostep", "twostep.robust")) {
+  # PML + twostep.huber.white: the assembled joint carries
+  # Options$estimator == "none" and no PML cache (bifreq/long/uniweights),
+  # while both the joint information (the numerical hessian of the PML
+  # gradient) and the casewise scores need them. Patch a local copy of the
+  # joint (R copy semantics: the returned object is not affected).
+  if (lavoptions$se == "twostep.huber.white" &&
+      joint@Model@estimator == "PML") {
+    joint@Options$estimator <- "PML"
+    if (is.null(joint@Cache[[1]]$long)) {
+      joint@Cache <- lav_step10_cache(
+        slot_cache = NULL,
+        lavdata = joint@Data,
+        lavmodel = joint@Model,
+        lavpartable = joint@ParTable,
+        lavoptions = joint@Options,
+        sampling_weights = if (length(joint@Data@sampling.weights) > 0L) {
+          joint@Data@sampling.weights
+        } else {
+          NULL
+        }
+      )
+    }
+  }
+
+  if (lavoptions$se %in% c("naive", "twostep", "twostep.robust",
+                           "twostep.huber.white")) {
     info <- lavInspect(joint, "information")
     i_12 <- info[step1_free_idx, step2_free_idx, drop = FALSE]
     i_22 <- info[step2_free_idx, step2_free_idx, drop = FALSE]
@@ -333,7 +446,8 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
   # invert augmented information, for I.22 block only
   # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
-  if (lavoptions$se %in% c("standard", "twostep", "twostep.robust")) {
+  if (lavoptions$se %in% c("standard", "twostep", "twostep.robust",
+                           "twostep.huber.white")) {
     # Fix for EFA/ESEM: when rotation is used, FIT.PA@Model@con.jac includes
     # columns for rotation identification constraints that are not part of
     # step2.free.idx. These extra columns cause a dimension mismatch in
@@ -427,10 +541,31 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
     out$VCOV <- vcov_1
 
-  # se = "twostep" or "twostep.robust"
-  } else if (lavoptions$se  == "twostep" || lavoptions$se == "twostep.robust") {
+  # se = "twostep", "twostep.robust" or "twostep.huber.white"
+  } else if (lavoptions$se %in% c("twostep", "twostep.robust",
+                                  "twostep.huber.white")) {
 
     robust <- (lavoptions$se == "twostep.robust")
+    huber_white <- (lavoptions$se == "twostep.huber.white")
+    hw_v <- NULL
+    if (huber_white) {
+      # casewise-score V pieces; on failure fall back to plain twostep
+      hw_v <- tryCatch(
+        lav_sam_step2_se_hw_v(
+          joint = joint, step1 = step1,
+          step2_free_idx = step2_free_idx, ntot = n
+        ),
+        error = function(e) e
+      )
+      if (inherits(hw_v, "error")) {
+        lav_msg_warn(gettextf(
+          "huber.white standard errors (se = \"twostep.huber.white\") could
+           not be computed (%s); twostep standard errors are reported
+           instead.", conditionMessage(hw_v)))
+        huber_white <- FALSE
+        lavoptions$se <- "twostep"
+      }
+    }
     if (robust && fit@Model@conditional.x &&
         isTRUE(step1$sam.method %in% c("local", "fsr", "cfsr"))) {
       # only reached when Gamma.eta is unavailable (tsrobust_condx_flag was
@@ -463,7 +598,21 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
         lavoptions$se <- "twostep"
       }
     }
-    if (!robust) {
+    if (huber_white) {
+      # stacked M-estimation sandwich with casewise-score meat: same A/B
+      # assembly as the twostep.robust branch below, with the V pieces
+      # replaced by their casewise counterparts (see lav_sam_step2_se_hw_v)
+      m_b <- -1 * info[step2_free_idx, step1_free_idx, drop = FALSE]
+      v22 <- hw_v$v22
+      v21 <- hw_v$v21[, step1_free_idx, drop = FALSE]
+      v11 <- hw_v$v11[step1_free_idx, step1_free_idx, drop = FALSE]
+      v12 <- t(v21)
+
+      a_inv <- -1 * i_22_inv
+      v2 <- 1 / n * (a_inv %*% v22 %*% a_inv)
+      v1 <- 1 / n * (a_inv %*%
+        (m_b %*% v12 + v21 %*% t(m_b) + m_b %*% v11 %*% t(m_b)) %*% a_inv)
+    } else if (!robust) {
       v2 <- 1 / n * i_22_inv # not the same as FIT.PA@vcov$vcov!!
       v1 <- i_22_inv %*% i_21 %*% sigma_11 %*% i_12 %*% i_22_inv
     } else {

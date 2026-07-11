@@ -159,7 +159,15 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
         "sam(sam.method = \"global\") does not support estimator PML (yet);
          use sam.method = \"local\" or sem() instead."))
     }
-    if (se %in% c("twostep", "twostep.robust", "local", "local.nt")) {
+    # note: "twostep.huber.white" is in this list DELIBERATELY, even though
+    # casewise PML scores exist (lav_sc_pml()): for sam.method = "local"
+    # the joint-PML-given-theta1 estimator that the huber.white sandwich
+    # linearizes is NOT the local (VETA-fit) step-2 estimator (their
+    # variance estimates differ substantially), so the sandwich describes
+    # the wrong estimator. A valid correction for PML needs a
+    # structural-space (Gamma.eta) route.
+    if (se %in% c("twostep", "twostep.robust", "twostep.huber.white",
+                  "local", "local.nt")) {
       lav_msg_warn(gettextf(
         "se = \"%s\" is not available (yet) for estimator PML; naive
          standard errors are reported instead.", se))

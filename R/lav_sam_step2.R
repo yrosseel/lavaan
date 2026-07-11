@@ -214,7 +214,8 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
       # (uncorrected) structural test. For se = local / local.nt the SEs ARE
       # read from this fit, so we cannot silently degrade -> re-raise.
       if (gamma_flag &&
-          lavoptions$se %in% c("twostep", "twostep.robust", "naive")) {
+          lavoptions$se %in% c("twostep", "twostep.robust",
+                               "twostep.huber.white", "naive")) {
         lavoptions_pa$test <- "standard"
         fit_pa <- lavaan::lavaan(pts,
           sample_cov  = step1$VETA,

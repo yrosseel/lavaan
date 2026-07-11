@@ -124,6 +124,10 @@ sam <- function(model = NULL,
                         "two_step_robust", "two.step.robust",
                         "twostep.robust")) {
       se <- "twostep.robust"
+    } else if (se %in% c("twostep.hw", "twostep.huber.white",
+                         "two-step.huber.white", "two.step.huber.white",
+                         "twostep.huber-white")) {
+      se <- "twostep.huber.white"
     } else if (se %in% c("ij", "local")) {
       se <- "local"
     } else if (se %in% c("robust", "robust.sem", "robust.huber.white",
@@ -138,11 +142,13 @@ sam <- function(model = NULL,
     }
     # check if valid
     if (!se %in% c("standard", "naive", "twostep", "local", "local.nt",
-                   "twostep.robust", "bootstrap", "none")) {
+                   "twostep.robust", "twostep.huber.white",
+                   "bootstrap", "none")) {
       lav_msg_stop(gettextf(
         "invalid se= argument (%1$s) for sam(); valid options are %2$s.",
         se,
-        lav_msg_view(c("twostep", "twostep.robust", "local", "local.nt",
+        lav_msg_view(c("twostep", "twostep.robust", "twostep.huber.white",
+                       "local", "local.nt",
                        "naive", "standard", "bootstrap", "none"),
                      log_sep = "or")))
     }
@@ -264,6 +270,38 @@ sam <- function(model = NULL,
         which does not account for clustering; consider se = \"local\"
         instead."))
     }
+
+    # twostep.huber.white (casewise-score sandwich): current scope is
+    # continuous ML, single level, no equality constraints, no clustering,
+    # complete data or missing = "ml"; single- or multigroup. Outside that
+    # scope, fall back to the closest supported flavour. (PML is handled
+    # earlier, in lav_sam_step0(): although casewise PML scores exist, the
+    # joint-score linearization does not describe the local step-2
+    # estimator for PML -- see the note there.)
+    if (se == "twostep.huber.white") {
+      hw_fallback <- NULL
+      if (fit@Data@nlevels > 1L) {
+        hw_fallback <- "twostep" # no casewise scores for multilevel (yet)
+      } else if (fit@Model@conditional.x) {
+        hw_fallback <- "twostep.robust" # no scores under conditional.x (yet)
+      } else if (fit@Model@categorical) {
+        hw_fallback <- "twostep.robust" # untested for (D)WLS scores (yet)
+      } else if (fit@Model@eq.constraints || fit@Model@ceq.simple.only) {
+        # the block-to-joint free-parameter mapping of the casewise influence
+        # does not handle equality constraints (yet)
+        hw_fallback <- "twostep.robust"
+      } else if (length(fit@Data@cluster) > 0L) {
+        # the casewise meat would need within-cluster score aggregation (yet)
+        hw_fallback <- "twostep.robust"
+      }
+      if (!is.null(hw_fallback)) {
+        lav_msg_warn(gettextf(
+          "se = \"twostep.huber.white\" is not available (yet) for this
+           setting; using se = \"%s\" instead.", hw_fallback))
+        se <- hw_fallback
+        fit@Options$se <- se
+      }
+    }
   }
 
   lavoptions <- lavInspect(fit, "options")
@@ -329,7 +367,8 @@ sam <- function(model = NULL,
   #          corrected test. local/local.nt require #
   #          it (re-raise on failure).              #
   ##################################################
-  if (se %in% c("local", "local.nt", "twostep", "twostep.robust", "naive")) {
+  if (se %in% c("local", "local.nt", "twostep", "twostep.robust",
+                "twostep.huber.white", "naive")) {
     gamma_eta_required <- se %in% c("local", "local.nt")
     ge_try <- tryCatch({
       gamma_eta <- vector("list", length = fit@Data@ngroups)

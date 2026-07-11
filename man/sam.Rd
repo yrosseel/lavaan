@@ -37,7 +37,14 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     standard errors take the estimation uncertainty of the first (measurement)
     stage into account. If \code{"standard"}, this uncertainty is ignored,
     and we treat the measurement information as known. If \code{"none"},
-    no standard errors are computed. If the data are clustered (a
+    no standard errors are computed. The experimental
+    \code{"twostep.huber.white"} variant computes the two-step correction
+    as a stacked (Murphy-Topel type) sandwich with casewise-score based
+    (first-order) meat -- the two-step analogue of
+    \code{se = "robust.huber.white"} in \code{\link{sem}}; it is currently
+    available for continuous complete or \code{missing = "ml"} data
+    (single- or multigroup, single level, no equality constraints), and
+    falls back to \code{"twostep.robust"} or \code{"twostep"} otherwise. If the data are clustered (a
     \code{cluster=} argument is provided, without multilevel model syntax),
     \code{se = "twostep"} is automatically replaced by
     \code{se = "twostep.robust"}, and the standard errors (also for
