@@ -1066,7 +1066,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             # DWLS the diagonal weights then also derive from the NT
             # Gamma, by design): for WLS/DLS the (full) weight matrix is
             # derived from this NACOV, and storing the NT Gamma instead
-            # silently turned WLS into GLS (before 0.7-2, when
+            # silently turned WLS into GLS (before 0.7-1, when
             # test = "browne.residual.nt" was combined with
             # estimator = "WLS"); note that the browne.residual.nt test
             # itself never reads this slot (it uses the fast kernel, or
@@ -1176,7 +1176,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         }
       }
 
-      # GLS: since 0.7-2 the estimation machinery no longer needs the
+      # GLS: since 0.7-1 the estimation machinery no longer needs the
       # (large) WLS.V matrix (the objective uses the trace shortcut, the
       # gradient the omega approach, and the expected information is
       # streamed); when a consumer does need the full matrix (robust
@@ -1407,7 +1407,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 # internal one (e.g., sam() with conditional.x = TRUE, where VETA is in
 # measurement order, but the structural model is y-variables-first); if
 # (dim)names are present, reorder by name; if absent, assume the statistic
-# is already in the internal order (pre-0.7-2 behavior)
+# is already in the internal order (pre-0.7-1 behavior)
 lav_samp_align_by_names <- function(stat = NULL, row_names = NULL,
                                     col_names = NULL, what = "res.slopes",
                                     g = 1L) {
@@ -2037,7 +2037,7 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
     # NACOV: nothing can be computed from moments alone, except the
     # normal-theory Gamma; compute it when the robust.sem.nt sandwich
-    # asks for it (the default se for continuous ULS) -- before 0.7-2,
+    # asks for it (the default se for continuous ULS) -- before 0.7-1,
     # this failed with a cryptic error. (The browne.residual.nt test
     # does not read this slot: it uses the fast kernel, or recomputes
     # at test time.)

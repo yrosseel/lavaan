@@ -118,7 +118,7 @@ lav_object_baseline <- function(object = NULL,
   } else {
     # the baseline standard errors are never used (only the baseline
     # test statistics feed CFI/TLI and friends), so skip the vcov step
-    # (since 0.7-2); the scaled/robust tests recompute E.inv, Delta and
+    # (since 0.7-1); the scaled/robust tests recompute E.inv, Delta and
     # WLS.V themselves when no vcov is available -- as has always been
     # the case for se = "bootstrap", where the baseline was already
     # fitted with se = "none" since 0.6-20

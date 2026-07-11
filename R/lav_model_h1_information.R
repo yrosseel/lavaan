@@ -151,7 +151,7 @@ lav_model_h1_info_ed <- function(what = "expected",
   # 1. WLS.V (=A1) for GLS/WLS
   if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS") {
     a1 <- lavsamplestats@WLS.V
-    # GLS: since 0.7-2 the NT weight matrix is no longer pre-computed at
+    # GLS: since 0.7-1 the NT weight matrix is no longer pre-computed at
     # the samplestats stage (estimation does not need it); build it here
     # on demand. Only reached for the 'plain' single-level variant: the
     # correlation/conditional.x/group.w.free/two.stage variants still

@@ -216,7 +216,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
                          function(x) !is.null(x$scaled.test.stat))
     if (!any(scaled_list)) {
       # no test entry carries a scaled.test.stat field (eg PML objects
-      # created before 0.7-2): fall back to matching the scaled-test names
+      # created before 0.7-1): fall back to matching the scaled-test names
       scaled_list <- sapply(mods[[which(ndf > 0)[1]]]@test,
         function(x) {
           x$test[1] %in% c(

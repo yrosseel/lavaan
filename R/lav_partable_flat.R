@@ -232,7 +232,7 @@ lav_pt_flat <- function(flat = NULL,
   }
 
   # b2) COVARIANCES between `independent` latent variables (lv.names.x)
-  #     and observed exogenous covariates (ov.names.x) -- new in 0.7-2
+  #     and observed exogenous covariates (ov.names.x) -- new in 0.7-1
   #     (not if conditional.x: the covariates are conditioned out, so these
   #      covariances cannot be represented)
   if (auto_cov_x && !conditional_x &&

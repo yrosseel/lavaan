@@ -1,7 +1,7 @@
 # - 0.6-13: fix multiple-group UG^2 bug (reported by Gronneberg, Foldnes and
 #           Moss) when Satterthwaite = TRUE, ngroups > 1, and eq constraints.
 #           Use ug2.old.approach = TRUE to get the old result
-# - 0.7-2:  the traces are computed by the streamed worker
+# - 0.7-1:  the traces are computed by the streamed worker
 #           lav_test_ug_trace_stream() (lav_test_utils.R) unless the U or
 #           UGamma matrices themselves are needed; shared helpers for the
 #           E.inv-recompute check, failure entries and labels

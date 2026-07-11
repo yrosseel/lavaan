@@ -1036,7 +1036,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
   eeta <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
   ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
 
-  # Bartlett + higher-order factors (new in 0.7-2): collapse the measurement
+  # Bartlett + higher-order factors (new in 0.7-1): collapse the measurement
   # chain, just like in sam(): LAMBDA.star = LAMBDA %*% solve(I - B), where B
   # only contains the factor loadings of the higher-order factors (the rows
   # of the latent indicators); for each higher-order factor, the columns of

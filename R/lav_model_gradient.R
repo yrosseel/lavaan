@@ -210,7 +210,7 @@ lav_model_grad <- function(lavmodel = NULL,
   # composites?
   composites_flag <- lavmodel@composites
 
-  # 1. ML approach (also GLS/ULS since 0.7-2, see the omega flags above)
+  # 1. ML approach (also GLS/ULS since 0.7-1, see the omega flags above)
   if (((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
     lavdata@nlevels == 1L && !composites_flag &&
     !lavmodel@conditional.x) || gls_omega_flag || uls_omega_flag) {

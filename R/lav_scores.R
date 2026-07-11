@@ -533,7 +533,7 @@ lav_sc_ls <- function(ntab = 0L,
       score_matrix[wi, ] <- zc %*% delta[[g]]
     } else if (estimator == "GLS" &&
       is.null(lavsamplestats@WLS.V[[g]])) {
-      # GLS: WLS.V is no longer pre-computed (0.7-2); stream
+      # GLS: WLS.V is no longer pre-computed (0.7-1); stream
       # WLS.V %*% Delta without forming the matrix
       v11_scale <- 1.0
       if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&

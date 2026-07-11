@@ -74,7 +74,7 @@ lav_options_est_gls <- function(opt) {
       "ordered categorical data is not supported when estimator is GLS."))
   }
   if (opt$.multilevel) {
-    # no two-level normal-theory weight matrix (yet); before 0.7-2 this
+    # no two-level normal-theory weight matrix (yet); before 0.7-1 this
     # failed silently during estimation
     lav_msg_stop(gettext(
       "multilevel data is not supported when estimator is GLS."))

@@ -3,7 +3,7 @@
 #
 #           Note however that Satterthwaite = FALSE always (for now), so
 #           the fix has no (visible) effect
-# - 0.7-2:  the traces are computed by the streamed worker
+# - 0.7-1:  the traces are computed by the streamed worker
 #           lav_test_ug_trace_stream() (lav_test_utils.R): no more
 #           pstar x pstar products (A1 %*% ... %*% A1)
 

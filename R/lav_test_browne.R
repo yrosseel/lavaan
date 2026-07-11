@@ -117,7 +117,7 @@ lav_test_browne <- function(lavobject = NULL,
     # ADF version
     # note: the stored NACOV can only be used for the sample-based
     # version; the model-based version must recompute Gamma at the
-    # model-implied moments (before 0.7-2, browne.residual.adf.model
+    # model-implied moments (before 0.7-1, browne.residual.adf.model
     # silently returned the sample-based statistic whenever a NACOV
     # was stored, e.g. for the (D)WLS-family estimators)
     if (!model_based &&

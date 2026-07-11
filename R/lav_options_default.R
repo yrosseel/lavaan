@@ -530,7 +530,7 @@ lav_options_default <- function() {
   # (two-level + missing data, plain iterations only)
   elm(c("em.h1.args", "fused"), TRUE, bl = TRUE)
   # gn-args sublist (Gauss-Newton; optim.method = "gn")
-  # (< 0.7-2 these lived at the top level, as optim.gn.max.iter,
+  # (< 0.7-1 these lived at the top level, as optim.gn.max.iter,
   #  optim.gn.tol.x and optim.gn.stephalf.max; the latter is gone: the
   #  Levenberg-Marquardt damping replaces the step-halving)
   elm(c("gn.args", "max_iter"), 200L, nm = "[100, 1e8]", num2int = TRUE)
