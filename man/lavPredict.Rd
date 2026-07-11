@@ -17,6 +17,7 @@ lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            parallel = c("auto", "no", "multicore", "snow"),
            ncpus = NULL, cl = NULL,
            drop_list_single_group = TRUE,
+           mdist_draws = 2000L,
            ...)
 }
 \arguments{
@@ -69,7 +70,18 @@ a list with one (nfactor x nfactor) matrix per observation.}
 \item{mdist}{Logical. If TRUE, the (squared)
 Mahalanobis distances of the factor scores (if \code{type = "lv"}) or
 the casewise residuals (if \code{type = "resid"}) are returned as an
-attribute.}
+attribute. If (some of) the data is ordered categorical, the distances
+are generalized as in Mansolf and Reise (2017): the continuous distance is
+replaced by its expected value over the region of the (multivariate
+normally distributed) latent response vector that is consistent with the
+observed response pattern; this expectation is approximated by Monte Carlo
+integration (using \code{mdist_draws} random draws per distinct response
+pattern; the result therefore depends on the state of the random number
+generator, and \code{set.seed()} can be used for reproducibility).
+Observed continuous variables are conditioned on, and missing values are
+integrated out. In this categorical setting, \code{type = "resid"} is
+allowed, and returns the expected casewise residuals of the latent
+responses (a by-product of the same Monte Carlo integration).}
 \item{rel}{Logical. Only used if \code{type = "lv"}. If TRUE,
 the factor reliabilities are returned as an attribute. (The squared
 values are often called the factor determinacies.)}
@@ -113,6 +125,10 @@ the \code{"optim()"} function is used with the BFGS method.}
     a list, where each element corresponds to a group (even if there is only
     a single group). If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
+\item{mdist_draws}{Integer. Only used if \code{mdist = TRUE} and (some of)
+    the data is ordered categorical: the number of Monte Carlo draws per
+    distinct response pattern used to approximate the expected Mahalanobis
+    distances.}
 \item{...}{To support old argument names.}
 }
 \details{
@@ -148,6 +164,14 @@ methods, see:
 Skrondal, A., & Rabe-Hesketh, S. (2004). \emph{Generalized latent variable
 modeling: Multilevel, longitudinal, and structural equation models.} Boca
 Raton, FL: Chapman & Hall/CRC.
+
+For the Mahalanobis distances with ordered categorical data
+(\code{mdist = TRUE}), see:
+
+Mansolf, M., & Reise, S. P. (2017). Case diagnostics for factor analysis of
+ordered categorical data with applications to person-fit measurement.
+\emph{Structural Equation Modeling: A Multidisciplinary Journal, 25}(1),
+86-100. \doi{10.1080/10705511.2017.1367926}
 
 For the correlation-preserving factor scores (\code{transform = TRUE}), see:
 
@@ -193,6 +217,25 @@ HS.ord[ , paste0("x", 1:9)] <-
 fit.ord <- cfa(HS.model, data = HS.ord, ordered = paste0("x", 1:9))
 fscores <- lavPredict(fit.ord, se = "standard")
 head(attr(fscores, "se")[[1]])
+
+
+## -------------------------------------------------
+## casewise Mahalanobis distances (case diagnostics)
+## -------------------------------------------------
+
+## continuous data: the squared distances are exact
+fscores <- lavPredict(fit, mdist = TRUE)
+head(attr(fscores, "mdist")[[1]])
+
+## ordered categorical data: expected (squared) distances of the latent
+## responses, obtained by Monte Carlo integration (Mansolf & Reise, 2017);
+## set the seed for reproducibility
+set.seed(123)
+resid.ord <- lavPredict(fit.ord, type = "resid", mdist = TRUE)
+## expected casewise residuals of the latent responses:
+head(resid.ord)
+## expected squared residual-based distances (person fit):
+head(attr(resid.ord, "mdist")[[1]])
 
 
 ## ------------------------------------------

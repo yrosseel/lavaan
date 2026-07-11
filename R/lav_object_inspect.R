@@ -3570,18 +3570,33 @@ lav_inspect_mdist2 <- function(object, type = "resid", squared = TRUE,
   lavdata <- object@Data
   n_g <- lavdata@ngroups
 
-  # lavPredict()
-  out <- lavPredict(object, type = type, method = "ML", # = Bartlett
-    label = FALSE, fsm = TRUE, mdist = TRUE,
-    se = "none", acov = "none")
-  return_value <- attr(out, "mdist")
+  if (object@Model@categorical) {
+    # ordered categorical (or mixed) data: the expected M-distances of the
+    # latent responses, obtained by Monte Carlo integration (Mansolf &
+    # Reise, 2017); note that here the expected distance E[d] is not the
+    # square root of the expected squared distance E[d^2], so both are
+    # computed directly
+    out <- lav_predict_mdist_cat(lavobject = object, type = type,
+      method = "ML") # = Bartlett
+    if (squared) {
+      return_value <- lapply(out, "[[", "d2")
+    } else {
+      return_value <- lapply(out, "[[", "d")
+    }
+  } else {
+    # lavPredict()
+    out <- lavPredict(object, type = type, method = "ML", # = Bartlett
+      label = FALSE, fsm = TRUE, mdist = TRUE,
+      se = "none", acov = "none")
+    return_value <- attr(out, "mdist")
 
-  for (g in seq_len(n_g)) {
     # squared?
     if (!squared) {
-      return_value[[g]] <- sqrt(return_value[[g]])
+      return_value <- lapply(return_value, sqrt)
     }
+  }
 
+  for (g in seq_len(n_g)) {
     # labels?
     # if(add_labels) {
     # }

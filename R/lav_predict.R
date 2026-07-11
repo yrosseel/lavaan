@@ -57,6 +57,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
                        parallel = c("auto", "no", "multicore", "snow"),
                        ncpus = NULL, cl = NULL,
                        drop_list_single_group = TRUE,
+                       mdist_draws = 2000L,
                       ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
@@ -162,7 +163,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
     mdist = mdist, append_data = append_data, assemble = assemble,
     level = level, optim_method = optim_method, eta = eta,
     parallel = parallel, ncpus = ncpus, cl = cl,
-    drop_list_single_group = drop_list_single_group
+    drop_list_single_group = drop_list_single_group,
+    mdist_draws = mdist_draws
   )
 
   res
@@ -184,7 +186,8 @@ lav_predict_internal <- function(lavmodel = NULL,
                                append_data = FALSE, assemble = FALSE, # or TRUE?
                                level = 1L, optim_method = "bfgs", eta = NULL,
                                parallel = "no", ncpus = NULL, cl = NULL,
-                               drop_list_single_group = TRUE) {
+                               drop_list_single_group = TRUE,
+                               mdist_draws = 2000L) {
   # type
   type <- tolower(type)
   lavpta <- lav_pt_attributes(lavpartable)
@@ -196,10 +199,13 @@ lav_predict_internal <- function(lavmodel = NULL,
     type <- "resid"
   }
 
-  # if resid, not for categorical
-  if (type == "resid" && lavmodel@categorical) {
+  # if resid, not for categorical, unless mdist = TRUE: in that case the
+  # expected residuals of the latent responses are computed by Monte Carlo
+  # integration (Mansolf & Reise, 2017; see lav_predict_mdist_cat)
+  if (type == "resid" && lavmodel@categorical && !mdist) {
     lav_msg_stop(gettext(
-      "casewise residuals not available if data is categorical"))
+      "casewise residuals not available if data is categorical
+      (unless mdist = TRUE)"))
   }
 
   # append_data? check level
@@ -208,8 +214,11 @@ lav_predict_internal <- function(lavmodel = NULL,
     append_data <- FALSE
   }
 
-  # mdist? -> fsm = TRUE
-  if (mdist) {
+  # mdist? -> fsm = TRUE (continuous data only; for categorical data the
+  # distances are computed by Monte Carlo integration, and no factor score
+  # matrix is involved)
+  mdist_cat_flag <- mdist && lavmodel@categorical
+  if (mdist && !mdist_cat_flag) {
     fsm <- TRUE
   }
 
@@ -304,6 +313,26 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (lavdata@nlevels > 1L) {
       lavdata <- new_data
     }
+  }
+
+  # categorical data + mdist: expected (squared) M-distances of the latent
+  # responses, via Monte Carlo integration (Mansolf & Reise, 2017)
+  if (mdist_cat_flag) {
+    if (!type %in% c("lv", "resid", "yhat")) {
+      lav_msg_stop(gettext(
+        "mdist is only available if type is one of: lv resid yhat"))
+    }
+    if (level > 1L) {
+      lav_msg_stop(gettext(
+        "mdist with categorical data is not available if level > 1L"))
+    }
+    mdist_cat <- lav_predict_mdist_cat(
+      lavmodel = lavmodel, lavdata = lavdata, lavimplied = lavimplied,
+      data_obs = data_obs, exo = exo,
+      type = type, method = method, ndraws = mdist_draws
+    )
+    # (squared metric, as in the continuous case)
+    mdist_1 <- lapply(mdist_cat, "[[", "d2")
   }
 
   if (type == "lv") {
@@ -449,7 +478,7 @@ lav_predict_internal <- function(lavmodel = NULL,
 #     }
 
     # new in 0.6-17
-    if (mdist) {
+    if (mdist && !mdist_cat_flag) {
       veta <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = TRUE)
       eeta <- lav_model_eeta(
         lavmodel = lavmodel,
@@ -607,28 +636,39 @@ lav_predict_internal <- function(lavmodel = NULL,
     # resid: y - yhat
   } else if (type %in% c("yhat", "resid")) {
     resid_flag <- type == "resid"
-    out <- lav_predict_yhat(
-      lavobject = NULL, lavmodel = lavmodel,
-      lavdata = lavdata, lavsamplestats = lavsamplestats,
-      lavimplied = lavimplied,
-      data_obs = data_obs, exo = exo,
-      eta = eta, method = method, optim_method = optim_method,
-      fsm = fsm,
-      resid_flag = resid_flag
-    )
-    if (fsm) {
-      fsm_1 <- attr(out, "fsm")
+    if (resid_flag && mdist_cat_flag) {
+      # categorical data: the expected casewise residuals of the latent
+      # responses (a by-product of the Monte Carlo integration)
+      out <- lapply(mdist_cat, "[[", "resid")
+    } else {
+      out <- lav_predict_yhat(
+        lavobject = NULL, lavmodel = lavmodel,
+        lavdata = lavdata, lavsamplestats = lavsamplestats,
+        lavimplied = lavimplied,
+        data_obs = data_obs, exo = exo,
+        eta = eta, method = method, optim_method = optim_method,
+        fsm = fsm,
+        resid_flag = resid_flag
+      )
+      if (fsm) {
+        fsm_1 <- attr(out, "fsm")
+      }
     }
 
     # label?
     if (label) {
       for (g in seq_len(lavdata@ngroups)) {
-        colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        if (ncol(out[[g]]) == length(lavpta$vnames$ov[[g]])) {
+          colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        } else {
+          # conditional.x: the columns only cover the non-exogenous ov's
+          colnames(out[[g]]) <- lavpta$vnames$ov.nox[[g]]
+        }
       }
     }
 
     # mdist
-    if (mdist) {
+    if (mdist && !mdist_cat_flag) {
       mm_lambda <- lav_model_lambda(
         lavmodel = lavmodel,
         remove_dummy_lv = FALSE,
