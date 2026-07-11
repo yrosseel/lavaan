@@ -114,7 +114,6 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
 
   # compute tr UG per group
   ngroups <- m1@SampleStats@ngroups
-  ug_group <- vector("list", length = ngroups)
 
   # safety check: m_a %*% p_inv %*% t(m_a) should NOT contain all-zero
   # rows/columns
@@ -142,53 +141,42 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
   # compute scaling factor
   fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal
 
+  # both traces live in the npar x npar space: with M = paapaap
+  # (symmetric) and K_g = Pi_g' V_g Gamma_g V_g Pi_g, we have
+  # U = V Pi M Pi' V, so that (Satorra 2000, eq. 23)
+  #   tr(U Gamma)     = sum_g fg_g tr(M K_g)
+  #   tr((U Gamma)^2) = tr((M K)^2), K = sum_g fg_g K_g
+  # this replaces the stacked pstar x pstar computation; the fg * Gamma_g
+  # with UNweighted V blocks convention is trace-equivalent to the
+  # Gamma_g / fg + fg-weighted-V convention used elsewhere (see the
+  # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
+  k_group <- vector("list", length = ngroups)
+  trace_ugamma_group <- numeric(ngroups)
+  for (g in 1:ngroups) {
+    vp <- wls_v[[g]] %*% m_pi[[g]] # pstar x npar
+    k_group[[g]] <- crossprod(vp, m_gamma[[g]] %*% vp)
+    trace_ugamma_group[g] <- sum(paapaap * k_group[[g]])
+  }
+  trace_ugamma <- sum(fg * trace_ugamma_group)
 
-  # this is what we did <0.6-13
-  if (old_approach) {
-    trace_ugamma <- numeric(ngroups)
-    trace_ugamma2 <- numeric(ngroups)
-    for (g in 1:ngroups) {
-      ug_group <- wls_v[[g]] %*% m_gamma[[g]] %*% wls_v[[g]] %*%
-        m_pi[[g]] %*% paapaap %*% t(m_pi[[g]])
-      trace_ugamma[g] <- sum(diag(ug_group))
-      if (satterthwaite) {
-        trace_ugamma2[g] <- sum(diag(ug_group %*% ug_group))
+  trace_ugamma2 <- as.numeric(NA)
+  if (satterthwaite) {
+    if (old_approach) {
+      # this is what we did <0.6-13: also the second trace per group
+      trace_ugamma2_group <- numeric(ngroups)
+      for (g in 1:ngroups) {
+        mk <- paapaap %*% k_group[[g]]
+        trace_ugamma2_group[g] <- sum(mk * t(mk))
       }
-    }
-
-    trace_ugamma <- sum(fg * trace_ugamma)
-    if (satterthwaite) {
-      trace_ugamma2 <- sum(fg * trace_ugamma2)
-    }
-  } else {
-    # for trace_ugamma, we can compute the trace per group
-    # as in Satorra (2000) eq. 23
-    trace_ugamma <- numeric(ngroups)
-    for (g in 1:ngroups) {
-      ug_group <- wls_v[[g]] %*% m_gamma[[g]] %*% wls_v[[g]] %*%
-        m_pi[[g]] %*% paapaap %*% t(m_pi[[g]])
-      trace_ugamma[g] <- sum(diag(ug_group))
-    }
-    trace_ugamma <- sum(fg * trace_ugamma)
-
-    # but for trace_ugamma2, we can no longer compute the trace per group
-    trace_ugamma2 <- as.numeric(NA)
-    if (satterthwaite) {
-      # global approach (not group-specific).
-      # NOTE: fg * Gamma_g with UNweighted V blocks -- trace-equivalent to
-      # the Gamma_g / fg + fg-weighted-V convention used elsewhere (see the
-      # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
-      gamma_f <- m_gamma
-      for (g in seq_along(m_gamma)) {
-        gamma_f[[g]] <- fg[g] * m_gamma[[g]]
+      trace_ugamma2 <- sum(fg * trace_ugamma2_group)
+    } else {
+      # global approach (not group-specific)
+      k_all <- fg[1] * k_group[[1]]
+      for (g in seq_len(ngroups - 1L) + 1L) {
+        k_all <- k_all + fg[g] * k_group[[g]]
       }
-      gamma_all <- lav_mat_bdiag(gamma_f)
-      v_all <- lav_mat_bdiag(wls_v)
-      pi_all <- do.call(rbind, m_pi)
-      u_all <- v_all %*% pi_all %*% paapaap %*% t(pi_all) %*% v_all
-      ug_all <- u_all %*% gamma_all
-      ug_all2 <- ug_all %*% ug_all
-      trace_ugamma2 <- sum(diag(ug_all2))
+      mk <- paapaap %*% k_all
+      trace_ugamma2 <- sum(mk * t(mk))
     }
   }
 

@@ -112,93 +112,57 @@ lavTest <- function(lavobject, test = "standard",               # nolint
   invisible(test_1)
 }
 
+# synonyms for the test statistics: canonical name -> accepted aliases
+lav_test_synonyms <- list(
+  standard = c("chisq", "chi", "chi-square", "chi.square"),
+  satorra.bentler = c(
+    "satorra", "sb", "satorra-bentler",
+    "m.adjusted", "m", "mean.adjusted", "mean-adjusted"
+  ),
+  yuan.bentler = c("yuan", "yb", "yuan-bentler"),
+  yuan.bentler.mplus = c("yuan-bentler.mplus", "yuan-bentler-mplus"),
+  yuan.chan = c("yuan-chan", "yuan_chan", "yuanchan", "yc"),
+  mean.var.adjusted = c(
+    "mean-var-adjusted", "mv", "second.order",
+    "satterthwaite", "mv.adjusted"
+  ),
+  scaled.shifted = c("mplus6", "scale.shift", "scaled-shifted"),
+  mean.var.adjusted.corrected = c(
+    "mean-var-adjusted-corrected",
+    "mv.adjusted.corrected", "mvc", "hayakawa"
+  ),
+  scaled.shifted.corrected = c("scaled-shifted-corrected", "ssc"),
+  bollen.stine = c("bootstrap", "boot", "bollen-stine"),
+  browne.residual.adf = c(
+    "browne", "residual", "residuals", "browne.residual",
+    "browne.residuals", "residual-based", "residual.based",
+    "browne.residuals.adf"
+  ),
+  browne.residual.nt = c(
+    "browne.residuals.nt",
+    "browne.nt.residuals", "browne.nt.residual"
+  ),
+  browne.residual.adf.model = c(
+    "browne.residuals.adf.model",
+    "browne.residual.model.adf", "browne.residuals.model.adf"
+  ),
+  browne.residual.nt.model = c(
+    "browne.residuals.nt.model",
+    "rls", "browne.rls", "nt.rls", "nt-rls", "ntrls"
+  )
+)
+
 # allow for 'flexible' names for the test statistics
 # 0.6-13: if multiple names, order them in such a way
 #         that the 'scaled' variants appear after the others
 lav_test_rename <- function(test, check = FALSE) {
   test <- tolower(test)
 
-  if (length(target_idx <- which(test %in%
-    c("standard", "chisq", "chi", "chi-square", "chi.square"))) > 0L) {
-    test[target_idx] <- "standard"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "satorra", "sb", "satorra.bentler", "satorra-bentler",
-      "m.adjusted", "m", "mean.adjusted", "mean-adjusted"
-    ))) > 0L) {
-    test[target_idx] <- "satorra.bentler"
-  }
-  if (length(target_idx <- which(test %in%
-    c("yuan", "yb", "yuan.bentler", "yuan-bentler"))) > 0L) {
-    test[target_idx] <- "yuan.bentler"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "yuan.bentler.mplus", "yuan-bentler.mplus",
-      "yuan-bentler-mplus"
-    ))) > 0L) {
-    test[target_idx] <- "yuan.bentler.mplus"
-  }
-  if (length(target_idx <- which(test %in%
-    c("yuan.chan", "yuan-chan", "yuan_chan", "yuanchan", "yc"))) > 0L) {
-    test[target_idx] <- "yuan.chan"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
-      "satterthwaite", "mv.adjusted"
-    ))) > 0L) {
-    test[target_idx] <- "mean.var.adjusted"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "mplus6", "scale.shift", "scaled.shifted",
-      "scaled-shifted"
-    ))) > 0L) {
-    test[target_idx] <- "scaled.shifted"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "mean.var.adjusted.corrected", "mean-var-adjusted-corrected",
-      "mv.adjusted.corrected", "mvc", "hayakawa"
-    ))) > 0L) {
-    test[target_idx] <- "mean.var.adjusted.corrected"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "scaled.shifted.corrected", "scaled-shifted-corrected", "ssc"
-    ))) > 0L) {
-    test[target_idx] <- "scaled.shifted.corrected"
-  }
-  if (length(target_idx <- which(test %in%
-    c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
-    test[target_idx] <- "bollen.stine"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "browne", "residual", "residuals", "browne.residual",
-      "browne.residuals", "residual-based", "residual.based",
-      "browne.residuals.adf", "browne.residual.adf"
-    ))) > 0L) {
-    test[target_idx] <- "browne.residual.adf"
-  }
-  if (length(target_idx <- which(test %in%
-    c("browne.residuals.nt", "browne.residual.nt",
-      "browne.nt.residuals", "browne.nt.residual"))) > 0L) {
-    test[target_idx] <- "browne.residual.nt"
-  }
-  if (length(target_idx <- which(test %in%
-    c("browne.residual.adf.model", "browne.residuals.adf.model",
-      "browne.residual.model.adf", "browne.residuals.model.adf"))) > 0L) {
-    test[target_idx] <- "browne.residual.adf.model"
-  }
-  if (length(target_idx <- which(test %in%
-    c(
-      "browne.residuals.nt.model", "browne.residual.nt.model",
-      "rls", "browne.rls", "nt.rls", "nt-rls", "ntrls"
-    ))) > 0L) {
-    test[target_idx] <- "browne.residual.nt.model"
+  for (canonical in names(lav_test_synonyms)) {
+    target_idx <- which(test %in% lav_test_synonyms[[canonical]])
+    if (length(target_idx) > 0L) {
+      test[target_idx] <- canonical
+    }
   }
 
   if (length(target_idx <- which(vapply(
@@ -342,24 +306,10 @@ lav_model_test <- function(lavobject = NULL,
 
   test_1 <- list()
 
-  # degrees of freedom (ignoring constraints)
-  df <- lav_pt_df(lavpartable)
-
-  # handle equality constraints (note: we ignore inequality constraints,
-  # active or not!)
-  # we use the rank of con.jac (even if the constraints are nonlinear)
-  if (!lavmodel@cin.simple.only && nrow(lavmodel@con.jac) > 0L) {
-    ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
-    if (length(ceq_idx) > 0L) {
-      neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
-      df <- df + neq
-    }
-  } else if (lavmodel@ceq.simple.only) {
-    # needed??
-    ndat <- lav_pt_ndat(lavpartable)
-    npar <- max(lavpartable$free)
-    df <- ndat - npar
-  }
+  # degrees of freedom, handling equality constraints (note: we ignore
+  # inequality constraints, active or not! we use the rank of con.jac,
+  # even if the constraints are nonlinear)
+  df <- lav_test_df(lavpartable = lavpartable, lavmodel = lavmodel)
 
   # shortcut: return empty list if one of the conditions below is true:
   # - test == "none"
@@ -386,13 +336,9 @@ lav_model_test <- function(lavobject = NULL,
       )
     }
 
-    attr(test_1, "info") <-
-      list(
-        ngroups = lavdata@ngroups, group.label = lavdata@group.label,
-        information = lavoptions$information,
-        h1.information = lavoptions$h1.information,
-        observed.information = lavoptions$observed.information
-      )
+    attr(test_1, "info") <- lav_test_info_attr(
+      lavdata = lavdata, lavoptions = lavoptions
+    )
 
     return(test_1)
   }
@@ -543,13 +489,9 @@ lav_model_test <- function(lavobject = NULL,
 
   if (length(test) == 1L && test == "standard") {
     # we are done
-    attr(test_1, "info") <-
-      list(
-        ngroups = lavdata@ngroups, group.label = lavdata@group.label,
-        information = lavoptions$information,
-        h1.information = lavoptions$h1.information,
-        observed.information = lavoptions$observed.information
-      )
+    attr(test_1, "info") <- lav_test_info_attr(
+      lavdata = lavdata, lavoptions = lavoptions
+    )
     return(test_1)
   } else {
     # strip 'standard' from test list
@@ -675,18 +617,9 @@ lav_model_test <- function(lavobject = NULL,
       "scaled.shifted.corrected"
     )) {
       # which test statistic shall we scale?
-      unscaled_test <- test_1[[1]]
-      if (lavoptions$scaled.test != "standard") {
-        idx <- which(names(test_1) == lavoptions$scaled.test)
-        if (length(idx) > 0L) {
-          unscaled_test <- test_1[[idx[1]]]
-        } else {
-          lav_msg_warn(gettextf(
-            "scaled.test [%1$s] not found among available (non scaled) tests:
-            %2$s. Using standard test instead.",
-            lavoptions$scaled.test, lav_msg_view(test)))
-        }
-      }
+      unscaled_test <- lav_test_scaled_base(
+        test_1 = test_1, lavoptions = lavoptions, test = test
+      )
 
       out <- lav_test_sb(
         lavobject = NULL,
@@ -710,18 +643,9 @@ lav_model_test <- function(lavobject = NULL,
       "yuan.bentler.mplus"
     )) {
       # which test statistic shall we scale?
-      unscaled_test <- test_1[[1]]
-      if (lavoptions$scaled.test != "standard") {
-        idx <- which(names(test_1) == lavoptions$scaled.test)
-        if (length(idx) > 0L) {
-          unscaled_test <- test_1[[idx[1]]]
-        } else {
-          lav_msg_warn(gettextf(
-            "scaled.test [%1$s] not found among available (non scaled) tests:
-            %2$s. Using standard test instead.",
-            lavoptions$scaled.test, lav_msg_view(test)))
-          }
-      }
+      unscaled_test <- lav_test_scaled_base(
+        test_1 = test_1, lavoptions = lavoptions, test = test
+      )
 
       out <- lav_test_yb(
         lavobject = NULL,
@@ -809,13 +733,9 @@ lav_model_test <- function(lavobject = NULL,
 
   # add additional information as an attribute, needed for independent
   # printing
-  attr(test_1, "info") <-
-    list(
-      ngroups = lavdata@ngroups, group.label = lavdata@group.label,
-      information = lavoptions$information,
-      h1.information = lavoptions$h1.information,
-      observed.information = lavoptions$observed.information
-    )
+  attr(test_1, "info") <- lav_test_info_attr(
+    lavdata = lavdata, lavoptions = lavoptions
+  )
 
   test_1
 }

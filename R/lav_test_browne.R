@@ -242,11 +242,8 @@ lav_test_browne <- function(lavobject = NULL,
       res_all)
     stat <- ntotal * (q1 - q2)
     stat_group <- stat * unlist(nobs) / ntotal # proxy only
-
-    # 3. nonlinear equality constraints
-  } else {
-    # TODO
   }
+  # (nonlinear equality constraints were caught at the top)
 
 
   # DF
@@ -254,20 +251,7 @@ lav_test_browne <- function(lavobject = NULL,
     df_1 <- lavobject@test[[1]]$df
   } else {
     # same approach as in lav_test.R
-    df <- lav_pt_df(lavpartable)
-    if (nrow(lavmodel@con.jac) > 0L) {
-      ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
-      if (length(ceq_idx) > 0L) {
-        neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
-        df <- df + neq
-      }
-    } else if (lavmodel@ceq.simple.only) {
-      # needed??
-      ndat <- lav_pt_ndat(lavpartable)
-      npar <- max(lavpartable$free)
-      df <- ndat - npar
-    }
-    df_1 <- df
+    df_1 <- lav_test_df(lavpartable = lavpartable, lavmodel = lavmodel)
   }
 
   if (adf) {

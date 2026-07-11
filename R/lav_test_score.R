@@ -55,6 +55,41 @@ lav_test_score_ceq_simple <- function(object) {
   list(R = r_mat, lhs = lhs, op = rep("==", length(lhs)), rhs = rhs)
 }
 
+# the [1:npar, 1:npar] block of the inverse of the information matrix
+# bordered with the constraint rows in r1 (the constraints that are KEPT,
+# i.e. not released): the 'constrained' inverse that neutralizes the
+# released constraints only.
+#
+# computed via the null-space identity
+#   J.inv = Z solve(Z' I Z) Z',  Z = orthonormal basis of null(r1),
+# which equals the [1:npar, 1:npar] block of
+#   ginv(rbind(cbind(I, t(r1)), cbind(r1, 0)))
+# (see also lav_model_info_augment_invert); one solve of order
+# npar - nrow(r1) instead of the SVD of the (npar + nrow(r1))^2 bordered
+# matrix -- this matters when the constraints are released one at a time.
+# if Z'IZ cannot be solved (the model is not identified even with the
+# kept constraints), we fall back to the explicit bordered Moore-Penrose
+# route
+lav_test_score_iinv <- function(information = NULL, r1 = NULL) {
+  if (is.null(r1) || nrow(r1) == 0L) {
+    return(MASS::ginv(information))
+  }
+  z <- lav_mat_ortho_complement(t(r1))
+  ziz <- crossprod(z, information %*% z)
+  out <- try(z %*% solve(ziz, t(z)), silent = TRUE)
+  if (inherits(out, "try-error")) {
+    z1 <- cbind(
+      rbind(information, r1),
+      rbind(t(r1), matrix(0, nrow(r1), nrow(r1)))
+    )
+    z1_plus <- MASS::ginv(z1)
+    out <- z1_plus[seq_len(nrow(information)), seq_len(nrow(information))]
+  } else {
+    out <- (out + t(out)) / 2
+  }
+  out
+}
+
 lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
                          univariate = TRUE, cumulative = FALSE,
                          epc = FALSE, standardized = epc, cov_std = epc,
@@ -138,18 +173,13 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
       r_add <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
       r_1 <- rbind(r_model, r_add)
 
-      z <- cbind(
-        rbind(information_1, r_model),
-        rbind(t(r_model), matrix(0, nrow(r_model), nrow(r_model)))
-      )
-      z_plus <- MASS::ginv(z)
-      j_inv <- z_plus[seq_len(nrow(information_1)),
-                      seq_len(nrow(information_1))]
+      # keep the model constraints
+      j_inv <- lav_test_score_iinv(information_1, r_model)
 
       r_idx <- seq_len(nadd) + nrow(r_model)
     } else {
       r_1 <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
-      j_inv <- MASS::ginv(information_1)
+      j_inv <- lav_test_score_iinv(information_1)
 
       r_idx <- seq_len(nadd)
     }
@@ -187,13 +217,12 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
       object,
       paste("information", information, sep = ".")
     )
-    j_inv <- MASS::ginv(information_1) # FIXME: move into if(is.null(release))?
-    #                 else written over with Z1.plus if(is.numeric(release))
     # R <- object@Model@con.jac[,]
 
     if (is.null(release)) {
       # ALL constraints
       r_idx <- seq_len(nrow(r_1))
+      j_inv <- lav_test_score_iinv(information_1)
     } else if (is.numeric(release)) {
       r_idx <- release
       if (max(r_idx) > nrow(r_1)) {
@@ -203,14 +232,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
       }
 
       # neutralize the non-needed constraints
-      r1 <- r_1[-r_idx, , drop = FALSE]
-      z1 <- cbind(
-        rbind(information_1, r1),
-        rbind(t(r1), matrix(0, nrow(r1), nrow(r1)))
+      j_inv <- lav_test_score_iinv(
+        information_1, r_1[-r_idx, , drop = FALSE]
       )
-      z1_plus <- MASS::ginv(z1)
-      j_inv <- z1_plus[seq_len(nrow(information_1)),
-                       seq_len(nrow(information_1))]
     } else if (is.character(release)) {
       lav_msg_stop(gettext("not implemented yet"))
     }
@@ -325,14 +349,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     ts_scaled <- rep(as.numeric(NA), nrow(r_1))
     epc_uni <- numeric(nrow(r_1)) # ignored in release= mode
     for (r in r_idx) {
-      r1 <- r_1[-r, , drop = FALSE]
-      z1 <- cbind(
-        rbind(information_1, r1),
-        rbind(t(r1), matrix(0, nrow(r1), nrow(r1)))
+      z1_plus1 <- lav_test_score_iinv(
+        information_1, r_1[-r, , drop = FALSE]
       )
-      z1_plus <- MASS::ginv(z1)
-      z1_plus1 <- z1_plus[seq_len(nrow(information_1)),
-                          seq_len(nrow(information_1))]
       ts_1[r] <- as.numeric(n * t(score) %*% z1_plus1 %*% score)
       if (!is.null(b_meat)) {
         # single restriction: the scaled, adjusted and generalized
@@ -381,14 +400,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     for (r in seq_along(r_idx)) {
       rcumul_idx <- ts_order[1:r]
 
-      r1 <- r_1[-rcumul_idx, , drop = FALSE]
-      z1 <- cbind(
-        rbind(information_1, r1),
-        rbind(t(r1), matrix(0, nrow(r1), nrow(r1)))
+      z1_plus1 <- lav_test_score_iinv(
+        information_1, r_1[-rcumul_idx, , drop = FALSE]
       )
-      z1_plus <- MASS::ginv(z1)
-      z1_plus1 <- z1_plus[seq_len(nrow(information_1)),
-                          seq_len(nrow(information_1))]
       ts_1[r] <- as.numeric(n * t(score) %*% z1_plus1 %*% score)
       if (!is.null(b_meat)) {
         a_c <- r_1[rcumul_idx, , drop = FALSE]
@@ -430,14 +444,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     # OUT$EPC <- EPC
 
     # alltogether
-    r1 <- r_1[-r_idx, , drop = FALSE]
-    z1 <- cbind(
-      rbind(information_1, r1),
-      rbind(t(r1), matrix(0, nrow(r1), nrow(r1)))
+    z1_plus1 <- lav_test_score_iinv(
+      information_1, r_1[-r_idx, , drop = FALSE]
     )
-    z1_plus <- MASS::ginv(z1)
-    z1_plus1 <- z1_plus[seq_len(nrow(information_1)),
-                           seq_len(nrow(information_1))]
     # EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
     # to keep the 'sign' consistent with modindices(), which
     # uses epc = 'new - old'

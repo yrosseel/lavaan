@@ -3,6 +3,9 @@
 #
 #           Note however that Satterthwaite = FALSE always (for now), so
 #           the fix has no (visible) effect
+# - 0.7-2:  the traces are computed by the streamed worker
+#           lav_test_ug_trace_stream() (lav_test_utils.R): no more
+#           pstar x pstar products (A1 %*% ... %*% A1)
 
 lav_test_yb <- function(lavobject = NULL,
                                   lavsamplestats = NULL,
@@ -44,23 +47,9 @@ lav_test_yb <- function(lavobject = NULL,
   }
 
   # E.inv ok?
-  if (length(lavoptions$information) == 1L &&
-    length(lavoptions$h1.information) == 1L &&
-    length(lavoptions$observed.information) == 1L) {
-    e_inv_recompute <- FALSE
-  } else if ((lavoptions$information[1] == lavoptions$information[2]) &&
-    (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-    (lavoptions$information[2] == "expected" ||
-      lavoptions$observed.information[1] ==
-        lavoptions$observed.information[2])) {
-    e_inv_recompute <- FALSE
-  } else {
-    e_inv_recompute <- TRUE
-    # change information options
-    lavoptions$information[1] <- lavoptions$information[2]
-    lavoptions$h1.information[1] <- lavoptions$h1.information[2]
-    lavoptions$observed.information[1] <- lavoptions$observed.information[2]
-  }
+  lavoptions <- lav_test_change_options(lavoptions)
+  e_inv_recompute <- attr(lavoptions, "recompute")
+  attr(lavoptions, "recompute") <- NULL
   if (!is.null(e_inv)) {
     e_inv_recompute <- FALSE # user-provided
   }
@@ -74,13 +63,6 @@ lav_test_yb <- function(lavobject = NULL,
                          `yuan.bentler.mplus'; will use `yuan.bentler' only"))
     test <- "yuan.bentler"
   }
-
-  # information
-  # information <- lavoptions$information[1]
-
-  # ndat
-  ndat <- numeric(lavsamplestats@ngroups)
-
 
   # do we have E.inv?
   if (is.null(e_inv) || e_inv_recompute) {
@@ -103,18 +85,14 @@ lav_test_yb <- function(lavobject = NULL,
           "could not invert information matrix needed for UGamma"))
         return(NULL)
       } else {
-        test_1$standard$stat <- as.numeric(NA)
-        test_1$standard$stat.group <- rep(as.numeric(NA), lavdata@ngroups)
-        test_1$standard$pvalue <- as.numeric(NA)
-        test_1[[test[1]]] <- c(test_1$standard,
-          scaling.factor = as.numeric(NA),
-          shift.parameter = as.numeric(NA),
-          label = character(0)
+        na_out <- lav_test_scaled_na(test_1$standard,
+          test1 = test[1],
+          ngroups = lavdata@ngroups
         )
+        test_1$standard <- na_out$standard
+        test_1[[test[1]]] <- na_out$failed
         lav_msg_warn(gettext("could not invert information matrix needed for
                              robust test statistic"))
-        test_1[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when
-                       # robust test is detected for some but not all models
         return(test_1)
       }
     }
@@ -122,20 +100,13 @@ lav_test_yb <- function(lavobject = NULL,
 
   # catch df == 0
   if (test_1$standard$df == 0L || test_1$standard$df < 0) {
-    test_1[[test[1]]] <- c(test_1$standard,
-      scaling.factor = as.numeric(NA),
-      label = character(0)
+    na_out <- lav_test_scaled_na(test_1$standard,
+      test1 = test[1],
+      na_standard = FALSE, shift = FALSE
     )
-    test_1[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when
-                   # robust test is detected for some but not all models
+    test_1[[test[1]]] <- na_out$failed
     return(test_1)
   }
-
-  # mean and variance adjusted?
-  # satterthwaite <- FALSE # for now
-  # if(any(test %in% c("mean.var.adjusted", "scaled.shifted"))) {
-  #    Satterthwaite <- TRUE
-  # }
 
   # FIXME: should we not always use 'unstructured' here?
   # if the model is, say, the independence model, the
@@ -276,7 +247,10 @@ lav_test_yb <- function(lavobject = NULL,
   test_1
 }
 
-
+# trace of U %*% Gamma (U %*% Omega), with U = A1 - A1 Delta E.inv Delta' A1,
+# via the streamed worker (same structure as the Satorra-Bentler U, with
+# V := A1); trace_h0 = tr(B1 Delta E.inv Delta') is accumulated per group
+# as tr(E.inv Delta' B1 Delta)
 lav_test_yb_trace <- function(lavsamplestats = lavsamplestats,
                                         meanstructure = TRUE,
                                         a1_group = NULL,
@@ -286,89 +260,33 @@ lav_test_yb_trace <- function(lavsamplestats = lavsamplestats,
                                         e_inv = NULL,
                                         ug2_old_approach = FALSE,
                                         satterthwaite = FALSE) {
-  # we always assume a meanstructure (nope, not any longer, since 0.6)
-  # meanstructure <- TRUE
-
   ngroups <- lavsamplestats@ngroups
+  fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
 
   trace_h1 <- attr(omega, "trace.h1")
   h1_ndat <- attr(omega, "h1.ndat")
 
-  if (ug2_old_approach || !satterthwaite) {
-    trace_ugamma <- numeric(ngroups)
-    trace_ugamma2 <- numeric(ngroups)
-    trace_h0 <- numeric(ngroups)
+  # tr(U Gamma) (and tr((U Gamma)^2) if satterthwaite)
+  out <- lav_test_ug_trace_stream(
+    m_gamma = omega, delta = delta, wls_v = a1_group, e_inv = e_inv,
+    fg = fg, satterthwaite = satterthwaite,
+    old_approach = ug2_old_approach
+  )
 
-    for (g in 1:ngroups) {
-      fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+  # trace.h0 per group; fg cancels against the Gamma_g / fg convention:
+  # sum( (fg * B1_g) * (Delta E.inv Delta') ) = fg * tr(E.inv Delta' B1 Delta)
+  trace_h0 <- numeric(ngroups)
+  for (g in seq_len(ngroups)) {
+    trace_h0[g] <- fg[g] *
+      sum(e_inv * crossprod(delta[[g]], b1_group[[g]] %*% delta[[g]]))
+  }
 
-      a1 <- a1_group[[g]] * fg
-      b1 <- b1_group[[g]] * fg
-      mm_delta <- delta[[g]]
-      gamma_g <- omega[[g]] / fg
-
-      d_einv_t_d <- mm_delta %*% tcrossprod(e_inv, mm_delta)
-
-      # trace.h1[g] <- sum( B1 * t( A1.inv ) )
-      # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) )
-      trace_h0[g] <- sum(b1 * d_einv_t_d)
-      # trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
-      u <- a1 - a1 %*% d_einv_t_d %*% a1
-      trace_ugamma[g] <- sum(u * gamma_g)
-
-      if (satterthwaite) {
-        ug <- u %*% gamma_g
-        trace_ugamma2[g] <- sum(ug * t(ug))
-      }
-    } # g
-    trace_ugamma <- sum(trace_ugamma)
-    attr(trace_ugamma, "h1") <- trace_h1
-    attr(trace_ugamma, "h0") <- trace_h0
-    attr(trace_ugamma, "h1.ndat") <- h1_ndat
-    if (satterthwaite) {
-      attr(trace_ugamma, "trace.UGamma2") <- sum(trace_ugamma2)
-    }
-  } else {
-    trace_ugamma <- trace_ugamma2 <- ug <- as.numeric(NA)
-    fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-    # if(Satterthwaite) {
-
-    a1_f <- a1_group
-    for (g in 1:ngroups) {
-      a1_f[[g]] <- a1_group[[g]] * fg[g]
-    }
-    a1_all <- lav_mat_bdiag(a1_f)
-
-    b1_f <- b1_group
-    for (g in 1:ngroups) {
-      b1_f[[g]] <- b1_group[[g]] * fg[g]
-    }
-    b1_all <- lav_mat_bdiag(b1_f)
-
-    # Omega_g / fg: the Cov(sqrt(ntotal) s_g) stacking convention (see the
-    # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
-    gamma_f <- lav_gamma_rescale_ntotal(omega,
-      nobs = lavsamplestats@nobs, ntotal = lavsamplestats@ntotal
-    )
-    gamma_all <- lav_mat_bdiag(gamma_f)
-    delta_all <- do.call("rbind", delta)
-
-    d_einv_t_d <- delta_all %*% tcrossprod(e_inv, delta_all)
-
-    trace_h0 <- sum(b1_all * d_einv_t_d)
-    u_all <- a1_all - a1_all %*% d_einv_t_d %*% a1_all
-    trace_ugamma <- sum(u_all * gamma_all)
-
-    attr(trace_ugamma, "h1") <- sum(trace_h1)
-    attr(trace_ugamma, "h0") <- trace_h0
-    attr(trace_ugamma, "h1.ndat") <- sum(h1_ndat)
-    if (satterthwaite) {
-      ug <- u_all %*% gamma_all
-      trace_ugamma2 <- sum(ug * t(ug))
-      attr(trace_ugamma, "trace.UGamma2") <- trace_ugamma2
-    }
-
-    # } else {
+  trace_ugamma <- out$trace.UGamma
+  attr(trace_ugamma, "h1") <- trace_h1
+  attr(trace_ugamma, "h0") <- trace_h0
+  attr(trace_ugamma, "h1.ndat") <- h1_ndat
+  if (satterthwaite) {
+    attr(trace_ugamma, "trace.UGamma2") <- out$trace.UGamma2
   }
 
   trace_ugamma
