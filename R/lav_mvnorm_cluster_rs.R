@@ -87,17 +87,21 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     }
 
     # the random-slope paths at level 1
-    rs_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" & pt$level == 1L)
-    if (length(rs_idx) == 0L) {
-      lav_msg_stop(gettext("no random-slope (rv) regressions found at
-                            level 1."))
-    }
+    # (the level column may hold user-chosen labels instead of 1L/2L)
+    level_values <- lav_pt_level_values(pt)
+    rs_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" &
+                    pt$level == level_values[1])
     # random slopes at level 2 are not allowed
-    bad_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" & pt$level > 1L)
+    bad_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" &
+                     pt$level %in% level_values[-1L])
     if (length(bad_idx) > 0L) {
       lav_msg_stop(gettext(
         "random slopes (rv() modifier) can only be used in the level-1
          (within) part of the model."))
+    }
+    if (length(rs_idx) == 0L) {
+      lav_msg_stop(gettext("no random-slope (rv) regressions found at
+                            level 1."))
     }
 
     path_rv <- pt$rv[rs_idx]
