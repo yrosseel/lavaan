@@ -443,10 +443,32 @@ lav_object_fit_by_level <- function(object) {
       )
     }
 
+    # strip the slots that are shared with (and identical to) the
+    # original object: the raw data can be huge, and storing two extra
+    # copies would blow up the size of the fitted object; they are
+    # re-injected by lav_fit_by_level_rehydrate() before use
+    fit_ps@Data <- new("lavData")
+    fit_ps@SampleStats <- new("lavSampleStats")
+    fit_ps@Cache <- list()
+    fit_ps@h1 <- list()
+
     out[[level_names[l]]] <- fit_ps
   }
 
   out
+}
+
+# re-inject the (stripped) slots that a stored partially saturated fit
+# shares with the original object; the result is identical to the fit
+# as it came out of lavaan(), because these slots were passed along
+# unmodified (slot_data/slot_sample_stats/slot_cache/sloth1) when the
+# partially saturated model was fitted
+lav_fit_by_level_rehydrate <- function(fit_l, object) {
+  fit_l@Data <- object@Data
+  fit_l@SampleStats <- object@SampleStats
+  fit_l@Cache <- object@Cache
+  fit_l@h1 <- object@h1
+  fit_l
 }
 
 # resolve a user-specified 'level' argument (1/2, "within"/"between", or
@@ -503,7 +525,7 @@ lav_fit_by_level_get <- function(object, level = NULL) {
       target))
   }
 
-  fit_l
+  lav_fit_by_level_rehydrate(fit_l, object)
 }
 
 # build a small (measures x levels) matrix with level-specific fit
@@ -545,6 +567,7 @@ lav_fit_by_level_fm <- function(object) {
     if (is.null(fit_l)) {
       next
     }
+    fit_l <- lav_fit_by_level_rehydrate(fit_l, object)
     fm <- try(
       lav_fit(
         object = fit_l,
