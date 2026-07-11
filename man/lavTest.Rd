@@ -27,6 +27,17 @@ the model.}
     statistic is computed. If \code{"scaled.shifted"} is included,
     an alternative mean and variance adjusted test statistic is
     computed (as in Mplus version 6 or higher).
+    If \code{"mean.var.adjusted.corrected"} (aliases: \code{"mvc"},
+    \code{"hayakawa"}) or \code{"scaled.shifted.corrected"} (alias:
+    \code{"ssc"}) is included, the corresponding test statistic is computed
+    with the corrected (unbiased) estimator of the trace of the squared
+    UGamma matrix (Hayakawa, 2018), which remains accurate when the number
+    of observed variables is large relative to the sample size (where the
+    naive estimator is severely biased, and the uncorrected adjusted tests
+    underreject). These corrected tests are only available for single-group,
+    single-level, complete, continuous data and \code{estimator = "ML"}.
+    Following Hayakawa (2018), they are best combined with
+    \code{scaled_test = "RLS"}.
     If \code{"boot"} or \code{"bootstrap"} or \code{"Bollen.Stine"} is
     included, the
     Bollen-Stine bootstrap is used to compute the bootstrap probability value
@@ -63,6 +74,19 @@ the model.}
     nested list of test statistics (including an info attribute) is
     returned.
 }
+\references{
+Hayakawa, K. (2019). Corrected goodness-of-fit test in covariance
+structure analysis. \emph{Psychological Methods, 24}(3), 371--389.
+\doi{10.1037/met0000180}
+
+Himeno, T., & Yamada, T. (2014). Estimations for some functions of
+covariance matrix in high dimension under non-normality and its
+applications. \emph{Journal of Multivariate Analysis, 130}, 27--44.
+
+Srivastava, M. S. (2005). Some tests concerning the covariance matrix in
+high dimensional data. \emph{Journal of the Japan Statistical Society,
+35}(2), 251--272.
+}
 \examples{
 HS.model <- '
     visual  =~ x1 + x2 + x3
@@ -73,4 +97,7 @@ fit <- cfa(HS.model, data = HolzingerSwineford1939)
 lavTest(fit, test = "browne.residual.adf")
 lavTest(fit, test = "peba4", output = "text")
 lavTest(fit, test = "pols3", scaled_test = "RLS", output = "text")
+# corrected adjusted test (Hayakawa, 2018), based on the RLS statistic
+lavTest(fit, test = "mean.var.adjusted.corrected", scaled_test = "RLS",
+        output = "text")
 }

@@ -347,7 +347,8 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "yuan.chan", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted",
+      "scaled.shifted.corrected"
     )) {
     robust_flag <- TRUE
   }
@@ -518,7 +519,9 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
         df3 <- df
         c_hat <- test[[scaled_idx]]$scaling.factor
         shift_par <- 0
-        if (scaled_test == "scaled.shifted") {
+        if (scaled_test %in% c(
+          "scaled.shifted", "scaled.shifted.corrected"
+        )) {
           # compute c.hat from a and b
           a <- test[[scaled_idx]]$scaling.factor
           b <- test[[scaled_idx]]$shift.parameter

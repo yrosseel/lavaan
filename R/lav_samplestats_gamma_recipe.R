@@ -53,7 +53,9 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
     if (missing == "listwise" && any(test %in% c(
       "satorra.bentler",
       "mean.var.adjusted",
-      "scaled.shifted"
+      "mean.var.adjusted.corrected",
+      "scaled.shifted",
+      "scaled.shifted.corrected"
     ))) {
       nacov_compute <- TRUE
     }

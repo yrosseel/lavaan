@@ -747,7 +747,8 @@ lav_options_set <- function(opt = NULL) {
   if (any(opt$missing == c("ml", "ml.x")) &&
     any(opt$test %in% c(
       "satorra.bentler",
-      "mean.var.adjusted", "scaled.shifted"
+      "mean.var.adjusted", "scaled.shifted",
+      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
     ))) {
     lav_msg_warn(gettextf(
       "missing will be set to %s for satorra.bentler style test",
@@ -1025,7 +1026,8 @@ lav_options_set <- function(opt = NULL) {
     any(opt$test %in% c(
       "satorra.bentler", "yuan.bentler",
       "yuan.bentler.mplus",
-      "mean.var.adjusted", "scaled.shifted"
+      "mean.var.adjusted", "scaled.shifted",
+      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
     ))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust test statistics are requested.",
@@ -1045,7 +1047,9 @@ lav_options_set <- function(opt = NULL) {
         "yuan.bentler",
         "yuan.bentler.mplus",
         "mean.var.adjusted",
-        "scaled.shifted"
+        "mean.var.adjusted.corrected",
+        "scaled.shifted",
+        "scaled.shifted.corrected"
       ))) {
         if (length(opt$test) > 1L) {
           opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
@@ -1265,6 +1269,7 @@ lav_options_set <- function(opt = NULL) {
     "yuan.bentler", "yuan.bentler.mplus",
     "yuan.chan", # SAM-only (sam.method = "global"); ignored elsewhere
     "mean.var.adjusted", "scaled.shifted",
+    "mean.var.adjusted.corrected", "scaled.shifted.corrected",
     "browne.residual.adf", "browne.residual.nt",
     "browne.residual.nt.model",
     "browne.residual.adf.model",
@@ -1282,6 +1287,7 @@ lav_options_set <- function(opt = NULL) {
         "browne.residual.nt.model", "satorra.bentler",
         "yuan.bentler", "yuan.bentler.mplus",
         "mean.var.adjusted", "scaled.shifted",
+        "mean.var.adjusted.corrected", "scaled.shifted.corrected",
         "bollen.stine"
       ), log_sep = "or")
     ))

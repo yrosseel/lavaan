@@ -305,21 +305,23 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # do we have a scaled test statistic? if so, which one?
+  scaled_test_names <- c(
+    "satorra.bentler",
+    "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
+    "mean.var.adjusted", "scaled.shifted",
+    "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+  )
   scaled_flag <- FALSE
   if (!fmg_standard_test &&
       scaled_test != "none" &&
-      any(test_names %in% c(
-        "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
-        "mean.var.adjusted", "scaled.shifted"
-      ))) {
+      any(test_names %in% scaled_test_names)) {
     scaled_flag <- TRUE
-    if (scaled_test %in% c("standard", "default")) {
-      tmp_idx <- which(test_names %in% c(
-        "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
-        "mean.var.adjusted", "scaled.shifted"
-      ))
+    # note: object@Options$scaled.test holds the *base* statistic that was
+    # scaled (eg "browne.residual.nt.model"), not the name of a scaled
+    # test; in that case (as for "standard"/"default"), use the first
+    # scaled test that is available
+    if (!scaled_test %in% scaled_test_names) {
+      tmp_idx <- which(test_names %in% scaled_test_names)
       scaled_test <- test_names[tmp_idx[1]]
     }
   }

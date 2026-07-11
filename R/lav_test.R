@@ -159,6 +159,19 @@ lav_test_rename <- function(test, check = FALSE) {
     test[target_idx] <- "scaled.shifted"
   }
   if (length(target_idx <- which(test %in%
+    c(
+      "mean.var.adjusted.corrected", "mean-var-adjusted-corrected",
+      "mv.adjusted.corrected", "mvc", "hayakawa"
+    ))) > 0L) {
+    test[target_idx] <- "mean.var.adjusted.corrected"
+  }
+  if (length(target_idx <- which(test %in%
+    c(
+      "scaled.shifted.corrected", "scaled-shifted-corrected", "ssc"
+    ))) > 0L) {
+    test[target_idx] <- "scaled.shifted.corrected"
+  }
+  if (length(target_idx <- which(test %in%
     c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
     test[target_idx] <- "bollen.stine"
   }
@@ -212,7 +225,9 @@ lav_test_rename <- function(test, check = FALSE) {
       "yuan.chan",
       "mean.adjusted",
       "mean.var.adjusted",
+      "mean.var.adjusted.corrected",
       "scaled.shifted",
+      "scaled.shifted.corrected",
       "bollen.stine",
       "browne.residual.nt",
       "browne.residual.nt.model",
@@ -262,7 +277,9 @@ lav_test_rename <- function(test, check = FALSE) {
     "yuan.chan",
     "mean.adjusted",
     "mean.var.adjusted",
-    "scaled.shifted"
+    "mean.var.adjusted.corrected",
+    "scaled.shifted",
+    "scaled.shifted.corrected"
   ))
   fmg_idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
   test <- c(test[nonscaled_idx], test[scaled_idx], test[fmg_idx])
@@ -653,7 +670,9 @@ lav_model_test <- function(lavobject = NULL,
     } else if (this_test %in% c(
       "satorra.bentler",
       "mean.var.adjusted",
-      "scaled.shifted"
+      "mean.var.adjusted.corrected",
+      "scaled.shifted",
+      "scaled.shifted.corrected"
     )) {
       # which test statistic shall we scale?
       unscaled_test <- test_1[[1]]

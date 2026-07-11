@@ -75,15 +75,29 @@ lav_test_sb <- function(lavobject = NULL,
   if (!all(test %in% c(
     "satorra.bentler",
     "scaled.shifted",
-    "mean.var.adjusted"
+    "mean.var.adjusted",
+    "mean.var.adjusted.corrected",
+    "scaled.shifted.corrected"
   ))) {
     lav_msg_warn(gettext(
-      "test must be one of `satorra.bentler', `scaled.shifted' or
-      `mean.var.adjusted'; will use `satorra.bentler' only"))
+      "test must be one of `satorra.bentler', `scaled.shifted',
+      `mean.var.adjusted', `mean.var.adjusted.corrected' or
+      `scaled.shifted.corrected'; will use `satorra.bentler' only"))
     test <- "satorra.bentler"
   }
 
-  if (return_u) {
+  # corrected trace (Hayakawa 2018) tests need the U matrix and casewise data
+  corrected_trace <- any(test %in% c(
+    "mean.var.adjusted.corrected",
+    "scaled.shifted.corrected"
+  ))
+  if (corrected_trace) {
+    lav_test_hayakawa_check(
+      lavoptions = lavoptions, lavdata = lavdata, lavmodel = lavmodel
+    )
+  }
+
+  if (return_u || corrected_trace) {
     method <- "original"
   }
 
@@ -183,7 +197,10 @@ lav_test_sb <- function(lavobject = NULL,
 
   # mean and variance adjusted?
   satterthwaite <- FALSE
-  if (any(test %in% c("mean.var.adjusted", "scaled.shifted"))) {
+  if (any(test %in% c(
+    "mean.var.adjusted", "scaled.shifted",
+    "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+  ))) {
     satterthwaite <- TRUE
   }
 
@@ -208,7 +225,7 @@ lav_test_sb <- function(lavobject = NULL,
       m_gamma = m_gamma,
       delta = delta, wls_v = wls_v, e_inv = e_inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
-      ntotal = lavsamplestats@ntotal, return_u = return_u,
+      ntotal = lavsamplestats@ntotal, return_u = return_u || corrected_trace,
       return_ugamma = return_ugamma,
       ug2_old_approach = ug2_old_approach,
       satterthwaite = satterthwaite,
@@ -239,6 +256,31 @@ lav_test_sb <- function(lavobject = NULL,
   }
   trace_ugamma <- out$trace.UGamma
   trace_ugamma2 <- out$trace.UGamma2
+
+  # corrected traces (Hayakawa 2018) from the casewise moment vectors
+  if (corrected_trace) {
+    u_mat <- out$UfromUGamma
+    if (is.list(u_mat)) {
+      u_mat <- u_mat[[1]] # single group only (checked above)
+    }
+    if (is.matrix(u_mat)) {
+      trace_c <- lav_test_hayakawa_trace2(
+        u = u_mat, m_y = lavdata@X[[1]],
+        meanstructure = lavmodel@meanstructure
+      )
+      trace_ugamma_c <- trace_c$trace.UGamma
+      trace_ugamma2_c <- trace_c$trace.UGamma2
+    } else {
+      trace_ugamma_c <- trace_ugamma2_c <- as.numeric(NA)
+    }
+    if (!is.finite(trace_ugamma2_c) || trace_ugamma2_c <= 0 ||
+      !is.finite(trace_ugamma_c) || trace_ugamma_c <= 0) {
+      lav_msg_warn(gettext(
+        "corrected trace estimates are not positive; the corrected
+        adjusted test statistics will be NA."))
+      trace_ugamma_c <- trace_ugamma2_c <- as.numeric(NA)
+    }
+  }
 
   if ("satorra.bentler" %in% test) {
     # same df
@@ -401,6 +443,70 @@ lav_test_sb <- function(lavobject = NULL,
         scaled.test.stat = test_1$standard$stat,
         scaled.test = test_1$standard$test,
         label = label
+      )
+  }
+
+  if ("mean.var.adjusted.corrected" %in% test) {
+    # Hayakawa (2018): mean and variance adjusted test with the unbiased
+    # (Srivastava 2005; Himeno & Yamada 2014) estimator of tr(UGamma^2)
+    df_scaled <- trace_ugamma_c^2 / trace_ugamma2_c
+
+    # scaling factor
+    scaling_factor <- trace_ugamma2_c / trace_ugamma_c
+    if (isTRUE(scaling_factor < 0)) scaling_factor <- as.numeric(NA)
+
+    # scaled test statistic per group and global
+    stat_group <- test_1$standard$stat.group / scaling_factor
+    stat <- test_1$standard$stat / scaling_factor
+
+    test_1$mean.var.adjusted.corrected <-
+      list(
+        test = "mean.var.adjusted.corrected",
+        stat = stat,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma_c,
+        trace.UGamma2 = trace_ugamma2_c,
+        trace.UGamma2.naive = trace_ugamma2,
+        scaling.factor = scaling_factor,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
+        label =
+          "mean and variance adjusted correction (corrected trace)"
+      )
+  }
+
+  if ("scaled.shifted.corrected" %in% test) {
+    # scaled and shifted test with the corrected estimator of tr(UGamma^2)
+    # (not in Hayakawa 2018, but the same substitution)
+    df_scaled <- test_1$standard$df
+
+    fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
+    a <- sqrt(df_scaled / trace_ugamma2_c)
+    if (isTRUE(a < 0) || is.nan(a)) a <- as.numeric(NA)
+    scaling_factor <- 1 / a
+    if (isTRUE(scaling_factor < 0)) scaling_factor <- as.numeric(NA)
+
+    shift_parameter <- df_scaled - a * trace_ugamma_c
+    stat <- test_1$standard$stat * a + shift_parameter
+    stat_group <- test_1$standard$stat.group * a + fg * shift_parameter
+
+    test_1$scaled.shifted.corrected <-
+      list(
+        test = "scaled.shifted.corrected",
+        stat = stat,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma_c,
+        trace.UGamma2 = trace_ugamma2_c,
+        trace.UGamma2.naive = trace_ugamma2,
+        scaling.factor = scaling_factor,
+        shift.parameter = shift_parameter,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
+        label = "simple second-order correction (corrected trace)"
       )
   }
 

@@ -262,7 +262,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "yuan.chan", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted",
+      "scaled.shifted.corrected"
     )) {
     robust_flag <- TRUE
   }
@@ -380,7 +381,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
       df3 <- fiml$df3
       c_hat3 <- c_hat <- fiml$c.hat3
       xx3_scaled <- fiml$XX3.scaled
-    } else if (scaled_test == "scaled.shifted") {
+    } else if (scaled_test %in% c(
+      "scaled.shifted", "scaled.shifted.corrected"
+    )) {
       # compute c.hat from a and b
       a <- test[[scaled_idx]]$scaling.factor
       b <- test[[scaled_idx]]$shift.parameter
@@ -517,7 +520,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
         c_hat_null <- fiml$c.hat3.null
       } else if (!baseline_scaled_ok) {
         c_hat_null <- as.numeric(NA)
-      } else if (scaled_test == "scaled.shifted") {
+      } else if (scaled_test %in% c(
+        "scaled.shifted", "scaled.shifted.corrected"
+      )) {
         # compute c.hat from a and b
         a_null <-
           baseline_test[[baseline_scaled_idx]]$scaling.factor

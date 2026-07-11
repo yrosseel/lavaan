@@ -198,7 +198,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   mods_scaled <- unlist(lapply(mods, function(x) {
     any(c(
       "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
-      "mean.var.adjusted", "scaled.shifted"
+      "mean.var.adjusted", "scaled.shifted",
+      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
     ) %in%
       unlist(sapply(slot(x, "test"), "[[", "test")))
   }))
@@ -218,7 +219,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     if (test == "default") {
       test_1 <- default_test
     } else if (!test %in% c("satorra.bentler", "yuan.bentler",
-     "yuan.bentler.mplus", "mean.var.adjusted", "scaled.shifted")) {
+     "yuan.bentler.mplus", "mean.var.adjusted", "scaled.shifted",
+     "mean.var.adjusted.corrected", "scaled.shifted.corrected")) {
       lav_msg_stop(gettextf(
         "test = %s not found in object. See available tests in
         lavInspect(object, \"options\")$test.", dQuote(test)))
@@ -281,6 +283,15 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
         method <- "satorra.bentler.2001"
       } else {
         method <- "satorra.2000"
+        if (test_1 %in% c(
+          "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+        )) {
+          # the corrected (Hayakawa 2018) trace estimator is not (yet)
+          # available for difference tests
+          lav_msg_warn(gettext(
+            "the difference test uses the standard (uncorrected) trace
+            estimates, not the corrected (Hayakawa 2018) versions."))
+        }
       }
     } else {
       # nothing to do
