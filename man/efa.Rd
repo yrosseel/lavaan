@@ -67,7 +67,10 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    blocks \code{efa("a")} and \code{efa("b")}), so that each efa block gets
    its own target matrix (the same targets are then used in all groups).
    The latter is only relevant when the model syntax (of \code{sem()} or
-   \code{cfa()}) defines multiple efa blocks (set-ESEM).}
+   \code{cfa()}) defines multiple efa blocks (set-ESEM). Note that a named
+   list must provide a target matrix for \emph{every} efa block (with two
+   or more factors) in the model; omitting a block results in an error, as
+   the rotation criterion would be undefined for that block.}
 \item{rotation_args}{List. Options related to the rotation algorithm. DEPRECATED.
    The options should now be given in the \code{rotation} argument as a list.}
 \item{ov_names}{Character vector. The variables names that are needed for
