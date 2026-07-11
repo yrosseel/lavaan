@@ -691,6 +691,7 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
 
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     lavoptions_joint$baseline <- FALSE
+    lavoptions_joint$fit.by.level <- FALSE
     lavoptions_joint$sample.icov <- FALSE
     #lavoptions.joint$h1 <- TRUE # we need this if we re-use the sam object
     lavoptions_joint$test <- "none"
@@ -1085,6 +1086,7 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
       opts$se       <- "none"
       opts$test     <- test
       opts$baseline <- FALSE
+      opts$fit.by.level <- FALSE
       opts$estimator <- joint@Model@estimator
       if (!is.null(gamma_unbiased)) {
         opts$gamma.unbiased <- gamma_unbiased

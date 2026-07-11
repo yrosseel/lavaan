@@ -1085,6 +1085,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       check.gradient = FALSE,
       check.vcov = FALSE,
       baseline = FALSE,
+      fit.by.level = FALSE,
       h1 = FALSE,
       se = "none",
       test = "none"

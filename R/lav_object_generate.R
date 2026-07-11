@@ -132,6 +132,7 @@ lav_object_baseline <- function(object = NULL,
   # change options
   lavoptions$h1 <- FALSE # already provided by lavh1
   lavoptions$baseline <- FALSE # of course
+  lavoptions$fit.by.level <- FALSE
   lavoptions$loglik <- TRUE # eg for multilevel
   lavoptions$implied <- TRUE # needed for loglik (multilevel)
   lavoptions$check.start <- FALSE
@@ -321,6 +322,9 @@ lav_object_extended <- function(object, add = NULL,
   # (modindices!)
   lavoptions$check.delta.cat.mediator <- FALSE
 
+  # no need for the partially saturated models (multilevel)
+  lavoptions$fit.by.level <- FALSE
+
   fit <- lavaan(list_1,
     slot_options     = lavoptions,
     slot_sample_stats = object@SampleStats,
@@ -454,6 +458,7 @@ lav_object_catml <- function(lavobject = NULL, allow_refit = TRUE) {
   # the robust corrections assume the (default) independence baseline
   # (Savalei, 2021, eq. 6b); never use a 'nested' baseline here
   lavoptions$baseline.type <- "independence"
+  lavoptions$fit.by.level <- FALSE
   if (!refit) {
     lavoptions$optim.method <- "none"
     lavoptions$optim.force.converged <- TRUE

@@ -720,6 +720,7 @@ lav_fit_check_baseline <- function(fit_indep = NULL, object = NULL,
       lavoptions$estimator <- object@Options$estimator
       lavoptions$se <- "none"
       lavoptions$baseline <- FALSE
+      lavoptions$fit.by.level <- FALSE
       lavoptions$check.start <- FALSE
       lavoptions$check.post <- FALSE
       lavoptions$check.vcov <- FALSE

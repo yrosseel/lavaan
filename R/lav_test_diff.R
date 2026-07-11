@@ -392,6 +392,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   options_1$optim.method <- "none"
   options_1$optim.force.converged <- TRUE
   options_1$baseline <- FALSE
+  options_1$fit.by.level <- FALSE
   options_1$h1 <- TRUE # needed after all (yuan.benter.mplus)
   options_1$start <- pt_m0_extended # new in 0.6!
   m10 <- lavaan(

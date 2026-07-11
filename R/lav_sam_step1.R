@@ -113,6 +113,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   lavoptions_mm$check.post <- FALSE # neg lv variances may be overridden
   lavoptions_mm$check.gradient <- FALSE # too sensitive in large model (global)
   lavoptions_mm$baseline <- FALSE
+  lavoptions_mm$fit.by.level <- FALSE
   lavoptions_mm$bounds <- "wide.zerovar"
 
   # conditional.x: for CONTINUOUS data the measurement models are always

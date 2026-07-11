@@ -26,7 +26,7 @@ setMethod(
              robust = TRUE,
              cat.nonpd = "na"
            ),
-           output = "vector", ...) {
+           output = "vector", level = NULL, ...) {
     dotdotdot <- list(...)
     lav_adapt_func(environment(), dotdotdot, NULL)
     if (!is.list(fit_measures))
@@ -35,7 +35,7 @@ setMethod(
     lav_fit(
       object = object, fit_measures = fit_measures,
       baseline_model = baseline_model, h1_model = h1_model,
-      output = output
+      output = output, level = level
     )
   }
 )
@@ -52,7 +52,7 @@ setMethod(
              robust = TRUE,
              cat.nonpd = "na"
            ),
-           output = "vector", ...) {
+           output = "vector", level = NULL, ...) {
     dotdotdot <- list(...)
     lav_adapt_func(environment(), dotdotdot, NULL)
     if (!is.list(fit_measures))
@@ -61,7 +61,7 @@ setMethod(
     lav_fit(
       object = object, fit_measures = fit_measures,
       baseline_model = baseline_model, h1_model = h1_model,
-      output = output
+      output = output, level = level
     )
   }
 )
@@ -138,9 +138,35 @@ lav_fit <- function(object, fit_measures = "all",
                                robust = TRUE,
                                cat.nonpd = "na"
                              ),
-                             output = "vector") {
+                             output = "vector", level = NULL) {
   # check object
   object <- lav_object_check_version(object)
+
+  # level-specific fit measures for multilevel models: delegate to the
+  # partially saturated model for that level (see lav_fit_by_level.R)
+  if (!is.null(level)) {
+    target <- lav_fit_by_level_target(object, level = level)
+    fit_l <- lav_fit_by_level_get(object, level = level)
+    if (missing(fm_args)) {
+      out <- lav_fit(
+        object = fit_l, fit_measures = fit_measures,
+        baseline_model = baseline_model, h1_model = h1_model,
+        output = output
+      )
+    } else {
+      out <- lav_fit(
+        object = fit_l, fit_measures = fit_measures,
+        baseline_model = baseline_model, h1_model = h1_model,
+        fm_args = fm_args, output = output
+      )
+    }
+    if (output %in% c("vector", "text")) {
+      attr(out, "header") <- gettextf(
+        "Fit measures for the %s level only (the other level is saturated):",
+        target)
+    }
+    return(out)
+  }
 
   # sam objects (issue #517)
   if (!is.null(object@internal$sam.method)) {

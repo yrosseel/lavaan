@@ -363,6 +363,12 @@ lav_object_summary <- function(object, header = TRUE,
         attr(fit, "header") <- NULL
       }
       res$fit <- fit
+
+      # multilevel: add level-specific fit measures (based on the stored
+      # partially saturated fits; see fit.by.level option)
+      if (object@Data@nlevels > 1L) {
+        res$fit.by.level <- lav_fit_by_level_fm(object)
+      }
     }
   }
 

@@ -1303,6 +1303,11 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     lav_fitmeasures_print(y$fit, nd = nd, add_h0 = add_h0)
   }
 
+  # level-specific fit measures (multilevel only, if present)
+  if (!is.null(y$fit.by.level)) {
+    lav_fit_by_level_print(y$fit.by.level, nd = nd)
+  }
+
   # efa output
   if (!is.null(y$efa)) {
     # get cutoff, if it is stored as an attribute

@@ -196,6 +196,7 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     se = "none",
     test = "standard",
     baseline = FALSE,
+    fit.by.level = FALSE,
     check.post = FALSE
   ), silent = TRUE)
   if (inherits(fit_tilde, "try-error")) {
@@ -313,6 +314,7 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     se = "none",
     test = "standard",
     baseline = FALSE,
+    fit.by.level = FALSE,
     check.post = FALSE
   ), silent = TRUE)
   if (inherits(fit_b_tilde, "try-error")) {

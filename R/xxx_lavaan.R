@@ -726,6 +726,16 @@ lavaan <- function(
     lav_monte_carlo = lav_monte_carlo
   )
 
+  # ----------- fit.by.level (multilevel only) ----------
+  # fit the partially saturated models (one per level), providing
+  # level-specific fit measures; see fitMeasures(..., level = )
+  if (lavdata@nlevels > 1L && isTRUE(lavoptions$fit.by.level)) {
+    fbl <- lav_object_fit_by_level(out)
+    if (length(fbl) > 0L) {
+      out@internal$fit.by.level <- fbl
+    }
+  }
+
   # restore random seed
   if (!is.null(temp_seed)) {
     assign(".Random.seed", temp_seed, envir = .GlobalEnv)             # nolint

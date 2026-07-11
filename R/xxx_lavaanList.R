@@ -96,6 +96,7 @@ lavaanList <- function(model = NULL, # model                    # nolint
   }
 
   lavoptions <- fit@Options
+  lavoptions$fit.by.level <- FALSE # no partially saturated models
   lavmodel <- fit@Model
   lavpartable <- fit@ParTable
   lavpta <- fit@pta

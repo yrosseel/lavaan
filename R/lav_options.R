@@ -590,6 +590,7 @@ lav_options_set <- function(opt = NULL) {
     # h1 loglikelihood is NOT comparable to the (conditional-on-x)
     # loglikelihood of the random-slope model
     opt$baseline <- FALSE
+    opt$fit.by.level <- FALSE
     # note: estimator = "MLR" implies test = "yuan.bentler.mplus" (set
     # in lav_options_mimic); this is not an explicit user request, so
     # we do not warn about it

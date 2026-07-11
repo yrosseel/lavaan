@@ -840,6 +840,14 @@ Miscellaneous:
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
       allow the slope structure to be unrestricted.}
+    \item{\code{fit.by.level}:}{Logical. Only used for multilevel models.
+      If \code{TRUE}, fit (and store) the partially saturated models that
+      are needed to compute level-specific fit measures: for each level,
+      an auxiliary model is fitted where the model at that level is
+      retained, while the model at the other level is saturated (in
+      addition, level-specific baseline models are fitted as well). See
+      the \code{level} argument of \code{\link{fitMeasures}}. Set to
+      \code{FALSE} to skip these additional model fits.}
     \item{\code{store.vcov}}{Logical. If \code{TRUE}, and \code{se=} is not
       set to \code{"none"}, store the full variance-covariance matrix of
       the model parameters in the vcov slot of the fitted lavaan object.}
