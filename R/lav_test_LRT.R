@@ -214,6 +214,18 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
                          #FIXME: ? If no mods have df > 0,
                          #         this still yields error
                          function(x) !is.null(x$scaled.test.stat))
+    if (!any(scaled_list)) {
+      # no test entry carries a scaled.test.stat field (eg PML objects
+      # created before 0.7-2): fall back to matching the scaled-test names
+      scaled_list <- sapply(mods[[which(ndf > 0)[1]]]@test,
+        function(x) {
+          x$test[1] %in% c(
+            "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
+            "mean.var.adjusted", "scaled.shifted",
+            "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+          )
+        })
+    }
     scaled_idx <- which(scaled_list)[[1]]
     default_test <- object@test[[scaled_idx]]$test
     if (test == "default") {
@@ -391,6 +403,10 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   } else if (method %in% c("satorra.bentler.2001",
            "satorra.bentler.2010", "satorra.2000")) {
     c_delta <- rep(as.numeric(NA), length(stat_1))
+  } else {
+    # eg method = "mean.var.adjusted.PLRT" or "standard": no scaling
+    # attributes (c_delta is consulted below, so it must exist)
+    c_delta <- NULL
   }
 
   # correction for scaled test statistics
