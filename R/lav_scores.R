@@ -30,13 +30,15 @@ lav_sc <- function(object, scaling = FALSE,
 
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
-  if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS")) {
+  if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS", "PML")) {
     lav_msg_warn(gettext("scores only available if estimator is ML"))
     return(matrix(0, 0, 0))
   }
 
   # check if conditional.x = TRUE
-  if (object@Model@conditional.x) {
+  # (exception: PML supports exogenous covariates through the pairwise
+  # likelihood machinery itself)
+  if (object@Model@conditional.x && object@Options$estimator != "PML") {
     lav_msg_stop(gettext("scores not available (yet) if conditional.x = TRUE"))
   }
 
@@ -91,6 +93,14 @@ lav_sc <- function(object, scaling = FALSE,
       ntab = ntab, ntot = ntot, npar = npar,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
+    )
+  } else if (object@Options$estimator == "PML") {
+    # casewise scores of the pairwise log-likelihood
+    score_matrix <- lav_sc_pml(
+      ntot = ntot, npar = npar,
+      lavdata = lavdata, lavsamplestats = lavsamplestats,
+      lavmodel = lavmodel, lavimplied = object@implied,
+      lavcache = object@Cache
     )
   } else {
     # should not happen
@@ -294,6 +304,87 @@ lav_sc_ml <- function(ntab = 0L,
     if (scaling) {
       score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
     }
+  } # g
+
+  score_matrix
+}
+
+# casewise scores of the PAIRWISE log-likelihood (estimator = "PML"),
+# YR July 2026. The chain is identical to the first-order information for
+# PML (see lav_model_h1_info_firstorder()): lav_pml_dploglik_dimplied()
+# provides the casewise derivatives with respect to the implied statistics
+# (thresholds/means, slopes, variances, correlations), and the Delta matrix
+# maps them to the model parameters:
+#   sc_i(theta) = dlogPL_i/dtheta' = dlogPL_i/dimplied' %*% Delta
+# The scores are in +logPL convention (they sum to ~zero at the PML
+# solution), one row per (original) case, placed at case.idx -- exactly as
+# lav_sc_ml(). Consequently crossprod(sc)/N reproduces the first-order
+# (unit) information, and the huber.white sandwich built from these scores
+# reproduces the default robust PML standard errors.
+# Supported: complete data ("listwise") and missing = "available.cases"
+# (the univariate part is included in the casewise scores); exogenous
+# covariates go through the pairwise machinery itself (conditional.x).
+# missing = "doubly.robust" is NOT covered (its correction terms are not
+# part of lav_pml_dploglik_dimplied()), matching the first-order
+# information code.
+lav_sc_pml <- function(ntot = 0L,
+                       npar = 0L,
+                       lavdata = NULL,
+                       lavsamplestats = NULL,
+                       lavmodel = NULL,
+                       lavimplied = NULL,
+                       lavcache = NULL) {
+  if (lavdata@missing == "doubly.robust") {
+    lav_msg_stop(gettext(
+      "casewise PML scores are not available (yet) for
+       missing = \"doubly.robust\""))
+  }
+  score_matrix <- matrix(NA, ntot, npar)
+
+  # Delta matrix
+  delta <- lav_model_delta(lavmodel = lavmodel)
+
+  # model-implied statistics
+  if (is.null(lavimplied) || length(lavimplied) == 0L) {
+    lavimplied <- lav_model_implied(lavmodel)
+  }
+
+  for (g in 1:lavsamplestats@ngroups) {
+    if (lavmodel@conditional.x) {
+      sigma_1 <- lavimplied$res.cov[[g]]
+      mu <- lavimplied$res.mean[[g]]
+      if (is.null(mu)) {
+        mu <- lavimplied$res.int[[g]]
+      }
+      th <- lavimplied$res.th[[g]]
+      pi0 <- lavimplied$res.slopes[[g]]
+      exo <- lavdata@eXo[[g]]
+    } else {
+      sigma_1 <- lavimplied$cov[[g]]
+      mu <- lavimplied$mean[[g]]
+      th <- lavimplied$th[[g]]
+      pi0 <- NULL
+      exo <- NULL
+    }
+
+    sc <- lav_pml_dploglik_dimplied(
+      sigma_hat = sigma_1,
+      mu_hat = mu,
+      th = th,
+      th_idx = lavmodel@th.idx[[g]],
+      num_idx = lavmodel@num.idx[[g]],
+      x = lavdata@X[[g]],
+      exo = exo,
+      wt = NULL,
+      pi0 = pi0,
+      lavcache = lavcache[[g]],
+      missing = lavdata@missing,
+      scores = TRUE,
+      negative = FALSE
+    )
+
+    wi <- lavdata@case.idx[[g]]
+    score_matrix[wi, ] <- sc %*% delta[[g]]
   } # g
 
   score_matrix

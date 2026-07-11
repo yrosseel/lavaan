@@ -35,9 +35,18 @@ will be removed from the output.}
 \item{...}{To accept old argument names with dots. No other arguments are accepted.}
 }
 \value{A n x k matrix corresponding to n observations and k parameters.}
+\details{
+Casewise scores are available for the ML, GLS, ULS and WLS estimators, and
+(since 0.7-1) for the PML (pairwise maximum likelihood) estimator. For PML,
+the scores are the casewise derivatives of the pairwise log-likelihood
+(including the weighted univariate part when
+\code{missing = "available.cases"}); \code{missing = "doubly.robust"} is not
+supported (yet). Exogenous covariates (\code{conditional.x = TRUE}) are
+supported for PML only.
+}
 \author{Ed Merkle for the ML case; the \code{remove.duplicated},
 \code{ignore.constraints} and \code{remove.empty.cases} arguments were added by
-Yves Rosseel; Franz Classe for the WLS case.}
+Yves Rosseel; Franz Classe for the WLS case; Yves Rosseel for the PML case.}
 \examples{
 ## The famous Holzinger and Swineford (1939) example
 HS.model <- ' visual  =~ x1 + x2 + x3
