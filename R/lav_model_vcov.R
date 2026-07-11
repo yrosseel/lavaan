@@ -421,7 +421,13 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     # fg twice for WLS.V, 1/fg1 once for GaMMA
     # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
     # t(Delta) * WLS.V %*% gamma %*% WLS.V %*% Delta
-    wd <- wls_v[[g]] %*% delta[[g]]
+    if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
+      # diagonal weight matrix (stored as a vector)
+      wd <- wls_v[[g]] * delta[[g]]
+    } else {
+      # full weight matrix
+      wd <- wls_v[[g]] %*% delta[[g]]
+    }
 
     # to compute (incomplete) GAMMA, should we use
     # structured or unstructured mean/sigma?
