@@ -187,6 +187,23 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
     # all sam methods (the measurement blocks are always fitted in step 1).
     se <- "twostep.robust"
   }
+  if (fit@Model@conditional.x && se == "twostep" &&
+      sam_method %in% c("local", "fsr", "cfsr")) {
+    # conditional.x + local sam method: the classic two-step correction is
+    # built on the joint information matrix, so it linearizes the
+    # joint-model-given-theta1 estimator. Under conditional.x that estimator
+    # is NOT asymptotically equivalent to the local step-2 estimator (the
+    # structural fit is saturated in the latent-on-x slopes and cannot pool
+    # information across statistics the way the joint estimator does), and
+    # the joint-information formula underestimates the sampling variability
+    # (badly so for binary covariates). Use the robust variant instead: under
+    # conditional.x it is computed as the structural-space sandwich (see the
+    # tsrobust_condx_flag note in lav_sam_step2_se.R), which linearizes the
+    # actual two-step estimator (and coincides with se = "local"). For
+    # sam.method = "global" step 2 IS the joint estimator, and the classic
+    # formula still applies.
+    se <- "twostep.robust"
+  }
   fit@Options$se <- se
 
   # test

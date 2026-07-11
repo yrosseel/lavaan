@@ -154,6 +154,15 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     model on its latent-response scale, while its thresholds are fixed at
     their sample-based values.
 
+    When \code{conditional.x = TRUE} is combined with a local
+    \code{sam.method}, the default \code{se = "twostep"} is automatically
+    replaced by \code{se = "twostep.robust"}: the classic two-step formula is
+    built on the joint information matrix, which does not describe the local
+    step-2 estimator in this setting (it underestimates the sampling
+    variability, especially for binary covariates). The robust variant is
+    computed as a structural-space sandwich here, and coincides with
+    \code{se = "local"}.
+
     Not (yet) available in combination with \code{conditional.x = TRUE}:
     multiple groups (for the local standard errors and the corrected test
     statistic), multilevel models, latent interactions, and the Yuan-Chan
