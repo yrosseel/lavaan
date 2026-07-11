@@ -35,6 +35,14 @@
 
 # - change 0.6-13: fixed.x = TRUE is ignored (to conform with 'tradition')
 
+# - change 0.7-1: two multigroup ACOV fixes: (1) the stored @NACOV is scaled
+#                  by 1/n_g (not 1/ntotal) to obtain ACOV(s_g), and (2) the
+#                  standardized-residual ACOV is computed from the full
+#                  stacked Q over all groups, so that under across-group
+#                  equality constraints the Var(sigma-hat) contributions of
+#                  the other groups (and, for the combined summary table, the
+#                  cross-group residual covariance) are no longer dropped.
+
 # - change 0.7-1: refactor (issue #291): ACOV.obs (= the expensive ACOV of
 #                  the observed h1 sample statistics) is computed at most once
 #                  per call and reused for both the residual SEs and the
@@ -97,9 +105,10 @@
 #                  are replaced by a single overall table that pools the
 #                  residual elements across all blocks. The per-block and the
 #                  combined tables share one code path (column "specs"); the
-#                  combined ACOV is block-diagonal across independent groups but
-#                  the joint ACOV across the (correlated) levels of a multilevel
-#                  model.
+#                  combined ACOV is the joint (stacked) ACOV across all blocks:
+#                  across the (correlated) levels of a multilevel model, and
+#                  across groups -- where the residuals are correlated whenever
+#                  across-group equality constraints couple theta-hat.
 
 setMethod(
   "residuals", "lavaan",
@@ -1154,7 +1163,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
   out
 }
 
-# compute ACOV for the observed h1 sample statistics (ACOV == Gamma/N)
+# compute ACOV for the observed h1 sample statistics (ACOV == Gamma/n_g)
 #
 # This is the (often expensive) building block underlying all residual
 # standard errors. It only depends on 'object' and 'h1_acov' (NOT on 'type'
@@ -1166,7 +1175,14 @@ lav_residuals_acov_obs <- function(object, h1_acov = "unstructured") {
   if (!is.null(lavsamplestats@NACOV[[1]])) {
     nacov_obs <- lavsamplestats@NACOV
                 # if this changes, tag @TDJorgensen in commit message
-    acov_obs <- lapply(nacov_obs, function(x) x / lavsamplestats@ntotal)
+    # @NACOV[[g]] stores Gamma_g = Cov(sqrt(n_g) s_g) (see the SCALING
+    # CONVENTIONS note in lav_samplestats_gamma.R), so ACOV(s_g) =
+    # NACOV[[g]] / n_g. (before 0.7-1, this divided by ntotal instead,
+    # shrinking all multigroup residual SEs by the factor sqrt(n_g/ntotal);
+    # the h1_acov branch below always used 1/n_g.)
+    acov_obs <- lapply(seq_along(nacov_obs), function(g) {
+      nacov_obs[[g]] / lavsamplestats@nobs[[g]]
+    })
   } else {
     acov_obs <- lav_model_h1_acov(
       lavobject = object,
@@ -1222,12 +1238,67 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
     mm_delta <- lavTech(object, "delta")
   }
 
+  if (z_type == "standardized") {
+    # see Ogasawara (2001) using Bentler & Dijkstra (1985) eq 1.7.4
+
+    # NVarCov, but always 'not' robust
+    #
+    # new in 0.6-6: to ensure Q is a projection matrix, we
+    #               force observed.information = "h1"
+    #               (only needed if information is observed)
+    this_options <- object@Options
+    this_options$observed.information[1] <- "h1"
+    a0_inv <- lav_model_info(
+      lavmodel = lavmodel,
+      lavsamplestats = object@SampleStats,
+      lavdata = lavdata,
+      lavcache = object@Cache,
+      lavimplied = object@implied,
+      lavh1 = object@h1,
+      lavoptions = this_options,
+      extra = FALSE,
+      augmented = TRUE,
+      inverted = TRUE,
+      use_ginv = TRUE
+    )
+
+    # ACOV of the residual vector STACKED over all groups: linearizing,
+    #   r_g = (s_g - sigma_g)
+    #         - Delta_g a0_inv sum_h gw_h Delta_h' A1_h (s_h - sigma_h)
+    # i.e. r = Q (s - sigma) with
+    #   Q = I - Delta a0_inv Delta' W,   W = bdiag(gw_g A1_g)
+    #   ACOV(r) = Q bdiag(ACOV(s_g)) Q'
+    # Under across-group equality constraints a0_inv (the constrained,
+    # augmented inverse) is NOT block-diagonal across the groups, so the
+    # diagonal blocks of ACOV(r) pick up Var(sigma-hat_g) contributions
+    # from every group's sampling variability. (before 0.7-1, this was
+    # computed per group as Q_gg ACOV(s_g) Q_gg', which drops those
+    # cross-group terms and understates the residual SEs whenever equality
+    # constraints couple the groups; without such constraints the two
+    # coincide.)
+    gw_all <- unlist(object@SampleStats@nobs) / object@SampleStats@ntotal
+                 # if this changes, tag @TDJorgensen in commit message
+    delta_all <- do.call(rbind, mm_delta)
+    w_all <- lav_mat_bdiag(lapply(
+      seq_len(lavdata@ngroups),
+      function(g) gw_all[g] * a1[[g]]
+    ))
+    q_all <- diag(nrow = nrow(delta_all)) -
+      delta_all %*% a0_inv %*% t(delta_all) %*% w_all
+    acov_res_all <- q_all %*% lav_mat_bdiag(acov_obs) %*% t(q_all)
+
+    # start/end of each group's block in the stacked matrix
+    block_n <- vapply(acov_obs, nrow, integer(1L))
+    block_end <- cumsum(block_n)
+    block_start <- block_end - block_n + 1L
+
+    # per-group cov->cor correction matrices (NULL if type == "raw"),
+    # collected to also correct the full stacked matrix afterwards
+    cor_mat <- vector("list", lavdata@ngroups)
+  }
+
   # for each group, compute ACOV
   for (g in seq_len(lavdata@ngroups)) {
-    # group weight
-    gw <- object@SampleStats@nobs[[g]] / object@SampleStats@ntotal
-                 # if this changes, tag @TDJorgensen in commit message
-
     if (z_type == "standardized.mplus") { # simplified formula
       # also used by LISREL?
       # see https://www.statmodel.com/download/StandardizedResiduals.pdf
@@ -1235,32 +1306,9 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
       acov_est_g <- mm_delta[[g]] %*% vcov_1 %*% t(mm_delta[[g]])
       acov_res[[g]] <- acov_obs[[g]] - acov_est_g
     } else if (z_type == "standardized") {
-      # see Ogasawara (2001) using Bentler & Dijkstra (1985) eq 1.7.4
-
-      # NVarCov, but always 'not' robust
-      #
-      # new in 0.6-6: to ensure Q is a projection matrix, we
-      #               force observed.information = "h1"
-      #               (only needed if information is observed)
-      this_options <- object@Options
-      this_options$observed.information[1] <- "h1"
-      a0_g_inv <- lav_model_info(
-        lavmodel = lavmodel,
-        lavsamplestats = object@SampleStats,
-        lavdata = lavdata,
-        lavcache = object@Cache,
-        lavimplied = object@implied,
-        lavh1 = object@h1,
-        lavoptions = this_options,
-        extra = FALSE,
-        augmented = TRUE,
-        inverted = TRUE,
-        use_ginv = TRUE
-      )
-
-      acov_est_g <- gw * (mm_delta[[g]] %*% a0_g_inv %*% t(mm_delta[[g]]))
-      q_1 <- diag(nrow = nrow(acov_est_g)) - acov_est_g %*% a1[[g]]
-      acov_res[[g]] <- q_1 %*% acov_obs[[g]] %*% t(q_1)
+      # this group's diagonal block of the stacked ACOV(r)
+      idx_g <- block_start[g]:block_end[g]
+      acov_res[[g]] <- acov_res_all[idx_g, idx_g, drop = FALSE]
 
       # correct ACOV.res for type = "cor.bentler" or type = "cor.bollen"
       if (type == "cor.bentler") {
@@ -1284,14 +1332,14 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
             jac <- lav_residuals_cor_jacobian_cat(
               lavmodel, g, cov_1, "cor.bentler", nexo = nexo, s_x = s_x
             )
-            acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
+            cor_mat[[g]] <- jac
           } else {
             # pure categorical: already in correlation metric, nothing to do
           }
         } else if (lavdata@nlevels > 1L) {
           # multilevel: block-diagonal jacobian over the level-specific blocks
           jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bentler")
-          acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
+          cor_mat[[g]] <- jac
         } else {
           # Ogasawara (2001), eq (13), or
           # Maydeu-Olivares (2017), eq (16)
@@ -1321,7 +1369,7 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           } else {
             gg <- g_inv_sqrt
           }
-          acov_res[[g]] <- gg %*% acov_res[[g]] %*% gg
+          cor_mat[[g]] <- gg
         } # continuous
       } else if (type == "cor.bollen") {
         if (lavmodel@categorical) {
@@ -1344,14 +1392,14 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
             jac <- lav_residuals_cor_jacobian_cat(
               lavmodel, g, cov_1, "cor.bollen", nexo = nexo, s_x = s_x
             )
-            acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
+            cor_mat[[g]] <- jac
           } else {
             # pure categorical: already in correlation metric, nothing to do
           }
         } else if (lavdata@nlevels > 1L) {
           # multilevel: block-diagonal jacobian over the level-specific blocks
           jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bollen")
-          acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
+          cor_mat[[g]] <- jac
         } else {
           # here we use the Maydeu-Olivares (2017) approach, see eq 17
           cov_1 <- if (lavmodel@conditional.x) {
@@ -1373,11 +1421,37 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           } else {
             ff <- f1
           }
-          acov_res[[g]] <- ff %*% acov_res[[g]] %*% t(ff)
+          cor_mat[[g]] <- ff
         } # continuous
       } # cor.bollen
+
+      # apply the cov->cor correction to this group's block
+      if (!is.null(cor_mat[[g]])) {
+        acov_res[[g]] <- cor_mat[[g]] %*% acov_res[[g]] %*% t(cor_mat[[g]])
+      }
     } # z.type = "standardized"
   } # g
+
+  # attach the full stacked ACOV (all groups; correlation-metric corrected
+  # like the per-group blocks): used by the combined residual summaries,
+  # where the cross-group covariance between the residuals (nonzero under
+  # across-group equality constraints) must be retained
+  if (z_type == "standardized") {
+    if (any(!vapply(cor_mat, is.null, logical(1L)))) {
+      cor_all <- lav_mat_bdiag(lapply(
+        seq_len(lavdata@ngroups),
+        function(g) {
+          if (is.null(cor_mat[[g]])) {
+            diag(nrow = block_n[g])
+          } else {
+            cor_mat[[g]]
+          }
+        }
+      ))
+      acov_res_all <- cor_all %*% acov_res_all %*% t(cor_all)
+    }
+    attr(acov_res, "full") <- acov_res_all
+  }
 
   acov_res
 }
@@ -2013,10 +2087,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
   }
 
   # build the single combined table by pooling, per column, the residual
-  # elements across all blocks. The combined ACOV is block-diagonal across
-  # (independent) groups, but the one joint ACOV across (correlated) levels.
+  # elements across all blocks. The combined ACOV is sliced from the one
+  # joint ACOV: across levels the blocks are correlated by construction,
+  # and across (independent) groups the residuals are still correlated
+  # whenever across-group equality constraints couple theta-hat (before
+  # 0.7-1, the group blocks were assumed independent and bdiag'ed, dropping
+  # that cross-group covariance). The bdiag path remains as a fallback only.
   combine_specs_table <- function(block_specs_ty, block_acov_ty, full_acov,
-                                  multilevel, ty) {
+                                  ty) {
     col_names <- names(block_specs_ty[[1]])
     cols <- lapply(col_names, function(cn) {
       stats <- unlist(lapply(block_specs_ty, function(bs) bs[[cn]]$stats))
@@ -2025,14 +2103,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
       ))
       acov <- NULL
       if (se || unbiased) {
-        if (multilevel) {
-          # one joint ACOV: gather the (global) indices across the levels
+        if (!is.null(full_acov)) {
+          # one joint ACOV: gather the (global) indices across the blocks
           gidx <- unlist(lapply(
             block_specs_ty, function(bs) bs[[cn]]$offset + bs[[cn]]$lidx
           ))
           acov <- full_acov[gidx, gidx, drop = FALSE]
         } else {
-          # independent groups: block-diagonal of the per-group column slices
+          # fallback: block-diagonal of the per-block column slices
           blocks <- lapply(seq_along(block_specs_ty), function(b) {
             li <- block_specs_ty[[b]][[cn]]$lidx
             block_acov_ty[[b]][li, li, drop = FALSE]
@@ -2114,6 +2192,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
       block_specs[[ty]] <- vector("list", lavdata@ngroups)
       block_acov[[ty]] <- vector("list", lavdata@ngroups)
     }
+    offset_g <- 0L # start row of this group's block in the joint ACOV
     for (g in seq_len(lavdata@ngroups)) {
       nvar <- object@pta$nvar[[g]]
       if (lavmodel@categorical) {
@@ -2135,7 +2214,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         for (ty in type) {
           sel <- get_rms_lists(ty, g)
           block_specs[[ty]][[g]] <- categorical_specs(
-            sel$est, idx, nvar_endo, conditional_x, cov_nm, th_nm, ty
+            sel$est, idx, nvar_endo, conditional_x, cov_nm, th_nm, ty,
+            offset = offset_g
           )
           block_acov[[ty]][g] <- list(sel$se) # single [ keeps NULL slots
         }
@@ -2147,7 +2227,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
           sel <- get_rms_lists(ty, g)
           block_specs[[ty]][[g]] <- condx_specs(
             sel$est, nvar_endo, nexo,
-            has_mean = lavmodel@meanstructure, ty = ty
+            has_mean = lavmodel@meanstructure, ty = ty, offset = offset_g
           )
           block_acov[[ty]][g] <- list(sel$se) # single [ keeps NULL slots
         }
@@ -2167,10 +2247,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
             sel$est, nvar_endo,
             mean_idx = mean_acov_idx, cov_idx = cov_acov_idx,
             cov_nm = "cov", mean_nm = "mean", ty = ty,
-            has_mean = lavmodel@meanstructure
+            has_mean = lavmodel@meanstructure, offset = offset_g
           )
           block_acov[[ty]][g] <- list(sel$se) # single [ keeps NULL slots
         }
+      }
+      # advance to the next group's block in the joint ACOV
+      if (se || unbiased) {
+        offset_g <- offset_g + nrow(get_se_list(type[1])[[g]])
       }
     } # g
   }
@@ -2180,13 +2264,20 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     out <- vector("list", length(type))
     names(out) <- type
     for (ty in type) {
-      full_acov <- if (multilevel && (se || unbiased)) {
-        get_se_list(ty)[[1]]
-      } else {
-        NULL
+      full_acov <- NULL
+      if (se || unbiased) {
+        if (multilevel) {
+          # one joint ACOV across the levels
+          full_acov <- get_se_list(ty)[[1]]
+        } else {
+          # single-level multigroup: the joint (stacked) ACOV attached by
+          # lav_residuals_acov(), which retains the cross-group covariance
+          # of the residuals under across-group equality constraints
+          full_acov <- attr(get_se_list(ty), "full")
+        }
       }
       out[[ty]] <- combine_specs_table(
-        block_specs[[ty]], block_acov[[ty]], full_acov, multilevel, ty
+        block_specs[[ty]], block_acov[[ty]], full_acov, ty
       )
     }
     sum_stat <- list(out)
