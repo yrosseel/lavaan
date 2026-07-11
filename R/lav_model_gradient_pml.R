@@ -408,6 +408,14 @@ lav_pml_dploglik_dimplied <- function(
   }
 
   if (missing == "available.cases" && all(ov_types == "ordered")) {
+    # the available.cases objective adds a (weighted) UNIVARIATE likelihood
+    # part to the pairwise likelihood; its scores/gradient must be added to
+    # the threshold (and slope) entries. Note (fixed July 2026): the scores
+    # branch used to (a) drop the univariate part entirely when nexo == 0,
+    # and (b) overwrite scores_1 with only its first n_th + n_sl columns
+    # when nexo > 0 (losing the correlation columns) -- which made the
+    # casewise scores (and hence the first-order information) inconsistent
+    # with the estimating function.
     if (nexo == 0L) {
       uni_scores <- matrix(0, nrow(x), n_th)
       for (i in seq_len(nvar)) {
@@ -418,6 +426,12 @@ lav_pml_dploglik_dimplied <- function(
           weights_casewise = lavcache$uniweights.casewise
         )
         uni_scores[, th_idx_i] <- der_y1$dx.th.y1
+      }
+      if (scores) {
+        scores_1[, seq_len(n_th)] <-
+          scores_1[, seq_len(n_th), drop = FALSE] + uni_scores
+      } else {
+        uni_gradient <- colSums(uni_scores)
       }
     } else {
       uni_scores <- matrix(0, nrow(x), ncol = (n_th + n_sl))
@@ -433,7 +447,8 @@ lav_pml_dploglik_dimplied <- function(
         uni_scores[, sl_idx_i] <- der_y1$dx.sl.y1
       }
       if (scores) {
-        scores_1 <- scores_1[, 1:(n_th + n_sl)] + uni_scores
+        scores_1[, seq_len(n_th + n_sl)] <-
+          scores_1[, seq_len(n_th + n_sl), drop = FALSE] + uni_scores
       } else {
         uni_gradient <- colSums(uni_scores)
       }
@@ -455,10 +470,16 @@ lav_pml_dploglik_dimplied <- function(
   gradient <- colSums(grad, na.rm = TRUE)
 
   if (missing == "available.cases" && all(ov_types == "ordered")) {
+    # (fixed July 2026: the RHS used the FULL gradient vector instead of
+    # its leading block, garbling the result through recycling; note that
+    # the nexo == 0 case is normally unreachable here -- it is handled by
+    # the shortcut at the top of this function)
     if (nexo == 0L) {
-      gradient[1:n_th] <- gradient + uni_gradient
+      gradient[seq_len(n_th)] <-
+        gradient[seq_len(n_th)] + uni_gradient
     } else {
-      gradient[1:(n_th + n_sl)] <- gradient + uni_gradient
+      gradient[seq_len(n_th + n_sl)] <-
+        gradient[seq_len(n_th + n_sl)] + uni_gradient
     }
   }
 
