@@ -1010,8 +1010,10 @@ lav_model_est <- function(lavmodel = NULL,
         dx_unpack <- numeric(ncol(cin_jac_1))
         dx_unpack <- dx[lavpartable$free[lavpartable$free > 0]]
       } else if (lavmodel@eq.constraints) {
-        # this should not happen!
-        cat("\n DEBUG: NLMINB + cin.simple.only + lavmodel@eq.constraints \n")
+        # unreachable via the standard pipeline: eq.constraints is a
+        # packing flag that is only TRUE when equality constraints are the
+        # ONLY constraints, which contradicts cin.simple.only; kept as a
+        # safety net
         dx_unpack <- as.numeric(lavmodel@eq.constraints.K %*% dx)
       } else {
         dx_unpack <- dx

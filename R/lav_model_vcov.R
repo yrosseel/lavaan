@@ -691,21 +691,19 @@ lav_model_vcov <- function(lavmodel = NULL,
         symmetric = TRUE,
         only.values = TRUE
       )$values
-      # correct for (in)equality constraints
-      neq <- 0L
-      niq <- 0L
+      # correct for (in)equality constraints: the effective number of
+      # imposed constraints is the RANK of the stacked equality + active
+      # inequality rows (a plain row count over-corrects when rows are
+      # redundant, within or across the two sets)
+      neiq <- 0L
       if (nrow(lavmodel@con.jac) > 0L) {
         ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
         cin_idx <- attr(lavmodel@con.jac, "cin.idx")
         ina_idx <- attr(lavmodel@con.jac, "inactive.idx")
-        if (length(ceq_idx) > 0L) {
-          neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
+        act_idx <- c(ceq_idx, setdiff(cin_idx, ina_idx)) # only active cin
+        if (length(act_idx) > 0L) {
+          neiq <- qr(lavmodel@con.jac[act_idx, , drop = FALSE])$rank
         }
-        if (length(cin_idx) > 0L) {
-          niq <- length(cin_idx) - length(ina_idx) # only active
-        }
-        # total number of relevant constraints
-        neiq <- neq + niq
         if (neiq > 0L) {
           eigvals <- rev(eigvals)[-seq_len(neiq)]
         }
