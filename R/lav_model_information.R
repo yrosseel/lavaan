@@ -557,8 +557,6 @@ lav_model_info_firstorder <- function(lavmodel = NULL,
 
     # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-    # NOTE: UNSURE ABOUT THIS PART. WHAT IS THE ROLE OF fg?
-
     wt <- lavdata@weights[[g]]
     if (is.null(wt)) {
       fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
@@ -570,7 +568,19 @@ lav_model_info_firstorder <- function(lavmodel = NULL,
     # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     # compute information for this group
-    info_group[[g]] <- fg * b0_group[[g]]
+    if (lavmodel@estimator == "PML") {
+      # (fixed July 2026, resolving the "WHAT IS THE ROLE OF fg?" note):
+      # for PML, b0_group is a TOTAL (summed-over-cases) information --
+      # the crossprod of the casewise pairwise scores -- so the correct
+      # aggregate is the plain sum, divided by N further below. The extra
+      # fg weight double-counted the group sizes and, combined with the
+      # matching error in the hessian-based information, inflated all
+      # multigroup PML standard errors by sqrt(N/n_g). Single-group fits
+      # are unaffected (fg = 1).
+      info_group[[g]] <- b0_group[[g]]
+    } else {
+      info_group[[g]] <- fg * b0_group[[g]]
+    }
   }
 
   # 4. assemble over groups

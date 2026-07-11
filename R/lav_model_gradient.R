@@ -799,7 +799,18 @@ lav_model_grad <- function(lavmodel = NULL,
       }
 
       # group weights (if any)
-      group_dx <- group_w[g] * group_dx
+      # note (fixed July 2026): NOT for PML. The PML objective is the plain
+      # SUM of the group objectives (each -logPL_g already carries its own
+      # N_g; see lav_model_objective(): "no weighting needed!"), so the
+      # gradient must be the plain sum of the (total) group gradients as
+      # well. The n_g/N weighting made the analytic gradient inconsistent
+      # with the objective for multigroup PML and -- through the
+      # hessian-based information -- inflated all multigroup PML standard
+      # errors by a factor sqrt(N/n_g). Single-group fits are unaffected
+      # (group_w = 1).
+      if (estimator != "PML") {
+        group_dx <- group_w[g] * group_dx
+      }
       if (g == 1) {
         dx <- group_dx
       } else {
