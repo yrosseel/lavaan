@@ -124,11 +124,12 @@ lav_object_summary <- function(object, header = TRUE,
     fm_args <- default_fm_args
   }
   if (is.list(fit_measures)) {
+    fit_measures <- lav_fit_measures_list_alias(fit_measures)
     if (is.null(names(fit_measures)) ||
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(
         "If %s is a list, it must contain a named element %s.",
-        "fit.measures"
+        "fit.measures", "fit.measures (or fit_measures)"
       ))
     }
     temp <- fit_measures$fit.measures
@@ -331,7 +332,9 @@ lav_object_summary <- function(object, header = TRUE,
   } # efa
 
   # only if requested, add the additional fit measures
-  if (fit_measures != "none") {
+  # (fit_measures may be a vector of measure names; only the single
+  #  "none" turns this section off)
+  if (!identical(fit_measures, "none")) {
     # some early warnings (to avoid a hard stop)
     if (object@Data@data.type == "none") {
       lav_msg_warn(gettext(

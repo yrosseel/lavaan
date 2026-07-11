@@ -36,7 +36,8 @@ fitmeasures(object, fit_measures = "all",
   returned. If only a single or a few fit measures are specified by name,
   only those are computed and returned.
   If additional options for certain fit measures are needed, fit_measures
-  should be a list whose \code{fit.measures} element holds the measures
+  should be a list whose \code{fit.measures} (or \code{fit_measures}) element
+  holds the measures
   wanted, with the options supplied as further named elements of the list. The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this

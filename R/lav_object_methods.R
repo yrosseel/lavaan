@@ -90,6 +90,7 @@ setMethod(
     }
     if (!is.list(fit_measures))
         fit_measures <- list(fit.measures = fit_measures)
+    fit_measures <- lav_fit_measures_list_alias(fit_measures)
     if (is.logical(fit_measures$fit.measures)) {
       fit_measures$fit.measures <- if (fit_measures$fit.measures) "default" else "none"
     }

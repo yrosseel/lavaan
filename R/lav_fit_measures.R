@@ -127,6 +127,18 @@ lav_efalist_fitmeasures <- function(
 }
 
 
+# if fit_measures is a list, the element holding the measures is classically
+# named "fit.measures"; accept the snake_case spelling "fit_measures" as an
+# alias, matching the name of the formal argument
+lav_fit_measures_list_alias <- function(fit_measures) {
+  if (is.list(fit_measures) && is.null(fit_measures[["fit.measures"]]) &&
+      !is.null(fit_measures[["fit_measures"]])) {
+    names(fit_measures)[names(fit_measures) == "fit_measures"] <-
+      "fit.measures"
+  }
+  fit_measures
+}
+
 lav_fit <- function(object, fit_measures = "all",
                              baseline_model = NULL, h1_model = NULL,
                              fm_args = list(
@@ -228,11 +240,12 @@ lav_fit <- function(object, fit_measures = "all",
     fm_args <- default_fm_args
   }
   if (is.list(fit_measures)) {
+    fit_measures <- lav_fit_measures_list_alias(fit_measures)
     if (is.null(names(fit_measures)) ||
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(
         "If %s is a list, it must contain a named element %s.",
-        "fit_measures", "fit.measures"
+        "fit_measures", "fit.measures (or fit_measures)"
       ))
     }
     temp <- fit_measures$fit.measures
