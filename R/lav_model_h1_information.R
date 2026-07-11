@@ -574,9 +574,10 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
         if (is.null(wt)) wt <- rep(1, length(clusters_idx))
 
         for (b in seq_along(clusters)) {
-          sc_b <- sc[clusters_idx == b, ]
+          # drop = FALSE: a single-observation cluster must stay a matrix
+          sc_b <- sc[clusters_idx == b, , drop = FALSE]
           wt_b <- wt[clusters_idx == b]
-          zb[[b]] <- apply(sc_b * wt_b, 2, sum)
+          zb[[b]] <- colSums(sc_b * wt_b)
         }
         zbar <- apply(do.call(cbind, zb), 1, mean)
         b1c <- Reduce(f = `+`, lapply(zb, function(z) tcrossprod(z - zbar)))

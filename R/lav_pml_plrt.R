@@ -150,45 +150,46 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # Hattheta0 <- H0.Hessian
   # InvHattheta0 <- solve(Hattheta0)
   inv_hattheta0 <- attr(vcov_1, "E.inv")
+  if (is.null(inv_hattheta0)) {
+    # lav_model_vcov() only attaches "E.inv" when the vcov and test
+    # information options coincide (they do not, e.g., with cluster =
+    # where information = c("observed", "expected")); recompute it here.
+    # The PLRT 'H' matrix is the observed (Hessian-based) information --
+    # the flavor that E.inv holds in the non-clustered case
+    h0_options <- lavoptions
+    h0_options$information <- c("observed", "observed")
+    inv_hattheta0 <- lav_model_info(
+      lavmodel = lavmodel,
+      lavsamplestats = lavsamplestats,
+      lavdata = lavdata,
+      lavcache = lavcache,
+      lavoptions = h0_options,
+      extra = FALSE,
+      augmented = TRUE,
+      inverted = TRUE,
+      use_ginv = TRUE
+    )
+  }
   inv_h_to_psipsi_attheta0 <- inv_hattheta0[index_par, index_par, drop = FALSE]
                                                            # H^psipsi(theta0)
-  if (lavmodel@eq.constraints) {
-    in_1 <- inv_h_to_psipsi_attheta0
-    in_npar <- ncol(in_1)
-
-    # create `bordered' matrix
-    if (nrow(lavmodel@con.jac) > 0L) {
-      h <- lavmodel@con.jac[, index_par, drop = FALSE]
-      inactive_idx <- attr(h, "inactive.idx")
-      lambda <- lavmodel@con.lambda # lagrangean coefs
-      if (length(inactive_idx) > 0L) {
-        h <- h[-inactive_idx, , drop = FALSE]
-        lambda <- lambda[-inactive_idx]
-      }
-      if (nrow(h) > 0L) {
-        h0 <- matrix(0, nrow(h), nrow(h))
-        h10 <- matrix(0, ncol(in_1), nrow(h))
-        dl <- 2 * diag(lambda, nrow(h), nrow(h))
-        # FIXME: better include inactive + slacks??
-        e3 <- rbind( #TODO: check if var e3 needed ???
-          cbind(in_1, h10, t(h)),
-          cbind(t(h10), dl, h0),
-          cbind(h, h0, h0)
-        )
-        inv_of_inv_h_to_psipsi_attheta0 <-               # nolint
-          MASS::ginv(in_1)[1:in_npar, 1:in_npar, drop = FALSE]
-      } else {
-        inv_of_inv_h_to_psipsi_attheta0 <- solve(in_1)   # nolint
-      }
-    }
+  # with equality constraints, inv_hattheta0 is the *constrained*
+  # (augmented) inverse, which is singular along the constrained
+  # directions, so its submatrix must be ginv-inverted (the ginv(M) %*% M
+  # projection then restricts the trace to the constrained tangent space).
+  # NOTE: do not gate this on @eq.constraints alone -- that packing flag is
+  # FALSE when equality constraints coexist with inequality constraints or
+  # bounds, and solve() below would then fail on a singular matrix
+  has_ceq <- lavmodel@eq.constraints || lavmodel@ceq.simple.only ||
+    nrow(lavmodel@ceq.JAC) > 0L
+  if (length(index_par) == 0L) {
+    # eg independence model (YR 26 June 2018)
+    inv_of_inv_h_to_psipsi_attheta0 <- matrix(0, 0, 0)     # nolint
+  } else if (has_ceq) {
+    inv_of_inv_h_to_psipsi_attheta0 <-                     # nolint
+      MASS::ginv(inv_h_to_psipsi_attheta0)
   } else {
-    # YR 26 June 2018: check for empty index.par (eg independence model)
-    if (length(index_par) > 0L) {
-      inv_of_inv_h_to_psipsi_attheta0 <-                   # nolint
-        solve(inv_h_to_psipsi_attheta0) # [H^psipsi(theta0)]^(-1)
-    } else {
-      inv_of_inv_h_to_psipsi_attheta0 <- matrix(0, 0, 0)   # nolint
-    }
+    inv_of_inv_h_to_psipsi_attheta0 <-                     # nolint
+      solve(inv_h_to_psipsi_attheta0) # [H^psipsi(theta0)]^(-1)
   }
 
   h0tmp_prod1 <- inv_of_inv_h_to_psipsi_attheta0 %*% inv_g_to_psipsi_attheta0
@@ -220,6 +221,23 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # Hattheta0 <- getHessian(fittedSat2)
   # InvHattheta0 <- solve(Hattheta0)
   inv_hattheta0 <- attr(vcov_sat2, "E.inv")
+  if (is.null(inv_hattheta0)) {
+    # not attached when the vcov/test information options differ (e.g.,
+    # with cluster =); recompute the observed-information version
+    sat2_options <- tmp_options
+    sat2_options$information <- c("observed", "observed")
+    inv_hattheta0 <- lav_model_info(
+      lavmodel = fitted_sat2@Model,
+      lavsamplestats = fitted_sat2@SampleStats,
+      lavdata = fitted_sat2@Data,
+      lavcache = fitted_sat2@Cache,
+      lavoptions = sat2_options,
+      extra = FALSE,
+      augmented = TRUE,
+      inverted = TRUE,
+      use_ginv = TRUE
+    )
+  }
   inv_h_to_sigmasigma_attheta0 <-
               inv_hattheta0[d_sat_idx, d_sat_idx, drop = FALSE]
                                                     # H^sigmasigma(theta0)
