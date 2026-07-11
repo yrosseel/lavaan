@@ -39,8 +39,11 @@ lav_pml_test_plrt <- function(fit_obj_h0, fit_obj_h1) {
   #             nested in the covariance matrix sense, but not
   #             in the parameter (table) sense
   eq_mat <- lav_test_diff_a(m1 = fit_obj_h1, m0 = fit_obj_h0)
-  if (obj_h1_h0@Model@eq.constraints) {
-    eq_mat <- eq_mat %*% t(obj_h1_h0@Model@eq.constraints.K)
+  # same basis as used inside lav_test_diff_a (also covers ceq.simple.only
+  # and equality constraints coexisting with inequality constraints/bounds)
+  eq_basis_h1 <- lav_con_eq_basis(obj_h1_h0@Model)
+  if (!is.null(eq_basis_h1)) {
+    eq_mat <- eq_mat %*% t(eq_basis_h1)
   }
   # if (equal_constr == TRUE) {
   #    EqMat <- fit_objH0@Model@ceq.JAC

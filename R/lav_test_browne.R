@@ -92,13 +92,12 @@ lav_test_browne <- function(lavobject = NULL,
     }
   }
 
-  # linear equality constraints?
-  lineq_flag <- FALSE
-  if (lavmodel@eq.constraints) {
-    lineq_flag <- TRUE
-  } else if (lavmodel@ceq.simple.only) {
-    lineq_flag <- TRUE
-  }
+  # linear equality constraints? NOTE: do not test the packing flags
+  # (@eq.constraints / @ceq.simple.only) here -- they are both FALSE when
+  # equality constraints coexist with inequality constraints or bounds,
+  # and the constraints would silently be dropped from the projection
+  eq_basis <- lav_con_eq_basis(lavmodel)
+  lineq_flag <- !is.null(eq_basis)
 
   # can we use the fast version?
   fast_flag <- FALSE
@@ -215,11 +214,7 @@ lav_test_browne <- function(lavobject = NULL,
   } else if (lineq_flag) {
     res_all <- do.call("c", wls_obs) - do.call("c", wls_est)
     delta_all <- do.call("rbind", delta)
-    if (lavmodel@eq.constraints) {
-      delta_g <- delta_all %*% lavmodel@eq.constraints.K
-    } else if (lavmodel@ceq.simple.only) {
-      delta_g <- delta_all %*% lavmodel@ceq.simple.K
-    }
+    delta_g <- delta_all %*% eq_basis
     gamma_inv_weighted <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
       if (n_minus_one) {

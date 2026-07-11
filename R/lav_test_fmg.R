@@ -346,7 +346,11 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   ngroups <- length(wls_obs)
   stat_group <- numeric(ngroups)
 
-  lineq_flag <- lavmodel@eq.constraints || lavmodel@ceq.simple.only
+  # NOTE: not the packing flags (@eq.constraints/@ceq.simple.only) -- they
+  # are both FALSE when equality constraints coexist with inequality
+  # constraints or bounds (see lav_con_eq_basis)
+  eq_basis <- lav_con_eq_basis(lavmodel)
+  lineq_flag <- !is.null(eq_basis)
 
   if (!lineq_flag) {
     for (g in seq_len(ngroups)) {
@@ -363,11 +367,7 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   } else {
     res_all <- do.call("c", wls_obs) - do.call("c", wls_est)
     delta_all <- do.call("rbind", delta)
-    if (lavmodel@eq.constraints) {
-      delta_g <- delta_all %*% lavmodel@eq.constraints.K
-    } else {
-      delta_g <- delta_all %*% lavmodel@ceq.simple.K
-    }
+    delta_g <- delta_all %*% eq_basis
     gamma_inv_weighted <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
       Ng <- if (n_minus_one) nobs[[g]] - 1L else nobs[[g]]
@@ -1068,11 +1068,12 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
 
   A <- lav_test_diff_a(m1, m0, method = "delta", reference = "H1")
 
-  # Handle equality constraints
-  if (m1@Model@eq.constraints) {
-    A <- A %*% t(m1@Model@eq.constraints.K)
-  } else if (m1@Model@ceq.simple.only) {
-    A <- A %*% t(m1@Model@ceq.simple.K)
+  # Handle equality constraints (same orthonormal basis as used inside
+  # lav_test_diff_a; also covers equality constraints coexisting with
+  # inequality constraints/bounds)
+  eq_basis_m1 <- lav_con_eq_basis(m1@Model)
+  if (!is.null(eq_basis_m1)) {
+    A <- A %*% t(eq_basis_m1)
   }
 
   # Safety check: remove zero rows/columns

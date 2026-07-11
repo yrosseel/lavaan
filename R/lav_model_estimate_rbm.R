@@ -117,7 +117,9 @@ lav_model_est_rbm <- function(lavmodel = NULL,
   }
 
   # general (non-simple) equality constraints are not supported yet
-  if (lavmodel@eq.constraints) {
+  # (nrow(ceq.JAC) > 0L also catches equality constraints coexisting with
+  # inequality constraints/bounds, where @eq.constraints is FALSE)
+  if (lavmodel@eq.constraints || nrow(lavmodel@ceq.JAC) > 0L) {
     lav_msg_stop(gettext(
       "estimator \"rbm\" does not support general equality constraints yet;
        use simple (label-based) equality constraints instead."))

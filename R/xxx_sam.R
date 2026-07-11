@@ -286,9 +286,12 @@ sam <- function(model = NULL,
         hw_fallback <- "twostep.robust" # no scores under conditional.x (yet)
       } else if (fit@Model@categorical) {
         hw_fallback <- "twostep.robust" # untested for (D)WLS scores (yet)
-      } else if (fit@Model@eq.constraints || fit@Model@ceq.simple.only) {
+      } else if (fit@Model@eq.constraints || fit@Model@ceq.simple.only ||
+        nrow(fit@Model@ceq.JAC) > 0L) {
         # the block-to-joint free-parameter mapping of the casewise influence
-        # does not handle equality constraints (yet)
+        # does not handle equality constraints (yet); the extra ceq.JAC check
+        # catches equality constraints coexisting with inequality
+        # constraints/bounds, where both packing flags are FALSE
         hw_fallback <- "twostep.robust"
       } else if (length(fit@Data@cluster) > 0L) {
         # the casewise meat would need within-cluster score aggregation (yet)

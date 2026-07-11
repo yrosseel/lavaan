@@ -386,6 +386,38 @@ lav_con_check_simple <- function(lavmodel = NULL) {
   simple
 }
 
+# orthonormal basis 'K' of the equality-constrained (tangent) space, in the
+# column space of lav_model_delta(): post-multiplying Delta by K restricts it
+# to the directions that satisfy the equality constraints.
+#
+# This plays the role of eq.constraints.K, but is also available when
+# equality constraints coexist with inequality constraints or with parameter
+# bounds: in that case BOTH lavmodel@eq.constraints and
+# lavmodel@ceq.simple.only are FALSE (they are *packing* flags, meaning
+# "only equality constraints"), eq.constraints.K is not computed, and code
+# that gates the K-reduction on those flags would silently drop the equality
+# constraints (wrong statistics with unchanged df).
+#
+# Returns NULL when the model has no equality constraints. For nonlinear
+# equality constraints the basis is the null space of the Jacobian
+# (a local, asymptotically correct linearization).
+lav_con_eq_basis <- function(lavmodel = NULL) {
+  if (lavmodel@eq.constraints) {
+    # only linear equality constraints: precomputed orthonormal null space
+    out <- lavmodel@eq.constraints.K
+  } else if (lavmodel@ceq.simple.only) {
+    # ceq.simple.K is a 0/1 duplication matrix (t(K) %*% K != I);
+    # orthonormalize so that K / t(K) round-trips are consistent
+    out <- qr.Q(qr(lavmodel@ceq.simple.K))
+  } else if (nrow(lavmodel@ceq.JAC) > 0L) {
+    # equality constraints together with inequality constraints/bounds
+    out <- lav_mat_ortho_complement(t(lavmodel@ceq.JAC))
+  } else {
+    out <- NULL
+  }
+  out
+}
+
 lav_con_r2k <- function(lavmodel = NULL) {
   # constraint matrix
   m_r <- NULL

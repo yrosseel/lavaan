@@ -594,10 +594,9 @@ lav_test_sb_trace_complement <- function(m_gamma = NULL,
 
       # handle equality constraints
       # FIXME: inequality constraints are ignored!
-      if (lavmodel@eq.constraints) {
-        delta_g <- delta_g %*% lavmodel@eq.constraints.K
-      } else if (lavmodel@ceq.simple.only) {
-        delta_g <- delta_g %*% lavmodel@ceq.simple.K
+      eq_basis <- lav_con_eq_basis(lavmodel)
+      if (!is.null(eq_basis)) {
+        delta_g <- delta_g %*% eq_basis
       }
 
       # orthogonal complement of Delta.g
@@ -641,10 +640,9 @@ lav_test_sb_trace_complement <- function(m_gamma = NULL,
 
     # handle equality constraints
     # FIXME: inequality constraints are ignored!
-    if (lavmodel@eq.constraints) {
-      delta_all <- delta_all %*% lavmodel@eq.constraints.K
-    } else if (lavmodel@ceq.simple.only) {
-      delta_all <- delta_all %*% lavmodel@ceq.simple.K
+    eq_basis <- lav_con_eq_basis(lavmodel)
+    if (!is.null(eq_basis)) {
+      delta_all <- delta_all %*% eq_basis
     }
 
     # orthogonal complement of Delta.g
