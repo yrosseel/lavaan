@@ -634,6 +634,17 @@ lav_model_info_firstorder <- function(lavmodel = NULL,
 # contains more parameters than the joint model; therefore, information
 # will be 'too small', and we need to remove some columns in H
 #
+# the constrained inverse is computed via the null-space identity: the
+# [1:npar, 1:npar] block of the inverse of the bordered (KKT) matrix
+# equals Z (Z' I Z)^-1 Z', with Z an orthonormal basis of the null space
+# of the active constraint Jacobian. This needs one solve of order
+# npar - rank(h) instead of the SVD of the (npar + 2m) x (npar + 2m)
+# bordered matrix, and avoids the MASS::ginv() tolerance altogether. When
+# Z'IZ is singular (the model is not identified even on the constrained
+# tangent space), we fall back to the bordered matrix + Moore-Penrose
+# route, preserving the legacy behavior in that regime. The full bordered
+# matrix is still built when inverted = FALSE (lavInspect
+# "augmented.information").
 lav_model_info_augment_invert <- function(lavmodel = NULL,
                                                  information = NULL,
                                                  inverted = FALSE,
@@ -641,10 +652,13 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
                                                  use_ginv = FALSE,
                                                  rm_idx = integer(0L)) {
   npar <- nrow(information)
-  is_augmented <- FALSE
 
-  # handle constraints
+  # collect the ACTIVE constraint rows (row-normalized), if any
+  h <- NULL
+  lambda <- numeric(0L)
+  border_type <- "none"
   if (nrow(lavmodel@con.jac) > 0L) {
+    border_type <- "general"
     h <- lavmodel@con.jac
     # read the attribute BEFORE any subsetting: `[` drops attributes, so
     # reading it after h[, -rm_idx] silently kept the inactive inequality
@@ -660,14 +674,14 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
       h <- h[, -rm_idx, drop = FALSE]
     }
     # normalize the rows of h: the null space of h (and therefore the
-    # returned [1:npar, 1:npar] block) is invariant to row scaling, but
-    # crossprod(h) puts the SQUARED row norms into the spectrum of the
-    # augmented matrix, and MASS::ginv() uses a tolerance RELATIVE to the
-    # largest singular value: a badly scaled constraint (eg
-    # 1000*a == 1000*b) raised the cutoff enough to zero genuine
-    # directions of the information, silently collapsing the standard
-    # errors. Rows that lost all their entries to rm_idx (constraints
-    # involving only removed parameters) are dropped.
+    # constrained inverse) is invariant to row scaling, but crossprod(h)
+    # puts the SQUARED row norms into the spectrum of the bordered
+    # matrix, and MASS::ginv() uses a tolerance RELATIVE to the largest
+    # singular value: a badly scaled constraint (eg 1000*a == 1000*b)
+    # raised the cutoff enough to zero genuine directions of the
+    # information, silently collapsing the standard errors. Rows that
+    # lost all their entries to rm_idx (constraints involving only
+    # removed parameters) are dropped.
     row_norm <- sqrt(rowSums(h * h))
     nonzero_idx <- which(row_norm > 0)
     if (length(nonzero_idx) < nrow(h)) {
@@ -679,29 +693,9 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
       h <- h / row_norm
       # the multiplier of a rescaled constraint rescales inversely
       lambda <- lambda * row_norm
-      is_augmented <- TRUE
-      h0 <- matrix(0, nrow(h), nrow(h))
-      h10 <- matrix(0, ncol(information), nrow(h))
-      # note: this middle block is fully decoupled (zero off-diagonal
-      # blocks on both sides), so it cannot affect the returned
-      # [1:npar, 1:npar] slice of the inverse; it is kept for the shape
-      # of the full augmented matrix (lavInspect "augmented.information").
-      # For the same reason check_pd should never be TRUE when a border
-      # is present: a bordered (KKT) matrix is always indefinite.
-      dl <- 2 * diag(lambda, nrow(h), nrow(h))
-      # adding crossprod(h) leaves the [1:npar, 1:npar] block of the
-      # inverse unchanged (h x = 0 implies (info + h'h) x = info x), but
-      # makes the augmented matrix nonsingular when the information is
-      # singular only along the constraint-normal directions
-      info <- information + crossprod(h)
-      e3 <- rbind(
-        cbind(info, h10, t(h)),
-        cbind(t(h10), dl, h0),
-        cbind(h, h0, h0)
-      )
-      information <- e3
     }
   } else if (lavmodel@ceq.simple.only) {
+    border_type <- "simple"
     h <- t(lav_mat_ortho_complement(lavmodel@ceq.simple.K))
     if (length(rm_idx) > 0L) {
       h <- h[, -rm_idx, drop = FALSE]
@@ -711,21 +705,51 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
       nonzero_idx <- which(row_norm > 0)
       h <- h[nonzero_idx, , drop = FALSE] / row_norm[nonzero_idx]
     }
-    if (nrow(h) > 0L) {
-      is_augmented <- TRUE
-      h0 <- matrix(0, nrow(h), nrow(h))
-      h10 <- matrix(0, ncol(information), nrow(h))
-      info <- information + crossprod(h)
-      e2 <- rbind(
+    lambda <- numeric(nrow(h))
+  }
+  is_augmented <- !is.null(h) && nrow(h) > 0L
+
+  # build the full bordered (KKT) matrix; only needed when the caller
+  # asks for the un-inverted augmented matrix, or as the Moore-Penrose
+  # fallback of the inverted path below
+  build_border <- function() {
+    h0 <- matrix(0, nrow(h), nrow(h))
+    # adding crossprod(h) leaves the [1:npar, 1:npar] block of the
+    # inverse unchanged (h x = 0 implies (info + h'h) x = info x), but
+    # makes the bordered matrix nonsingular when the information is
+    # singular only along the constraint-normal directions
+    info <- information + crossprod(h)
+    if (border_type == "general") {
+      # note: the middle 2*diag(lambda) block is fully decoupled (zero
+      # off-diagonal blocks on both sides), so it cannot affect the
+      # [1:npar, 1:npar] slice of the inverse; it is kept for the shape
+      # of the full augmented matrix (lavInspect "augmented.information")
+      h10 <- matrix(0, npar, nrow(h))
+      dl <- 2 * diag(lambda, nrow(h), nrow(h))
+      rbind(
+        cbind(info, h10, t(h)),
+        cbind(t(h10), dl, h0),
+        cbind(h, h0, h0)
+      )
+    } else {
+      rbind(
         cbind(info, t(h)),
         cbind(h, h0)
       )
-      information <- e2
     }
   }
 
   if (check_pd) {
-    eigvals <- eigen(information,
+    # for a constrained model, the relevant identification check is the
+    # information restricted to the constrained tangent space (a bordered
+    # matrix itself is a saddle matrix and always indefinite)
+    if (is_augmented) {
+      z <- lav_mat_ortho_complement(t(h))
+      m_check <- crossprod(z, information %*% z)
+    } else {
+      m_check <- information
+    }
+    eigvals <- eigen(m_check,
       symmetric = TRUE,
       only.values = TRUE
     )$values
@@ -736,35 +760,54 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
     }
   }
 
-  if (inverted) {
+  if (!inverted) {
     if (is_augmented) {
+      return(build_border())
+    }
+    return(information)
+  }
+
+  # inverted
+  if (!is_augmented) {
+    if (use_ginv) {
       # note: default tol in MASS::ginv is sqrt(.Machine$double.eps)
       #       which seems a bit too conservative
       #       from 0.5-20, we changed this to .Machine$double.eps^(3/4)
-      information <-
-        try(
-          MASS::ginv(information,
-            tol = .Machine$double.eps^(3 / 4)
-          )[1:npar,
-            1:npar,
-            drop = FALSE
-          ],
-          silent = TRUE
-        )
+      out <- try(
+        MASS::ginv(information,
+          tol = .Machine$double.eps^(3 / 4)
+        ),
+        silent = TRUE
+      )
     } else {
-      if (use_ginv) {
-        information <- try(
-          MASS::ginv(information,
-            tol = .Machine$double.eps^(3 / 4)
-          ),
-          silent = TRUE
-        )
-      } else {
-        information <- try(solve(information), silent = TRUE)
-      }
+      out <- try(solve(information), silent = TRUE)
     }
+    return(out)
   }
 
-  # augmented/inverted information
-  information
+  # constrained inverse: null-space route
+  out <- try(
+    {
+      z <- lav_mat_ortho_complement(t(h))
+      ziz <- crossprod(z, information %*% z)
+      v <- z %*% solve(ziz, t(z))
+      # enforce exact symmetry
+      (v + t(v)) / 2
+    },
+    silent = TRUE
+  )
+  if (!inherits(out, "try-error")) {
+    return(out)
+  }
+
+  # fallback: bordered matrix + Moore-Penrose
+  try(
+    MASS::ginv(build_border(),
+      tol = .Machine$double.eps^(3 / 4)
+    )[1:npar,
+      1:npar,
+      drop = FALSE
+    ],
+    silent = TRUE
+  )
 }
