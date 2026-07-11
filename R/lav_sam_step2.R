@@ -175,6 +175,15 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
                              pt_1$user[reg_idx] != 1L &
                              pt_1$op[reg_idx] == "~~")] # FIXME: more?
     pts$free[var_idx] <- max(pts$free) + seq_along(var_idx)
+    # reset any stale bounds (a fixed parameter has lower == its fixed
+    # value whenever the partable carries bounds columns; see the same
+    # fix in lav_pt_subset_sm())
+    if (!is.null(pts$lower)) {
+      pts$lower[var_idx] <- -Inf
+    }
+    if (!is.null(pts$upper)) {
+      pts$upper[var_idx] <- +Inf
+    }
 
     # set 'ustart' values for free FIT.PA parameter to NA
     pts$ustart[pts$free > 0L] <- as.numeric(NA)

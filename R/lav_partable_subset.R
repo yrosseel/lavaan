@@ -775,6 +775,16 @@ lav_pt_subset_sm <- function(pt_1 = NULL,
     if (length(fixed_var_idx) > 0L) {
       pt_1$free[fixed_var_idx] <- max(pt_1$free) + seq_along(fixed_var_idx)
       pt_1$ustart[fixed_var_idx] <- as.numeric(NA)
+      # reset any stale bounds: when the parent partable carries bounds
+      # columns (explicit inequality constraints, bounds=), a FIXED
+      # parameter has lower == upper == its fixed value; keeping that
+      # lower bound after freeing pins the (residual) variance at 1
+      if (!is.null(pt_1$lower)) {
+        pt_1$lower[fixed_var_idx] <- -Inf
+      }
+      if (!is.null(pt_1$upper)) {
+        pt_1$upper[fixed_var_idx] <- +Inf
+      }
     }
   }
 
