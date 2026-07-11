@@ -56,7 +56,7 @@ nlminb_constr <- function(start, objective, gradient = NULL, hessian = NULL,
   ceq_idx <- cin_idx <- integer(0)
   if (nceq > 0L) ceq_idx <- 1:nceq
   if (ncin > 0L) cin_idx <- nceq + 1:ncin
-  cin_flag <- rep(FALSE, length(ncon))
+  cin_flag <- rep(FALSE, ncon)
   if (ncin > 0L) cin_flag[cin_idx] <- TRUE
 
   # control outer default values
@@ -246,13 +246,15 @@ nlminb_constr <- function(start, objective, gradient = NULL, hessian = NULL,
   cin_idx <- which(cin_flag)
   # ceq.idx <- which(!cin.flag)
   if (ncin > 0L) {
-    # FIXME: slack value not too strict??
-    slack <- 1e-05
-    # cat("DEBUG:\n"); print(con0)
-    inactive_idx <- which(cin_flag & abs(con0) > slack)
-    # if(length(inactive.idx) > 0L) {
-    #    JAC        <-        JAC[-inactive.idx,,drop=FALSE]
-    # }
+    # strict complementarity: a row is only ACTIVE (binding) when it is
+    # satisfied with near-equality AND its multiplier exerts force on the
+    # gradient (see lav_con_cin_inactive_idx()); the multipliers of the
+    # non-binding rows have been driven to zero by the augmented-Lagrangian
+    # updates. (The old |con0| <= 1e-05 rule wrongly treated an interior
+    # solution that merely grazes a bound as equality-constrained.)
+    inactive_idx <- lav_con_cin_inactive_idx(
+      con0 = con0, lambda = lambda, jac = jac, cin_flag = cin_flag
+    )
   }
   attr(jac, "inactive.idx") <- inactive_idx
   attr(jac, "cin.idx") <- cin_idx

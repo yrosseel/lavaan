@@ -973,12 +973,16 @@ lav_model_est <- function(lavmodel = NULL,
       ceq_idx <- cin_idx <- integer(0)
       if (nceq > 0L) ceq_idx <- 1:nceq
       if (ncin > 0L) cin_idx <- nceq + 1:ncin
-      cin_flag <- rep(FALSE, length(ncon))
+      cin_flag <- rep(FALSE, ncon)
       if (ncin > 0L) cin_flag[cin_idx] <- TRUE
 
       inactive_idx <- integer(0L)
       cin_idx <- which(cin_flag)
       if (ncin > 0L) {
+        # optimizer == "NONE": no multiplier information is available for
+        # the externally supplied solution, so a constraint that touches
+        # the boundary is conservatively treated as binding (this only
+        # feeds the df bookkeeping); no strict-complementarity test here
         slack <- 1e-05
         inactive_idx <- which(cin_flag & con0 > slack)
       }
@@ -999,26 +1003,43 @@ lav_model_est <- function(lavmodel = NULL,
     if (lavmodel@cin.simple.only && nrow(lavmodel@cin.JAC) > 0L) {
       # JAC
       cin_jac_1 <- lavmodel@cin.JAC
-      con0 <- lavmodel@cin.function(x)
-      slack <- 1e-05
-      inactive_idx <- which(abs(con0) > slack)
 
-      # lambda
-      # FIXME! HOW to compute this (post-hoc)?
+      # lambda (post-hoc): the bound rows involve one parameter each, so
+      # the rows of cin.JAC are mutually orthogonal and the least-squares
+      # multiplier reduces to the plain inner product with the gradient.
+      # NOTE: for ceq.simple models both the parameter vector and the
+      # gradient live in the reduced (packed) space, while cin.function
+      # and cin.JAC operate on the full (unco) space -- unpack BOTH
+      # (evaluating cin.function on the packed x returned garbage
+      # constraint values, silently corrupting the old classification)
       dx <- gradient(x)
       if (lavmodel@ceq.simple.only) {
-        dx_unpack <- numeric(ncol(cin_jac_1))
-        dx_unpack <- dx[lavpartable$free[lavpartable$free > 0]]
+        unpack_idx <- lavpartable$free[lavpartable$free > 0]
+        x_unpack <- x[unpack_idx]
+        dx_unpack <- dx[unpack_idx]
       } else if (lavmodel@eq.constraints) {
         # unreachable via the standard pipeline: eq.constraints is a
         # packing flag that is only TRUE when equality constraints are the
         # ONLY constraints, which contradicts cin.simple.only; kept as a
         # safety net
+        x_unpack <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+          lavmodel@eq.constraints.k0
         dx_unpack <- as.numeric(lavmodel@eq.constraints.K %*% dx)
       } else {
+        x_unpack <- x
         dx_unpack <- dx
       }
+      con0 <- lavmodel@cin.function(x_unpack)
       cin_lambda <- drop(cin_jac_1 %*% dx_unpack)
+
+      # strict complementarity: a bound is only ACTIVE (binding) when the
+      # solution sits at the bound AND the multiplier exerts force on the
+      # gradient (see lav_con_cin_inactive_idx()); an interior solution
+      # that merely grazes a bound keeps its ordinary standard error
+      inactive_idx <- lav_con_cin_inactive_idx(
+        con0 = con0, lambda = cin_lambda, jac = cin_jac_1,
+        cin_flag = rep(TRUE, nrow(cin_jac_1))
+      )
       cin_lambda[inactive_idx] <- 0
 
       # remove all inactive rows
