@@ -53,7 +53,12 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{se = "local"} is available for the single-group continuous
     complete-data setting; it uses the cluster-sandwich covariance of the
     saturated (h1) estimates, and also enables the corrected structural
-    test statistic.}
+    test statistic. For \code{estimator = "PML"}, \code{se = "local"} is
+    the only available two-step correction (single group, complete data,
+    all-ordinal indicators): it combines the casewise influences of the
+    saturated thresholds/polychoric correlations with the casewise
+    pairwise-likelihood influences of the measurement-block estimates,
+    and also enables the corrected structural test statistic.}
 \item{mm_list}{List. Define the measurement blocks. 
      Each element of the list should
      be either a single name of a latent variable, or a vector of latent

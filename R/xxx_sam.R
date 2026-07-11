@@ -390,6 +390,12 @@ sam <- function(model = NULL,
         step1$JAC <- tmp_2l$JAC
         step1$Gamma.eta.full <- tmp_2l$Gamma.eta.full
         step1$caseB <- TRUE
+      } else if (identical(fit@Options$estimator.orig, "PML")) {
+        # PML: theta1.hat is not a function of the saturated statistics
+        # (the pairwise likelihood loads on the full bivariate tables), so
+        # the influence route below does not apply; build the casewise
+        # joint-influence Gamma.eta instead (see lav_sam_gamma_eta_pml())
+        gamma_eta <- lav_sam_gamma_eta_pml(step1 = step1, fit = fit)
       } else {
         jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
 

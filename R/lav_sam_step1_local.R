@@ -1295,6 +1295,152 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   list(jac)
 }
 
+# PML structural-space Gamma.eta (se = "local" for estimator = "PML").
+#
+# For PML the step-1 estimator is NOT a function of the saturated statistics
+# s = (thresholds, polychoric correlations): the pairwise likelihood loads on
+# the full bivariate tables. The influence route Gamma.eta = JAC Gamma JAC'
+# (which writes theta1.hat as a function of s) therefore does not apply.
+# Instead we build the CASEWISE joint influences of the two ingredients of
+# the structural statistics c(EETA, vech(VETA)) = f(s, theta1.hat):
+#
+#   sqrt(N) (stats - target) ~ (1/sqrt(N)) sum_i u_i,
+#   u_i = JACb zeta_i + JACc h_i
+#
+# with
+#   zeta_i = casewise influence of the saturated statistics: the muthen1984
+#            two-stage estimator's influence function, zeta_i = N B^-1 sc_i
+#            (SC/A11/A21/A22 from muthen1984()); their crossprod/N
+#            reproduces the categorical Gamma (NACOV) exactly;
+#   h_i    = casewise influence of the step-1 (PML) block estimates: per
+#            block, I_b^-1 g1_i with g1_i the casewise pairwise scores
+#            (lav_sc()) and I_b the unit block information;
+#   JACb   = d(stats)/d s'       (theta1 fixed; lav_sam_jacb_cat_g());
+#   JACc   = d(stats)/d theta1'  (s fixed; lav_sam_jac_est_rows() over ALL
+#            free block parameters, which automatically includes the
+#            within-block factor (co)variances -- the 'psi channel' of the
+#            (D)WLS categorical path: in the delta parameterization VETA
+#            depends on Psi through theta_jj = 1 - (Lambda Psi Lambda')_jj).
+#
+# Gamma.eta = (1/N) sum_i (u_i - ubar)(u_i - ubar)': the joint casewise
+# (infinitesimal-jackknife) covariance, including the cross-covariance
+# between s and theta1.hat (same cases). Downstream, step 2 consumes it
+# exactly like the (D)WLS Gamma.eta: robust (local) SEs + the corrected
+# Satorra-Bentler structural test.
+#
+# Scope (guarded): single group, single level, complete data, all-ordinal,
+# no exogenous covariates, no sampling weights, no equality constraints.
+lav_sam_gamma_eta_pml <- function(step1 = NULL, fit = NULL) {
+  lavdata <- fit@Data
+  lavmodel <- fit@Model
+  g <- 1L
+
+  # guards
+  if (lavdata@ngroups > 1L) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with multiple groups (yet)!"))
+  }
+  if (lavdata@nlevels > 1L) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available for multilevel models (yet)!"))
+  }
+  if (lavmodel@conditional.x) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with exogenous covariates
+       (conditional.x = TRUE) (yet)!"))
+  }
+  if (anyNA(lavdata@X[[g]])) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available for missing data (yet)!"))
+  }
+  if (length(lavdata@sampling.weights) > 0L) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with sampling weights (yet)!"))
+  }
+  if (lavmodel@eq.constraints || lavmodel@ceq.simple.only) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with equality constraints (yet)!"))
+  }
+  ov_idx <- match(lavdata@ov.names[[g]], lavdata@ov$name)
+  ov_types <- lavdata@ov$type[ov_idx]
+  if (!all(ov_types == "ordered")) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: all observed variables must be ordered (yet)!"))
+  }
+
+  y <- lavdata@X[[g]]
+  n <- nrow(y)
+  meanstructure <- lavmodel@meanstructure
+
+  # --- 1. zeta_i: casewise influence of the saturated (th, rho) statistics
+  cat_1 <- muthen1984(
+    data_1 = y,
+    ov_names = lavdata@ov.names[[g]],
+    ov_types = ov_types,
+    ov_levels = lavdata@ov$nlev[ov_idx],
+    wls_w = TRUE
+  )
+  b_inv <- lav_m84_b_inv(
+    a11 = cat_1$A11, a21 = cat_1$A21, a22 = cat_1$A22
+  )$b_inv
+  zeta <- n * (cat_1$SC %*% t(b_inv)) # N x nstats, WLS.obs layout
+
+  # --- 2. JACb: d(stats)/d s' (theta1 fixed)
+  joint_labels <- lav_sam_wls_obs_labels(
+    ov_names = lavdata@ov.names[[g]],
+    th_idx = fit@SampleStats@th.idx[[g]],
+    ov_names_x = NULL
+  )
+  jacb <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels, meanstructure)
+
+  # --- 3. rows: ALL free block parameters, mapped to step1$PT rows
+  pt_1 <- step1$PT
+  n_mmblocks <- length(step1$MM.FIT)
+  rows_list <- cols_list <- vector("list", n_mmblocks)
+  for (mm in seq_len(n_mmblocks)) {
+    fb <- step1$MM.FIT[[mm]]
+    ptm <- fb@ParTable
+    ptm_idx <- step1$block.ptm.idx[[mm]]
+    ok <- ptm$free[ptm_idx] > 0L
+    rows_list[[mm]] <- step1$block.mm.idx[[mm]][ptm_idx][ok]
+    cols_list[[mm]] <- ptm$free[ptm_idx][ok]
+  }
+  rows_idx <- sort(unique(unlist(rows_list)))
+
+  # JACc: d(stats)/d theta1' (s fixed), columns in rows_idx order
+  jacc <- lav_sam_jac_est_rows(rows_idx, step1, fit, g, meanstructure)
+
+  # --- 4. h_i: casewise influence of the block (PML) estimates,
+  #        columns in rows_idx order
+  h <- matrix(0, n, length(rows_idx))
+  for (mm in seq_len(n_mmblocks)) {
+    fb <- step1$MM.FIT[[mm]]
+    # ignore_constraints: the blocks are fitted with bounds =
+    # "wide.zerovar", which lavaan represents as (inactive) linear
+    # INEQUALITY constraints; lav_sc()'s constraint projection would
+    # project the scores onto them and corrupt the casewise influences.
+    # Equality constraints are excluded from this route (guard above).
+    scb <- lav_sc(fb, remove_empty_cases = FALSE,
+                  ignore_constraints = TRUE)
+    scb[is.na(scb)] <- 0
+    if (nrow(scb) != n) {
+      lav_msg_stop(gettext(
+        "internal error: case alignment failure between a measurement
+         block and the data (PML Gamma.eta)."))
+    }
+    ib <- lavTech(fb, "information") # unit information
+    nb <- fb@SampleStats@ntotal
+    hb <- (n / nb) * scb %*% solve(ib)
+    h[, match(rows_list[[mm]], rows_idx)] <-
+      hb[, cols_list[[mm]], drop = FALSE]
+  }
+
+  # --- 5. assemble the joint casewise influences + Gamma.eta
+  u <- zeta %*% t(jacb) + h %*% t(jacc)
+  u <- t(t(u) - colMeans(u))
+  list(crossprod(u) / n)
+}
+
 # Two-level (single group) Gamma.eta: the NACOV of the structural statistics
 # c(EETA_b, vech(VETA_b)) per level, plus their full (cross-level) covariance.
 #
