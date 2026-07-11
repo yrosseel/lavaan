@@ -57,6 +57,24 @@ information is the default, which provides better control of Type I errors.}
     a parameter that was explicitly fixed to a constant (say to zero),
     it is better to label the parameter, and use an explicit equality
     constraint.
+
+    In addition to the standard (normal-theory) score test, robust
+    versions are computed whenever the fitted object provides the
+    ingredients for a sandwich-type covariance matrix: either because
+    robust standard errors were requested (e.g.,
+    \code{se = "robust.sem"} or \code{se = "robust.huber.white"}), or
+    because a scaled test statistic was requested (e.g.,
+    \code{test = "satorra.bentler"}). Following Satorra (2000), three
+    robust versions are reported: a mean-scaled statistic
+    (\code{score.scaled}), a mean-and-variance adjusted statistic with
+    fractional degrees of freedom (\code{score.adjusted}), and the
+    generalized, asymptotically distribution-free statistic
+    (\code{score.robust}). For a single restriction, the three versions
+    coincide. The univariate (and cumulative) score tests are then
+    accompanied by scaled counterparts in the \code{X2.scaled} column.
+    Note that for estimators that are not asymptotically efficient
+    (e.g., \code{DWLS}, \code{ULS} and \code{PML}), only the robust
+    versions have the correct asymptotic distribution.
 }
 \value{
   A list containing at least one \code{data.frame}:
@@ -64,13 +82,19 @@ information is the default, which provides better control of Type I errors.}
     \item \code{$test}: The total score test, with columns for the score
       test statistic (\code{X2}), the degrees of freedom (\code{df}), and
       a \emph{p} value under the \eqn{\chi^2} distribution (\code{p.value}).
+      If robust versions could be computed, three additional rows are
+      included: \code{score.scaled}, \code{score.adjusted} and
+      \code{score.robust} (see Details).
     \item \code{$uni}: Optional (if \code{univariate=TRUE}).
       Each 1-\emph{df} score test, equivalent to modification indices.
+      If robust versions could be computed, the scaled statistics are
+      provided in the \code{X2.scaled} and \code{p.value.scaled} columns.
       If \code{epc=TRUE} when \code{add}ing parameters (not when releasing
-      constraints), an unstandardized EPC is provided for each added parameter,
-      as would be returned by \code{\link{modificationIndices}}.
+      constraints), an unstandardized EPC is provided for each added
+      parameter, as would be returned by \code{\link{modificationIndices}}.
     \item \code{$cumulative}: Optional (if \code{cumulative=TRUE}).
-      Cumulative score tests.
+      Cumulative score tests, with scaled counterparts if robust versions
+      could be computed.
     \item \code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates,
       expected parameter changes, and expected parameter values if all
       the tested constraints were freed.
@@ -79,6 +103,12 @@ information is the default, which provides better control of Type I errors.}
 \references{
 Bentler, P. M., & Chou, C. P. (1993). Some new covariance structure model
 improvement statistics. Sage Focus Editions, 154, 235-255.
+
+Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample
+analysis of moment structures. In Heijmans, R.D.H., Pollock, D.S.G. &
+Satorra, A. (Eds.), Innovations in multivariate statistical analysis:
+A festschrift for Heinz Neudecker (pp. 233-247). London: Kluwer Academic
+Publishers.
 }
 
 \examples{

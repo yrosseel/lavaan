@@ -12,6 +12,9 @@
 # - YR 8 Jan 2026: use ceq.JAC instead of con.jac (as we do not support
 #                  inequality constraints anyway, and we do not want to
 #                  release the EFA constraints)
+# - YR 11 Jul 2026: add the scaled, adjusted and generalized ('robust')
+#                   versions of the score test (Satorra, 2000); see
+#                   lav_test_satorra2000.R
 
 # For ceq.simple models, the simple equality constraints are absorbed (no '=='
 # rows; ceq.JAC is empty). Reconstruct an explicit constraint jacobian in the
@@ -100,6 +103,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     univariate <- TRUE
   }
 
+  # PML: the expected (h1) information is not available; use the
+  # observed (pairwise) information instead
+  if (object@Model@estimator == "PML" && information == "expected") {
+    information <- "observed"
+  }
 
   # Mode 1: ADDING new parameters
   if (!is.null(add) && all(nchar(add) > 0L)) {
@@ -111,6 +119,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
 
     # extend model with extra set of parameters
     fit <- lav_object_extended(object, add = add)
+
+    # the object providing the ingredients for the robust versions
+    # (Satorra, 2000): score/information/meat all live in the parameter
+    # space of the extended model
+    robust_object <- fit
 
     score <- lavTech(fit, "gradient.logl")
     information_1 <- lavTech(fit, paste("information", information, sep = "."))
@@ -152,6 +165,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     class(table_1) <- c("lavaan.data.frame", "data.frame")
   } else {
     # MODE 2: releasing constraints
+
+    robust_object <- object
 
     r_1 <- object@Model@ceq.JAC[, , drop = FALSE]
     ceq_simple_con <- NULL
@@ -220,6 +235,18 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     class(table_1) <- c("lavaan.data.frame", "data.frame")
   }
 
+  # PML: lavTech(object, "gradient.logl") returns the TOTAL (summed over
+  # cases) pairwise gradient, while the information matrices are on the
+  # unit scale (see lav_model_info_firstorder()); rescale the score so
+  # that both are on the same (unit) scale
+  if (object@Model@estimator == "PML") {
+    if (length(object@Data@sampling.weights) == 0L) {
+      score <- score / object@SampleStats@ntotal
+    } else {
+      score <- score / sum(unlist(object@Data@weights))
+    }
+  }
+
   if (object@Data@nlevels == 1L) {
     n <- object@SampleStats@ntotal
     if (lavoptions$mimic == "EQS") {
@@ -235,19 +262,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     score <- score / 2 # -2 * LRT
   }
 
-  if (lavoptions$se == "standard") {
-    stat <- as.numeric(n * score %*% j_inv %*% score)
-  } else {
-    # generalized score test
-    lav_msg_warn(gettext("se is not `standard'; not implemented yet;
-                         falling back to ordinary score test"))
-
-    # NOTE!!!
-    # we can NOT use VCOV here, because it reflects the constraints,
-    # and the whole point is to test for these constraints...
-
-    stat <- as.numeric(n * score %*% j_inv %*% score)
-  }
+  # the standard (normal-theory) score test statistic
+  #
+  # NOTE: we can NOT use VCOV here, because it reflects the constraints,
+  # and the whole point is to test for these constraints...
+  stat <- as.numeric(n * score %*% j_inv %*% score)
 
   # compute df, taking into account that some of the constraints may
   # be needed to identify the model (and hence Information is singular)
@@ -262,6 +281,40 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     test = "score", X2 = stat, df = df, p.value = pvalue,
     stringsAsFactors = FALSE
   )
+
+  # scaled, adjusted and generalized ('robust') versions (Satorra, 2000),
+  # whenever the object provides the ingredients for the sandwich: the
+  # (unit-scale) meat B, in the same parameter space as information_1
+  b_meat <- lav_test_meat(robust_object)
+  if (!is.null(b_meat)) {
+    a_mat <- r_1[r_idx, , drop = FALSE]
+    aj <- a_mat %*% j_inv
+    m1 <- aj %*% t(a_mat)              # A J A'
+    m2 <- aj %*% b_meat %*% t(aj)      # A J B J A'
+    s2000 <- lav_test_satorra2000(
+      stat = stat, df = df, m1 = m1, m2 = m2,
+      v = as.numeric(aj %*% score), n = n
+    )
+    test <- rbind(test, data.frame(
+      test = c("score.scaled", "score.adjusted", "score.robust"),
+      X2 = c(
+        s2000$stat.scaled, s2000$stat.adjusted,
+        s2000$stat.robust
+      ),
+      df = c(s2000$df.scaled, s2000$df.adjusted, s2000$df.robust),
+      p.value = c(
+        s2000$p.value.scaled, s2000$p.value.adjusted,
+        s2000$p.value.robust
+      ),
+      stringsAsFactors = FALSE
+    ))
+  } else if (!lavoptions$se %in% c("standard", "none")) {
+    lav_msg_warn(gettextf(
+      "the scaled, adjusted and robust versions of the score test are not
+      available when se = %s; only the standard score test is computed.",
+      dQuote(lavoptions$se)))
+  }
+
   class(test) <- c("lavaan.data.frame", "data.frame")
   attr(test, "header") <- "total score test:"
 
@@ -269,6 +322,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
 
   if (univariate) {
     ts_1 <- numeric(nrow(r_1))
+    ts_scaled <- rep(as.numeric(NA), nrow(r_1))
     epc_uni <- numeric(nrow(r_1)) # ignored in release= mode
     for (r in r_idx) {
       r1 <- r_1[-r, , drop = FALSE]
@@ -280,6 +334,18 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
       z1_plus1 <- z1_plus[seq_len(nrow(information_1)),
                           seq_len(nrow(information_1))]
       ts_1[r] <- as.numeric(n * t(score) %*% z1_plus1 %*% score)
+      if (!is.null(b_meat)) {
+        # single restriction: the scaled, adjusted and generalized
+        # versions all coincide (Satorra, 2000, eq. 25-28)
+        a_r <- r_1[r, , drop = FALSE]
+        aj_r <- a_r %*% z1_plus1
+        m1_r <- as.numeric(aj_r %*% t(a_r))
+        m2_r <- as.numeric(aj_r %*% b_meat %*% t(aj_r))
+        if (is.finite(m1_r) && is.finite(m2_r) &&
+          m1_r > 0 && m2_r > 0) {
+          ts_scaled[r] <- ts_1[r] * m1_r / m2_r
+        }
+      }
       if (epc && !is.null(add)) {
         # EPC.uni[r] <- -1 * utils::tail(as.numeric(score %*%  Z1.plus1),
         #                               n = nrow(R))[r]
@@ -295,6 +361,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     table2$X2 <- ts_1[r_idx]
     table2$df <- rep(1, length(r_idx))
     table2$p.value <- 1 - pchisq(table2$X2, df = table2$df)
+    if (!is.null(b_meat)) {
+      table2$X2.scaled <- ts_scaled[r_idx]
+      table2$p.value.scaled <- 1 - pchisq(table2$X2.scaled, df = 1)
+    }
     if (epc && !is.null(add)) {
       table2$epc <- epc_uni[r_idx]
     }
@@ -307,6 +377,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
     row_order <-
          sort.int(ts_1[r_idx], index.return = TRUE, decreasing = TRUE)$ix
     ts_1 <- numeric(length(r_idx))
+    ts_scaled <- rep(as.numeric(NA), length(r_idx))
     for (r in seq_along(r_idx)) {
       rcumul_idx <- ts_order[1:r]
 
@@ -319,12 +390,27 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
       z1_plus1 <- z1_plus[seq_len(nrow(information_1)),
                           seq_len(nrow(information_1))]
       ts_1[r] <- as.numeric(n * t(score) %*% z1_plus1 %*% score)
+      if (!is.null(b_meat)) {
+        a_c <- r_1[rcumul_idx, , drop = FALSE]
+        aj_c <- a_c %*% z1_plus1
+        m1_c <- aj_c %*% t(a_c)
+        m2_c <- aj_c %*% b_meat %*% t(aj_c)
+        s2000 <- lav_test_satorra2000(
+          stat = ts_1[r], df = r,
+          m1 = m1_c, m2 = m2_c
+        )
+        ts_scaled[r] <- s2000$stat.scaled
+      }
     }
 
     table3 <- table_1[row_order, ]
     table3$X2 <- ts_1
     table3$df <- seq_along(ts_1)
     table3$p.value <- 1 - pchisq(table3$X2, df = table3$df)
+    if (!is.null(b_meat)) {
+      table3$X2.scaled <- ts_scaled
+      table3$p.value.scaled <- 1 - pchisq(table3$X2.scaled, df = table3$df)
+    }
     attr(table3, "header") <- "cumulative score tests:"
     out$cumulative <- table3
   }
