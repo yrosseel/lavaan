@@ -137,6 +137,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   # TDJ: Add user-supplied h1 model, if it exists
   if (user_h1_exists) mods$user_h1 <- object@external$h1.model
 
+  # ensure model names are unique (they are used as row.names later)
+  names(mods) <- make.unique(names(mods))
+
   # put them in order (using degrees of freedom)
   ndf <- sapply(mods, function(x) x@test[[1]]$df)
   order_idx <- order(ndf)
