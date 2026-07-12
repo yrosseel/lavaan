@@ -484,9 +484,16 @@ lav_predict_internal <- function(lavmodel = NULL,
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats, remove_dummy_lv = TRUE
       )
+      # under conditional.x, lavimplied has no joint 'cov'; the relevant Sigma
+      # is Cov(y|x) = res.cov (partial matching would wrongly pick cov.x)
+      implied_cov <- if (lavmodel@conditional.x) {
+        lavimplied$res.cov
+      } else {
+        lavimplied$cov
+      }
       mdist_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
         a <- fsm_1[[g]]
-        sigma <- lavimplied$cov[[g]]
+        sigma <- implied_cov[[g]]
         if (transform) {
           fs_cov <- veta[[g]]
         } else {
@@ -674,8 +681,15 @@ lav_predict_internal <- function(lavmodel = NULL,
         remove_dummy_lv = FALSE,
         use_wmat = TRUE
       )
+      # under conditional.x, lavimplied has no joint 'cov'; the relevant Sigma
+      # is Cov(y|x) = res.cov (partial matching would wrongly pick cov.x)
+      implied_cov <- if (lavmodel@conditional.x) {
+        lavimplied$res.cov
+      } else {
+        lavimplied$cov
+      }
       mdist_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
-        sigma <- lavimplied$cov[[g]]
+        sigma <- implied_cov[[g]]
         la <- mm_lambda[[g]]
         if (type == "resid") {
           ila <- diag(ncol(sigma)) - la %*% fsm_1[[g]]
@@ -1030,11 +1044,38 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
   mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
                                 use_wmat = TRUE)
-  sigma_hat <- lavimplied$cov
+
+  # conditional.x: the model-implied Sigma/means refer to the residual y|x
+  # system, and the exogenous x-part is handled separately (per case). We
+  # therefore use the *conditional* (given-x) model-implied quantities:
+  #  - Sigma      = Cov(y|x) = res.cov (NOT the joint 'cov', which under
+  #                 conditional.x does not exist in lavimplied)
+  #  - V(ETA)     = Cov(eta|x) = (I-B)^-1 Psi (I-B)^-T (no Gamma cov.x Gamma'
+  #                 term), keeping the dummy latent variables so that it stays
+  #                 conformable with the full LAMBDA
+  #  - E(ETA|x_i) and E(Y|x_i) are per-case quantities (computed in the loop)
+  cond_x <- lavmodel@conditional.x
+  if (cond_x) {
+    # exo may be NULL when called via the 'lavobject' convenience path
+    if (is.null(exo)) {
+      exo <- lavdata@eXo
+    }
+    sigma_hat <- lavimplied$res.cov
+    veta <- lav_model_vetax(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+    eetax <- lav_model_eetax(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+      exo = exo, nobs = lapply(data_obs, NROW)
+    )
+    res_int <- lavimplied$res.int
+    res_slopes <- lavimplied$res.slopes
+  } else {
+    sigma_hat <- lavimplied$cov
+    veta <- lav_model_veta(lavmodel = lavmodel)
+    eeta <- lav_model_eeta(lavmodel = lavmodel,
+                           lavsamplestats = lavsamplestats)
+    ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+  }
   sigma_inv <- lapply(sigma_hat, lav_predict_solve)
-  veta <- lav_model_veta(lavmodel = lavmodel)
-  eeta <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-  ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
 
   # Bartlett + higher-order factors (new in 0.7-1): collapse the measurement
   # chain, just like in sam(): LAMBDA.star = LAMBDA %*% solve(I - B), where B
@@ -1131,10 +1172,12 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     b <- lav_predict_block_idx(lavdata, g, level)
 
     veta_g <- veta[[b]]
-    eeta_g <- eeta[[b]]
     lambda_g <- mm_lambda[[b]]
-    ey_g <- ey[[b]]
     sigma_inv_g <- sigma_inv[[b]]
+    if (!cond_x) {
+      eeta_g <- eeta[[b]]
+      ey_g <- ey[[b]]
+    }
     # higher-order factors (Bartlett only; NULL otherwise)
     lambda_star_g <- mm_lambda_star[[b]]
     ho_fixes_g <- ho_fixes[[b]]
@@ -1228,13 +1271,29 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       next
     }
 
-    # center data
-    yc <- t(t(data_obs_g) - ey_g)
+    # center data and set up the per-case latent means (eeta_case_g); under
+    # conditional.x both the observed centering means E(Y|x_i) and the latent
+    # means E(ETA|x_i) vary per case (as a function of x_i)
+    if (cond_x) {
+      exo_g <- exo[[g]]
+      # E(Y|x_i) = res.int + res.slopes %*% x_i
+      eyx_g <- matrix(res_int[[b]], nrow = nrow(data_obs_g),
+                      ncol = length(res_int[[b]]), byrow = TRUE)
+      if (!is.null(exo_g) && ncol(exo_g) > 0L) {
+        eyx_g <- eyx_g + exo_g %*% t(res_slopes[[b]])
+      }
+      yc <- data_obs_g - eyx_g
+      eeta_case_g <- eetax[[b]] # [nobs x nfac]
+    } else {
+      yc <- t(t(data_obs_g) - ey_g)
+      eeta_case_g <- matrix(eeta_g, nrow = nrow(data_obs_g),
+                            ncol = length(eeta_g), byrow = TRUE)
+    }
 
     # NOTE: do NOT scale yc by the sampling weights here. Factor scores are
     # per-case predictions; a case's score must not depend on its own
     # sampling weight. Weights already enter via the (weighted) parameter
-    # estimates and the weighted mean (ey_g) used for centering above.
+    # estimates and the weighted mean used for centering above.
 
     # global factor score coefficient matrix 'C'
     fsc <- compute_fsc(lambda_g, sigma_inv_g, veta_g,
@@ -1274,10 +1333,10 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       mp <- mp_1[[g]]
 
       # factor scores container
-      fs_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
+      fs_g <- matrix(as.numeric(NA), nrow(yc), ncol = nfac)
 
       if (se == "standard") {
-        se_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
+        se_g <- matrix(as.numeric(NA), nrow(yc), ncol = nfac)
       }
 
       if (acov == "standard") {
@@ -1329,7 +1388,8 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         }
 
         # factor scores for this pattern
-        fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc) + eeta_g)
+        fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc)) +
+          eeta_case_g[mp$case.idx[[p]], , drop = FALSE]
 
         # SE?
         if (se == "standard") {
@@ -1358,7 +1418,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       } # p
     } else {
       # compute factor scores
-      fs_g <- t(fsc %*% t(yc) + eeta_g)
+      fs_g <- t(fsc %*% t(yc)) + eeta_case_g
     }
 
     # replace values in dummy lv's by their observed counterpart
