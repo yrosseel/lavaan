@@ -272,15 +272,17 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   identifiers <- gregexpr("[ \n][_.[:alpha:]][_.[:alnum:]]*",
                           paste0(" ", modelsrcw)
   )[[1]]
-  identifier_lengths <- attr(identifiers, "match.length") - 1L
-  for (i in seq_along(identifiers)) {
-    pfpos <- identifiers[i]
-    pflen <- identifier_lengths[i]
-    substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
-    elem_pos[elem_i] <- pfpos
-    elem_text[elem_i] <- substr(modelsrc, pfpos, pfpos + pflen - 1L)
-    elem_type[elem_i] <- types$identifier
-    elem_i <- elem_i + 1L
+  if (identifiers[1L] > -1L) {
+    identifier_lengths <- attr(identifiers, "match.length") - 1L
+    for (i in seq_along(identifiers)) {
+      pfpos <- identifiers[i]
+      pflen <- identifier_lengths[i]
+      substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
+      elem_pos[elem_i] <- pfpos
+      elem_text[elem_i] <- substr(modelsrc, pfpos, pfpos + pflen - 1L)
+      elem_type[elem_i] <- types$identifier
+      elem_i <- elem_i + 1L
+    }
   }
   # check for uninterpreted chars
   wrong <- regexpr("[^\"\n ]", modelsrcw)
@@ -633,13 +635,17 @@ lav_parse_modenv <- function(config, side) {
 # -------------------- main parsing function --------------------------------- #
 lav_parse_model_string_open <- function(model_syntax = "",
                                         as_data_frame = FALSE) {
-  stopifnot(length(model_syntax) > 0L)
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(
     pattern = "\u02dc",
     replacement = "~",
     paste(unlist(model_syntax), "", collapse = "\n")
   )
+  # check for empty, whitespace-only or comment-only model syntax
+  if (length(model_syntax) == 0L ||
+      !grepl("[^[:space:];]", gsub("[#!][^\n]*", "", modelsrc))) {
+    lav_msg_stop(gettext("Model syntax is empty."))
+  }
   hashstring <- paste0("mdl_o_", lav_char2hash(paste0(modelsrc, as_data_frame)))
   if (exists(hashstring, envir = lavaan_cache_env)) {
     return(get(hashstring, envir = lavaan_cache_env))
