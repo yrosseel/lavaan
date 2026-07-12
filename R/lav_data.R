@@ -201,11 +201,19 @@ lav_lavdata <- function(data = NULL, # data.frame
     # list?
     if (is.list(sample_cov)) {
       # multiple groups, multiple cov matrices
-      if (!is.null(sample_mean)) {
-        stopifnot(length(sample_mean) == length(sample_cov))
+      if (!is.null(sample_mean) &&
+          (!is.list(sample_mean) ||
+           length(sample_mean) != length(sample_cov))) {
+        lav_msg_stop(gettextf(
+          "sample.cov is a list of %s matrices; sample.mean should be a
+          list of the same length.", length(sample_cov)))
       }
-      if (!is.null(sample_th)) {
-        stopifnot(length(sample_th) == length(sample_cov))
+      if (!is.null(sample_th) &&
+          (!is.list(sample_th) ||
+           length(sample_th) != length(sample_cov))) {
+        lav_msg_stop(gettextf(
+          "sample.cov is a list of %s matrices; sample.th should be a
+          list of the same length.", length(sample_cov)))
       }
       # multiple groups, multiple cov matrices
       ngroups <- length(sample_cov)
@@ -218,7 +226,11 @@ lav_lavdata <- function(data = NULL, # data.frame
         }
       } else {
         if (is.null(label)) {
-          stopifnot(length(group_label) == ngroups)
+          if (length(group_label) != ngroups) {
+            lav_msg_stop(gettextf(
+              "length(group.label) = %1$s but sample.cov implies
+              ngroups = %2$s.", length(group_label), ngroups))
+          }
         } else {
           # FIXME!!!!
           # check if they match
@@ -232,6 +244,15 @@ lav_lavdata <- function(data = NULL, # data.frame
           "sample_cov must be a matrix or a list of matrices"))
       }
       sample_cov <- list(sample_cov)
+    }
+
+    # check sample_nobs: we need one value per group
+    sample_nobs <- as.list(sample_nobs)
+    if (length(sample_nobs) != ngroups) {
+      lav_msg_stop(gettextf(
+        "length(sample.nobs) = %1$s but sample.cov implies ngroups = %2$s;
+        please provide the number of observations for each group.",
+        length(sample_nobs), ngroups))
     }
 
     # get ov.names
