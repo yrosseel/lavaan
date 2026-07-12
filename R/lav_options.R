@@ -416,6 +416,21 @@ lav_options_set <- function(opt = NULL) {
         "sampling weights are not supported for two-level models (yet)."))
     }
 
+    # only listwise deletion and full-information ML can handle missing
+    # values in the two-level case; the other methods (two.stage,
+    # robust.two.stage, pairwise, available.cases, doubly.robust) are
+    # single-level methods (before 0.7-1 these crashed deep inside the
+    # saturated-model EM with a cryptic error)
+    if (any(opt$missing == c(
+      "two.stage", "robust.two.stage", "pairwise",
+      "available.cases", "doubly.robust"
+    ))) {
+      lav_msg_stop(gettextf(
+        "missing = %1$s is not supported for two-level models; use
+         missing = %2$s or missing = %3$s instead.",
+        dQuote(opt$missing), dQuote("ml"), dQuote("listwise")))
+    }
+
     # two-level + conditional.x: the expected information would need the
     # Delta matrix in the unconditional statistic space (the parameter-space
     # kernel lav_mvn_cl_info_expected_delta works with unconditional
