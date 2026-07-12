@@ -729,6 +729,17 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
   }
   op <- formule$elem_text[opi]
   if (any(op == constraint_operators)) {         # ----- constraints ------- #
+    # a constraint/definition needs a non-empty left- and right-hand side
+    if (opi <= 1L || opi >= nelem) {
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[opi])
+      lav_msg_stop(
+        gettextf("Missing or empty %1$s of operator '%2$s'.",
+                 if (opi <= 1L) gettext("left-hand side")
+                 else gettext("right-hand side"),
+                 op),
+        tl[1L], footer = tl[2L]
+      )
+    }
     lhs <- paste(formule$elem_text[seq.int(1L, opi - 1L)], collapse = "")
     rhs <- paste(formule$elem_text[seq.int(opi + 1L, nelem)], collapse = "")
     constraints <- c(
