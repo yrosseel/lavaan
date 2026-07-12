@@ -409,6 +409,13 @@ lav_options_set <- function(opt = NULL) {
   if (opt$.multilevel) {
     opt$meanstructure <- TRUE
 
+    # no estimator supports sampling weights in the two-level case (yet);
+    # before 0.7-1 the ML machinery silently ignored them
+    if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
+      lav_msg_stop(gettext(
+        "sampling weights are not supported for two-level models (yet)."))
+    }
+
     # two-level least-squares estimation? (WLS/WLSM(V)/ULS(M,MV)/DWLS)
     multilevel_wls <-
       lav_options_estimatorgroup(opt$estimator) %in% c("WLS", "DWLS", "ULS")
@@ -425,11 +432,6 @@ lav_options_set <- function(opt = NULL) {
         lav_msg_stop(gettext(
           "conditional.x = TRUE is not supported for two-level (D)WLS
           estimation with continuous-only data (yet)."))
-      }
-      if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
-        lav_msg_stop(gettext(
-          "sampling weights are not supported for two-level (D)WLS
-          estimation (yet)."))
       }
       if (opt$.categorical) {
         # categorical two-level (D)WLS:
