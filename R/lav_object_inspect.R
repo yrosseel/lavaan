@@ -863,6 +863,13 @@ lav_inspect_modelmatrices <- function(object, what = "free",
       ceq_simple     = TRUE,
       delta          = NULL)
   } else if (what == "dx.all") {
+    # the gradient for ALL model matrix elements (type = "allofthem")
+    # has not been implemented for these model classes
+    if (object@Model@multilevel || object@Model@categorical ||
+        object@Model@conditional.x) {
+      lav_msg_stop(gettext("dx.all is not available for multilevel,
+        categorical or conditional.x models"))
+    }
     if (lav_verbose(FALSE)) on.exit(lav_verbose(current_verbose), TRUE)
     glist <- lav_model_grad(
       lavmodel   = object@Model,
@@ -1411,6 +1418,9 @@ lav_inspect_cl_info <- function(
       # everybody belongs to cluster 1
       return_value <- lapply(seq_len(n_g),
         function(gg) rep(1L, object@Data@nobs[[gg]]))
+    } else if (what == "average.cluster.size") {
+      lav_msg_stop(gettext(
+        "average cluster size only available for clustered data"))
     }
   }
 
@@ -1897,7 +1907,11 @@ lav_inspect_th <- function(object,
 
   # labels + class
   for (b in seq_len(nblocks)) {
-    if (length(object@Model@num.idx[[b]]) > 0L) {
+    # note: for (continuous) multilevel models, @Model@th.idx may contain
+    # fewer elements than nblocks; but then there is nothing to remove
+    if (length(object@Model@num.idx[[b]]) > 0L &&
+        b <= length(object@Model@th.idx) &&
+        length(object@Model@th.idx[[b]]) > 0L) {
       num_idx <- which(object@Model@th.idx[[b]] == 0)
       return_value[[b]] <- return_value[[b]][-num_idx]
     }
@@ -1961,7 +1975,8 @@ lav_inspect_vy <- function(object,
   # labels + class
   for (b in seq_len(nblocks)) {
     if (add_labels && length(return_value[[b]]) > 0L) {
-      if (object@Model@categorical) {
+      if (object@Model@categorical || object@Model@conditional.x) {
+        # y-side variables only (no exogenous x covariates)
         names(return_value[[b]]) <- object@pta$vnames$ov.nox[[b]]
       } else {
         names(return_value[[b]]) <- object@pta$vnames$ov[[b]]
@@ -2193,6 +2208,17 @@ lav_inspect_wls_obs <- function(object,
     add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
   return_value <- object@SampleStats@WLS.obs ### FIXME: should be in @h1??
+
+  # two-level models (e.g., estimator = "ML"): the WLS.obs slot may not
+  # be filled in; construct the observed statistic vector from the h1
+  # (saturated) model instead, using the same layout as wls.est
+  if (object@Data@nlevels > 1L && any(sapply(return_value, is.null))) {
+    if (length(object@h1) == 0L) {
+      lav_msg_stop(gettext("h1 slot is not available; refit with h1 = TRUE"))
+    }
+    return_value <- lav_model_wls_est(lavmodel = object@Model,
+      lavimplied = object@h1$implied)
+  }
 
   if (add_labels) {
     tmp_names <- lav_inspect_delta_rownames(object,
