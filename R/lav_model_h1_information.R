@@ -633,7 +633,18 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
           res_pi_b      = res_pi_b,
           divide_by_two = TRUE
         )
+        # reorder from the kernel statistic order to the Delta row order
+        perm <- lav_mvreg_cl_stat_perm(
+          res_int_w = res_int_w, res_pi_w = res_pi_w,
+          res_int_b = res_int_b, res_pi_b = res_pi_b
+        )
+        b1[[g]] <- b1[[g]][perm, perm, drop = FALSE]
       } else {
+        # note: if conditional.x, the (unconditional) unstructured b1
+        # may only be combined with matching unconditional-space factors
+        # (as in the yuan.bentler.mplus trace), never with the
+        # conditional.x Delta; user-requested h1.information =
+        # "unstructured" is blocked in lav_options_set()
         mu_w <- implied$mean[[(g - 1) * lavdata@nlevels + 1L]]
         mu_b <- implied$mean[[(g - 1) * lavdata@nlevels + 2L]]
         sigma_w <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]

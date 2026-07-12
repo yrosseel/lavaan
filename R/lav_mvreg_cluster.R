@@ -456,6 +456,30 @@ lav_mvreg_cl_loglik_samp_2l <- function(ylp = NULL,
 }
 
 # first derivative -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
+# two orderings of the two-level conditional.x statistic vector coexist:
+# - the lav_mvreg_cl_* kernels use, per level,
+#       [ res.int, vec(res.slopes), vech(res.cov) ]
+# - lav_model_delta() and the *LS machinery use, per level,
+#       [ vecr(cbind(res.int, res.slopes)), vech(res.cov) ]
+#   (one [intercept, slopes] set per variable, cfr. lav_model_wls_est)
+# this returns the permutation p such that x.kernel[p] == x.delta;
+# for a matrix: B.delta == B.kernel[p, p]
+lav_mvreg_cl_stat_perm <- function(res_int_w = NULL, res_pi_w = NULL,
+                                   res_int_b = NULL, res_pi_b = NULL) {
+  perm_l <- function(res_int, res_pi) {
+    nvar <- NROW(res_int)
+    nexo <- NCOL(res_pi)
+    pstar <- nvar * (nvar + 1L) / 2L
+    c(
+      as.vector(t(matrix(seq_len(nvar * (1L + nexo)), nrow = nvar))),
+      nvar * (1L + nexo) + seq_len(pstar)
+    )
+  }
+  p_w <- perm_l(res_int_w, res_pi_w)
+  p_b <- perm_l(res_int_b, res_pi_b)
+  c(p_w, length(p_w) + p_b)
+}
+
 lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
                                        lp = NULL,
                                        res_sigma_w = NULL,

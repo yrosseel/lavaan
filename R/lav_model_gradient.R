@@ -656,6 +656,14 @@ lav_model_grad <- function(lavmodel = NULL,
             res_pi_b = pi0[[(g - 1) * 2 + 2]],
             sinv_method = "eigen"
           )
+          # reorder from the kernel statistic order to the Delta row order
+          perm <- lav_mvreg_cl_stat_perm(
+            res_int_w = mu_hat[[(g - 1) * 2 + 1]],
+            res_pi_w = pi0[[(g - 1) * 2 + 1]],
+            res_int_b = mu_hat[[(g - 1) * 2 + 2]],
+            res_pi_b = pi0[[(g - 1) * 2 + 2]]
+          )
+          dx_1 <- dx_1[perm]
         } else {
           dx_1 <- lav_mvn_cl_dlogl_2l_samp(
             ylp = lavsamplestats@YLp[[g]],

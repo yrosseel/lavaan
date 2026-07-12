@@ -416,6 +416,31 @@ lav_options_set <- function(opt = NULL) {
         "sampling weights are not supported for two-level models (yet)."))
     }
 
+    # two-level + conditional.x: the expected information would need the
+    # Delta matrix in the unconditional statistic space (the parameter-space
+    # kernel lav_mvn_cl_info_expected_delta works with unconditional
+    # moments); until that conversion exists, only observed/first.order
+    # information is supported (the default)
+    if (isTRUE(opt$conditional.x) && any(opt$information == "expected")) {
+      lav_msg_stop(gettext(
+        "information = \"expected\" is not supported (yet) for two-level
+         models with conditional.x = TRUE; use \"observed\" (the default)
+         or \"first.order\"."))
+    }
+
+    # ditto for a user-requested unstructured h1: the unstructured
+    # (unconditional) h1 information cannot be combined with the
+    # conditional.x Delta (before 0.7-1 this crashed with a cryptic
+    # "non-conformable arguments" error); note that the internal
+    # yuan.bentler.mplus route (which never mixes the two spaces) does
+    # not pass through this check
+    if (isTRUE(opt$conditional.x) &&
+        any(opt$h1.information == "unstructured")) {
+      lav_msg_stop(gettext(
+        "h1.information = \"unstructured\" is not supported (yet) for
+         two-level models with conditional.x = TRUE."))
+    }
+
     # two-level least-squares estimation? (WLS/WLSM(V)/ULS(M,MV)/DWLS)
     multilevel_wls <-
       lav_options_estimatorgroup(opt$estimator) %in% c("WLS", "DWLS", "ULS")
