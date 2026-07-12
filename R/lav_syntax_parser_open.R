@@ -899,6 +899,15 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
         modlist[[cur_mod_idx]] <- modifyList(modlist[[cur_mod_idx]], modnu)
       }
     }
+  } else {
+    # length modelems == 0
+    if (opi != nelem - 1L) {
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[opi + 1L])
+      lav_msg_stop(gettext("invalid formula right hand side"),
+        tl[1L],
+        footer = tl[2L]
+      )
+    }
   }
   # check for variable regressed on itself
   if (formule$elem_text[opi] %in% c("~", ":~") &&
