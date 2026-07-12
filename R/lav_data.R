@@ -632,6 +632,12 @@ lav_data_full <- function(data = NULL, # data.frame
 ) {
   # number of groups and group labels
   if (!is.null(group) && length(group) > 0L) {
+    if (length(group) > 1L) {
+      lav_msg_stop(gettext(
+        "lavaan supports only a single grouping variable; if you wish to
+        combine several grouping variables, create a single new variable
+        first (e.g., using interaction())."))
+    }
     if (!(group %in% names(data))) {
       lav_msg_stop(gettextf(
         "grouping variable %1$s not found; variable names
@@ -682,6 +688,10 @@ lav_data_full <- function(data = NULL, # data.frame
   # sampling weights
   if (!is.null(sampling_weights)) {
     if (is.character(sampling_weights)) {
+      if (length(sampling_weights) > 1L) {
+        lav_msg_stop(gettext(
+          "lavaan supports only a single sampling weights variable."))
+      }
       if (!(sampling_weights %in% names(data))) {
         lav_msg_stop(
           gettextf("sampling weights variable %1$s not found;
@@ -703,6 +713,13 @@ lav_data_full <- function(data = NULL, # data.frame
 
   # clustered?
   if (!is.null(cluster) && length(cluster) > 0L) {
+    # only a single clustering variable is supported (two-level models)
+    if (length(cluster) > 1L) {
+      lav_msg_stop(gettext(
+        "lavaan supports only a single clustering variable; if you wish to
+        combine several clustering variables, create a single new variable
+        first (e.g., using interaction())."))
+    }
     # cluster variable in data?
     if (!all(cluster %in% names(data))) {
       # which one did we not find?
