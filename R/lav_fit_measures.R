@@ -170,6 +170,7 @@ lav_fit_measures_names <- function() {
     "gfi_rls", "gfi_rls.ci.lower", "gfi_rls.ci.upper",
     "gfi_rls.robust", "gfi_rls.ci.lower.robust", "gfi_rls.ci.upper.robust",
     "gfi_lisrel", "agfi_lisrel", "pgfi",
+    "agfi", # alias for agfi_lisrel (the only pre-0.7-1 name)
     # (s)rmr
     "rmr", "rmr_nomean", "srmr",
     "srmr_bentler", "srmr_bentler_nomean",
@@ -698,14 +699,18 @@ lav_fit <- function(object, fit_measures = "all",
   # "all"/"default"/"none"), check that the names are known (new in 0.7-1);
   # note: we check against the complete catalog, not against what is
   # available for this particular fit
+  # unknown names are dropped with a warning (not an error): several
+  # packages pass their own non-lavaan measures along, relying on the
+  # pre-0.7-1 behavior of silently ignoring them
   if (!(length(fit_measures_orig) == 1L &&
         fit_measures_orig %in% c("all", "default", "none"))) {
     bad_idx <- which(!fit_measures %in% lav_fit_measures_names())
     if (length(bad_idx) > 0L) {
-      lav_msg_stop(ngettext(length(bad_idx),
+      lav_msg_warn(ngettext(length(bad_idx),
         "unknown fit measure:", "unknown fit measures:"),
         lav_msg_view(fit_measures_orig[bad_idx], "none", FALSE)
       )
+      fit_measures <- fit_measures[-bad_idx]
     }
   }
 
@@ -831,7 +836,9 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # GFI and friends
-  if (any(c(fit_gfi, fit_gfi_extra, fit_gfi_lisrel) %in% fit_measures)) {
+  # "agfi" is a backward-compatible alias for "agfi_lisrel" (<0.7-1)
+  if (any(c(fit_gfi, fit_gfi_extra, fit_gfi_lisrel, "agfi")
+          %in% fit_measures)) {
     # check gfi.ci.level option (default 0.90)
     gfi_ci_level <- 0.90
     if (!is.null(fm_args$gfi.ci.level) &&
@@ -856,6 +863,10 @@ lav_fit <- function(object, fit_measures = "all",
         cat_nonpd = fm_args$cat.nonpd
       )
     )
+    # return the value under the old (requested) name
+    if ("agfi" %in% fit_measures) {
+      indices[["agfi"]] <- indices[["agfi_lisrel"]]
+    }
   }
 
   # various: Hoelter Critical N (CN)

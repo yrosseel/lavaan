@@ -416,6 +416,8 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
     # default set
     fit_measures <- fit_gfi_all
   } else {
+    # backward compatibility: "agfi" (<0.7-1) is an alias for "agfi_lisrel"
+    fit_measures[fit_measures == "agfi"] <- "agfi_lisrel"
     # remove any not-GFI related index from fit.measures
     rm_idx <- which(!fit_measures %in% fit_gfi_all)
     if (length(rm_idx) > 0L) {
