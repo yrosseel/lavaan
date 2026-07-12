@@ -127,6 +127,60 @@ lav_efalist_fitmeasures <- function(
 }
 
 
+# complete catalog of fit measure names that fitMeasures() can ever return
+# (across all estimators/test statistics/data types); used to catch
+# misspelled or unknown measure names early -- keep in sync with the 'sets'
+# defined in lav_fit() below
+# note: a name being listed here does not imply the measure is available
+# for every fitted model (eg the .scaled/.robust variants); requesting a
+# valid-but-unavailable measure is silently ignored, as before
+lav_fit_measures_names <- function() {
+  c(
+    # always
+    "npar", "ntotal", "fmin",
+    # chi-square test
+    "chisq", "df", "pvalue",
+    "chisq.scaled", "df.scaled", "pvalue.scaled", "chisq.scaling.factor",
+    # baseline model
+    "baseline.chisq", "baseline.df", "baseline.pvalue",
+    "baseline.chisq.scaled", "baseline.df.scaled", "baseline.pvalue.scaled",
+    "baseline.chisq.scaling.factor",
+    # incremental fit indices
+    "cfi", "tli", "cfi.scaled", "tli.scaled", "cfi.robust", "tli.robust",
+    "nnfi", "rfi", "nfi", "pnfi", "ifi", "rni",
+    "nnfi.scaled", "rfi.scaled", "nfi.scaled", "pnfi.scaled",
+    "ifi.scaled", "rni.scaled",
+    "nnfi.robust", "rni.robust",
+    # likelihood based measures
+    "logl", "unrestricted.logl", "aic", "bic", "bic2",
+    "scaling.factor.h1", "scaling.factor.h0",
+    # rmsea
+    "rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.ci.level",
+    "rmsea.pvalue", "rmsea.close.h0",
+    "rmsea.notclose.pvalue", "rmsea.notclose.h0",
+    "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled",
+    "rmsea.pvalue.scaled", "rmsea.notclose.pvalue.scaled",
+    "rmsea.robust", "rmsea.ci.lower.robust", "rmsea.ci.upper.robust",
+    "rmsea.pvalue.robust", "rmsea.notclose.pvalue.robust",
+    # gfi and friends
+    "gfi", "gfi.ci.lower", "gfi.ci.upper", "gfi.ci.level",
+    "gfi.robust", "gfi.ci.lower.robust", "gfi.ci.upper.robust",
+    "gfi_lrt", "gfi_lrt.ci.lower", "gfi_lrt.ci.upper",
+    "gfi_lrt.robust", "gfi_lrt.ci.lower.robust", "gfi_lrt.ci.upper.robust",
+    "gfi_rls", "gfi_rls.ci.lower", "gfi_rls.ci.upper",
+    "gfi_rls.robust", "gfi_rls.ci.lower.robust", "gfi_rls.ci.upper.robust",
+    "gfi_lisrel", "agfi_lisrel", "pgfi",
+    # (s)rmr
+    "rmr", "rmr_nomean", "srmr",
+    "srmr_bentler", "srmr_bentler_nomean",
+    "crmr", "crmr_nomean",
+    "srmr_mplus", "srmr_mplus_nomean",
+    "srmr_within", "srmr_between",
+    # various
+    "cn_05", "cn_01", "mfi", "ecvi", "wrmr"
+  )
+}
+
 # if fit_measures is a list, the element holding the measures is classically
 # named "fit.measures"; accept the snake_case spelling "fit_measures" as an
 # alias, matching the name of the formal argument
@@ -637,6 +691,21 @@ lav_fit <- function(object, fit_measures = "all",
           fit_rmsea, fit_srmr2, fit_gfi, fit_other
         )
       }
+    }
+  }
+
+  # if specific measures were requested (ie not one of the keywords
+  # "all"/"default"/"none"), check that the names are known (new in 0.7-1);
+  # note: we check against the complete catalog, not against what is
+  # available for this particular fit
+  if (!(length(fit_measures_orig) == 1L &&
+        fit_measures_orig %in% c("all", "default", "none"))) {
+    bad_idx <- which(!fit_measures %in% lav_fit_measures_names())
+    if (length(bad_idx) > 0L) {
+      lav_msg_stop(ngettext(length(bad_idx),
+        "unknown fit measure:", "unknown fit measures:"),
+        lav_msg_view(fit_measures_orig[bad_idx], "none", FALSE)
+      )
     }
   }
 
