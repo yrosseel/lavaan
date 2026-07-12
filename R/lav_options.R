@@ -325,6 +325,20 @@ lav_options_set <- function(opt = NULL) {
   if (opt$.clustered && !opt$.multilevel) {
     opt$meanstructure <- TRUE
 
+    # single-level clustered continuous ML: the pairwise / available.cases
+    # missing-data methods are not supported (they were silently fed into the
+    # cluster-robust machinery, producing nonsense estimates and a failing
+    # baseline model, or crashing deep inside with a cryptic "NA/NaN/Inf in
+    # foreign function call" error); the categorical (D)WLS + cluster path
+    # handles these via muthen1984() and is left untouched
+    if (!opt$.categorical &&
+        any(opt$missing == c("pairwise", "available.cases"))) {
+      lav_msg_stop(gettextf(
+        "missing = %1$s is not supported for clustered (cluster =) continuous
+         models; use missing = %2$s or missing = %3$s instead.",
+        dQuote(opt$missing), dQuote("ml"), dQuote("listwise")))
+    }
+
     if (opt$estimator == "mlr") {
       opt$estimator <- "ml"
       opt$test <- "yuan.bentler.mplus"
@@ -388,6 +402,17 @@ lav_options_set <- function(opt = NULL) {
         opt$information[2] <- "expected"
       }
     }
+  }
+
+  # cluster-robust SEs were explicitly requested, but no cluster= variable
+  # was given: the requested estimator is undefined without cluster data
+  # (before, lavaan silently computed a non-cluster-robust sandwich that did
+  # not match any documented estimator)
+  if (!opt$.clustered &&
+      any(opt$se == c("robust.cluster", "robust.cluster.sem"))) {
+    lav_msg_stop(gettextf(
+      "se = %s requires clustered data; please provide the cluster= argument.",
+      dQuote(opt$se)))
   }
 
   # composites ####
