@@ -33,6 +33,34 @@ lav_start <- function(start_method = "default",
     lavpartable$op %in% c("~", "<~"))
   # ord.names <- unique(lavpartable$lhs[ lavpartable$op == "|" ])
 
+  # helper: the best available h1 (co)variance matrix for group g, to be
+  # used for starting values; if conditional.x, the residual version
+  # (note: lavh1$implied may not contain a cov/res.cov element at all,
+  #  and NULL[[g]] would be an error, hence the length() checks)
+  stats_h1_cov <- function(g) {
+    if (conditional_x) {
+      if (length(lavh1$implied$res.cov) >= g &&
+          !is.null(lavh1$implied$res.cov[[g]])) {
+        lavh1$implied$res.cov[[g]]
+      } else if (length(lavsamplestats@missing.h1) >= g &&
+                 !is.null(lavsamplestats@missing.h1[[g]]$res.cov)) {
+        lavsamplestats@missing.h1[[g]]$res.cov
+      } else {
+        lavsamplestats@res.cov[[g]]
+      }
+    } else {
+      if (length(lavh1$implied[["cov"]]) >= g &&
+          !is.null(lavh1$implied[["cov"]][[g]])) {
+        lavh1$implied[["cov"]][[g]]
+      } else if (length(lavsamplestats@missing.h1) >= g &&
+                 !is.null(lavsamplestats@missing.h1[[g]]$sigma)) {
+        lavsamplestats@missing.h1[[g]]$sigma
+      } else {
+        lavsamplestats@cov[[g]]
+      }
+    }
+  }
+
   # nlevels?
   nlevels <- lav_pt_nlevels(lavpartable)
 
@@ -210,14 +238,7 @@ lav_start <- function(start_method = "default",
       lavpartable$lhs == lavpartable$rhs)
     sample_var_idx <- match(lavpartable$lhs[ov_var_idx], ov_names)
     if (model_type == "unrestricted") {
-    # this does not work if conditional.x = TRUE...
-      if (!is.null(lavh1$implied$cov[[g]])) {
-        h1_cov <- lavh1$implied$cov[[g]]
-      } else if (!is.null(lavsamplestats@missing.h1[[g]])) {
-        h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
-      } else {
-        h1_cov <- lavsamplestats@cov[[g]]
-      }
+      h1_cov <- stats_h1_cov(g)
       start[ov_var_idx] <- diag(h1_cov)[sample_var_idx]
     } else {
       #if (start.initial == "mplus") {
@@ -274,11 +295,7 @@ lav_start <- function(start_method = "default",
         ov_idx <- match(lavpartable$rhs[lambda_idx], ov_names)
         if (length(ov_idx) > 0L && !any(is.na(ov_idx))) {
           if (lavsamplestats@missing.flag && nlevels == 1L) {
-            if (!is.null(lavh1$implied$cov[[g]])) {
-              h1_cov <- lavh1$implied$cov[[g]]
-            } else {
-              h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
-            }
+            h1_cov <- stats_h1_cov(g)
             cov_1 <- h1_cov[ov_idx, ov_idx, drop = FALSE]
           } else {
             if (conditional_x && !is.null(lavsamplestats@res.cov[[g]])) {
@@ -400,11 +417,7 @@ lav_start <- function(start_method = "default",
 
             if (length(ov_idx) > 0L && !any(is.na(ov_idx))) {
               if (lavsamplestats@missing.flag && nlevels == 1L) {
-                if (!is.null(lavh1$implied$cov[[g]])) {
-                  h1_cov <- lavh1$implied$cov[[g]]
-                } else {
-                  h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
-                }
+                h1_cov <- stats_h1_cov(g)
                 cov_1 <- h1_cov[ov_idx, ov_idx, drop = FALSE]
               } else {
                 if (conditional_x) {
@@ -454,13 +467,7 @@ lav_start <- function(start_method = "default",
         lavpartable$lhs != lavpartable$rhs)
       lhs_idx <- match(lavpartable$lhs[cov_idx], ov_names)
       rhs_idx <- match(lavpartable$rhs[cov_idx], ov_names)
-      if (!is.null(lavh1$implied$cov[[g]])) {
-        h1_cov <- lavh1$implied$cov[[g]]
-      } else if (!is.null(lavsamplestats@missing.h1[[g]])) {
-        h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
-      } else {
-        h1_cov <- lavsamplestats@cov[[g]]
-      }
+      h1_cov <- stats_h1_cov(g)
       start[cov_idx] <- h1_cov[cbind(lhs_idx, rhs_idx)]
     }
 
@@ -494,13 +501,7 @@ lav_start <- function(start_method = "default",
         lavpartable$lhs != lavpartable$rhs)
       lhs_idx <- match(lavpartable$lhs[cov_idx], ov_names)
       rhs_idx <- match(lavpartable$rhs[cov_idx], ov_names)
-      if (!is.null(lavh1$implied$cov[[g]])) {
-        h1_cov <- lavh1$implied$cov[[g]]
-      } else if (!is.null(lavsamplestats@missing.h1[[g]])) {
-        h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
-      } else {
-        h1_cov <- lavsamplestats@cov[[g]]
-      }
+      h1_cov <- stats_h1_cov(g)
       start[cov_idx] <- h1_cov[cbind(lhs_idx, rhs_idx)]
     }
 
@@ -519,8 +520,21 @@ lav_start <- function(start_method = "default",
       lavpartable$lhs %in% ov_names)
     sample_int_idx <- match(lavpartable$lhs[ov_int_idx], ov_names)
     if (lavsamplestats@missing.flag && nlevels == 1L) {
-      if (!is.null(lavh1$implied$mean[[g]])) {
-        h1_mean <- lavh1$implied$mean[[g]]
+      # note: use exact list indexing below ([["mean"]], not $mean), as
+      # the conditional.x implied list has mean.x/cov.x elements that $
+      # would partially match
+      if (conditional_x) {
+        if (length(lavh1$implied$res.int) >= g &&
+            !is.null(lavh1$implied$res.int[[g]])) {
+          h1_mean <- lavh1$implied$res.int[[g]]
+        } else if (length(lavsamplestats@missing.h1) >= g &&
+                   !is.null(lavsamplestats@missing.h1[[g]]$res.int)) {
+          h1_mean <- lavsamplestats@missing.h1[[g]]$res.int
+        } else {
+          h1_mean <- lavsamplestats@res.int[[g]]
+        }
+      } else if (!is.null(lavh1$implied[["mean"]][[g]])) {
+        h1_mean <- lavh1$implied[["mean"]][[g]]
       } else if (!is.null(lavsamplestats@missing.h1[[g]])) {
         h1_mean <- lavsamplestats@missing.h1[[g]]$mu
       } else {
