@@ -36,9 +36,14 @@ lav_sc <- function(object, scaling = FALSE,
   }
 
   # check if conditional.x = TRUE
-  # (exception: PML supports exogenous covariates through the pairwise
-  # likelihood machinery itself)
-  if (object@Model@conditional.x && object@Options$estimator != "PML") {
+  # (exceptions: PML supports exogenous covariates through the pairwise
+  # likelihood machinery itself; for ML (single-level, continuous) the
+  # lav_mvreg_* score kernels are used)
+  if (object@Model@conditional.x &&
+      !(object@Options$estimator == "PML" ||
+        (object@Options$estimator == "ML" &&
+         !object@Model@categorical &&
+         object@Data@nlevels == 1L))) {
     lav_msg_stop(gettext("scores not available (yet) if conditional.x = TRUE"))
   }
 
@@ -248,6 +253,41 @@ lav_sc_ml <- function(ntab = 0L,
     if (lavsamplestats@ngroups > 1) {
       moments <- moments_groups[[g]]
     }
+
+    # conditional.x: casewise scores of the conditional (mvreg) likelihood,
+    # with respect to (vec(Beta), vech(res.cov)) -- the same stat order as
+    # the conditional.x Delta rows (meanstructure is always TRUE here)
+    if (lavmodel@conditional.x) {
+      if (!lavsamplestats@missing.flag) { # complete data
+        sc <- lav_mvreg_sc_beta_sigma(
+          y = lavdata@X[[g]], exo = lavdata@eXo[[g]],
+          res_int = moments$res.int, res_slopes = moments$res.slopes,
+          res_cov = moments$res.cov
+        )
+      } else { # incomplete data
+        sc <- lav_mvreg_mi_sc_beta_sigma(
+          y = lavdata@X[[g]], exo = lavdata@eXo[[g]],
+          mp = lavdata@Mp[[g]],
+          res_int = moments$res.int, res_slopes = moments$res.slopes,
+          res_cov = moments$res.cov
+        )
+        # the (saturated) casewise score entries that refer to the
+        # unobserved cells of a case are zero (see lav_sc_ml below)
+        sc[is.na(sc)] <- 0
+      }
+
+      if (scaling && lavsamplestats@missing.flag) {
+        sc <- group_w[g] * sc
+      }
+
+      wi <- lavdata@case.idx[[g]]
+      score_matrix[wi, ] <- sc %*% delta[[g]]
+      if (scaling) {
+        score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
+      }
+      next
+    }
+
     sigma_hat <- moments$cov
     nvar <- ncol(lavsamplestats@cov[[g]])
 

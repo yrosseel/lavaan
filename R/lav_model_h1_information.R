@@ -212,10 +212,37 @@ lav_model_h1_info_ed <- function(what = "expected",
     a1 <- vector("list", length = lavsamplestats@ngroups)
 
     for (g in 1:lavsamplestats@ngroups) {
-      if (lavsamplestats@missing.flag) {
+      if (lavsamplestats@missing.flag && lavmodel@conditional.x) {
+        # mvreg, missing data
+        if (lavmodel@meanstructure && structured) {
+          res_int <- lavimplied$res.int[[g]]
+          res_slopes <- lavimplied$res.slopes[[g]]
+        } else {
+          res_int <- lavh1$implied$res.int[[g]]
+          res_slopes <- lavh1$implied$res.slopes[[g]]
+        }
+        if (structured) {
+          res_cov <- lavimplied$res.cov[[g]]
+        } else {
+          res_cov <- lavh1$implied$res.cov[[g]]
+        }
+
+        if (observed) {
+          a1[[g]] <- lav_mvreg_mi_information_observed_samplestats(
+            yp = lavsamplestats@missing[[g]],
+            res_int = res_int,
+            res_slopes = res_slopes,
+            res_cov = res_cov
+          )
+        } else {
+          a1[[g]] <- lav_mvreg_mi_info_expected(
+            yp = lavsamplestats@missing[[g]],
+            res_cov = res_cov
+          )
+        }
+      } else if (lavsamplestats@missing.flag) {
         # mvnorm, missing data
         # FIXME: allow for meanstructure = FALSE
-        # FIXME: allow for conditional.x = TRUE
         if (lavmodel@meanstructure && structured) {
           mean_1 <- lavimplied$mean[[g]]
         } else {
@@ -684,10 +711,28 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
         cluster_idx <- NULL
       }
 
-      if (lavsamplestats@missing.flag) {
+      if (lavsamplestats@missing.flag && lavmodel@conditional.x) {
+        # mvreg, missing data
+        if (lavmodel@meanstructure && structured) {
+          res_int <- lavimplied$res.int[[g]]
+          res_slopes <- lavimplied$res.slopes[[g]]
+        } else {
+          res_int <- lavh1$implied$res.int[[g]]
+          res_slopes <- lavh1$implied$res.slopes[[g]]
+        }
+
+        b1[[g]] <- lav_mvreg_mi_info_firstorder(
+          y = lavdata@X[[g]],
+          exo = lavdata@eXo[[g]],
+          mp = lavdata@Mp[[g]], wt = wt,
+          cluster_idx = cluster_idx,
+          res_int = res_int,
+          res_slopes = res_slopes,
+          res_cov = implied$res.cov[[g]]
+        )
+      } else if (lavsamplestats@missing.flag) {
         # mvnorm
         # FIXME: allow for meanstructure = FALSE
-        # FIXME: allow for conditional.x = TRUE
         if (lavmodel@meanstructure && structured) {
           mean_1 <- lavimplied$mean[[g]]
         } else {
