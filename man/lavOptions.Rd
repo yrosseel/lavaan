@@ -192,6 +192,14 @@ Data options:
       but does not delete any cases with missing values for the exogenous
       covariates, even if \code{fixed.x = TRUE}. (Note: all lavaan versions
       < 0.6 used \code{"ml.x"} instead of \code{"ml"}).
+      Since version 0.7-2, \code{"ml"} can also be combined with
+      \code{conditional.x = TRUE} (single-level, continuous data): the
+      likelihood of the observed non-x variables is then computed case by
+      case, conditional on the (complete) exogenous covariates of that
+      case. Cases with missing values on the exogenous covariates are
+      deleted first, and \code{"ml.x"} is not available in this setting.
+      Note that the robust (missing-data corrected) versions of RMSEA/CFI
+      are not (yet) available when \code{conditional.x = TRUE}.
       If you wish to use multiple
       imputation, you need to use an external package (e.g., mice) to
       generate imputed datasets, which can then be analyzed using
@@ -206,7 +214,9 @@ Data options:
       are adjusted correctly to reflect the two-step procedure. The
       \code{"robust.two.stage"} option produces standard errors and
       a test statistic that are robust against non-normality.
-      Both options are available for the ML estimator, and also for the
+      Both options are available for the ML estimator (since version
+      0.7-2 also in combination with \code{conditional.x = TRUE}), and
+      also for the
       (continuous-data) least-squares estimators \code{"ULS"}, \code{"GLS"},
       \code{"WLS"} and \code{"DLS"}; for the latter, lavaan automatically
       switches to \code{se = "robust.sem"} and \code{test = "satorra.bentler"},
