@@ -22,7 +22,7 @@ The deadline is *31 July 2026*.
 
 The proposal for the full project
 can be found on [Zenodo](https://doi.org/10.5281/zenodo.19552779). The post-doc
-position above is part of Work Package 1 (WP1).
+position above is part of Work Package 2 (WP2).
 
 
 ## Installation
