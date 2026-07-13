@@ -16,7 +16,26 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     # missing data
     if (lavsamplestats@missing.flag) {
       if (lavoptions$conditional.x) {
-        implied <- list() # not available yet
+        implied <- list(
+          res.cov = lavsamplestats@res.cov,
+          res.int = lavsamplestats@res.int,
+          res.slopes = lavsamplestats@res.slopes,
+          cov.x = lavsamplestats@cov.x,
+          mean.x = lavsamplestats@mean.x,
+          res.th = lavsamplestats@res.th,
+          group.w = lavsamplestats@group.w
+        )
+        # insert the EM-based estimates (obtained by partitioning the
+        # joint EM moments; see lav_samp_from_data)
+        for (g in 1:lavdata@ngroups) {
+          if (!is.null(lavsamplestats@missing.h1[[g]]$res.cov)) {
+            implied$res.cov[[g]] <- lavsamplestats@missing.h1[[g]]$res.cov
+            implied$res.int[[g]] <- lavsamplestats@missing.h1[[g]]$res.int
+            implied$res.slopes[[g]] <-
+              lavsamplestats@missing.h1[[g]]$res.slopes
+          }
+          # else: zero coverage; keep the pairwise-based sample statistics
+        }
       } else {
         implied <- list(
           cov = lavsamplestats@cov,

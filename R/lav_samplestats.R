@@ -627,17 +627,20 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             correlation structures."))
         }
 
-        # FIXME!
-        # no handling of missing data yet....
-        if (missing %in% c(
-          "ml", "ml.x",
-          "two.stage", "robust.two.stage"
-        )) {
-          lav_msg_stop(gettextf(
-            "missing = %s + conditional.x not supported yet", missing))
+        # missing values in the exogenous x variables cannot be handled
+        # when we condition on x
+        if (missing == "ml.x") {
+          lav_msg_stop(gettext(
+            "missing = \"ml.x\" is not supported when conditional.x = TRUE
+            (missing values in the exogenous variables); use missing = \"ml\"
+            (listwise deletion of cases with missing x values), or
+            conditional.x = FALSE."))
         }
 
         # residual covariances!
+        # (pairwise-complete sample statistics; if missing = \"ml\" or
+        #  two.stage, these serve as starting values only, and the
+        #  EM-based statistics are computed below)
 
         y <- cbind(x[[g]], exo[[g]])
     cov_1 <- unname(stats::cov(y, use = "pairwise.complete.obs"))
@@ -677,6 +680,112 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
         res_int[[g]] <- coef_1[1, ] # intercepts
         res_slopes[[g]] <- t(coef_1[-1, , drop = FALSE]) # slopes
+
+        # missing data: FIML or two-stage
+        if (missing %in% c("ml", "two.stage", "robust.two.stage")) {
+          if (missing == "ml") {
+            missing_flag <- TRUE
+          } else {
+            # two-stage: the sample statistics ARE the EM estimates
+            missing_flag <- FALSE
+            if (estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+              lav_msg_stop(gettextf(
+                "missing = %1$s + conditional.x is not supported (yet) for
+                estimator %2$s; use estimator = \"ML\", or
+                conditional.x = FALSE.", dQuote(missing), dQuote(estimator)))
+            }
+          }
+
+          # extended pattern statistics: the usual per-pattern moments,
+          # plus the crossproducts with the (complete) exogenous variables
+          missing_1[[g]] <- lav_samp_mi_patterns_res(
+            y = x[[g]], exo = exo[[g]], mp = mp[[g]], wt = wt[[g]]
+          )
+
+          # estimate the joint (y, x) moments of the unrestricted model
+          # via EM; because x is complete, the joint normal likelihood
+          # factorizes as f(y|x) * f(x) with variation-independent
+          # parameter blocks, and the saturated moments of the conditional
+          # model are obtained by partitioning the joint EM moments
+          current_warn <- lav_warn()
+          if (lav_warn(lavoptions$em.h1.args$warn))
+            on.exit(lav_warn(current_warn), TRUE)
+          # zero coverage?
+          if (any(lav_mat_vech(mp[[g]]$coverage, diagonal = FALSE) == 0)) {
+            # no EM estimates (h1 will be NULL)
+          } else if (!allow_empty_cell) {
+            # optionally augment the EM run with auxiliary variables to
+            # improve the h1 moments under MAR (as in the unconditional
+            # case; the auxiliary variables are dropped afterwards)
+            aux_g <- if (length(aux) >= g) aux[[g]] else NULL
+            has_aux <- !is.null(aux_g) && NCOL(aux_g) > 0L
+            y2 <- cbind(x[[g]], exo[[g]])
+            em_y <- if (has_aux) cbind(y2, aux_g) else y2
+            em_out <- lav_mvn_mi_h1_est_moments(
+              y = em_y, wt = wt[[g]],
+              max_iter = lavoptions$em.h1.args$max_iter,
+              tol = lavoptions$em.h1.args$tol,
+              non_pd_action = lavoptions$em.h1.args$non_pd_action,
+              non_pd_tol = lavoptions$em.h1.args$non_pd_tol,
+              acceleration = lavoptions$em.h1.args$acceleration
+            )
+            p_ov <- seq_len(NCOL(y2))
+            sigma_em <- em_out$Sigma[p_ov, p_ov, drop = FALSE]
+            mu_em <- em_out$Mu[p_ov]
+
+            # partition the joint moments into the residual moments of
+            # the saturated conditional model (same algebra as above)
+            a_em <- sigma_em[-x_idx[[g]], -x_idx[[g]], drop = FALSE]
+            b_em <- sigma_em[-x_idx[[g]], x_idx[[g]], drop = FALSE]
+            c_em <- sigma_em[x_idx[[g]], x_idx[[g]], drop = FALSE]
+            res_cov_em <- a_em - b_em %*% solve(c_em) %*% t(b_em)
+            my_em <- mu_em[-x_idx[[g]]]
+            mx_em <- mu_em[x_idx[[g]]]
+            c3_em <- rbind(
+              c(1, mx_em),
+              cbind(mx_em, c_em + tcrossprod(mx_em))
+            )
+            b3_em <- cbind(my_em, b_em + tcrossprod(my_em, mx_em))
+            coef_em <- unname(solve(c3_em, t(b3_em)))
+            res_int_em <- coef_em[1, ]
+            res_slopes_em <- t(coef_em[-1, , drop = FALSE])
+
+            # the saturated value of the conditional (-2/N) loglikelihood
+            h1_em <- lav_mvreg_mi_loglik_samp(
+              yp = missing_1[[g]],
+              res_int = res_int_em, res_slopes = res_slopes_em,
+              res_cov = res_cov_em,
+              log2pi = FALSE, minus_two = TRUE
+            ) / nobs[[g]]
+
+            missing_h1[[g]] <- list(
+              sigma = sigma_em, mu = mu_em, h1 = h1_em,
+              res.cov = res_cov_em, res.int = res_int_em,
+              res.slopes = res_slopes_em
+            )
+            if (has_aux) {
+              # keep the full augmented moments (see the unconditional case)
+              missing_h1[[g]]$sigma.aug <- em_out$Sigma
+              missing_h1[[g]]$mu.aug <- em_out$Mu
+            }
+
+            # for two-stage (or FIML with sampling weights), replace the
+            # sample statistics by the EM estimates
+            if (!missing_flag || !is.null(wt[[g]])) {
+              cov[[g]] <- sigma_em
+              if (ridge) {
+                diag(cov[[g]]) <- diag(cov[[g]]) + ridge_eps
+              }
+              var[[g]] <- diag(cov[[g]])
+              mean[[g]] <- mu_em
+              res_cov[[g]] <- res_cov_em
+              res_var[[g]] <- diag(cov[[g]])
+              res_int[[g]] <- res_int_em
+              res_slopes[[g]] <- res_slopes_em
+            }
+          }
+          lav_warn(current_warn)
+        }
       } else if (missing == "two.stage" ||
         missing == "robust.two.stage") {
         missing_flag <- FALSE # !!! just use sample statistics

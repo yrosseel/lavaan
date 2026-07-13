@@ -546,6 +546,44 @@ lav_model_grad <- function(lavmodel = NULL,
     }
 
     for (g in 1:lavmodel@nblocks) {
+      # missing data (FIML)?
+      if (lavsamplestats@missing.flag) {
+        sigma_1 <- sigma_hat[[g]]
+        sigma_inv <- attr(sigma_1, "inv")
+
+        # dlogl with respect to (vec(Beta), vech(res.cov)) -- the same
+        # stat order as the conditional.x DELTA rows
+        post <- c(
+          lav_mvreg_mi_dlogl_dbeta_samp(
+            yp = lavsamplestats@missing[[g]],
+            res_int = mu_hat[[g]], res_slopes = pi0[[g]],
+            res_cov = sigma_1, res_cov_inv = sigma_inv
+          ),
+          lav_mvreg_mi_dlogl_dvechrescov_samp(
+            yp = lavsamplestats@missing[[g]],
+            res_int = mu_hat[[g]], res_slopes = pi0[[g]],
+            res_cov = sigma_1, res_cov_inv = sigma_inv
+          )
+        )
+
+        # the objective is sum_g (nobs_g/ntotal) * 0.5 * (-2*logl_g/nobs_g
+        # - h1_g), so dF/dtheta = -(1/ntotal) * sum_g dlogl_g/dtheta;
+        # note: as in the unconditional missing-data path, the 1/ntotal
+        # factor is applied here directly and group_w is NOT used (for
+        # missing data, the callers -- optimization, hessian -- use
+        # group_weight = FALSE)
+        group_dx <- as.numeric(
+          -1 / lavsamplestats@ntotal * crossprod(delta[[g]], post)
+        )
+
+        if (g == 1) {
+          dx <- group_dx
+        } else {
+          dx <- dx + group_dx
+        }
+        next
+      }
+
       # augmented mean.x + cov.x matrix
       mean_x <- lavsamplestats@mean.x[[g]]
       cov_x <- lavsamplestats@cov.x[[g]]

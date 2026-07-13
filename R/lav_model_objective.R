@@ -171,12 +171,22 @@ lav_model_objective <- function(lavmodel = NULL,
         } else {
           this_h1 <- lavsamplestats@missing.h1[[g]]$h1
         }
-        group_fx <- lav_model_objective_fiml(
-          sigma_hat = sigma_hat[[g]],
-          mu_hat = mu_hat[[g]],
-          yp = lavsamplestats@missing[[g]],
-          h1 = this_h1, n = lavsamplestats@nobs[[g]]
-        )
+        if (conditional_x) {
+          group_fx <- lav_model_objective_fiml_res(
+            sigma_hat = sigma_hat[[g]],
+            mu_hat = mu_hat[[g]],
+            pi0 = pi0[[g]],
+            yp = lavsamplestats@missing[[g]],
+            h1 = this_h1, n = lavsamplestats@nobs[[g]]
+          )
+        } else {
+          group_fx <- lav_model_objective_fiml(
+            sigma_hat = sigma_hat[[g]],
+            mu_hat = mu_hat[[g]],
+            yp = lavsamplestats@missing[[g]],
+            h1 = this_h1, n = lavsamplestats@nobs[[g]]
+          )
+        }
       } else if (estimator == "ML" && lavdata@nlevels > 1L) {
         # FIML twolevel
         group_fx <- lav_model_objective_2l(

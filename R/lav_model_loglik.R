@@ -147,20 +147,31 @@ lav_model_loglik <- function(lavdata = NULL,
         } # complete
         # end multilevel
       } else if (lavsamplestats@missing.flag) {
-        x_idx <- lavsamplestats@x.idx[[g]]
-        x_mean <- x_cov <- NULL
-        if (length(x_idx) > 0L) {
-          x_mean <- lavh1$implied$mean[[g]][x_idx]
-          x_cov <- lavh1$implied$cov[[g]][x_idx, x_idx, drop = FALSE]
+        if (lavmodel@conditional.x) {
+          # the likelihood is already conditional on x; no x-marginal
+          # correction needed
+          logl_group[g] <- lav_mvreg_mi_loglik_samp(
+            yp         = lavsamplestats@missing[[g]],
+            res_int    = lavimplied$res.int[[g]],
+            res_slopes = lavimplied$res.slopes[[g]],
+            res_cov    = lavimplied$res.cov[[g]]
+          )
+        } else {
+          x_idx <- lavsamplestats@x.idx[[g]]
+          x_mean <- x_cov <- NULL
+          if (length(x_idx) > 0L) {
+            x_mean <- lavh1$implied$mean[[g]][x_idx]
+            x_cov <- lavh1$implied$cov[[g]][x_idx, x_idx, drop = FALSE]
+          }
+          logl_group[g] <- lav_mvn_mi_loglik_samp(
+            yp     = lavsamplestats@missing[[g]],
+            mu     = lavimplied$mean[[g]],
+            sigma_1  = lavimplied$cov[[g]],
+            x_idx  = lavsamplestats@x.idx[[g]],
+            x_mean = x_mean, # not needed? should be part of Sigma
+            x_cov  = x_cov
+          ) # not needed at all!
         }
-        logl_group[g] <- lav_mvn_mi_loglik_samp(
-          yp     = lavsamplestats@missing[[g]],
-          mu     = lavimplied$mean[[g]],
-          sigma_1  = lavimplied$cov[[g]],
-          x_idx  = lavsamplestats@x.idx[[g]],
-          x_mean = x_mean, # not needed? should be part of Sigma
-          x_cov  = x_cov
-        ) # not needed at all!
       } else { # single-level, complete data
         if (lavoptions$conditional.x) {
           # FIXME: use lavh1
