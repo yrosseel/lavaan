@@ -284,10 +284,6 @@ lav_object_gamma <- function(lavobject = NULL,
   # fit-time NACOV of the two.stage least-squares estimators and the
   # two-stage robust vcov machinery.
   if (!missing %in% c("listwise", "pairwise")) {
-    if (conditional_x) {
-      lav_msg_stop(gettext(
-        "Gamma is not available for conditional.x = TRUE with missing data."))
-    }
     sandwich <- adf
     if (missing == "two.stage") {
       sandwich <- FALSE
@@ -295,6 +291,46 @@ lav_object_gamma <- function(lavobject = NULL,
       sandwich <- TRUE
     }
     for (g in seq_len(lavdata@ngroups)) {
+      if (conditional_x) {
+        # conditional metric: Gamma is the N x acov of the saturated
+        # (vec(Beta), vech(res.cov)) estimates (x is complete)
+        if (model_based) {
+          res_int_g <- lavimplied$res.int[[g]]
+          res_slopes_g <- lavimplied$res.slopes[[g]]
+          res_cov_g <- lavimplied$res.cov[[g]]
+        } else {
+          res_int_g <- lavsamplestats@missing.h1[[g]]$res.int
+          res_slopes_g <- lavsamplestats@missing.h1[[g]]$res.slopes
+          res_cov_g <- lavsamplestats@missing.h1[[g]]$res.cov
+        }
+        if (is.null(res_cov_g)) {
+          lav_msg_stop(gettext(
+            "Gamma is not available: no EM estimates of the saturated
+            conditional moments (zero coverage?)."))
+        }
+        if (sandwich) {
+          gamma_g <- lav_mvreg_mi_h1_omega_sw(
+            y = lavdata@X[[g]], exo = lavdata@eXo[[g]],
+            mp = lavdata@Mp[[g]],
+            yp = lavsamplestats@missing[[g]], wt = lavdata@weights[[g]],
+            res_int = res_int_g, res_slopes = res_slopes_g,
+            res_cov = res_cov_g,
+            information = "observed"
+          )
+        } else {
+          i1 <- lav_mvreg_mi_information_observed_samplestats(
+            yp = lavsamplestats@missing[[g]],
+            res_int = res_int_g, res_slopes = res_slopes_g,
+            res_cov = res_cov_g
+          )
+          gamma_g <- lav_mat_sym_inverse(i1)
+        }
+        if (recipe$group.w.free) {
+          gamma_g <- lav_mat_bdiag(matrix(1, 1, 1), gamma_g)
+        }
+        out[[g]] <- gamma_g
+        next
+      }
       if (model_based) {
         mu_g <- lavimplied$mean[[g]]
         sigma_g <- lavimplied$cov[[g]]

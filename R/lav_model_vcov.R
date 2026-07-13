@@ -429,6 +429,70 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       wd <- wls_v[[g]] %*% delta[[g]]
     }
 
+    # conditional.x: the stage-1 'saturated' parameters live in the
+    # conditional metric (vec(Beta), vech(res.cov)); compute Omega with
+    # the lav_mvreg_mi_* kernels (x is complete). Note: with complete x,
+    # the joint information is block-diagonal between the conditional
+    # parameters and the x moments, so the conditional Omega is the
+    # correct stage-1 ACOV.
+    if (lavmodel@conditional.x) {
+      aux_g2 <- if (length(lavdata@aux) >= g) lavdata@aux[[g]] else NULL
+      if (!is.null(aux_g2) && NCOL(aux_g2) > 0L) {
+        lav_msg_stop(gettext(
+          "auxiliary variables (aux =) are not supported (yet) for
+          two-stage standard errors when conditional.x = TRUE."))
+      }
+      if (lavoptions$h1.information[1] == "unstructured") {
+        res_int_g <- lavh1$implied$res.int[[g]]
+        res_slopes_g <- lavh1$implied$res.slopes[[g]]
+        res_cov_g <- lavh1$implied$res.cov[[g]]
+      } else {
+        res_int_g <- lavimplied$res.int[[g]]
+        res_slopes_g <- lavimplied$res.slopes[[g]]
+        res_cov_g <- lavimplied$res.cov[[g]]
+      }
+
+      if (lavoptions$se == "two.stage") {
+        # Savalei & Bentler (2009), conditional metric
+        if (lavoptions$information[1] == "expected") {
+          info <- lav_mvreg_mi_info_expected(
+            yp = lavsamplestats@missing[[g]],
+            res_cov = res_cov_g
+          )
+        } else {
+          info <- lav_mvreg_mi_information_observed_samplestats(
+            yp = lavsamplestats@missing[[g]],
+            res_int = res_int_g, res_slopes = res_slopes_g,
+            res_cov = res_cov_g
+          )
+        }
+        omega_g <- lav_mat_sym_inverse(info)
+      } else { # robust.two.stage
+        # Savalei & Falk (2014), conditional metric
+        if (length(lavdata@cluster) > 0L) {
+          cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+        } else {
+          cluster_idx <- NULL
+        }
+        omega_g <- lav_mvreg_mi_h1_omega_sw(
+          y = lavdata@X[[g]],
+          exo = lavdata@eXo[[g]],
+          mp = lavdata@Mp[[g]],
+          yp = lavsamplestats@missing[[g]],
+          wt = lavdata@weights[[g]],
+          cluster_idx = cluster_idx,
+          res_int = res_int_g, res_slopes = res_slopes_g,
+          res_cov = res_cov_g,
+          information = lavoptions$information[1]
+        )
+      }
+      gamma[[g]] <- omega_g
+
+      # compute
+      t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
+      next
+    }
+
     # to compute (incomplete) GAMMA, should we use
     # structured or unstructured mean/sigma?
     #
