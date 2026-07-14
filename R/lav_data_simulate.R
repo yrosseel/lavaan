@@ -105,7 +105,13 @@ lav_data_simulate <- function(model = NULL,
     auto_fix_first = auto_fix_first, auto_fix_single = auto_fix_single,
     auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
     auto_cov_y = auto_cov_y), dotdotdot,
-    list(sample_nobs = sample_nobs, ov_var = ov_var, group_label = group_label,
+    # note: 'group_label' is deliberately NOT threaded here. it is a vestigial
+    # argument (never read by the single-level worker, and never has been), so
+    # forcing it would be pointless -- and harmful: it lets a caller-supplied
+    # lazy default such as 'paste("G", 1:ngroups)' (an idiom copied from old
+    # lavaan, where 'ngroups' only existed internally) stay unevaluated, as it
+    # did before the simulateData() refactor.
+    list(sample_nobs = sample_nobs, ov_var = ov_var,
     skewness = skewness, kurtosis = kurtosis, seed = seed,
     empirical = empirical, mass = mass, return_type = return_type,
     return_fit = return_fit, debug = debug, standardized = standardized,
@@ -500,7 +506,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
                          # data properties
                          sample_nobs = 500L,
                          ov_var = NULL,
-                         group_label = paste("G", 1:ngroups, sep = ""),
+                         group_label = NULL, # vestigial; never used below
                          skewness = NULL,
                          kurtosis = NULL,
                          # control
