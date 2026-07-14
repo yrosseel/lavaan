@@ -57,7 +57,7 @@ lav_data_simulate <- function(model = NULL,
                               # control
                               seed = NULL,
                               empirical = FALSE,
-                              mass = FALSE,
+                              mass = TRUE,
                               ordered_center = TRUE,
                               return_type = "data.frame",
                               return_fit = FALSE,
