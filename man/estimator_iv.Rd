@@ -349,6 +349,7 @@ model.iv <- '
 fit3 <- sem(model.iv, data = PoliticalDemocracy, estimator = "IV")
 lavInspect(fit3, "iv")
 
+\dontrun{
 ## equality constraints are honored (here: equal loadings across factors)
 model.eq <- '
     ind60 =~ x1 + x2 + x3
@@ -367,6 +368,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 fit.metric <- sem(HS.model, data = HolzingerSwineford1939, estimator = "IV",
                   group = "school", group.equal = "loadings")
 summary(fit.metric)
+}
 }
 \keyword{models}
 \keyword{regression}
