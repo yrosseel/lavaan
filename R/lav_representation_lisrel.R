@@ -3746,7 +3746,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
     # tau_full: tau values at ordinal TH slots, 0 at numeric TH slots
     tau_full <- numeric(nth_full)
-    if (!is.null(mlist$tau) && n_th > 0L) {
+    if (!is.null(mlist$tau) && nrow(mlist$tau) > 0L) {
       tau_full[ord_slots] <- as.vector(mlist$tau)
     }
 
@@ -3800,7 +3800,6 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       j_v <- rc[, 2L]
       jac_th[, col_th:(col_th + n_bet - 1L)] <-
         -delta_star * m[v_slot, i_v, drop = FALSE] *
-         matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
          matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
       col_th <- col_th + n_bet
     }
