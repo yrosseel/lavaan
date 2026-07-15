@@ -211,10 +211,16 @@ attr(fscores, "se")[[1]]
 ## for categorical indicators, the factor scores are obtained by numerical
 ## optimization, and their standard errors differ from one response pattern
 ## (observation) to the next
+
+## (a two-factor model is used here, as the numerical optimization and the
+##  Monte Carlo integration below both get expensive as the number of
+##  ordered indicators grows)
+HS.model.ord <- ' visual  =~ x1 + x2 + x3
+                  textual =~ x4 + x5 + x6 '
 HS.ord <- HolzingerSwineford1939
-HS.ord[ , paste0("x", 1:9)] <-
-    lapply(HS.ord[ , paste0("x", 1:9)], function(x) ordered(cut(x, 3)))
-fit.ord <- cfa(HS.model, data = HS.ord, ordered = paste0("x", 1:9))
+HS.ord[ , paste0("x", 1:6)] <-
+    lapply(HS.ord[ , paste0("x", 1:6)], function(x) ordered(cut(x, 3)))
+fit.ord <- cfa(HS.model.ord, data = HS.ord, ordered = paste0("x", 1:6))
 fscores <- lavPredict(fit.ord, se = "standard")
 head(attr(fscores, "se")[[1]])
 

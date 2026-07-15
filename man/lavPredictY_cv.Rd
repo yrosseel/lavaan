@@ -48,6 +48,7 @@ Consciousness: A Psychometric Validation and Analysis of a New Model of
 Mystical Experience. \doi{10.31219/osf.io/cgb6e}
 }
 \examples{
+\dontrun{
 colnames(PoliticalDemocracy) <- c("z1", "z2", "z3", "z4",
                                   "y1", "y2", "y3", "y4",
                                   "x1", "x2", "x3")
@@ -90,4 +91,5 @@ lavPredictY(fit, newdata = PoliticalDemocracy[idx,],
                  ynames  = ynames,
                  xnames  = xnames,
                  lambda  = lam)
+}
 }
