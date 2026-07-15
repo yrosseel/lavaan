@@ -41,7 +41,7 @@ cfaList(model = NULL, data_list = NULL, data_function = NULL,
 \item{data_function_args}{List. Optional list of arguments that are passed
     to the \code{data_function} function.}
 \item{ndat}{Integer. The number of datasets that should be generated using
-    the \code{dataFunction} function.}
+    the \code{data_function} function.}
 \item{cmd}{Character. The command used to run the SEM models. The possible
     choices are \code{"sem"}, \code{"cfa"} or \code{"lavaan"}, which determine
     how the default options are handled.}
