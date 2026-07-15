@@ -430,9 +430,9 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot_cutoff = 0.1,
       table_1 <- t(fit[idx, , drop = FALSE])
       tmp <- names_1[idx]
       # strip '.scaled'
-      tmp <- gsub(".scaled", "", tmp)
-      # replace 'robust' by 'r' (if any)
-      tmp <- gsub(".robust", "", tmp)
+      tmp <- gsub(".scaled", "", tmp, fixed = TRUE)
+      # strip '.robust'
+      tmp <- gsub(".robust", "", tmp, fixed = TRUE)
       # rename "bic2" -> "sabic"
       bic2_idx <- which(tmp == "bic2")
       if (length(bic2_idx) > 0L) {

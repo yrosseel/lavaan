@@ -331,7 +331,7 @@ lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
       lvnodes[ji] <- edges$van[j]
       edges$van[j] <- nodes$id[curnode]
       edges$tiepe[j] <- "~."
-      edges$label[j] <- ifelse(grepl("=", edges$label[j]),
+      edges$label[j] <- ifelse(grepl("=", edges$label[j], fixed = TRUE),
         gsub("^.*=", "", edges$label[j]), ""
       )
     }

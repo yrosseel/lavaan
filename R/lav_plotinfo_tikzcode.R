@@ -29,8 +29,8 @@ lav_plotinfo_tikzcode <- function(plotinfo,
   wovcol <- paste(round(tmpcol[, 1L] / 255, 2), collapse = ",")
   bovcol <- paste(round(tmpcol[, 2L] / 255, 2), collapse = ",")
   nodenaam <- function(nm, blk) {
-    if (blk > 0L) return(gsub("_", "", paste0("B", blk, nm)))
-    gsub("_", "", nm)
+    if (blk > 0L) return(gsub("_", "", paste0("B", blk, nm), fixed = TRUE))
+    gsub("_", "", nm, fixed = TRUE)
   }
   mlrij <- plotinfo$mlrij
   if (is.null(mlrij))

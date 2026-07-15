@@ -174,7 +174,7 @@ lav_export_mplus_mod <- function(free, ustart) {
 
 # sanitize a variable name for Mplus (no dots)
 lav_export_mplus_var <- function(x) {
-  gsub("\\.", "_", x)
+  gsub(".", "_", x, fixed = TRUE)
 }
 
 # Mplus is not case-sensitive: a latent variable (lhs of =~) may never share a
@@ -222,10 +222,9 @@ lav_export_mplus_expr <- function(expr) {
   if (is.na(expr) || !nzchar(expr)) {
     return(expr)
   }
-  expr <- gsub("\\^", "**", expr)
+  expr <- gsub("^", "**", expr, fixed = TRUE)
   # drop any leftover dots inside plabel-style tokens
-  expr <- gsub("\\.", "", expr)
-  expr
+  gsub(".", "", expr, fixed = TRUE)
 }
 
 # Mplus group labels for a multigroup model. We use the actual lavaan group

@@ -782,7 +782,7 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
     } else if (tn %in% c("satorra.bentler",
                          "yuan.bentler", "yuan.bentler.mplus")) {
       lrt_call$test <- tn
-    } else if (grepl(pattern = "browne", x = tn)) {
+    } else if (grepl(pattern = "browne", x = tn, fixed = TRUE)) {
       lrt_call$type <- tn
     } else {
       #TODO?

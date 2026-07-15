@@ -600,7 +600,8 @@ lav_parse_model_string <- function(model_syntax = "", as_data_frame = FALSE) {
   modelsrc <- gsub(
     pattern = "\u02dc",
     replacement = "~",
-    paste(unlist(model_syntax), "", collapse = "\n")
+    paste(unlist(model_syntax), "", collapse = "\n"),
+    fixed = TRUE
   )
   # check for empty, whitespace-only or comment-only model syntax
   if (length(model_syntax) == 0L ||

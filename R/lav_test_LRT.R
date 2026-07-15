@@ -661,7 +661,7 @@ lav_test_lrt_single_model <- function(object, method = "default",
     ## More than 1.  Cycle through possible user specifications:
   } else if (method[1] == "standard") {
     test_1 <- 1L
-  } else if (grepl(pattern = "browne", x = type) && type %in% tn) {
+  } else if (grepl("browne", type, fixed = TRUE) && type %in% tn) {
     test_1 <- type
   } else if (test %in% tn) {
     test_1 <- test
@@ -692,7 +692,7 @@ lav_test_lrt_single_model <- function(object, method = "default",
   }
 
   ## heading
-  if (grepl(pattern = "browne", x = test_1)) {
+  if (grepl(pattern = "browne", x = test_1, fixed = TRUE)) {
     attr(val, "heading") <- object@test[[test_1]]$label
 
   } else if (test_1 == 1L) {
