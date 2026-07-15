@@ -247,9 +247,10 @@ lav_model_pt  <- function(
     block_op_idx <- which(flat$op == ":")
 
     # check for wrong spelled 'group' lhs
-    if (length(grep("group", tmp_blocks_lhs)) > 1L) {
+    if (length(grep("group", tmp_blocks_lhs, fixed = TRUE)) > 1L) {
       lav_msg_warn(gettext("ambiguous block identifiers for group:"),
-        lav_msg_view(tmp_blocks_lhs[grep("group", tmp_blocks_lhs)], "none"))
+        lav_msg_view(tmp_blocks_lhs[grep("group", tmp_blocks_lhs, fixed = TRUE)],
+                    "none"))
     }
 
     # no empty :rhs fields allowed!

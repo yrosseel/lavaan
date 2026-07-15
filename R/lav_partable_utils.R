@@ -392,7 +392,7 @@ lav_pt_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
   if (exclude_nonpar) {
     # get all parameters that have a '.p*' plabel
     # (they exclude "==", "<", ">", ":=")
-    p1_idx <- which(grepl("\\.p", p1$plabel))
+    p1_idx <- grep(".p", p1$plabel, fixed = TRUE)
   } else {
     # all of it
     # note: block should be '0' in both p1 and p2

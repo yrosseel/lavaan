@@ -831,7 +831,7 @@ lav_data_full <- function(data = NULL, # data.frame
     ov_all <- unique(c(ov_names[[g]], ov_names_x[[g]])) # no overlap if categ
 
     # handle interactions
-    ov_int_names <- ov_all[grepl(":", ov_all)]
+    ov_int_names <- ov_all[grepl(":", ov_all, fixed = TRUE)]
     n_int <- length(ov_int_names)
     if (n_int > 0L) {
       ov_names_noint <- ov_all[!ov_all %in% ov_int_names]

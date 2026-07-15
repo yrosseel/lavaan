@@ -475,9 +475,9 @@ lav_test_diff_af_h1 <- function(m1, m0) {
   pt_m1 <- lav_pt_set_cache(parTable(m1), m1@pta)
 
   # select .p*. parameters only
-  m0_p_idx <- which(grepl("\\.p", pt_m0$plabel))
+  m0_p_idx <- grep(".p", pt_m0$plabel, fixed = TRUE)
   np0 <- length(m0_p_idx)
-  m1_p_idx <- which(grepl("\\.p", pt_m1$plabel))
+  m1_p_idx <- grep(".p", pt_m1$plabel, fixed = TRUE)
   np1 <- length(m1_p_idx)
 
   # check if parameter space is the same

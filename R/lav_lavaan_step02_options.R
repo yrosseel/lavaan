@@ -148,7 +148,7 @@ lav_step02_options <- function(slot_options = NULL,
       # first check if we can find ov.names.y in Data
       tmp_ov_names_y <- unique(unlist(ov_names_y))
       # remove possible interaction terms involving an y term
-      int_idx <- which(grepl(":", tmp_ov_names_y))
+      int_idx <- grep(":", tmp_ov_names_y, fixed = TRUE)
       if (length(int_idx) > 0L) {
         tmp_ov_names_y <- tmp_ov_names_y[-int_idx]
       }

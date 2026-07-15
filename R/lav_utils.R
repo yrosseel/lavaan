@@ -147,12 +147,8 @@ lav_cor2cov <- function(r, sds, names = NULL, ...) {
 #     x <- lav_char2num(s)
 lav_char2num <- function(s = "") {
   # first, strip all ',' or ';'
-  s_1 <- gsub(",", " ", s)
-  s_1 <- gsub(";", " ", s_1)
-  tc <- textConnection(s_1)
-  x <- scan(tc, quiet = TRUE)
-  close(tc)
-  x
+  s_1 <- chartr(",;", "  ", s)
+  scan(text = s_1, quiet = TRUE)
 }
 
 # create full matrix based on lower.tri or upper.tri elements; add names
@@ -515,8 +511,8 @@ lav_snake_case <- function(old) {
              "s_min_theta")
   if (is.list(old)) old_names <- names(old) else old_names <- old
   # transform dot.case and CamelCase to snake_case
-  varnames_new <- tolower(chartr(".", "_",
-                   gsub("([a-z])([A-Z])", "\\1_\\2", old_names)))
+  varnames_new <- chartr(".A-Z", "_a-z",
+                   gsub("([a-z])([A-Z])", "\\1_\\2", old_names))
   # apply standard modifications
   mtch <- match(old_names, curval)
   for (j in seq_along(old_names)) {

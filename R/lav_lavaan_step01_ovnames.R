@@ -390,7 +390,7 @@ lav_step01_ovnames_checklv <- function(
   }
 
   # sanity check: we do not support latent interaction yet (using the :)
-  lv_int_idx <- which(grepl(":", lv_lv_names))
+  lv_int_idx <- grep(":", lv_lv_names, fixed = TRUE)
   if (length(lv_int_idx) > 0L) {
     if (!is.null(dotdotdot$check.lv.interaction) &&
       !dotdotdot$check.lv.interaction) {

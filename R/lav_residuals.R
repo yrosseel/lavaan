@@ -1133,7 +1133,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
   if (rename_cov_cor && type %in% c("cor.bentler", "cor.bollen")) {
     for (b in seq_len(nblocks)) {
       names_1 <- names(res_list[[b]])
-      names_1 <- gsub("cov", "cor", names_1)
+      names_1 <- gsub("cov", "cor", names_1, fixed = TRUE)
       names(res_list[[b]]) <- names_1
     }
   }
