@@ -88,7 +88,11 @@ lav_options_mimic <- function(opt) {
   if (opt$estimator == "mlr") {
     if (opt$test[1] == "default") {
       opt$test <- mlr_test
-    } else {
+    } else if (!any(opt$test == "none")) {
+      # respect test = "none" (as the MLM/MLMV/ULSM/... blocks do); adding
+      # the MLR-implied scaled test would produce the invalid c("<scaled>",
+      # "none") combination (eg sam() fits its internal dummy model with
+      # test = "none")
       opt$test <- union(mlr_test, opt$test)
     }
   }

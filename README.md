@@ -15,14 +15,14 @@ lavaan is still under development, and much work still needs to be done.
 
 As part of an NWO-funded project for Dutch open-science infrastructural
 development, we are looking for a (second) 
-**researcher/junior postdoc for the lavaan project project**. 
+**researcher/junior postdoc for the lavaan project**. 
 The job ad can be found on the University of [Twente](https://utwentecareers.nl/en/vacancies/2525/researcher-in-methods-and-statistics-specializing-in-programming-and-structural-equation-modelling/).
 
 The deadline is *31 July 2026*.
 
 The proposal for the full project
 can be found on [Zenodo](https://doi.org/10.5281/zenodo.19552779). The post-doc
-position above is part of Work Package 1 (WP1).
+position above is part of Work Package 2 (WP2).
 
 
 ## Installation

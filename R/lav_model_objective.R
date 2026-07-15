@@ -51,7 +51,8 @@ lav_model_objective <- function(lavmodel = NULL,
 
   # do we need WLS.est?
   if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS") ||
-      (estimator == "GLS" && partial_cor)) {
+      (estimator == "GLS" &&
+        (partial_cor || conditional_x || group_w_free))) {
     lavimplied <- lav_model_implied(lavmodel, glist = glist)
     # check for COV with negative diagonal elements?
     # (note: all blocks, not groups -- multilevel has 2 blocks per group)
@@ -170,12 +171,22 @@ lav_model_objective <- function(lavmodel = NULL,
         } else {
           this_h1 <- lavsamplestats@missing.h1[[g]]$h1
         }
-        group_fx <- lav_model_objective_fiml(
-          sigma_hat = sigma_hat[[g]],
-          mu_hat = mu_hat[[g]],
-          yp = lavsamplestats@missing[[g]],
-          h1 = this_h1, n = lavsamplestats@nobs[[g]]
-        )
+        if (conditional_x) {
+          group_fx <- lav_model_objective_fiml_res(
+            sigma_hat = sigma_hat[[g]],
+            mu_hat = mu_hat[[g]],
+            pi0 = pi0[[g]],
+            yp = lavsamplestats@missing[[g]],
+            h1 = this_h1, n = lavsamplestats@nobs[[g]]
+          )
+        } else {
+          group_fx <- lav_model_objective_fiml(
+            sigma_hat = sigma_hat[[g]],
+            mu_hat = mu_hat[[g]],
+            yp = lavsamplestats@missing[[g]],
+            h1 = this_h1, n = lavsamplestats@nobs[[g]]
+          )
+        }
       } else if (estimator == "ML" && lavdata@nlevels > 1L) {
         # FIML twolevel
         group_fx <- lav_model_objective_2l(
@@ -237,8 +248,14 @@ lav_model_objective <- function(lavmodel = NULL,
 
       ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
-      if (partial_cor) {
-        # canonical GLS quadratic form in the partial moment space
+      if (partial_cor || conditional_x || group_w_free) {
+        # canonical GLS quadratic form; needed when the trace shortcut
+        # below does not apply:
+        # - partial_cor: partial moment space
+        # - conditional.x: residual moment space (WLS.obs/WLS.V are in
+        #   the [res.int|res.slopes, vech(res.cov)] metric, while
+        #   sigma_hat/data_cov would mix residual and joint moments)
+        # - group.w.free: the group weight discrepancy must be included
         group_fx <- lav_model_objective_wls(
           wls_est = wls_est[[g]],
           wls_obs = lavsamplestats@WLS.obs[[g]],
@@ -266,18 +283,16 @@ lav_model_objective <- function(lavmodel = NULL,
         if (estimator_args$dls.GammaNT == "sample") {
           wls_v <- lavsamplestats@WLS.V[[g]]
         } else {
-          dls_a <- estimator_args$dls.a
-          gamma_nt <- lav_samp_gamma_nt(
-            m_cov          = sigma_hat[[g]],
-            m_mean         = mu_hat[[g]],
-            x_idx          = lavsamplestats@x.idx[[g]],
-            fixed_x        = lavmodel@fixed.x,
-            conditional_x  = lavmodel@conditional.x,
-            meanstructure  = lavmodel@meanstructure,
-            slopestructure = lavmodel@conditional.x
+          wls_v <- lav_dls_wls_v_g(
+            m_cov         = sigma_hat[[g]],
+            m_mean        = mu_hat[[g]],
+            nacov_g       = lavsamplestats@NACOV[[g]],
+            dls_a         = estimator_args$dls.a,
+            x_idx         = lavsamplestats@x.idx[[g]],
+            fixed_x       = lavmodel@fixed.x,
+            conditional_x = lavmodel@conditional.x,
+            meanstructure = lavmodel@meanstructure
           )
-          w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-          wls_v <- lav_mat_sym_inverse(w_dls)
         }
       } else if (estimator == "NTRLS") {
         # WLS.V <- lav_samp_gamma_inverse_nt(

@@ -325,6 +325,20 @@ lav_options_set <- function(opt = NULL) {
   if (opt$.clustered && !opt$.multilevel) {
     opt$meanstructure <- TRUE
 
+    # single-level clustered continuous ML: the pairwise / available.cases
+    # missing-data methods are not supported (they were silently fed into the
+    # cluster-robust machinery, producing nonsense estimates and a failing
+    # baseline model, or crashing deep inside with a cryptic "NA/NaN/Inf in
+    # foreign function call" error); the categorical (D)WLS + cluster path
+    # handles these via muthen1984() and is left untouched
+    if (!opt$.categorical &&
+        any(opt$missing == c("pairwise", "available.cases"))) {
+      lav_msg_stop(gettextf(
+        "missing = %1$s is not supported for clustered (cluster =) continuous
+         models; use missing = %2$s or missing = %3$s instead.",
+        dQuote(opt$missing), dQuote("ml"), dQuote("listwise")))
+    }
+
     if (opt$estimator == "mlr") {
       opt$estimator <- "ml"
       opt$test <- "yuan.bentler.mplus"
@@ -390,6 +404,17 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
+  # cluster-robust SEs were explicitly requested, but no cluster= variable
+  # was given: the requested estimator is undefined without cluster data
+  # (before, lavaan silently computed a non-cluster-robust sandwich that did
+  # not match any documented estimator)
+  if (!opt$.clustered &&
+      any(opt$se == c("robust.cluster", "robust.cluster.sem"))) {
+    lav_msg_stop(gettextf(
+      "se = %s requires clustered data; please provide the cluster= argument.",
+      dQuote(opt$se)))
+  }
+
   # composites ####
   # resolve composites.cov = "default": the composite-indicator (co)variances
   # (the 'T' matrix) are fixed to their sample values for single-level models,
@@ -409,6 +434,53 @@ lav_options_set <- function(opt = NULL) {
   if (opt$.multilevel) {
     opt$meanstructure <- TRUE
 
+    # no estimator supports sampling weights in the two-level case (yet);
+    # before 0.7-1 the ML machinery silently ignored them
+    if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
+      lav_msg_stop(gettext(
+        "sampling weights are not supported for two-level models (yet)."))
+    }
+
+    # only listwise deletion and full-information ML can handle missing
+    # values in the two-level case; the other methods (two.stage,
+    # robust.two.stage, pairwise, available.cases, doubly.robust) are
+    # single-level methods (before 0.7-1 these crashed deep inside the
+    # saturated-model EM with a cryptic error)
+    if (any(opt$missing == c(
+      "two.stage", "robust.two.stage", "pairwise",
+      "available.cases", "doubly.robust"
+    ))) {
+      lav_msg_stop(gettextf(
+        "missing = %1$s is not supported for two-level models; use
+         missing = %2$s or missing = %3$s instead.",
+        dQuote(opt$missing), dQuote("ml"), dQuote("listwise")))
+    }
+
+    # two-level + conditional.x: the expected information would need the
+    # Delta matrix in the unconditional statistic space (the parameter-space
+    # kernel lav_mvn_cl_info_expected_delta works with unconditional
+    # moments); until that conversion exists, only observed/first.order
+    # information is supported (the default)
+    if (isTRUE(opt$conditional.x) && any(opt$information == "expected")) {
+      lav_msg_stop(gettext(
+        "information = \"expected\" is not supported (yet) for two-level
+         models with conditional.x = TRUE; use \"observed\" (the default)
+         or \"first.order\"."))
+    }
+
+    # ditto for a user-requested unstructured h1: the unstructured
+    # (unconditional) h1 information cannot be combined with the
+    # conditional.x Delta (before 0.7-1 this crashed with a cryptic
+    # "non-conformable arguments" error); note that the internal
+    # yuan.bentler.mplus route (which never mixes the two spaces) does
+    # not pass through this check
+    if (isTRUE(opt$conditional.x) &&
+        any(opt$h1.information == "unstructured")) {
+      lav_msg_stop(gettext(
+        "h1.information = \"unstructured\" is not supported (yet) for
+         two-level models with conditional.x = TRUE."))
+    }
+
     # two-level least-squares estimation? (WLS/WLSM(V)/ULS(M,MV)/DWLS)
     multilevel_wls <-
       lav_options_estimatorgroup(opt$estimator) %in% c("WLS", "DWLS", "ULS")
@@ -425,11 +497,6 @@ lav_options_set <- function(opt = NULL) {
         lav_msg_stop(gettext(
           "conditional.x = TRUE is not supported for two-level (D)WLS
           estimation with continuous-only data (yet)."))
-      }
-      if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
-        lav_msg_stop(gettext(
-          "sampling weights are not supported for two-level (D)WLS
-          estimation (yet)."))
       }
       if (opt$.categorical) {
         # categorical two-level (D)WLS:
@@ -590,6 +657,7 @@ lav_options_set <- function(opt = NULL) {
     # h1 loglikelihood is NOT comparable to the (conditional-on-x)
     # loglikelihood of the random-slope model
     opt$baseline <- FALSE
+    opt$fit.by.level <- FALSE
     # note: estimator = "MLR" implies test = "yuan.bentler.mplus" (set
     # in lav_options_mimic); this is not an explicit user request, so
     # we do not warn about it
@@ -747,7 +815,8 @@ lav_options_set <- function(opt = NULL) {
   if (any(opt$missing == c("ml", "ml.x")) &&
     any(opt$test %in% c(
       "satorra.bentler",
-      "mean.var.adjusted", "scaled.shifted"
+      "mean.var.adjusted", "scaled.shifted",
+      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
     ))) {
     lav_msg_warn(gettextf(
       "missing will be set to %s for satorra.bentler style test",
@@ -929,7 +998,7 @@ lav_options_set <- function(opt = NULL) {
   # to support the model (e.g., multiple groups, conditional.x), we
   # quietly fall back to "nlminb" later (see lav_lavaan_step11_optim)
   if (opt$optim.method == "default") {
-    if (opt$.multilevel && opt$missing == "ml" &&
+    if (opt$.multilevel && opt$missing %in% c("ml", "ml.x") &&
         lav_options_estimatorgroup(opt$estimator) == "ML") {
       opt$optim.method <- "em"
       opt$.optim.em.fallback <- TRUE
@@ -1025,7 +1094,8 @@ lav_options_set <- function(opt = NULL) {
     any(opt$test %in% c(
       "satorra.bentler", "yuan.bentler",
       "yuan.bentler.mplus",
-      "mean.var.adjusted", "scaled.shifted"
+      "mean.var.adjusted", "scaled.shifted",
+      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
     ))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust test statistics are requested.",
@@ -1045,7 +1115,9 @@ lav_options_set <- function(opt = NULL) {
         "yuan.bentler",
         "yuan.bentler.mplus",
         "mean.var.adjusted",
-        "scaled.shifted"
+        "mean.var.adjusted.corrected",
+        "scaled.shifted",
+        "scaled.shifted.corrected"
       ))) {
         if (length(opt$test) > 1L) {
           opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
@@ -1117,6 +1189,10 @@ lav_options_set <- function(opt = NULL) {
   # if conditional.x, always use a meanstructure
   if (opt$conditional.x) {
     opt$meanstructure <- TRUE
+    # auto.cov.x has no effect if conditional.x = TRUE: the exogenous
+    # covariates are conditioned out, so their covariances with exogenous
+    # latent variables cannot be represented
+    opt$auto.cov.x <- FALSE
   }
 
   # fixed.x
@@ -1261,6 +1337,7 @@ lav_options_set <- function(opt = NULL) {
     "yuan.bentler", "yuan.bentler.mplus",
     "yuan.chan", # SAM-only (sam.method = "global"); ignored elsewhere
     "mean.var.adjusted", "scaled.shifted",
+    "mean.var.adjusted.corrected", "scaled.shifted.corrected",
     "browne.residual.adf", "browne.residual.nt",
     "browne.residual.nt.model",
     "browne.residual.adf.model",
@@ -1278,6 +1355,7 @@ lav_options_set <- function(opt = NULL) {
         "browne.residual.nt.model", "satorra.bentler",
         "yuan.bentler", "yuan.bentler.mplus",
         "mean.var.adjusted", "scaled.shifted",
+        "mean.var.adjusted.corrected", "scaled.shifted.corrected",
         "bollen.stine"
       ), log_sep = "or")
     ))
@@ -1415,12 +1493,10 @@ lav_options_set <- function(opt = NULL) {
         tmp[target != 0] <- 0L # ignore these (non-zero) elements
         opt$rotation.args$target_mask <- target_mask <- tmp
       } else if (is.list(target)) {
-        out <- lapply(seq_along(target), function(g) {
-          tmp <- matrix(1L,
-            nrow = nrow(target[[g]]),
-            ncol = ncol(target[[g]])
-          )
-          tmp[target[[g]] != 0] <- 0L # ignore these (non-zero) elements
+        # lapply preserves the names (if any) of the target list
+        out <- lapply(target, function(tt) {
+          tmp <- matrix(1L, nrow = nrow(tt), ncol = ncol(tt))
+          tmp[tt != 0] <- 0L # ignore these (non-zero) elements
           tmp
         })
         opt$rotation.args$target_mask <- target_mask <- out
@@ -1444,6 +1520,19 @@ lav_options_set <- function(opt = NULL) {
       if (length(target) != length(target_mask)) {
         lav_msg_stop(gettext("length(target) != length(target_mask)"))
       }
+      # a *named* list is keyed by the efa block labels; a *nameless* list
+      # is interpreted per group -- both lists must use the same convention
+      target_named <- !is.null(names(target)) && any(nzchar(names(target)))
+      mask_named <- !is.null(names(target_mask)) &&
+        any(nzchar(names(target_mask)))
+      if (target_named != mask_named) {
+        lav_msg_stop(gettext(
+          "target and target_mask must either both be named lists (with the efa block labels as names), or both be nameless lists (one element per group)."))
+      }
+      if (target_named && !setequal(names(target), names(target_mask))) {
+        lav_msg_stop(gettext(
+          "the names of the target list do not match the names of the target_mask list."))
+      }
     }
   }
 
@@ -1459,24 +1548,16 @@ lav_options_set <- function(opt = NULL) {
       opt$rotation.args$target_mask <- target_mask
 
       # list
-    } else if (is.list(target)) {
-      ngroups <- length(target)
-      for (g in seq_len(ngroups)) {
-        if (anyNA(target[[g]])) {
-          warn_flag <- TRUE
-          # is target_mask just a <0 x 0 matrix>? create list!
-          if (is.matrix(opt$rotation.args$target_mask)) {
-            opt$rotation.args$target_mask <- vector("list", length = ngroups)
-          }
-          opt$rotation <- "pst"
-          target_mask <- matrix(1,
-            nrow = nrow(target[[g]]),
-            ncol = ncol(target[[g]])
-          )
-          target_mask[is.na(target[[g]])] <- 0
-          opt$rotation.args$target_mask[[g]] <- target_mask
-        }
-      }
+    } else if (is.list(target) && any(sapply(target, anyNA))) {
+      warn_flag <- TRUE
+      opt$rotation <- "pst"
+      # create a mask for *every* element (all-ones if no NA values);
+      # lapply preserves the names (if any) of the target list
+      opt$rotation.args$target_mask <- lapply(target, function(tt) {
+        tmp <- matrix(1, nrow = nrow(tt), ncol = ncol(tt))
+        tmp[is.na(tt)] <- 0
+        tmp
+      })
     }
     if (warn_flag) {
       lav_msg_warn(gettext(

@@ -87,6 +87,15 @@ lav_model <- function(lavpartable = NULL,
   nefa <- lav_pt_nefa(lavpartable)
   if (nefa > 0L) {
     efa_values <- lav_pt_efa_values(lavpartable)
+    # early check of *named* per-set target/target_mask lists (issue #516),
+    # so a name mismatch is caught before the model is estimated
+    if (!is.null(lavoptions$rotation) &&
+        any(lavoptions$rotation == c("target.strict", "pst"))) {
+      lav_model_efa_check_target(
+        ropts = lavoptions$rotation.args,
+        lavpartable = lavpartable, efa_values = efa_values
+      )
+    }
   }
 
   # check for simple equality constraints
@@ -486,6 +495,14 @@ lav_model <- function(lavpartable = NULL,
     m_free_idx = m_free_idx
   )
 
+  # GLS: the gradient reconstructs the (possibly rescaled) V11 block of
+  # the normal-theory weight matrix without forming WLS.V, so it needs
+  # this flag (see lav_model_omega)
+  estimator_args <- lavoptions$estimator.args
+  if (lavoptions$estimator == "GLS") {
+    estimator_args$gls.v11.mplus <- lavoptions$gls.v11.mplus
+  }
+
   tmp_model <- new("lavModel",
     GLIST = tmp_glist,
     dimNames = dim_names,
@@ -558,7 +575,7 @@ lav_model <- function(lavpartable = NULL,
     rv.lv = rv_lv,
     rv.ov = rv_ov,
     estimator = lavoptions$estimator,
-    estimator.args = lavoptions$estimator.args
+    estimator.args = estimator_args
   )
 
   if (lav_debug()) {

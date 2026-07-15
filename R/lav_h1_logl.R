@@ -77,17 +77,29 @@ lav_h1_logl <- function(lavdata = NULL,
         # store logl per group
         logl_group[g] <- out_1$logl
       } else if (lavsamplestats@missing.flag) {
-        logl_group[g] <-
-          lav_mvn_mi_loglik_samp(
-            yp     = lavsamplestats@missing[[g]],
-            #Mu     = lavsamplestats@missing.h1[[g]]$mu,
-            mu     = h1_implied$mean[[g]],
-            #Sigma  = lavsamplestats@missing.h1[[g]]$sigma,
-            sigma_1  = h1_implied$cov[[g]],
-            x_idx  = lavsamplestats@x.idx[[g]],
-            x_mean = lavsamplestats@mean.x[[g]],
-            x_cov  = lavsamplestats@cov.x[[g]]
-          )
+        if (lavoptions$conditional.x) {
+          # the likelihood is already conditional on x; no x-marginal
+          # correction needed
+          logl_group[g] <-
+            lav_mvreg_mi_loglik_samp(
+              yp         = lavsamplestats@missing[[g]],
+              res_int    = h1_implied$res.int[[g]],
+              res_slopes = h1_implied$res.slopes[[g]],
+              res_cov    = h1_implied$res.cov[[g]]
+            )
+        } else {
+          logl_group[g] <-
+            lav_mvn_mi_loglik_samp(
+              yp     = lavsamplestats@missing[[g]],
+              #Mu     = lavsamplestats@missing.h1[[g]]$mu,
+              mu     = h1_implied$mean[[g]],
+              #Sigma  = lavsamplestats@missing.h1[[g]]$sigma,
+              sigma_1  = h1_implied$cov[[g]],
+              x_idx  = lavsamplestats@x.idx[[g]],
+              x_mean = lavsamplestats@mean.x[[g]],
+              x_cov  = lavsamplestats@cov.x[[g]]
+            )
+        }
       } else { # single-level, complete data
         # all we need is: logdet of covariance matrix, nobs and nvar
         if (lavoptions$conditional.x) {

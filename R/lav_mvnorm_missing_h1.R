@@ -317,6 +317,7 @@ lav_mvn_mi_h1_est_moments_chol <- function(lavdata = NULL,
   lavoptions2$implied <- TRUE
   lavoptions2$loglik <- TRUE
   lavoptions2$baseline <- FALSE
+  lavoptions2$fit.by.level <- FALSE
   lavoptions2$fixed.x <- FALSE # even if model uses fixed.x=TRUE
   lavoptions2$model.type <- "unrestricted"
   lavoptions2$optim.attempts <- 4L

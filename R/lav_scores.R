@@ -30,13 +30,20 @@ lav_sc <- function(object, scaling = FALSE,
 
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
-  if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS")) {
+  if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS", "PML")) {
     lav_msg_warn(gettext("scores only available if estimator is ML"))
     return(matrix(0, 0, 0))
   }
 
   # check if conditional.x = TRUE
-  if (object@Model@conditional.x) {
+  # (exceptions: PML supports exogenous covariates through the pairwise
+  # likelihood machinery itself; for ML (single-level, continuous) the
+  # lav_mvreg_* score kernels are used)
+  if (object@Model@conditional.x &&
+      !(object@Options$estimator == "PML" ||
+        (object@Options$estimator == "ML" &&
+         !object@Model@categorical &&
+         object@Data@nlevels == 1L))) {
     lav_msg_stop(gettext("scores not available (yet) if conditional.x = TRUE"))
   }
 
@@ -92,6 +99,14 @@ lav_sc <- function(object, scaling = FALSE,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
     )
+  } else if (object@Options$estimator == "PML") {
+    # casewise scores of the pairwise log-likelihood
+    score_matrix <- lav_sc_pml(
+      ntot = ntot, npar = npar,
+      lavdata = lavdata, lavsamplestats = lavsamplestats,
+      lavmodel = lavmodel, lavimplied = object@implied,
+      lavcache = object@Cache
+    )
   } else {
     # should not happen
     lav_msg_fixme("this should not happen")
@@ -124,22 +139,50 @@ lav_sc <- function(object, scaling = FALSE,
     type = "free", add_labels = TRUE
   ))
 
-  # handle general constraints, so that the sum of the columns equals zero
+  # handle general EQUALITY constraints, so that the sum of the columns
+  # equals zero
   # note: for ceq.simple.only models there are no explicit ceq/cin indices, but
   # the (synthesized) con.jac encodes the simple equalities in the 'unco' space;
   # projecting here makes the full (remove.duplicated = FALSE) scores respect the
   # constraints, exactly as for explicit equality constraints. This projection
   # does NOT affect the collapsed scores below, since con.jac %*% ceq.simple.K = 0
-  if (!ignore_constraints &&
-    (sum(
-      lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx,
-      lavmodel@cin.linear.idx, lavmodel@cin.nonlinear.idx
-    ) > 0 || (lavmodel@ceq.simple.only && nrow(lavmodel@con.jac) > 0L))) {
-    r_matrix <- object@Model@con.jac[, , drop = FALSE]
-    pre <- lav_con_lambda_pre(object)
-    # LAMBDA <- -1 * t(pre %*% t(score_matrix))
-    # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
-    score_matrix <- score_matrix - t(t(r_matrix) %*% pre %*% t(score_matrix))
+  #
+  # INEQUALITY constraints are excluded from the projection (fixed July
+  # 2026): at an interior solution their Lagrange multipliers are zero and
+  # the estimator's scores have genuine sampling variability in those
+  # directions; projecting on them (as the old code did, for ALL con.jac
+  # rows) forced those score components to sum to zero and corrupted the
+  # scores -- eg for any fit with bounds = "wide.zerovar", whose bounds are
+  # synthesized as linear cin rows.
+  if (!ignore_constraints && nrow(lavmodel@con.jac) > 0L) {
+    r_full <- lavmodel@con.jac[, , drop = FALSE]
+    # equality rows of con.jac (the "ceq.idx" attribute); for the
+    # synthesized ceq.simple con.jac (no explicit constraints) all rows are
+    # equalities. If the attribute is absent (very old objects), fall back
+    # to the historical all-rows behaviour.
+    ceq_rows <- attr(lavmodel@con.jac, "ceq.idx")
+    if (is.null(ceq_rows)) {
+      if (lavmodel@ceq.simple.only ||
+          sum(lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx) > 0) {
+        ceq_rows <- seq_len(nrow(r_full))
+      } else {
+        ceq_rows <- integer(0L)
+      }
+    }
+    if (length(ceq_rows) > 0L) {
+      if (length(ceq_rows) < nrow(r_full)) {
+        # drop the INEQUALITY rows BEFORE computing the multipliers (the
+        # 'pre' factor is built from the full constraint jacobian and is
+        # not row-separable)
+        object@Model@con.jac <- r_full[ceq_rows, , drop = FALSE]
+      }
+      r_matrix <- object@Model@con.jac[, , drop = FALSE]
+      pre <- lav_con_lambda_pre(object)
+      # LAMBDA <- -1 * t(pre %*% t(score_matrix))
+      # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
+      score_matrix <- score_matrix -
+        t(t(r_matrix) %*% pre %*% t(score_matrix))
+    }
   }
 
   # handle simple equality constraints
@@ -210,6 +253,41 @@ lav_sc_ml <- function(ntab = 0L,
     if (lavsamplestats@ngroups > 1) {
       moments <- moments_groups[[g]]
     }
+
+    # conditional.x: casewise scores of the conditional (mvreg) likelihood,
+    # with respect to (vec(Beta), vech(res.cov)) -- the same stat order as
+    # the conditional.x Delta rows (meanstructure is always TRUE here)
+    if (lavmodel@conditional.x) {
+      if (!lavsamplestats@missing.flag) { # complete data
+        sc <- lav_mvreg_sc_beta_sigma(
+          y = lavdata@X[[g]], exo = lavdata@eXo[[g]],
+          res_int = moments$res.int, res_slopes = moments$res.slopes,
+          res_cov = moments$res.cov
+        )
+      } else { # incomplete data
+        sc <- lav_mvreg_mi_sc_beta_sigma(
+          y = lavdata@X[[g]], exo = lavdata@eXo[[g]],
+          mp = lavdata@Mp[[g]],
+          res_int = moments$res.int, res_slopes = moments$res.slopes,
+          res_cov = moments$res.cov
+        )
+        # the (saturated) casewise score entries that refer to the
+        # unobserved cells of a case are zero (see lav_sc_ml below)
+        sc[is.na(sc)] <- 0
+      }
+
+      if (scaling && lavsamplestats@missing.flag) {
+        sc <- group_w[g] * sc
+      }
+
+      wi <- lavdata@case.idx[[g]]
+      score_matrix[wi, ] <- sc %*% delta[[g]]
+      if (scaling) {
+        score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
+      }
+      next
+    }
+
     sigma_hat <- moments$cov
     nvar <- ncol(lavsamplestats@cov[[g]])
 
@@ -266,6 +344,87 @@ lav_sc_ml <- function(ntab = 0L,
     if (scaling) {
       score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
     }
+  } # g
+
+  score_matrix
+}
+
+# casewise scores of the PAIRWISE log-likelihood (estimator = "PML"),
+# YR July 2026. The chain is identical to the first-order information for
+# PML (see lav_model_h1_info_firstorder()): lav_pml_dploglik_dimplied()
+# provides the casewise derivatives with respect to the implied statistics
+# (thresholds/means, slopes, variances, correlations), and the Delta matrix
+# maps them to the model parameters:
+#   sc_i(theta) = dlogPL_i/dtheta' = dlogPL_i/dimplied' %*% Delta
+# The scores are in +logPL convention (they sum to ~zero at the PML
+# solution), one row per (original) case, placed at case.idx -- exactly as
+# lav_sc_ml(). Consequently crossprod(sc)/N reproduces the first-order
+# (unit) information, and the huber.white sandwich built from these scores
+# reproduces the default robust PML standard errors.
+# Supported: complete data ("listwise") and missing = "available.cases"
+# (the univariate part is included in the casewise scores); exogenous
+# covariates go through the pairwise machinery itself (conditional.x).
+# missing = "doubly.robust" is NOT covered (its correction terms are not
+# part of lav_pml_dploglik_dimplied()), matching the first-order
+# information code.
+lav_sc_pml <- function(ntot = 0L,
+                       npar = 0L,
+                       lavdata = NULL,
+                       lavsamplestats = NULL,
+                       lavmodel = NULL,
+                       lavimplied = NULL,
+                       lavcache = NULL) {
+  if (lavdata@missing == "doubly.robust") {
+    lav_msg_stop(gettext(
+      "casewise PML scores are not available (yet) for
+       missing = \"doubly.robust\""))
+  }
+  score_matrix <- matrix(NA, ntot, npar)
+
+  # Delta matrix
+  delta <- lav_model_delta(lavmodel = lavmodel)
+
+  # model-implied statistics
+  if (is.null(lavimplied) || length(lavimplied) == 0L) {
+    lavimplied <- lav_model_implied(lavmodel)
+  }
+
+  for (g in 1:lavsamplestats@ngroups) {
+    if (lavmodel@conditional.x) {
+      sigma_1 <- lavimplied$res.cov[[g]]
+      mu <- lavimplied$res.mean[[g]]
+      if (is.null(mu)) {
+        mu <- lavimplied$res.int[[g]]
+      }
+      th <- lavimplied$res.th[[g]]
+      pi0 <- lavimplied$res.slopes[[g]]
+      exo <- lavdata@eXo[[g]]
+    } else {
+      sigma_1 <- lavimplied$cov[[g]]
+      mu <- lavimplied$mean[[g]]
+      th <- lavimplied$th[[g]]
+      pi0 <- NULL
+      exo <- NULL
+    }
+
+    sc <- lav_pml_dploglik_dimplied(
+      sigma_hat = sigma_1,
+      mu_hat = mu,
+      th = th,
+      th_idx = lavmodel@th.idx[[g]],
+      num_idx = lavmodel@num.idx[[g]],
+      x = lavdata@X[[g]],
+      exo = exo,
+      wt = NULL,
+      pi0 = pi0,
+      lavcache = lavcache[[g]],
+      missing = lavdata@missing,
+      scores = TRUE,
+      negative = FALSE
+    )
+
+    wi <- lavdata@case.idx[[g]]
+    score_matrix[wi, ] <- sc %*% delta[[g]]
   } # g
 
   score_matrix
@@ -407,16 +566,34 @@ lav_sc_ls <- function(ntab = 0L,
     # compute Zc
     zc <- t(t(z) - sigma)
 
-    # weight matrix
-    if (estimator == "ULS") {
-      m_w <- diag(ncol(z))
-    } else {
-      m_w <- lavsamplestats@WLS.V[[g]]
-    }
-
     # combine matrices
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- zc %*% m_w %*% delta[[g]]
+    if (estimator == "ULS") {
+      # identity weight matrix
+      score_matrix[wi, ] <- zc %*% delta[[g]]
+    } else if (estimator == "GLS" &&
+      is.null(lavsamplestats@WLS.V[[g]])) {
+      # GLS: WLS.V is no longer pre-computed (0.7-1); stream
+      # WLS.V %*% Delta without forming the matrix
+      v11_scale <- 1.0
+      if (isTRUE(lavmodel@estimator.args$gls.v11.mplus) &&
+        lavmodel@meanstructure && lavdata@data.type == "full") {
+        v11_scale <- lavsamplestats@nobs[[g]] /
+          (lavsamplestats@nobs[[g]] - 1)
+      }
+      wd <- lav_samp_wls_v_nt_prod(
+        m_icov = lavsamplestats@icov[[g]],
+        x = delta[[g]],
+        meanstructure = lavmodel@meanstructure,
+        fixed_x = lavmodel@fixed.x,
+        x_idx = lavsamplestats@x.idx[[g]],
+        v11_scale = v11_scale
+      )
+      score_matrix[wi, ] <- zc %*% wd
+    } else {
+      m_w <- lavsamplestats@WLS.V[[g]]
+      score_matrix[wi, ] <- zc %*% m_w %*% delta[[g]]
+    }
   } # g
 
   score_matrix
@@ -424,4 +601,4 @@ lav_sc_ls <- function(ntab = 0L,
 
 # estfun method for the sandwich package (thin forwarder; see lav_alias
 # in 00alias.R)
-estfun.lavaan <- lav_alias("lavScores")
+estfun.lavaan <- lav_alias("lavScores")        # nolint

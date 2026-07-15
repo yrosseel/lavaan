@@ -463,7 +463,7 @@ lav_lavaan_lavinspect <- function(object,
 
 
     #### NACOV samplestats ####
-  } else if (what == "gamma") {
+  } else if (what == "gamma" || what == "sampstat.nacov") {
     lav_inspect_sampstat_gamma(object,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
@@ -664,6 +664,19 @@ lav_lavaan_lavinspect <- function(object,
     lav_inspect_sargan(object,
       drop_list_single_group = drop_list_single_group)
 
+    # sam: the stored step-2 structural fit (local sam.method only)
+  } else if (what %in% c("sam.struc.fit.object", "sam.struc")) {
+    if (is.null(object@internal$sam.method)) {
+      lav_msg_stop(gettext("this model was not fitted with sam()."))
+    }
+    fit_pa <- lav_sam_struc_object(object)
+    if (is.null(fit_pa)) {
+      lav_msg_stop(gettext(
+        "no stored structural fit found: either sam.method = \"global\" was
+         used, or this sam object was created by an older version of lavaan."))
+    }
+    fit_pa
+
     # post-checking
   } else if (what == "post.check" || what == "post") {
     lav_object_post_check(object)
@@ -850,6 +863,13 @@ lav_inspect_modelmatrices <- function(object, what = "free",
       ceq_simple     = TRUE,
       delta          = NULL)
   } else if (what == "dx.all") {
+    # the gradient for ALL model matrix elements (type = "allofthem")
+    # has not been implemented for these model classes
+    if (object@Model@multilevel || object@Model@categorical ||
+        object@Model@conditional.x) {
+      lav_msg_stop(gettext("dx.all is not available for multilevel,
+        categorical or conditional.x models"))
+    }
     if (lav_verbose(FALSE)) on.exit(lav_verbose(current_verbose), TRUE)
     glist <- lav_model_grad(
       lavmodel   = object@Model,
@@ -1398,6 +1418,9 @@ lav_inspect_cl_info <- function(
       # everybody belongs to cluster 1
       return_value <- lapply(seq_len(n_g),
         function(gg) rep(1L, object@Data@nobs[[gg]]))
+    } else if (what == "average.cluster.size") {
+      lav_msg_stop(gettext(
+        "average cluster size only available for clustered data"))
     }
   }
 
@@ -1884,7 +1907,11 @@ lav_inspect_th <- function(object,
 
   # labels + class
   for (b in seq_len(nblocks)) {
-    if (length(object@Model@num.idx[[b]]) > 0L) {
+    # note: for (continuous) multilevel models, @Model@th.idx may contain
+    # fewer elements than nblocks; but then there is nothing to remove
+    if (length(object@Model@num.idx[[b]]) > 0L &&
+        b <= length(object@Model@th.idx) &&
+        length(object@Model@th.idx[[b]]) > 0L) {
       num_idx <- which(object@Model@th.idx[[b]] == 0)
       return_value[[b]] <- return_value[[b]][-num_idx]
     }
@@ -1948,7 +1975,8 @@ lav_inspect_vy <- function(object,
   # labels + class
   for (b in seq_len(nblocks)) {
     if (add_labels && length(return_value[[b]]) > 0L) {
-      if (object@Model@categorical) {
+      if (object@Model@categorical || object@Model@conditional.x) {
+        # y-side variables only (no exogenous x covariates)
         names(return_value[[b]]) <- object@pta$vnames$ov.nox[[b]]
       } else {
         names(return_value[[b]]) <- object@pta$vnames$ov[[b]]
@@ -2181,6 +2209,17 @@ lav_inspect_wls_obs <- function(object,
 
   return_value <- object@SampleStats@WLS.obs ### FIXME: should be in @h1??
 
+  # two-level models (e.g., estimator = "ML"): the WLS.obs slot may not
+  # be filled in; construct the observed statistic vector from the h1
+  # (saturated) model instead, using the same layout as wls.est
+  if (object@Data@nlevels > 1L && any(sapply(return_value, is.null))) {
+    if (length(object@h1) == 0L) {
+      lav_msg_stop(gettext("h1 slot is not available; refit with h1 = TRUE"))
+    }
+    return_value <- lav_model_wls_est(lavmodel = object@Model,
+      lavimplied = object@h1$implied)
+  }
+
   if (add_labels) {
     tmp_names <- lav_inspect_delta_rownames(object,
       drop_list_single_group = FALSE)
@@ -2267,11 +2306,7 @@ lav_inspect_wls_v <- function(object,
 lav_inspect_sampstat_gamma <- function(object,
     add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
-  if (!is.null(object@SampleStats@NACOV[[1]])) {
-    return_value <- object@SampleStats@NACOV
-  } else {
-    return_value <- lav_object_gamma(object)
-  }
+  return_value <- lav_gamma_used(object)
 
   if (add_labels) {
     tmp_names <- lav_inspect_delta_rownames(object,
@@ -2313,7 +2348,11 @@ lav_inspect_sampstat_gamma <- function(object,
       }
     } else if (object@Data@nlevels > 1L &&
       length(object@Data@group.label) == 0L) {
-      names(return_value) <- object@Data@level.label
+      # two-level: NACOV/Gamma is stored per group (one matrix covering both
+      # levels), not per level; only add level labels if the lengths match
+      if (length(return_value) == length(object@Data@level.label)) {
+        names(return_value) <- object@Data@level.label
+      }
     }
   }
 
@@ -2945,14 +2984,16 @@ lav_inspect_vcov_def <- function(object, joint = FALSE,
     }
   }
 
-  # labels
+  # labels: the same parameter names as coef()/vcov() (user labels override
+  # the lhs-op-rhs default; := rows keep their name) (github issue #504)
   if (add_labels) {
+    tmp_names <- lav_pt_labels(lavpartable, type = "user")
     if (joint) {
-      lhs_names <- lavpartable$lhs[joint_idx]
+      tmp_names <- tmp_names[joint_idx]
     } else {
-      lhs_names <- lavpartable$lhs[def_idx]
+      tmp_names <- tmp_names[def_idx]
     }
-    colnames(return_value) <- rownames(return_value) <- lhs_names
+    colnames(return_value) <- rownames(return_value) <- tmp_names
   }
 
   # class
@@ -3555,18 +3596,33 @@ lav_inspect_mdist2 <- function(object, type = "resid", squared = TRUE,
   lavdata <- object@Data
   n_g <- lavdata@ngroups
 
-  # lavPredict()
-  out <- lavPredict(object, type = type, method = "ML", # = Bartlett
-    label = FALSE, fsm = TRUE, mdist = TRUE,
-    se = "none", acov = "none")
-  return_value <- attr(out, "mdist")
+  if (object@Model@categorical) {
+    # ordered categorical (or mixed) data: the expected M-distances of the
+    # latent responses, obtained by Monte Carlo integration (Mansolf &
+    # Reise, 2017); note that here the expected distance E[d] is not the
+    # square root of the expected squared distance E[d^2], so both are
+    # computed directly
+    out <- lav_predict_mdist_cat(lavobject = object, type = type,
+      method = "ML") # = Bartlett
+    if (squared) {
+      return_value <- lapply(out, "[[", "d2")
+    } else {
+      return_value <- lapply(out, "[[", "d")
+    }
+  } else {
+    # lavPredict()
+    out <- lavPredict(object, type = type, method = "ML", # = Bartlett
+      label = FALSE, fsm = TRUE, mdist = TRUE,
+      se = "none", acov = "none")
+    return_value <- attr(out, "mdist")
 
-  for (g in seq_len(n_g)) {
     # squared?
     if (!squared) {
-      return_value[[g]] <- sqrt(return_value[[g]])
+      return_value <- lapply(return_value, sqrt)
     }
+  }
 
+  for (g in seq_len(n_g)) {
     # labels?
     # if(add_labels) {
     # }

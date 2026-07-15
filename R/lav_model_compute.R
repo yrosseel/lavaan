@@ -443,8 +443,12 @@ lav_model_veta <- function(lavmodel = NULL, glist = NULL,
 }
 
 # V(ETA|x_i): latent variances variances/covariances, conditional on x_
-# - this is always (I-B)^-1 PSI (I-B)^-T, after REMOVING lv dummies
-lav_model_vetax <- function(lavmodel = NULL, glist = NULL) {
+# - this is always (I-B)^-1 PSI (I-B)^-T
+# - by default the (observed) dummy latent variables are REMOVED, but if
+#   remove_dummy_lv = FALSE, the full latent space is kept (needed when the
+#   result must be conformable with the full LAMBDA, e.g. in lavPredict())
+lav_model_vetax <- function(lavmodel = NULL, glist = NULL,
+                            remove_dummy_lv = TRUE) {
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
@@ -463,10 +467,14 @@ lav_model_vetax <- function(lavmodel = NULL, glist = NULL) {
     mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      lv_idx <- c(
-        lavmodel@ov.y.dummy.lv.idx[[g]],
-        lavmodel@ov.x.dummy.lv.idx[[g]]
-      )
+      if (remove_dummy_lv) {
+        lv_idx <- c(
+          lavmodel@ov.y.dummy.lv.idx[[g]],
+          lavmodel@ov.x.dummy.lv.idx[[g]]
+        )
+      } else {
+        lv_idx <- NULL
+      }
       eta_g <- lav_lisrel_vetax(
         mlist = mlist,
         lv_dummy_idx = lv_idx

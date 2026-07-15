@@ -270,9 +270,9 @@ lav_step11_estoptim <- function(lavdata = NULL,
         }
       }
 
-      # Gauss-Newton
+      # Gauss-Newton (Fisher scoring with Levenberg-Marquardt damping);
+      # the default for DLS
     } else if (lavoptions$optim.method == "gn") {
-      # only tested for DLS (for now)
       x <- try(
         lav_optim_gn(
           lavmodel = lavmodel,

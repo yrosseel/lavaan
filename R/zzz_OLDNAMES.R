@@ -88,6 +88,22 @@ simulateData <- function(
                          standardized = FALSE) {
   lav_deprecated("lavSimulateData", times = 0L)   #--> for now no warning
   sc <- sys.call()
+  # rename any old dotted argument names to their snake_case equivalents
+  # (e.g. 'group.label' -> 'group_label') at the *name* level, without
+  # evaluating the argument expressions. this routes such arguments to the
+  # matching formal of the new function instead of into '...', where
+  # 'list(...)' would eagerly force them. it preserves backward compatibility
+  # for callers that copied lavaan's historical (and unused) default idiom
+  # 'group.label = paste("G", 1:ngroups, sep = "")', where 'ngroups' only
+  # ever existed inside lavaan: as long as such an argument is never used, it
+  # stays a lazy promise and is never evaluated (as it was before 0.6-19).
+  nms <- names(sc)
+  if (!is.null(nms)) {
+    named <- which(nzchar(nms))
+    if (length(named) > 0L) {
+      names(sc)[named] <- lav_snake_case(nms[named])
+    }
+  }
   # call new function
   sc[[1L]] <- quote(lavaan::lavSimulateData)
   eval(sc, parent.frame())

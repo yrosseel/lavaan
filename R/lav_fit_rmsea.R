@@ -251,7 +251,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "yuan.chan", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted",
+      "scaled.shifted.corrected"
     )) {
     robust_flag <- TRUE
   }
@@ -335,7 +336,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
 
   # scaled X2/df values
   if (scaled_flag) {
-    if (scaled_test == "scaled.shifted") {
+    if (scaled_test %in% c("scaled.shifted", "scaled.shifted.corrected")) {
       xx2 <- test[[scaled_idx]]$stat
       df2 <- df
     } else {
@@ -376,7 +377,9 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
       xx3 <- x2
       df3 <- df
       c_hat <- test[[scaled_idx]]$scaling.factor
-      if (scaled_test == "scaled.shifted") {
+      if (scaled_test %in% c(
+        "scaled.shifted", "scaled.shifted.corrected"
+      )) {
         # compute c.hat from a and b
         a <- test[[scaled_idx]]$scaling.factor
         b <- test[[scaled_idx]]$shift.parameter

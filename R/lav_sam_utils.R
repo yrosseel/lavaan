@@ -22,6 +22,19 @@ lav_sam_lvnames2 <- function(lv_names) {
   list(idx1 = idx1, idx2 = idx2, names = names2)
 }
 
+# is this a sam object created with sam.method = "local", "fsr" or "cfsr"?
+lav_sam_local_flag <- function(object) {
+  sam_method <- object@internal$sam.method
+  !is.null(sam_method) && sam_method %in% c("local", "fsr", "cfsr")
+}
+
+# the stored step-2 structural fit of a local SAM object (with the two-step
+# corrected test/baseline injected, if available); NULL for global sam
+# objects, and for sam objects created by older versions of lavaan
+lav_sam_struc_object <- function(object) {
+  object@internal$sam.struc.fit.object
+}
+
 # construct 'mapping matrix' M using either "ML", "GLS" or "ULS" method
 #
 # by construction, M %*% LAMBDA = I (the identity matrix)
@@ -678,6 +691,7 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
 
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     lavoptions_joint$baseline <- FALSE
+    lavoptions_joint$fit.by.level <- FALSE
     lavoptions_joint$sample.icov <- FALSE
     #lavoptions.joint$h1 <- TRUE # we need this if we re-use the sam object
     lavoptions_joint$test <- "none"
@@ -697,16 +711,46 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
   # set ustart values
   pt_1$ustart <- pt_1$est # as this is used if optim.method == "none"
 
+  # the step-0 dummy fit of the local methods skips the inverse of S
+  # (sample.icov = FALSE: the inverse may not exist when N < nvar), but the
+  # joint-model computations of some estimators need S^-1 (eg the GLS
+  # information/objective). Backfill it here when it is missing; if S cannot
+  # be inverted it simply stays missing, exactly as before.
+  lavsamplestats_joint <- fit@SampleStats
+  if (fit@Data@nlevels == 1L && !fit@Model@categorical &&
+      !lavsamplestats_joint@missing.flag) { # core lavaan skips icov for
+                                            # missing = "ml" on purpose
+    for (g in seq_len(lavsamplestats_joint@ngroups)) {
+      if (is.null(lavsamplestats_joint@icov[[g]]) &&
+          !is.null(lavsamplestats_joint@cov[[g]])) {
+        # quietly: the inverse is optional here (only some estimators need
+        # it), so a non-PD S must not surface a warning at this point
+        current_warn <- lav_warn()
+        lav_warn(FALSE)
+        out <- try(lav_samp_icov(
+          cov_1 = lavsamplestats_joint@cov[[g]], ridge = 1e-05,
+          x_idx = lavsamplestats_joint@x.idx[[g]],
+          ngroups = fit@Data@ngroups, g = g
+        ), silent = TRUE)
+        lav_warn(current_warn)
+        if (!inherits(out, "try-error")) {
+          lavsamplestats_joint@icov[[g]] <- out$icov
+          lavsamplestats_joint@cov.log.det[[g]] <- out$cov.log.det
+        }
+      }
+    }
+  }
+
   joint <- lavaan::lavaan(pt_1,
     slot_options = lavoptions_joint,
-    slot_sample_stats = fit@SampleStats,
+    slot_sample_stats = lavsamplestats_joint,
     slot_data = fit@Data,
     verbose = FALSE
   )
   joint
 }
 
-# (two-step robust) fit measures for the structural part of a local SAM model.
+# the (two-step robust) STRUCTURAL fit object of a local SAM model.
 #
 # The structural model FIT.PA is fitted with se = "robust.sem" using the
 # step-1 induced NACOV (Gamma.eta) of the latent (co)variances/means. Its
@@ -720,20 +764,12 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
 # step-1 variability couples the groups, so the relevant Gamma has nonzero
 # cross-group blocks (step1$Gamma.eta.full) that a per-group NACOV list cannot
 # represent. We then recompute the Satorra-Bentler scaled chi-square ourselves
-# -- for the model AND the baseline -- using that full Gamma, and read off the
-# robust fit measures.
-lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
-  measures <- c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")
-
-  fallback <- function() {
-    out <- try(fitMeasures(fit_pa, measures), silent = TRUE)
-    if (inherits(out, "try-error")) {
-      out <- "(unable to obtain fit measures)"
-      names(out) <- "warning"
-    }
-    out
-  }
-
+# -- for the model AND the baseline -- using that full Gamma.
+#
+# The corrected FIT.PA is stored in the @internal slot of the final sam
+# object (element sam.struc.fit.object), so that fitMeasures(), lavResiduals()
+# and modindices() can delegate to it (issue #517).
+lav_sam_struc_fit_object <- function(fit_pa = NULL, step1 = NULL) {
   # do we have a (local) Gamma.eta and a non-saturated structural model?
   have_gamma <- !is.null(step1$Gamma.eta) &&
     length(step1$Gamma.eta) > 0L && !is.null(step1$Gamma.eta[[1]])
@@ -742,15 +778,16 @@ lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
     !is.null(fit_pa@baseline$partable)
 
   if (!have_gamma || df_struc < 1L || !has_baseline) {
-    return(fallback())
+    return(fit_pa)
   }
 
   out <- try(
     {
-      ng <- fit_pa@Data@ngroups
-      ntot <- fit_pa@SampleStats@ntotal
-      fg <- unlist(fit_pa@SampleStats@nobs) / ntot
-      meanstr <- fit_pa@Model@meanstructure
+      fp <- fit_pa
+      ng <- fp@Data@ngroups
+      ntot <- fp@SampleStats@ntotal
+      fg <- unlist(fp@SampleStats@nobs) / ntot
+      meanstr <- fp@Model@meanstructure
 
       # full Gamma of the stacked structural statistics (cross-group blocks
       # for Case B; block-diagonal otherwise)
@@ -764,54 +801,78 @@ lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
 
       # model: Satorra-Bentler scaled test using the full Gamma
       test_model <- lav_test_sb(
-        lavobject = fit_pa, test = "satorra.bentler",
+        lavobject = fp, test = "satorra.bentler",
         gamma_full = gamma_all
       )
 
       # baseline: refit the independence model on the latent (co)variances,
       # then apply the same Satorra-Bentler correction with the full Gamma
       fit_base <- lavaan::lavaan(
-        model = fit_pa@baseline$partable,
+        model = fp@baseline$partable,
         sample.cov = step1$VETA,
         sample.mean = if (meanstr) step1$EETA else NULL,
-        sample.nobs = as.list(unlist(fit_pa@SampleStats@nobs)),
+        sample.nobs = as.list(unlist(fp@SampleStats@nobs)),
         nacov = step1$Gamma.eta,
-        slot_options = fit_pa@Options
+        slot_options = fp@Options
       )
       test_base <- lav_test_sb(
         lavobject = fit_base, test = "satorra.bentler",
         gamma_full = gamma_all
       )
 
-      # inject the corrected scaled tests, then read the robust fit measures
-      fit_pa@test[["satorra.bentler"]] <- test_model[["satorra.bentler"]]
-      base_idx <- which(vapply(fit_pa@baseline$test,
+      # inject the corrected scaled tests
+      fp@test[["satorra.bentler"]] <- test_model[["satorra.bentler"]]
+      base_idx <- which(vapply(fp@baseline$test,
         function(x) x$test, character(1L)) == "satorra.bentler")
       if (length(base_idx) > 0L) {
-        fit_pa@baseline$test[[base_idx[1]]] <- test_base[["satorra.bentler"]]
+        fp@baseline$test[[base_idx[1]]] <- test_base[["satorra.bentler"]]
       }
-
-      # use the fitMeasures() labels for the SCALED/ROBUST measures, so the
-      # printed header makes clear these are the two-step corrected values
-      # (chisq.scaled / pvalue.scaled / cfi.robust / rmsea.robust), exactly as
-      # fitMeasures() reports them. (The naive fallback() above keeps the plain
-      # chisq/pvalue/cfi/rmsea labels.)
-      scaled_labels <- c(
-        "chisq.scaled", "df", "pvalue.scaled",
-        "cfi.robust", "rmsea.robust", "srmr"
-      )
-      fm <- fitMeasures(fit_pa, scaled_labels)
-      fm <- as.numeric(fm)
-      names(fm) <- scaled_labels
-      fm
+      fp@external$sam.struc.corrected <- TRUE
+      fp
     },
     silent = TRUE
   )
 
   if (inherits(out, "try-error")) {
-    return(fallback())
+    return(fit_pa) # the untouched original
   }
   out
+}
+
+# (two-step robust) fit measures for the structural part of a local SAM model,
+# extracted from the (corrected) structural fit object
+lav_sam_struc_fit <- function(fit_pa = NULL) {
+  measures <- c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")
+
+  fallback <- function() {
+    out <- try(fitMeasures(fit_pa, measures), silent = TRUE)
+    if (inherits(out, "try-error")) {
+      out <- "(unable to obtain fit measures)"
+      names(out) <- "warning"
+    }
+    out
+  }
+
+  if (!isTRUE(fit_pa@external$sam.struc.corrected)) {
+    return(fallback())
+  }
+
+  # use the fitMeasures() labels for the SCALED/ROBUST measures, so the
+  # printed header makes clear these are the two-step corrected values
+  # (chisq.scaled / pvalue.scaled / cfi.robust / rmsea.robust), exactly as
+  # fitMeasures() reports them. (The naive fallback() above keeps the plain
+  # chisq/pvalue/cfi/rmsea labels.)
+  scaled_labels <- c(
+    "chisq.scaled", "df", "pvalue.scaled",
+    "cfi.robust", "rmsea.robust", "srmr"
+  )
+  fm <- try(fitMeasures(fit_pa, scaled_labels), silent = TRUE)
+  if (inherits(fm, "try-error")) {
+    return(fallback())
+  }
+  fm <- as.numeric(fm)
+  names(fm) <- scaled_labels
+  fm
 }
 
 # Yuan & Chan (2002) rescaled GLOBAL test statistic for sam.method = "global".
@@ -881,6 +942,25 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   }
   fallback  <- list(test = test_orig, baseline.test = NULL)
 
+  # conditional.x: not supported (yet). The machinery below runs, but with
+  # NON-NORMAL (eg skewed or binary) covariates the scaled statistic is badly
+  # anti-conservative (empirical rejection rates up to ~0.3 at the 5% level
+  # in simulations, with either random or fixed covariate values; the
+  # simultaneous sem() satorra.bentler test on the same data is accurate, and
+  # so is the sam yuan.chan test with multivariate normal covariates -- the
+  # interplay between the unconditionally fitted step-1 blocks and the
+  # conditional full-model discrepancy is not yet correctly captured by the
+  # D Gamma D' residualization). Report the honest unscaled test instead.
+  # (The corrected STRUCTURAL test of sam.method = "local" does not have
+  # this problem: it is accurate in the same simulations.)
+  if (joint@Model@conditional.x) {
+    lav_msg_warn(gettext(
+      "the Yuan & Chan (2002) scaled test statistic (test = \"yuan.chan\") is
+       not available (yet) when conditional.x = TRUE; the standard (unscaled)
+       test is reported instead."))
+    return(fallback)
+  }
+
   # locate the standard (unscaled) full-model test = base statistic T
   std_idx <- which(vapply(test_orig, function(x) x$test, character(1L)) ==
                    "standard")
@@ -900,31 +980,25 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
       step1_free_idx <- step1$step1.free.idx
       step2_free_idx <- step2$step2.free.idx
 
-      # ingredients of the full (joint) model
-      if (!is.null(joint@SampleStats@NACOV[[1]])) {
-        gamma <- joint@SampleStats@NACOV
-      } else {
-        # default: the (unbiased) ADF Gamma. This is unavailable for the
-        # fixed.x / conditional.x setting (lav_samp_gamma() with unbiased =
-        # TRUE stops), so fall back to the *biased* ADF Gamma there
-        # (gamma.unbiased = FALSE) -- exactly the Gamma that simultaneous
-        # sem(test = "satorra.bentler") uses for such models. Asymptotically
-        # equivalent; the simple (no-x) cases keep the unbiased Gamma so their
-        # values are unchanged.
-        gamma <- tryCatch(lavTech(joint, "gamma"),
-                          error = function(e) NULL)
-        if (is.null(gamma)) {
-          opts <- joint@Options
-          opts$gamma.unbiased <- FALSE
-          gamma <- lav_object_gamma(
-            lavdata        = joint@Data,
-            lavoptions     = opts,
-            lavsamplestats = joint@SampleStats,
-            lavh1          = joint@h1,
-            lavimplied     = joint@implied,
-            model_based    = FALSE
-          )
-        }
+      # ingredients of the full (joint) model:
+      # stored NACOV, else recompute with the fit-time settings. The
+      # (unbiased) ADF Gamma is unavailable for the fixed.x / conditional.x
+      # setting (lav_samp_gamma() with unbiased = TRUE stops), so fall back
+      # to the *biased* ADF Gamma there (gamma.unbiased = FALSE) -- exactly
+      # the Gamma that simultaneous sem(test = "satorra.bentler") uses for
+      # such models. Asymptotically equivalent; the simple (no-x) cases keep
+      # the unbiased Gamma so their values are unchanged.
+      gamma <- tryCatch(lav_gamma_used(joint), error = function(e) NULL)
+      if (is.null(gamma) || is.null(gamma[[1]])) {
+        opts <- joint@Options
+        opts$gamma.unbiased <- FALSE
+        gamma <- lav_gamma_used(
+          lavdata        = joint@Data,
+          lavoptions     = opts,
+          lavsamplestats = joint@SampleStats,
+          lavh1          = joint@h1,
+          lavimplied     = joint@implied
+        )
       }
       delta <- lavTech(joint, "Delta")
       wls_v <- lavTech(joint, "WLS.V")
@@ -984,17 +1058,15 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   )
 
   if (inherits(out, "try-error")) {
-    # the Yuan-Chan correction reuses the same step-1 jacobian (P) as the robust
-    # SEs, so it shares their current limitations: it is not available for models
-    # with within-block equality constraints or conditional.x = TRUE (the P-row
-    # alignment then fails). Exogenous covariates with the default fixed.x = TRUE
-    # ARE supported (the biased ADF Gamma is used). Fall back to the unscaled
-    # test, with a note.
+    # the Yuan-Chan correction reuses the same step-1 jacobian (P) as the
+    # robust SEs, so it shares their current limitations. Equality constraints
+    # (within-block and across-group) and exogenous covariates (fixed.x, and
+    # conditional.x with the biased ADF Gamma) ARE supported. Fall back to the
+    # unscaled test, with a note.
     lav_msg_warn(gettext(
       "the Yuan & Chan (2002) scaled test statistic (test = \"yuan.chan\") is
-       not available for this model (eg models with within-block equality
-       constraints or conditional.x = TRUE); the standard (unscaled) test is
-       reported instead."))
+       not available for this model; the standard (unscaled) test is reported
+       instead."))
     return(fallback) # fall back to the unscaled standard test
   }
 
@@ -1009,24 +1081,34 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   # scaled test while its baseline does not).
   baseline_test <- NULL
   if (!is.null(joint@baseline$partable)) {
-    baseline_test <- try(
-      {
-        opts <- fit@Options
-        opts$se       <- "none"
-        opts$test     <- test
-        opts$baseline <- FALSE
-        opts$estimator <- joint@Model@estimator
-        fit_base <- lavaan::lavaan(
-          model             = joint@baseline$partable,
-          slot_data         = joint@Data,
-          slot_sample_stats = joint@SampleStats,
-          slot_options      = opts,
-          verbose           = FALSE
-        )
-        rename_yc(fit_base@test)
-      },
-      silent = TRUE
-    )
+    refit_baseline <- function(gamma_unbiased = NULL) {
+      opts <- fit@Options
+      opts$se       <- "none"
+      opts$test     <- test
+      opts$baseline <- FALSE
+      opts$fit.by.level <- FALSE
+      opts$estimator <- joint@Model@estimator
+      if (!is.null(gamma_unbiased)) {
+        opts$gamma.unbiased <- gamma_unbiased
+      }
+      fit_base <- lavaan::lavaan(
+        model             = joint@baseline$partable,
+        slot_data         = joint@Data,
+        slot_sample_stats = joint@SampleStats,
+        slot_options      = opts,
+        verbose           = FALSE
+      )
+      rename_yc(fit_base@test)
+    }
+    baseline_test <- try(refit_baseline(), silent = TRUE)
+    if (inherits(baseline_test, "try-error")) {
+      # the unbiased ADF Gamma (the sam default) is not available for eg
+      # fixed.x models: retry with the biased ADF Gamma, exactly as the
+      # model test above does (lav_gamma_used() fallback). Without a scaled
+      # baseline the scaled/robust incremental fit measures would be NA.
+      baseline_test <- try(refit_baseline(gamma_unbiased = FALSE),
+                           silent = TRUE)
+    }
     if (inherits(baseline_test, "try-error")) {
       baseline_test <- NULL
     }
@@ -1061,15 +1143,23 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
 
   # extra info for @internal slot
   if (sam_method %in% c("local", "fsr", "cfsr")) {
-    # (two-step robust) fit measures for the structural part; for multigroup
-    # models with across-group measurement constraints (Case B) these are
-    # recomputed with the full cross-group Gamma
-    sam_struc_fit <- lav_sam_struc_fit(fit_pa = fit_pa, step1 = step1)
+    # the structural fit object, with the (two-step robust) corrected test
+    # and baseline injected; for multigroup models with across-group
+    # measurement constraints (Case B) these are recomputed with the full
+    # cross-group Gamma. The object is stored in the @internal slot, so that
+    # fitMeasures(), lavResiduals() and modindices() can delegate to it
+    # (issue #517)
+    sam_struc_fit_object <- lav_sam_struc_fit_object(
+      fit_pa = fit_pa, step1 = step1
+    )
+    # (two-step robust) fit measures for the structural part
+    sam_struc_fit <- lav_sam_struc_fit(fit_pa = sam_struc_fit_object)
     sam_mm_rel <- step1$REL
   } else {
     sam_struc_fit <- paste0("no local fit measures available for",
                     "structural part if sam.method is global")
     names(sam_struc_fit) <- "warning"
+    sam_struc_fit_object <- NULL
     sam_mm_rel <- numeric(0L)
   }
 
@@ -1090,6 +1180,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     sam.struc.estimator = fit_pa@Model@estimator,
     sam.struc.args = struc_args,
     sam.struc.fit = sam_struc_fit,
+    sam.struc.fit.object = sam_struc_fit_object,
     sam.lavoptions = lavoptions
   )
   sam_1
@@ -1128,11 +1219,13 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
   # containers
   cov_list  <- vector("list", nblocks)
   ybar_list <- vector("list", nblocks)
+  slopes_list <- vector("list", nblocks)
 
   # label
   if (nblocks > 1L) {
     names(cov_list)  <- fit@Data@block.label
     names(ybar_list) <- fit@Data@block.label
+    names(slopes_list) <- fit@Data@block.label
   }
 
   # collect COV/YBAR per block
@@ -1185,6 +1278,7 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
       if (fit@Model@conditional.x) {
         ybar <- h1implied$res.int[[b]]
         cov_1  <- h1implied$res.cov[[b]]
+        slopes_list[[b]] <- h1implied$res.slopes[[b]]
       } else {
         ybar <- h1implied$mean[[b]] # EM version if missing="ml"
         cov_1  <- h1implied$cov[[b]]
@@ -1195,7 +1289,7 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
     ybar_list[[b]] <- ybar
   }
 
-  list(COV = cov_list, YBAR = ybar_list)
+  list(COV = cov_list, YBAR = ybar_list, SLOPES = slopes_list)
 }
 
 # automatically generate mm.list; we create measurement blocks so that:
@@ -1252,11 +1346,13 @@ lav_sam_get_mmlist <- function(lavobject) {
 }
 
 # labels for the elements of the WLS.obs statistics vector in the
-# categorical, conditional.x = FALSE case: 1) thresholds and (negative)
-# means, interleaved per variable, 2) variances (numeric variables only),
-# 3) correlations (vech, no diagonal); used to map the statistics of a
-# measurement block into the statistics vector of the joint model
-lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
+# categorical case: 1) thresholds and (negative) means, interleaved per
+# variable, 2) [conditional.x only] the slopes of the y-variables on the
+# exogenous covariates, column-major (lav_mat_vec(SLOPES): all y for x1,
+# then x2, ...), 3) variances (numeric variables only), 4) correlations
+# (vech, no diagonal); used to map the statistics of a measurement block
+# into the statistics vector of the joint model
+lav_sam_wls_obs_labels <- function(ov_names, th_idx, ov_names_x = NULL) {
   nvar <- length(ov_names)
 
   # variable of each th element: ordered variables have th_idx > 0; the
@@ -1272,6 +1368,13 @@ lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
     v <- v_of[k]
     count[v] <- count[v] + 1L
     th_labels[k] <- paste0(ov_names[v], "|t", count[v])
+  }
+
+  # slopes (conditional.x only), column-major over the nvar x nexo matrix
+  slope_labels <- character(0L)
+  if (length(ov_names_x) > 0L) {
+    slope_labels <- paste0(rep(ov_names, times = length(ov_names_x)), "~",
+                           rep(ov_names_x, each = nvar))
   }
 
   # variances (numeric variables only)
@@ -1294,7 +1397,37 @@ lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
     }, character(1L))
   }
 
-  c(th_labels, var_labels, cor_labels)
+  c(th_labels, slope_labels, var_labels, cor_labels)
+}
+
+# conditional.x: permutation of the conditional structural-moment vector
+# c( vecr(cbind(EETA, RS_eta)), vech(VETA) ) -- with the variables in
+# VETA (measurement) order and the covariates in data (ov.names.x) order --
+# to the structural model's internal order (target_eta = its ov.nox,
+# target_x = its ov.x). This is the layout of FIT.PA's WLS.obs: the NACOV
+# passed to lavaan() is consumed as-is (no name matching), so Gamma.eta must
+# be permuted with this index before the step-2 handoff.
+lav_sam_condx_perm_idx <- function(eta_names, x_names,
+                                   target_eta, target_x) {
+  ord <- match(target_eta, eta_names)
+  ord_x <- match(target_x, x_names)
+  if (length(ord) != length(eta_names) || anyNA(ord) ||
+      length(ord_x) != length(x_names) || anyNA(ord_x)) {
+    lav_msg_stop(gettext(
+      "internal error: unable to align the conditional structural moments
+      with the structural model (Gamma.eta permutation)"))
+  }
+  p <- length(eta_names)
+  q <- length(x_names)
+  mean_block <- unlist(lapply(ord, function(j) {
+    (j - 1L) * (q + 1L) + c(1L, 1L + ord_x)
+  }))
+  pos <- matrix(0L, p, p)
+  pos[lower.tri(pos, diag = TRUE)] <- seq_len(p * (p + 1L) / 2L)
+  pos[upper.tri(pos)] <- t(pos)[upper.tri(pos)]
+  sub <- pos[ord, ord, drop = FALSE]
+  vech_perm <- sub[lower.tri(sub, diag = TRUE)]
+  c(mean_block, p * (q + 1L) + vech_perm)
 }
 
 # merge the per-block mm clusters (as returned by lav_sam_get_mmlist())

@@ -100,7 +100,14 @@ Model features:
      listed variables are standardized to unit variance (their residual
      variances are fixed accordingly), while all remaining observed
      variables keep their original metric (a 'partial' correlation
-     structure).}
+     structure). If the model contains observed product (interaction)
+     terms (for example \code{x1:y1}) and \code{correlation = TRUE},
+     the product terms are automatically excluded from the correlation
+     set: the product of standardized variables does not have unit
+     variance, so their (co)variances remain free parameters. Note that
+     product terms are typically highly non-normal, so the normal-theory
+     (GLS) standard errors for their (co)variances may be too small;
+     consider \code{se = "robust.sem"}.}
     \item{\code{composites.cov}:}{Character string. Only used if the model
      contains composites. Controls whether the composite-indicator
      (co)variances (the elements of the \code{T} matrix) are fixed to their
@@ -134,8 +141,14 @@ Model features:
       indicator of a latent variable.}
     \item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
       and latent variables are set free.}
-    \item{\code{auto.cov.lv.x}:}{If \code{TRUE}, the covariances of exogenous 
+    \item{\code{auto.cov.lv.x}:}{If \code{TRUE}, the covariances of exogenous
       latent variables are included in the model and set free.}
+    \item{\code{auto.cov.x}:}{If \code{TRUE}, the covariances between
+      exogenous latent variables and observed exogenous covariates are also
+      included in the model and set free (this implies
+      \code{auto.cov.lv.x = TRUE}). Ignored if \code{conditional.x = TRUE},
+      as these covariances cannot be represented when the model is
+      conditioned on the exogenous covariates.}
     \item{\code{auto.cov.y}:}{If \code{TRUE}, the covariances of dependent 
       variables (both observed and latent) are included in the model and set 
       free.}
@@ -179,6 +192,14 @@ Data options:
       but does not delete any cases with missing values for the exogenous
       covariates, even if \code{fixed.x = TRUE}. (Note: all lavaan versions
       < 0.6 used \code{"ml.x"} instead of \code{"ml"}).
+      Since version 0.7-2, \code{"ml"} can also be combined with
+      \code{conditional.x = TRUE} (single-level, continuous data): the
+      likelihood of the observed non-x variables is then computed case by
+      case, conditional on the (complete) exogenous covariates of that
+      case. Cases with missing values on the exogenous covariates are
+      deleted first, and \code{"ml.x"} is not available in this setting.
+      Note that the robust (missing-data corrected) versions of RMSEA/CFI
+      are not (yet) available when \code{conditional.x = TRUE}.
       If you wish to use multiple
       imputation, you need to use an external package (e.g., mice) to
       generate imputed datasets, which can then be analyzed using
@@ -193,7 +214,9 @@ Data options:
       are adjusted correctly to reflect the two-step procedure. The
       \code{"robust.two.stage"} option produces standard errors and
       a test statistic that are robust against non-normality.
-      Both options are available for the ML estimator, and also for the
+      Both options are available for the ML estimator (since version
+      0.7-2 also in combination with \code{conditional.x = TRUE}), and
+      also for the
       (continuous-data) least-squares estimators \code{"ULS"}, \code{"GLS"},
       \code{"WLS"} and \code{"DLS"}; for the latter, lavaan automatically
       switches to \code{se = "robust.sem"} and \code{test = "satorra.bentler"},
@@ -553,9 +576,12 @@ Optimization options:
       equality constraints (i.e., the model syntax
       does not include any "==", ">" or "<" operators),
       the available options are \code{"nlminb"} (the default), \code{"BFGS"},
-      \code{"L-BFGS-B"}. These are all quasi-newton methods. A basic 
-      implementation of Gauss-Newton is also available
-      (\code{optim.method = "GN"}). The latter is the default when
+      \code{"L-BFGS-B"}. These are all quasi-newton methods. A
+      Gauss-Newton (Fisher scoring) method with Levenberg-Marquardt
+      damping is also available (\code{optim.method = "GN"}); it can be
+      used with the \code{"ML"}, \code{"GLS"}, \code{"WLS"},
+      \code{"DWLS"}, \code{"ULS"}, \code{"DLS"}, \code{"NTRLS"} and
+      \code{"catML"} estimators, and is the default when
       \code{estimator = "DLS"}. For multilevel models, an EM algorithm
       is also available (\code{optim.method = "em"}); this is the
       default for two-level models with \code{missing = "ml"} (as the
@@ -587,14 +613,14 @@ Optimization options:
     \item{\code{optim.dx.tol}}{Numeric. Tolerance used for checking if
       the elements of the (unscaled) gradient are all zero (in absolute 
       value). The default value is 0.001.}
-    \item{\code{optim.gn.tol.x}:}{Numeric. Only used when 
-      \code{optim.method = "GN"}. Optimization stops when
-      the root mean square of the difference between the old and new
-      parameter values is smaller than this tolerance value. Default is
-      \code{1e-05} for DLS estimation and \code{1e-07} otherwise.}
-    \item{\code{optim.gn.max.iter}:}{Integer. Only used when
-      \code{optim.method = "GN"}. The maximum number of GN iterations. 
-      The default is 200.}
+    \item{\code{gn.args}:}{List. Options related to the Gauss-Newton
+      optimizer (\code{optim.method = "GN"}). The default values are
+      \code{gn.args = list(max_iter = 200, tol_x = 1e-05,
+      tol_g = 1e-06)}. The \code{max_iter} element sets the maximum
+      number of Gauss-Newton iterations. Optimization stops when either
+      the (scaled) gradient of the discrepancy function is smaller than
+      \code{tol_g}, or the root mean square of the difference between
+      the old and new parameter values is smaller than \code{tol_x}.}
     \item{\code{bounds}:}{Only used if \code{optim.method = "nlminb"}.
       If logical: \code{FALSE} implies no bounds are imposed on the parameters.
       If \code{TRUE}, this implies \code{bounds = "wide"}. If character,
@@ -824,6 +850,14 @@ Miscellaneous:
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
       allow the slope structure to be unrestricted.}
+    \item{\code{fit.by.level}:}{Logical. Only used for multilevel models.
+      If \code{TRUE}, fit (and store) the partially saturated models that
+      are needed to compute level-specific fit measures: for each level,
+      an auxiliary model is fitted where the model at that level is
+      retained, while the model at the other level is saturated (in
+      addition, level-specific baseline models are fitted as well). See
+      the \code{level} argument of \code{\link{fitMeasures}}. Set to
+      \code{FALSE} to skip these additional model fits.}
     \item{\code{store.vcov}}{Logical. If \code{TRUE}, and \code{se=} is not
       set to \code{"none"}, store the full variance-covariance matrix of
       the model parameters in the vcov slot of the fitted lavaan object.}

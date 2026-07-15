@@ -26,7 +26,7 @@ setMethod(
              robust = TRUE,
              cat.nonpd = "na"
            ),
-           output = "vector", ...) {
+           output = "vector", level = NULL, ...) {
     dotdotdot <- list(...)
     lav_adapt_func(environment(), dotdotdot, NULL)
     if (!is.list(fit_measures))
@@ -35,7 +35,7 @@ setMethod(
     lav_fit(
       object = object, fit_measures = fit_measures,
       baseline_model = baseline_model, h1_model = h1_model,
-      output = output
+      output = output, level = level
     )
   }
 )
@@ -52,7 +52,7 @@ setMethod(
              robust = TRUE,
              cat.nonpd = "na"
            ),
-           output = "vector", ...) {
+           output = "vector", level = NULL, ...) {
     dotdotdot <- list(...)
     lav_adapt_func(environment(), dotdotdot, NULL)
     if (!is.list(fit_measures))
@@ -61,7 +61,7 @@ setMethod(
     lav_fit(
       object = object, fit_measures = fit_measures,
       baseline_model = baseline_model, h1_model = h1_model,
-      output = output
+      output = output, level = level
     )
   }
 )
@@ -127,6 +127,73 @@ lav_efalist_fitmeasures <- function(
 }
 
 
+# complete catalog of fit measure names that fitMeasures() can ever return
+# (across all estimators/test statistics/data types); used to catch
+# misspelled or unknown measure names early -- keep in sync with the 'sets'
+# defined in lav_fit() below
+# note: a name being listed here does not imply the measure is available
+# for every fitted model (eg the .scaled/.robust variants); requesting a
+# valid-but-unavailable measure is silently ignored, as before
+lav_fit_measures_names <- function() {
+  c(
+    # always
+    "npar", "ntotal", "fmin",
+    # chi-square test
+    "chisq", "df", "pvalue",
+    "chisq.scaled", "df.scaled", "pvalue.scaled", "chisq.scaling.factor",
+    # baseline model
+    "baseline.chisq", "baseline.df", "baseline.pvalue",
+    "baseline.chisq.scaled", "baseline.df.scaled", "baseline.pvalue.scaled",
+    "baseline.chisq.scaling.factor",
+    # incremental fit indices
+    "cfi", "tli", "cfi.scaled", "tli.scaled", "cfi.robust", "tli.robust",
+    "nnfi", "rfi", "nfi", "pnfi", "ifi", "rni",
+    "nnfi.scaled", "rfi.scaled", "nfi.scaled", "pnfi.scaled",
+    "ifi.scaled", "rni.scaled",
+    "nnfi.robust", "rni.robust",
+    # likelihood based measures
+    "logl", "unrestricted.logl", "aic", "bic", "bic2",
+    "scaling.factor.h1", "scaling.factor.h0",
+    # rmsea
+    "rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.ci.level",
+    "rmsea.pvalue", "rmsea.close.h0",
+    "rmsea.notclose.pvalue", "rmsea.notclose.h0",
+    "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled",
+    "rmsea.pvalue.scaled", "rmsea.notclose.pvalue.scaled",
+    "rmsea.robust", "rmsea.ci.lower.robust", "rmsea.ci.upper.robust",
+    "rmsea.pvalue.robust", "rmsea.notclose.pvalue.robust",
+    # gfi and friends
+    "gfi", "gfi.ci.lower", "gfi.ci.upper", "gfi.ci.level",
+    "gfi.robust", "gfi.ci.lower.robust", "gfi.ci.upper.robust",
+    "gfi_lrt", "gfi_lrt.ci.lower", "gfi_lrt.ci.upper",
+    "gfi_lrt.robust", "gfi_lrt.ci.lower.robust", "gfi_lrt.ci.upper.robust",
+    "gfi_rls", "gfi_rls.ci.lower", "gfi_rls.ci.upper",
+    "gfi_rls.robust", "gfi_rls.ci.lower.robust", "gfi_rls.ci.upper.robust",
+    "gfi_lisrel", "agfi_lisrel", "pgfi",
+    "agfi", # alias for agfi_lisrel (the only pre-0.7-1 name)
+    # (s)rmr
+    "rmr", "rmr_nomean", "srmr",
+    "srmr_bentler", "srmr_bentler_nomean",
+    "crmr", "crmr_nomean",
+    "srmr_mplus", "srmr_mplus_nomean",
+    "srmr_within", "srmr_between",
+    # various
+    "cn_05", "cn_01", "mfi", "ecvi", "wrmr"
+  )
+}
+
+# if fit_measures is a list, the element holding the measures is classically
+# named "fit.measures"; accept the snake_case spelling "fit_measures" as an
+# alias, matching the name of the formal argument
+lav_fit_measures_list_alias <- function(fit_measures) {
+  if (is.list(fit_measures) && is.null(fit_measures[["fit.measures"]]) &&
+      !is.null(fit_measures[["fit_measures"]])) {
+    names(fit_measures)[names(fit_measures) == "fit_measures"] <-
+      "fit.measures"
+  }
+  fit_measures
+}
+
 lav_fit <- function(object, fit_measures = "all",
                              baseline_model = NULL, h1_model = NULL,
                              fm_args = list(
@@ -138,9 +205,78 @@ lav_fit <- function(object, fit_measures = "all",
                                robust = TRUE,
                                cat.nonpd = "na"
                              ),
-                             output = "vector") {
+                             output = "vector", level = NULL) {
   # check object
   object <- lav_object_check_version(object)
+
+  # level-specific fit measures for multilevel models: delegate to the
+  # partially saturated model for that level (see lav_fit_by_level.R)
+  if (!is.null(level)) {
+    target <- lav_fit_by_level_target(object, level = level)
+    fit_l <- lav_fit_by_level_get(object, level = level)
+    if (missing(fm_args)) {
+      out <- lav_fit(
+        object = fit_l, fit_measures = fit_measures,
+        baseline_model = baseline_model, h1_model = h1_model,
+        output = output
+      )
+    } else {
+      out <- lav_fit(
+        object = fit_l, fit_measures = fit_measures,
+        baseline_model = baseline_model, h1_model = h1_model,
+        fm_args = fm_args, output = output
+      )
+    }
+    if (output %in% c("vector", "text")) {
+      attr(out, "header") <- gettextf(
+        "Fit measures for the %s level only (the other level is saturated):",
+        target)
+    }
+    return(out)
+  }
+
+  # sam objects (issue #517)
+  if (!is.null(object@internal$sam.method)) {
+    if (lav_sam_local_flag(object)) {
+      # delegate to the stored step-2 structural fit: the only meaningful
+      # fit measures for a local SAM model are those of the structural part,
+      # conditional on the (fixed) step-1 measurement model
+      fit_pa <- lav_sam_struc_object(object)
+      if (is.null(fit_pa)) {
+        lav_msg_stop(gettext(
+          "no stored structural fit found: this sam object was created by an
+           older version of lavaan; please rerun sam()."))
+      }
+      lav_msg_note(gettext(
+        "the fit measures are computed for the structural part only,
+         conditional on the (fixed) measurement model of step 1."))
+      if (missing(fm_args)) {
+        out <- lav_fit(
+          object = fit_pa, fit_measures = fit_measures,
+          baseline_model = baseline_model, h1_model = h1_model,
+          output = output
+        )
+      } else {
+        out <- lav_fit(
+          object = fit_pa, fit_measures = fit_measures,
+          baseline_model = baseline_model, h1_model = h1_model,
+          fm_args = fm_args, output = output
+        )
+      }
+      if (output %in% c("vector", "text")) {
+        attr(out, "header") <- gettext(
+          "Fit measures of the structural part (given the measurement model):")
+      }
+      return(out)
+    } else {
+      # sam.method = "global": the fit measures are computed from the joint
+      # model, but the parameters were estimated in two steps
+      lav_msg_warn(gettext(
+        "the parameters of this model were estimated using a two-step (sam)
+         procedure; the behavior of fit measures in this context has not
+         been studied, and they should be interpreted with caution."))
+    }
+  }
 
   # default fm_args
   default_fm_args <- list(
@@ -159,11 +295,12 @@ lav_fit <- function(object, fit_measures = "all",
     fm_args <- default_fm_args
   }
   if (is.list(fit_measures)) {
+    fit_measures <- lav_fit_measures_list_alias(fit_measures)
     if (is.null(names(fit_measures)) ||
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(
         "If %s is a list, it must contain a named element %s.",
-        "fit_measures", "fit.measures"
+        "fit_measures", "fit.measures (or fit_measures)"
       ))
     }
     temp <- fit_measures$fit.measures
@@ -262,21 +399,23 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # do we have a scaled test statistic? if so, which one?
+  scaled_test_names <- c(
+    "satorra.bentler",
+    "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
+    "mean.var.adjusted", "scaled.shifted",
+    "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+  )
   scaled_flag <- FALSE
   if (!fmg_standard_test &&
       scaled_test != "none" &&
-      any(test_names %in% c(
-        "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
-        "mean.var.adjusted", "scaled.shifted"
-      ))) {
+      any(test_names %in% scaled_test_names)) {
     scaled_flag <- TRUE
-    if (scaled_test %in% c("standard", "default")) {
-      tmp_idx <- which(test_names %in% c(
-        "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
-        "mean.var.adjusted", "scaled.shifted"
-      ))
+    # note: object@Options$scaled.test holds the *base* statistic that was
+    # scaled (eg "browne.residual.nt.model"), not the name of a scaled
+    # test; in that case (as for "standard"/"default"), use the first
+    # scaled test that is available
+    if (!scaled_test %in% scaled_test_names) {
+      tmp_idx <- which(test_names %in% scaled_test_names)
       scaled_test <- test_names[tmp_idx[1]]
     }
   }
@@ -556,6 +695,25 @@ lav_fit <- function(object, fit_measures = "all",
     }
   }
 
+  # if specific measures were requested (ie not one of the keywords
+  # "all"/"default"/"none"), check that the names are known (new in 0.7-1);
+  # note: we check against the complete catalog, not against what is
+  # available for this particular fit
+  # unknown names are dropped with a warning (not an error): several
+  # packages pass their own non-lavaan measures along, relying on the
+  # pre-0.7-1 behavior of silently ignoring them
+  if (!(length(fit_measures_orig) == 1L &&
+        fit_measures_orig %in% c("all", "default", "none"))) {
+    bad_idx <- which(!fit_measures %in% lav_fit_measures_names())
+    if (length(bad_idx) > 0L) {
+      lav_msg_warn(ngettext(length(bad_idx),
+        "unknown fit measure:", "unknown fit measures:"),
+        lav_msg_view(fit_measures_orig[bad_idx], "none", FALSE)
+      )
+      fit_measures <- fit_measures[-bad_idx]
+    }
+  }
+
   # catch empty list
   if (length(fit_measures) == 0L) {
     return(list())
@@ -678,7 +836,9 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # GFI and friends
-  if (any(c(fit_gfi, fit_gfi_extra, fit_gfi_lisrel) %in% fit_measures)) {
+  # "agfi" is a backward-compatible alias for "agfi_lisrel" (<0.7-1)
+  if (any(c(fit_gfi, fit_gfi_extra, fit_gfi_lisrel, "agfi")
+          %in% fit_measures)) {
     # check gfi.ci.level option (default 0.90)
     gfi_ci_level <- 0.90
     if (!is.null(fm_args$gfi.ci.level) &&
@@ -703,6 +863,10 @@ lav_fit <- function(object, fit_measures = "all",
         cat_nonpd = fm_args$cat.nonpd
       )
     )
+    # return the value under the old (requested) name
+    if ("agfi" %in% fit_measures) {
+      indices[["agfi"]] <- indices[["agfi_lisrel"]]
+    }
   }
 
   # various: Hoelter Critical N (CN)
@@ -854,6 +1018,12 @@ lav_fit_rv <- function(object, fit_measures = "all",
 lav_fitmeasures_print <- function(x, ..., nd = 3L, add_h0 = TRUE) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
+
+  # optional header (eg for sam objects, where the fit measures refer to the
+  # structural part only)
+  if (!is.null(attr(x, "header"))) {
+    cat("\n", attr(x, "header"), "\n", sep = "")
+  }
 
   names_x <- names(x)
 

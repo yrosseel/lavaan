@@ -159,10 +159,10 @@ lav_parse_tokens_open <- function(modelsrc, types) {
       substr(modelsrcw, comments[i], comments[i] + comment_lengths[i] - 1L) <-
         strrep(" ", comment_lengths[i] - 1L)
       # check for stringliterals in comment
-      str.in.comment <- (elem_pos > comments[i] &
+      str_in_comment <- (elem_pos > comments[i] &
                            elem_pos < comments[i] + comment_lengths[i])
-      if (any(str.in.comment)) {
-        elem_type[str.in.comment] <- 0
+      if (any(str_in_comment)) {
+        elem_type[str_in_comment] <- 0
       }
     }
   }
@@ -272,15 +272,17 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   identifiers <- gregexpr("[ \n][_.[:alpha:]][_.[:alnum:]]*",
                           paste0(" ", modelsrcw)
   )[[1]]
-  identifier_lengths <- attr(identifiers, "match.length") - 1L
-  for (i in seq_along(identifiers)) {
-    pfpos <- identifiers[i]
-    pflen <- identifier_lengths[i]
-    substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
-    elem_pos[elem_i] <- pfpos
-    elem_text[elem_i] <- substr(modelsrc, pfpos, pfpos + pflen - 1L)
-    elem_type[elem_i] <- types$identifier
-    elem_i <- elem_i + 1L
+  if (identifiers[1L] > -1L) {
+    identifier_lengths <- attr(identifiers, "match.length") - 1L
+    for (i in seq_along(identifiers)) {
+      pfpos <- identifiers[i]
+      pflen <- identifier_lengths[i]
+      substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
+      elem_pos[elem_i] <- pfpos
+      elem_text[elem_i] <- substr(modelsrc, pfpos, pfpos + pflen - 1L)
+      elem_type[elem_i] <- types$identifier
+      elem_i <- elem_i + 1L
+    }
   }
   # check for uninterpreted chars
   wrong <- regexpr("[^\"\n ]", modelsrcw)
@@ -633,13 +635,18 @@ lav_parse_modenv <- function(config, side) {
 # -------------------- main parsing function --------------------------------- #
 lav_parse_model_string_open <- function(model_syntax = "",
                                         as_data_frame = FALSE) {
-  stopifnot(length(model_syntax) > 0L)
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(
     pattern = "\u02dc",
     replacement = "~",
-    paste(unlist(model_syntax), "", collapse = "\n")
+    paste(unlist(model_syntax), "", collapse = "\n"),
+    fixed = TRUE
   )
+  # check for empty, whitespace-only or comment-only model syntax
+  if (length(model_syntax) == 0L ||
+      !grepl("[^[:space:];]", gsub("[#!][^\n]*", "", modelsrc))) {
+    lav_msg_stop(gettext("Model syntax is empty."))
+  }
   hashstring <- paste0("mdl_o_", lav_char2hash(paste0(modelsrc, as_data_frame)))
   if (exists(hashstring, envir = lavaan_cache_env)) {
     return(get(hashstring, envir = lavaan_cache_env))
@@ -662,15 +669,15 @@ lav_parse_model_string_open <- function(model_syntax = "",
   }
   formulalist <- lav_parse_formulas_open(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat_-----
-  max.mono.formulas <- length(formulalist)
+  max_mono_formulas <- length(formulalist)
   flat <- list()
-  flat$lhs <- character(max.mono.formulas)
-  flat$op <- character(max.mono.formulas)
-  flat$rhs <- character(max.mono.formulas)
-  flat$mod_idx <- integer(max.mono.formulas)
-  flat$block <- integer(max.mono.formulas) # keep track of groups using ":" opr
+  flat$lhs <- character(max_mono_formulas)
+  flat$op <- character(max_mono_formulas)
+  flat$rhs <- character(max_mono_formulas)
+  flat$mod_idx <- integer(max_mono_formulas)
+  flat$block <- integer(max_mono_formulas) # keep track of groups using ":" opr
   for (mod1 in config$modifiers$mod) {
-    flat[[mod1]] <- character(max.mono.formulas) # only for display purposes!
+    flat[[mod1]] <- character(max_mono_formulas) # only for display purposes!
   }
   tmplist <- list(
     flat = flat,
@@ -723,6 +730,17 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
   }
   op <- formule$elem_text[opi]
   if (any(op == constraint_operators)) {         # ----- constraints ------- #
+    # a constraint/definition needs a non-empty left- and right-hand side
+    if (opi <= 1L || opi >= nelem) {
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[opi])
+      lav_msg_stop(
+        gettextf("Missing or empty %1$s of operator '%2$s'.",
+                 if (opi <= 1L) gettext("left-hand side")
+                 else gettext("right-hand side"),
+                 op),
+        tl[1L], footer = tl[2L]
+      )
+    }
     lhs <- paste(formule$elem_text[seq.int(1L, opi - 1L)], collapse = "")
     rhs <- paste(formule$elem_text[seq.int(opi + 1L, nelem)], collapse = "")
     constraints <- c(
@@ -881,6 +899,15 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
         }
         modlist[[cur_mod_idx]] <- modifyList(modlist[[cur_mod_idx]], modnu)
       }
+    }
+  } else {
+    # length modelems == 0
+    if (opi != nelem - 1L) {
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[opi + 1L])
+      lav_msg_stop(gettext("invalid formula right hand side"),
+        tl[1L],
+        footer = tl[2L]
+      )
     }
   }
   # check for variable regressed on itself

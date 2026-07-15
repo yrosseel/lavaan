@@ -2,6 +2,12 @@
 #
 # NOTE: does not handle redundant constraints yet!
 #
+# - YR 11 Jul 2026: add the scaled and adjusted versions of the Wald test
+#                   (Satorra, 2000); see lav_test_satorra2000.R. Note that
+#                   the main statistic is already the generalized ('robust')
+#                   Wald test whenever the object's se is sandwich-based,
+#                   as it is based on the object's vcov.
+#
 
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
   # check object
@@ -110,6 +116,8 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
 
   # fixme: what if VCOV.r is singular?
   # Wald test statistic
+  # (this is the generalized/robust Wald test of Satorra (2000) whenever
+  # the object's se is sandwich-based, as vcov_1 is then a sandwich)
   wald <- as.numeric(t(theta_r) %*% solve(vcov_r) %*% theta_r)
 
   # df
@@ -123,6 +131,76 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
     stat = wald, df = wald_df, p.value = wald_pvalue,
     se = lavoptions$se
   )
+
+  # scaled, adjusted and generalized ('robust') versions (Satorra, 2000);
+  # these need both the standard (normal-theory) and a sandwich vcov;
+  # not for rotated (EFA/ESEM) solutions, as the stored vcov is
+  # post-processed in that case (see step 16)
+  se_flavor <- lav_test_robust_se_flavor(object)
+  if (!is.null(se_flavor) &&
+    !(lavmodel@nefa > 0L && lavoptions$rotation != "none")) {
+    # helper: (re)compute the vcov for a given se setting, in the same
+    # (nx.free) parameter space as the constraint jacobian
+    wald_vcov <- function(se) {
+      lavoptions2 <- lavoptions
+      lavoptions2$se <- se
+      lavoptions2$check.vcov <- FALSE
+      lavh1 <- object@h1
+      if (length(lavh1) == 0L) {
+        lavh1 <- NULL
+      }
+      vv <- try(
+        lav_model_vcov(
+          lavmodel = lavmodel,
+          lavsamplestats = object@SampleStats,
+          lavoptions = lavoptions2,
+          lavdata = object@Data,
+          lavpartable = object@ParTable,
+          lavcache = object@Cache,
+          lavimplied = object@implied,
+          lavh1 = lavh1
+        ),
+        silent = TRUE
+      )
+      if (inherits(vv, "try-error") || is.null(vv)) {
+        return(NULL)
+      }
+      lav_model_vcov_unco_to_free(lavmodel, vv)
+    }
+
+    # sandwich vcov (reuse the object's vcov if it is already of this
+    # flavor) and normal-theory vcov
+    if (lavoptions$se == se_flavor) {
+      vcov_rob <- vcov_1
+    } else {
+      vcov_rob <- wald_vcov(se_flavor)
+    }
+    if (lavoptions$se == "standard") {
+      vcov_nt <- vcov_1
+    } else {
+      vcov_nt <- wald_vcov("standard")
+    }
+
+    if (!is.null(vcov_rob) && !is.null(vcov_nt)) {
+      m1 <- jac %*% vcov_nt %*% t(jac)   # A J A' / n
+      m2 <- jac %*% vcov_rob %*% t(jac)  # A J B J A' / n
+      # the standard (normal-theory) Wald statistic
+      wald_nt <- as.numeric(t(theta_r) %*% MASS::ginv(m1) %*% theta_r)
+      s2000 <- lav_test_satorra2000(
+        stat = wald_nt, df = wald_df, m1 = m1, m2 = m2,
+        v = theta_r, n = 1
+      )
+      out$stat.standard <- wald_nt
+      out$stat.scaled <- s2000$stat.scaled
+      out$p.value.scaled <- s2000$p.value.scaled
+      out$scaling.factor <- s2000$scaling.factor
+      out$stat.adjusted <- s2000$stat.adjusted
+      out$df.adjusted <- s2000$df.adjusted
+      out$p.value.adjusted <- s2000$p.value.adjusted
+      out$stat.robust <- s2000$stat.robust
+      out$p.value.robust <- s2000$p.value.robust
+    }
+  }
 
   out
 }

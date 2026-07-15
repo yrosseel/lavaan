@@ -90,6 +90,7 @@ setMethod(
     }
     if (!is.list(fit_measures))
         fit_measures <- list(fit.measures = fit_measures)
+    fit_measures <- lav_fit_measures_list_alias(fit_measures)
     if (is.logical(fit_measures$fit.measures)) {
       fit_measures$fit.measures <- if (fit_measures$fit.measures) "default" else "none"
     }
@@ -277,6 +278,18 @@ standardizedSolution <- function(object,                     # nolint
     } else {
       type <- tolower(type)
       stopifnot(type %in% std_types)
+      if (type == "std.nox") {
+        # sanity checks (same as in parameterEstimates())
+        if (length(lav_object_vnames(object, "ov.x")) == 0) {
+          lav_msg_warn(gettext(
+            "`std.nox' values are identical to `std.all' values in the
+             absence of exogenous covariates."))
+        } else if (!object@Options$fixed.x) {
+          lav_msg_warn(gettext(
+            "`std.nox' values are identical to `std.all' values when
+             fixed.x = FALSE."))
+        }
+      }
     }
 
     # check output= argument
@@ -1023,12 +1036,13 @@ lavParameterEstimates <- function(object,                      # nolint
         if ("std.nox" %in% standardized) {
           # sanity checks
           if (length(lav_object_vnames(object, "ov.x")) == 0) {
-            lav_msg_note(gettext(
-              "`std.nox' unavailable without fixed exogenous predictors"))
-            standardized <- setdiff(standardized, "std.nox")
+            lav_msg_warn(gettext(
+              "`std.nox' values are identical to `std.all' values in the
+               absence of exogenous covariates."))
           } else if (!object@Options$fixed.x) {
-            lav_msg_note(gettext("`std.nox' unavailable when fixed.x = FALSE"))
-            standardized <- setdiff(standardized, "std.nox")
+            lav_msg_warn(gettext(
+              "`std.nox' values are identical to `std.all' values when
+               fixed.x = FALSE."))
           }
         }
       }
@@ -1565,9 +1579,17 @@ setMethod(
 
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
     tmp_logl <- object@loglik
-    logl <- tmp_logl$loglik
-    attr(logl, "df") <- tmp_logl$npar ### note: must be npar, not df!!
-    attr(logl, "nobs") <- tmp_logl$ntotal
+    if (is.null(tmp_logl$loglik)) {
+      # empty @loglik slot (eg loglik = FALSE, or estimator != ML):
+      # return NA instead of crashing (AIC/BIC then also return NA)
+      logl <- as.numeric(NA)
+      attr(logl, "df") <- object@optim$npar
+      attr(logl, "nobs") <- object@SampleStats@ntotal
+    } else {
+      logl <- tmp_logl$loglik
+      attr(logl, "df") <- tmp_logl$npar ### note: must be npar, not df!!
+      attr(logl, "nobs") <- tmp_logl$ntotal
+    }
     class(logl) <- "logLik"
     logl
   }
@@ -1603,6 +1625,15 @@ setMethod(
     call <- object@call
     if (is.null(call)) {
       lav_msg_stop(gettext("need an object with call slot"))
+    }
+    # sam objects store the original sam() call in the call slot (>= 0.7-1);
+    # in older versions, the call slot contained an internal lavaan() call
+    # that cannot be re-evaluated
+    if (!is.null(object@internal$sam.method) &&
+        !any(as.character(call[[1]]) == "sam")) {
+      lav_msg_stop(gettext(
+        "update() does not work for a sam object created by an older
+         version of lavaan; please rerun sam() first."))
     }
     current_call_names <- names(call)
     lavaan_formals <- names(formals(lavaan::lavaan))

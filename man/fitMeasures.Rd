@@ -18,7 +18,7 @@ fitMeasures(object, fit_measures = "all",
                            rmsea.notclose.h0 = 0.08,
                            robust            = TRUE,
                            cat.nonpd         = "na"),
-            output = "vector", ...)
+            output = "vector", level = NULL, ...)
 fitmeasures(object, fit_measures = "all",
             baseline_model = NULL, h1_model = NULL,
             fm_args = list(standard.test     = "default",
@@ -28,7 +28,7 @@ fitmeasures(object, fit_measures = "all",
                            rmsea.notclose.h0 = 0.08,
                            robust            = TRUE,
                            cat.nonpd         = "na"),
-            output = "vector", ...)
+            output = "vector", level = NULL, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -36,7 +36,8 @@ fitmeasures(object, fit_measures = "all",
   returned. If only a single or a few fit measures are specified by name,
   only those are computed and returned.
   If additional options for certain fit measures are needed, fit_measures
-  should be a list whose \code{fit.measures} element holds the measures
+  should be a list whose \code{fit.measures} (or \code{fit_measures}) element
+  holds the measures
   wanted, with the options supplied as further named elements of the list. The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
@@ -95,6 +96,20 @@ fitmeasures(object, fit_measures = "all",
   (for example \code{"rmsea.ci.lower"}). Otherwise, nothing will be 
   printed in that section.
   See the examples for how to add the chi-square test in the text output.}
+\item{level}{Only used for multilevel models. If not \code{NULL}, either
+  a level number (\code{1} or \code{2}) or a level name (\code{"within"} or
+  \code{"between"}, or the level label used in the model syntax). The
+  returned fit measures then reflect the fit of the model at that level
+  only, while the model at the other level is saturated. This uses the
+  so-called partially saturated model approach (Ryu & West, 2009): any
+  misfit of the partially saturated model can be attributed to the target
+  level. The incremental fit indices (e.g., CFI and TLI) are computed with
+  respect to a level-specific baseline model: the independence model at
+  the target level, again combined with a saturated model at the other
+  level. By default, these partially saturated models are fitted (and
+  stored) along with the original model; see the \code{fit.by.level}
+  option in \code{\link{lavOptions}}. If they were not stored, they are
+  re-fitted on the fly.}
 \item{...}{Further arguments passed to or from other methods. Not currently
   used for \code{lavaan} objects.}
 }
@@ -137,8 +152,20 @@ FMG p-values can be selected through the existing \code{standard.test}
 mechanism, for example
 \code{fitMeasures(fit, "pvalue", fm_args = list(standard.test = "peba4"))}.
 No separate FMG-specific fit-measure names are needed.
+
+For models fitted with \code{\link{sam}} using a local \code{sam.method}
+(\code{"local"}, \code{"fsr"} or \code{"cfsr"}), the fit measures are
+computed for the step-2 structural model only, conditional on the (fixed)
+measurement model of step 1; loglikelihood-based measures (aic, bic, ...)
+are not available. If \code{sam.method = "global"}, the fit measures are
+based on the joint model; since the parameters were estimated using a
+two-step procedure, they should be interpreted with caution.
 }
 \references{
+Ryu, E., & West, S. G. (2009). Level-specific evaluation of model fit in
+multilevel structural equation modeling. Structural Equation Modeling, 16(4),
+583--601. \doi{10.1080/10705510903203466}
+
 Brosseau-Liard, P. E., Savalei, V., & Li, L. (2012). An investigation of the
 sample performance of two nonnormality corrections for RMSEA. Multivariate
 behavioral research, 47(6), 904-930.
@@ -199,4 +226,19 @@ fit0 <- cfa(HS.model, data = HolzingerSwineford1939, orthogonal = TRUE)
 ## Calculate RMSEA_D (Savalei et al., 2023)
 ## See https://psycnet.apa.org/doi/10.1037/met0000537
 fitMeasures(fit0, "rmsea", h1_model = fit)
+
+## level-specific fit measures for a multilevel model (Ryu & West, 2009)
+model <- '
+    level: 1
+        fw =~ y1 + y2 + y3
+        fw ~ x1 + x2 + x3
+    level: 2
+        fb =~ y1 + y2 + y3
+        fb ~ w1 + w2
+'
+fit2l <- sem(model, data = Demo.twolevel, cluster = "cluster")
+fitMeasures(fit2l, c("chisq", "df", "pvalue", "cfi", "rmsea",
+                     "srmr_within"), level = "within")
+fitMeasures(fit2l, c("chisq", "df", "pvalue", "cfi", "rmsea",
+                     "srmr_between"), level = "between")
 }

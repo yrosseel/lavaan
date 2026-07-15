@@ -110,15 +110,19 @@ lav_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # H_attheta0 <- solve(attr(VCOV, "E.inv"))
 
   # inverted observed information ('H.inv')
-  if (is.null(vcov_1)) {
+  if (!is.null(vcov_1)) {
+    h0_inv <- attr(vcov_1, "E.inv")
+  }
+  if (is.null(vcov_1) || is.null(h0_inv)) {
+    # lav_model_vcov() only attaches "E.inv" when the vcov and test
+    # information options coincide (they do not, e.g., with cluster =);
+    # (re)compute it here
     h0_inv <- lav_model_info_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavoptions = lavoptions,
       lavcache = lavcache, augmented = TRUE, inverted = TRUE
     )
-  } else {
-    h0_inv <- attr(vcov_1, "E.inv")
   }
 
   # first order information ('J')

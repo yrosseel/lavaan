@@ -347,7 +347,8 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "yuan.chan", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted",
+      "scaled.shifted.corrected"
     )) {
     robust_flag <- TRUE
   }
@@ -415,6 +416,8 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
     # default set
     fit_measures <- fit_gfi_all
   } else {
+    # backward compatibility: "agfi" (<0.7-1) is an alias for "agfi_lisrel"
+    fit_measures[fit_measures == "agfi"] <- "agfi_lisrel"
     # remove any not-GFI related index from fit.measures
     rm_idx <- which(!fit_measures %in% fit_gfi_all)
     if (length(rm_idx) > 0L) {
@@ -518,7 +521,9 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
         df3 <- df
         c_hat <- test[[scaled_idx]]$scaling.factor
         shift_par <- 0
-        if (scaled_test == "scaled.shifted") {
+        if (scaled_test %in% c(
+          "scaled.shifted", "scaled.shifted.corrected"
+        )) {
           # compute c.hat from a and b
           a <- test[[scaled_idx]]$scaling.factor
           b <- test[[scaled_idx]]$shift.parameter

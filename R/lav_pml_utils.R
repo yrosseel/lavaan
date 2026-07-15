@@ -292,6 +292,7 @@ lav_pml_uni_sc <- function(y1, th_y1, exo = NULL, sl_y1 = NULL,
                        weights_casewise) {
   nth_y1 <- length(th_y1)
   nobs_1 <- length(y1)
+  th_y1_orig <- th_y1 # unpadded (lav_pml_uni_lik() pads itself)
   th_y1 <- c(-100, th_y1, 100)
 
   if (is.null(exo)) {
@@ -304,10 +305,14 @@ lav_pml_uni_sc <- function(y1, th_y1, exo = NULL, sl_y1 = NULL,
   }
 
   # lik, i.e. the univariate probability case-wise
+  # (fixed July 2026: pass the UNPADDED thresholds -- lav_pml_uni_lik()
+  # pads with -100/100 itself; passing the padded vector shifted every
+  # category's probability and made the first category's likelihood zero,
+  # producing Inf/garbage in the weights_casewise/lik factor below)
   lik <- lav_pml_uni_lik( # Y1 = X[,i],
     y1 = y1,
     # th_y1 = TH[th.idx==i],
-    th_y1 = th_y1,
+    th_y1 = th_y1_orig,
     exo = exo,
     # pi_y1 = PI[i,])
     pi_y1 = sl_y1

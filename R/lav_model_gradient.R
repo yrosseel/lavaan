@@ -103,14 +103,54 @@ lav_model_grad <- function(lavmodel = NULL,
     group_w <- rep(1.0, lavmodel@nblocks)
   }
 
+  # GLS: for single-level complete-data unconditional GLS, the weight
+  # matrix is a simple function of the sample moments:
+  #   WLS.V = bdiag(S.inv,  0.5 t(D) (S.inv %x% S.inv) D)
+  # so the gradient never needs the full WLS.V matrix:
+  # - gls_omega_flag: use the same Omega ('POST') approach as ML
+  #   (see lav_model_omega); no Delta needed at all
+  # - gls_stream_flag: keep the Delta-based *LS route, but compute
+  #   WLS.V %*% diff without forming WLS.V (composites, type != "free")
+  # excluded (not this simple Kronecker sandwich, or broken/rare):
+  # multilevel, conditional.x, (partial) correlation structures,
+  # group.w.free, missing data
+  gls_stream_flag <- (estimator == "GLS" &&
+    !lavmodel@multilevel &&
+    !conditional_x &&
+    !lavmodel@correlation &&
+    !group_w_free &&
+    !lavsamplestats@missing.flag)
+  gls_omega_flag <- (gls_stream_flag &&
+    type == "free" &&
+    !lavmodel@composites)
+
+  # ULS/DWLS (continuous): the weight matrix is diagonal (the identity
+  # for ULS), so the same Omega approach applies, with
+  # omega = [unvech(WLS.VD) *] (S - Sigma) with a doubled diagonal --
+  # so that 0.5 t(D) vec(omega) == WLS.VD * vech(S - Sigma) -- and
+  # omega_mu = [WLS.VD_mean *] (ybar - mu); no Delta needed at all
+  uls_omega_flag <- (estimator %in% c("ULS", "DWLS") &&
+    type == "free" &&
+    !categorical &&
+    !lavmodel@multilevel &&
+    !conditional_x &&
+    !lavmodel@correlation &&
+    !lavmodel@composites &&
+    !group_w_free &&
+    !lavsamplestats@missing.flag &&
+    (estimator == "ULS" || !is.null(lavsamplestats@WLS.VD[[1]])))
+
   # do we need WLS.est?
-  if (estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS", "DLS")) {
+  if (estimator %in% c("WLS", "NTRLS", "DLS") ||
+    (estimator == "GLS" && !gls_omega_flag) ||
+    (estimator %in% c("ULS", "DWLS") && !uls_omega_flag)) {
     # always compute WLS.est
     wls_est <- lav_model_wls_est(lavmodel = lavmodel, glist = glist) # ,
     # cov.x = lavsamplestats@cov.x)
   }
 
-  if (estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML")) {
+  if (estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML") ||
+    gls_omega_flag || uls_omega_flag) {
     # compute moments for all groups
     # if(conditional.x) {
     #    Sigma.hat <- lav_model_cond2joint_sigma(lavmodel = lavmodel,
@@ -170,16 +210,17 @@ lav_model_grad <- function(lavmodel = NULL,
   # composites?
   composites_flag <- lavmodel@composites
 
-  # 1. ML approach
-  if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
+  # 1. ML approach (also GLS/ULS since 0.7-1, see the omega flags above)
+  if (((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
     lavdata@nlevels == 1L && !composites_flag &&
-    !lavmodel@conditional.x) {
+    !lavmodel@conditional.x) || gls_omega_flag || uls_omega_flag) {
   correlation <- lavmodel@correlation
     if (meanstructure) {
       omega <- lav_model_omega(
         sigma_hat = sigma_hat, mu_hat = mu_hat,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
+        estimator_args = estimator_args,
         meanstructure = TRUE,
         conditional_x = conditional_x,
     correlation = correlation, num_idx = num_idx
@@ -190,6 +231,7 @@ lav_model_grad <- function(lavmodel = NULL,
         sigma_hat = sigma_hat, mu_hat = NULL,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
+        estimator_args = estimator_args,
         meanstructure = FALSE,
         conditional_x = conditional_x,
     correlation = correlation, num_idx = num_idx
@@ -234,7 +276,9 @@ lav_model_grad <- function(lavmodel = NULL,
       }
 
       # weight by group
-      if (lavmodel@nblocks > 1L) {
+      # (also for a single group when group_w != 1; for ML the single-group
+      #  weight is always nobs/ntotal == 1, but for GLS it is (nobs-1)/ntotal)
+      if (lavmodel@nblocks > 1L || group_w[g] != 1.0) {
         for (mm in mm_in_group) {
           dx_1[[mm]] <- group_w[g] * dx_1[[mm]]
         }
@@ -368,8 +412,25 @@ lav_model_grad <- function(lavmodel = NULL,
         # full weight matrix
         diff <- lavsamplestats@WLS.obs[[g]] - wls_est[[g]]
 
-        # full weight matrix
-        if (estimator == "GLS" || estimator == "WLS") {
+        if (estimator == "GLS" && gls_stream_flag) {
+          # compute WLS.V %*% diff without forming WLS.V
+          v11_scale <- 1.0
+          if (meanstructure && isTRUE(estimator_args$gls.v11.mplus)) {
+            v11_scale <- lavsamplestats@nobs[[g]] /
+              (lavsamplestats@nobs[[g]] - 1)
+          }
+          wv_diff <- lav_samp_wls_v_nt_prod(
+            m_icov = lavsamplestats@icov[[g]],
+            x = diff,
+            meanstructure = meanstructure,
+            fixed_x = lavmodel@fixed.x,
+            x_idx = lavsamplestats@x.idx[[g]],
+            v11_scale = v11_scale
+          )
+          group_dx <- -1 * crossprod(delta[[g]], wv_diff)
+
+          # full weight matrix
+        } else if (estimator == "GLS" || estimator == "WLS") {
           wls_v <- lavsamplestats@WLS.V[[g]]
           group_dx <- -1 * crossprod(
             delta[[g]],
@@ -379,18 +440,16 @@ lav_model_grad <- function(lavmodel = NULL,
           if (estimator_args$dls.GammaNT == "sample") {
             wls_v <- lavsamplestats@WLS.V[[g]] # for now
           } else {
-            dls_a <- estimator_args$dls.a
-            gamma_nt <- lav_samp_gamma_nt(
-              m_cov          = sigma_hat[[g]],
-              m_mean         = mu_hat[[g]],
-              x_idx          = lavsamplestats@x.idx[[g]],
-              fixed_x        = lavmodel@fixed.x,
-              conditional_x  = lavmodel@conditional.x,
-              meanstructure  = lavmodel@meanstructure,
-              slopestructure = lavmodel@conditional.x
+            wls_v <- lav_dls_wls_v_g(
+              m_cov         = sigma_hat[[g]],
+              m_mean        = mu_hat[[g]],
+              nacov_g       = lavsamplestats@NACOV[[g]],
+              dls_a         = estimator_args$dls.a,
+              x_idx         = lavsamplestats@x.idx[[g]],
+              fixed_x       = lavmodel@fixed.x,
+              conditional_x = lavmodel@conditional.x,
+              meanstructure = lavmodel@meanstructure
             )
-            w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-            wls_v <- lav_mat_sym_inverse(w_dls)
           }
           group_dx <- -1 * crossprod(
             delta[[g]],
@@ -487,6 +546,44 @@ lav_model_grad <- function(lavmodel = NULL,
     }
 
     for (g in 1:lavmodel@nblocks) {
+      # missing data (FIML)?
+      if (lavsamplestats@missing.flag) {
+        sigma_1 <- sigma_hat[[g]]
+        sigma_inv <- attr(sigma_1, "inv")
+
+        # dlogl with respect to (vec(Beta), vech(res.cov)) -- the same
+        # stat order as the conditional.x DELTA rows
+        post <- c(
+          lav_mvreg_mi_dlogl_dbeta_samp(
+            yp = lavsamplestats@missing[[g]],
+            res_int = mu_hat[[g]], res_slopes = pi0[[g]],
+            res_cov = sigma_1, res_cov_inv = sigma_inv
+          ),
+          lav_mvreg_mi_dlogl_dvechrescov_samp(
+            yp = lavsamplestats@missing[[g]],
+            res_int = mu_hat[[g]], res_slopes = pi0[[g]],
+            res_cov = sigma_1, res_cov_inv = sigma_inv
+          )
+        )
+
+        # the objective is sum_g (nobs_g/ntotal) * 0.5 * (-2*logl_g/nobs_g
+        # - h1_g), so dF/dtheta = -(1/ntotal) * sum_g dlogl_g/dtheta;
+        # note: as in the unconditional missing-data path, the 1/ntotal
+        # factor is applied here directly and group_w is NOT used (for
+        # missing data, the callers -- optimization, hessian -- use
+        # group_weight = FALSE)
+        group_dx <- as.numeric(
+          -1 / lavsamplestats@ntotal * crossprod(delta[[g]], post)
+        )
+
+        if (g == 1) {
+          dx <- group_dx
+        } else {
+          dx <- dx + group_dx
+        }
+        next
+      }
+
       # augmented mean.x + cov.x matrix
       mean_x <- lavsamplestats@mean.x[[g]]
       cov_x <- lavsamplestats@cov.x[[g]]
@@ -597,6 +694,14 @@ lav_model_grad <- function(lavmodel = NULL,
             res_pi_b = pi0[[(g - 1) * 2 + 2]],
             sinv_method = "eigen"
           )
+          # reorder from the kernel statistic order to the Delta row order
+          perm <- lav_mvreg_cl_stat_perm(
+            res_int_w = mu_hat[[(g - 1) * 2 + 1]],
+            res_pi_w = pi0[[(g - 1) * 2 + 1]],
+            res_int_b = mu_hat[[(g - 1) * 2 + 2]],
+            res_pi_b = pi0[[(g - 1) * 2 + 2]]
+          )
+          dx_1 <- dx_1[perm]
         } else {
           dx_1 <- lav_mvn_cl_dlogl_2l_samp(
             ylp = lavsamplestats@YLp[[g]],
@@ -740,7 +845,18 @@ lav_model_grad <- function(lavmodel = NULL,
       }
 
       # group weights (if any)
-      group_dx <- group_w[g] * group_dx
+      # note (fixed July 2026): NOT for PML. The PML objective is the plain
+      # SUM of the group objectives (each -logPL_g already carries its own
+      # N_g; see lav_model_objective(): "no weighting needed!"), so the
+      # gradient must be the plain sum of the (total) group gradients as
+      # well. The n_g/N weighting made the analytic gradient inconsistent
+      # with the objective for multigroup PML and -- through the
+      # hessian-based information -- inflated all multigroup PML standard
+      # errors by a factor sqrt(N/n_g). Single-group fits are unaffected
+      # (group_w = 1).
+      if (estimator != "PML") {
+        group_dx <- group_w[g] * group_dx
+      }
       if (g == 1) {
         dx <- group_dx
       } else {
@@ -1077,6 +1193,7 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
 
 lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
                          lavsamplestats = NULL, estimator = "ML",
+                         estimator_args = list(),
                          meanstructure = FALSE, conditional_x = FALSE,
              correlation = FALSE, num_idx = NULL) {
   # nblocks
@@ -1161,13 +1278,54 @@ lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
 
       # GLS
     } else if (estimator == "GLS") {
+      # rides the same 'POST' convention as ML; the caller weights each
+      # group by (nobs - 1)/ntotal (see group_w in lav_model_grad), so
+      # omega itself is the unweighted S.inv (S - Sigma) S.inv
       w_inv <- lavsamplestats@icov[[g]]
       m_w <- lavsamplestats@cov[[g]]
-      omega[[g]] <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]] *
-        (w_inv %*% (m_w - sigma_hat[[g]]) %*% w_inv)
+      omega[[g]] <- w_inv %*% (m_w - sigma_hat[[g]]) %*% w_inv
       if (meanstructure) {
         diff <- as.matrix(lavsamplestats@mean[[g]] - mu_hat[[g]])
-        omega_mu[[g]] <- t(t(diff) %*% w_inv)
+        omega_mu[[g]] <- w_inv %*% diff
+        if (isTRUE(estimator_args$gls.v11.mplus)) {
+          # V11 was rescaled by n/(n-1) (see lav_samp_from_data)
+          omega_mu[[g]] <- omega_mu[[g]] * lavsamplestats@nobs[[g]] /
+            (lavsamplestats@nobs[[g]] - 1)
+        }
+      }
+
+      # ULS
+    } else if (estimator == "ULS") {
+      # identity weight matrix: the 'POST' convention requires
+      # 0.5 t(D) vec(omega) == vech(S - Sigma), so double the diagonal
+      omega[[g]] <- lavsamplestats@cov[[g]] - sigma_hat[[g]]
+      diag(omega[[g]]) <- 2 * diag(omega[[g]])
+      if (meanstructure) {
+        omega_mu[[g]] <- as.matrix(
+          lavsamplestats@mean[[g]] - mu_hat[[g]])
+      }
+
+      # DWLS (continuous)
+    } else if (estimator == "DWLS") {
+      # diagonal weight matrix (the @WLS.VD vector): the 'POST'
+      # convention requires 0.5 t(D) vec(omega) == WLS.VD * vech(S -
+      # Sigma), so weight the residuals elementwise and double the
+      # diagonal; this also reproduces the structural zero weights of
+      # the x/x combinations when fixed.x = TRUE
+      vd <- lavsamplestats@WLS.VD[[g]]
+      nvar <- NCOL(sigma_hat[[g]])
+      if (meanstructure) {
+        vd_mean <- vd[seq_len(nvar)]
+        vd_cov <- vd[-seq_len(nvar)]
+      } else {
+        vd_cov <- vd
+      }
+      omega[[g]] <- lav_mat_vech_rev(vd_cov) *
+        (lavsamplestats@cov[[g]] - sigma_hat[[g]])
+      diag(omega[[g]]) <- 2 * diag(omega[[g]])
+      if (meanstructure) {
+        omega_mu[[g]] <- as.matrix(
+          vd_mean * (lavsamplestats@mean[[g]] - mu_hat[[g]]))
       }
     }
 

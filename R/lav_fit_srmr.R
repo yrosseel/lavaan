@@ -39,15 +39,27 @@ lav_fit_srmr_mplus <- function(lavobject) {
       }
     } else {
       # EM estimates
-      if (!is.null(lavh1$implied$cov[[g]])) {
-        s <- lavh1$implied$cov[[g]]
+      # (note: exact [[ indexing -- under conditional.x, $cov/$mean would
+      #  partially match the cov.x/mean.x elements of the implied list)
+      if (lavobject@Model@conditional.x) {
+        if (!is.null(lavh1$implied[["res.cov"]][[g]])) {
+          s <- lavh1$implied[["res.cov"]][[g]]
+          m <- lavh1$implied[["res.int"]][[g]]
+        } else {
+          s <- lavsamplestats@missing.h1[[g]]$res.cov
+          m <- lavsamplestats@missing.h1[[g]]$res.int
+        }
       } else {
-        s <- lavsamplestats@missing.h1[[g]]$sigma
-      }
-      if (!is.null(lavh1$implied$mean[[g]])) {
-        m <- lavh1$implied$mean[[g]]
-      } else {
-        m <- lavsamplestats@missing.h1[[g]]$mu
+        if (!is.null(lavh1$implied[["cov"]][[g]])) {
+          s <- lavh1$implied[["cov"]][[g]]
+        } else {
+          s <- lavsamplestats@missing.h1[[g]]$sigma
+        }
+        if (!is.null(lavh1$implied[["mean"]][[g]])) {
+          m <- lavh1$implied[["mean"]][[g]]
+        } else {
+          m <- lavsamplestats@missing.h1[[g]]$mu
+        }
       }
     }
     nvar <- ncol(s)

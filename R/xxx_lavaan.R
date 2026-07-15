@@ -54,7 +54,7 @@ lavaan <- function(
     # options (dotdotdot)
     ...) {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
   # start timer
   start_time0 <- proc.time()[3]
   timing <- list()
@@ -409,7 +409,8 @@ lavaan <- function(
   # and their acov (Gamma) is the cluster-based sandwich; both can only be
   # computed once the h1 model has been estimated
   if (lavdata@nlevels > 1L &&
-    lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
+    lavoptions$estimator %in% c("WLS", "DWLS", "ULS") &&
+    lavdata@data.type != "none") {
     if (lavoptions$.categorical) {
       # stage-wise (univariate + bivariate) estimation; this also
       # provides the 'h1' (unrestricted) implied statistics
@@ -724,6 +725,16 @@ lavaan <- function(
     start_time0    = start_time0,
     lav_monte_carlo = lav_monte_carlo
   )
+
+  # ----------- fit.by.level (multilevel only) ----------
+  # fit the partially saturated models (one per level), providing
+  # level-specific fit measures; see fitMeasures(..., level = )
+  if (lavdata@nlevels > 1L && isTRUE(lavoptions$fit.by.level)) {
+    fbl <- lav_object_fit_by_level(out)
+    if (length(fbl) > 0L) {
+      out@internal$fit.by.level <- fbl
+    }
+  }
 
   # restore random seed
   if (!is.null(temp_seed)) {

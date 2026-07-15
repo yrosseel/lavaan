@@ -85,15 +85,34 @@ lav_step16_rotation <- function(lavoptions = NULL,
     # add con.jac information (if any)
     lavmodel@con.lambda <- lavmodel_unrot@con.lambda
     if (nrow(lavmodel_unrot@con.jac) > 0L) {
+      # the re-parsed constraint set of the ROTATED model may have MORE
+      # equality rows than the unrotated one (equality rows involving the
+      # temporarily-fixed user=7 EFA identification parameters were
+      # removed as zero rows by lav_con_parse, and reappear here), so the
+      # cin/inactive indices and con.lambda of the unrotated fit -- which
+      # are aligned with the unrotated row layout -- must be rebuilt for
+      # the new layout, not copied verbatim (copying left con.lambda
+      # shorter than con.jac, and the cin/inactive indices off by the
+      # difference in equality rows)
+      nceq_new <- nrow(lavmodel@ceq.JAC)
+      ncin <- nrow(lavmodel@cin.JAC)
       con_jac <- rbind(lavmodel@ceq.JAC, lavmodel@cin.JAC)
+      old_cin_idx <- attr(lavmodel_unrot@con.jac, "cin.idx")
+      old_ina_idx <- attr(lavmodel_unrot@con.jac, "inactive.idx")
+      old_lambda <- lavmodel_unrot@con.lambda
+      attr(con_jac, "ceq.idx") <- seq_len(nceq_new)
+      attr(con_jac, "cin.idx") <- nceq_new + seq_len(ncin)
+      # inactive rows are inequality rows; re-express their positions
       attr(con_jac, "inactive.idx") <-
-        attr(lavmodel_unrot@con.jac, "inactive.idx")
-      attr(con_jac, "cin.idx") <- attr(lavmodel_unrot@con.jac, "cin.idx")
-      # use nrow(lavmodel@ceq.JAC), not lavmodel.unrot (which may have had
-      # zero rows removed by lav_con_parse for temporarily-fixed
-      # user=7 EFA identification parameters)
-      attr(con_jac, "ceq.idx") <- seq_len(nrow(lavmodel@ceq.JAC))
+        nceq_new + which(old_cin_idx %in% old_ina_idx)
       lavmodel@con.jac <- con_jac
+      # equality multipliers of the rotated fit are unknown (and unused:
+      # they only enter the decoupled lambda block of the bordered
+      # matrix); the inequality rows keep their multipliers
+      lavmodel@con.lambda <- c(
+        numeric(nceq_new),
+        old_lambda[old_cin_idx]
+      )
     }
 
     # overwrite parameters in @ParTable$est
@@ -243,16 +262,27 @@ lav_step16_rotation <- function(lavoptions = NULL,
 
           # other constraints
         } else {
-          inactive_idx <- attr(lavmodel@con.jac, "inactive.idx")
-          ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
-          cin_idx <- attr(lavmodel@con.jac, "cin.idx")
+          old_jac <- lavmodel@con.jac
+          inactive_idx <- attr(old_jac, "inactive.idx")
+          ceq_idx <- attr(old_jac, "ceq.idx")
+          cin_idx <- attr(old_jac, "cin.idx")
           lambda <- lavmodel@con.lambda
           nbord <- nrow(jac)
 
-          # reconstruct con.jac
-          con_jac_1 <- rbind(jac, lavmodel@ceq.JAC, lavmodel@cin.JAC)
+          # prepend the rotation border to the EXISTING con.jac rows (NOT
+          # to rbind(ceq.JAC, cin.JAC)): since 0.6-19 the con.jac of a
+          # ceq.simple/bounds model is SYNTHESIZED (eg the orthogonal
+          # complement of ceq.simple.K), so its rows -- which is what the
+          # ceq.idx/cin.idx/inactive.idx attributes and con.lambda are
+          # aligned with -- do not correspond to ceq.JAC/cin.JAC rows;
+          # the old rbind left con.lambda (and the offset attributes)
+          # misaligned with the merged matrix. For nonlinear constraints
+          # the existing con.jac is also the at-the-solution Jacobian,
+          # which is the correct linearization (ceq.JAC/cin.JAC are
+          # evaluated at parse time).
+          con_jac_1 <- rbind(jac, old_jac)
           attr(con_jac_1, "cin.idx") <- cin_idx + nbord
-          attr(con_jac_1, "ceq.idx") <- c(1:nbord, ceq_idx + nbord)
+          attr(con_jac_1, "ceq.idx") <- c(seq_len(nbord), ceq_idx + nbord)
           attr(con_jac_1, "inactive.idx") <- inactive_idx + nbord
 
           lavmodel@con.jac <- con_jac_1

@@ -4,15 +4,11 @@
 #           Gronneberg, Foldnes and Moss) when Satterthwaite = TRUE and
 #           ngroups > 1L (use old_approach = TRUE to get the old result)
 
-# Orthonormal basis spanning the columns of ceq.simple.K. In the (scaled)
-# difference tests, ceq.simple.K must play the same role as eq.constraints.K
-# (mapping the full/unco parameter space to the constrained space and back).
-# eq.constraints.K has orthonormal columns, but ceq.simple.K is a 0/1
-# duplication matrix (t(K) %*% K != I), so a plain K / t(K) round-trip would be
-# inconsistent. Using an orthonormal basis for the same column space fixes this.
-lav_test_diff_ceq_simple_k <- function(lavmodel) {
-  qr.Q(qr(lavmodel@ceq.simple.K))
-}
+# All equality-constraint reductions below use lav_con_eq_basis(): one
+# orthonormal basis (eq.constraints.K, orthonormalized ceq.simple.K, or the
+# ceq.JAC null space when equality constraints coexist with inequality
+# constraints/bounds -- where the @eq.constraints/@ceq.simple.only packing
+# flags are both FALSE), so K / t(K) round-trips are consistent everywhere.
 
 lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
                                       m_a = NULL,
@@ -82,10 +78,9 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
       m_a <- lav_test_diff_a(m1, m0, method = a_method, reference = "H1")
       # take into account equality constraints m1
       if (a_method == "delta") {
-        if (m1@Model@eq.constraints) {
-          m_a <- m_a %*% t(m1@Model@eq.constraints.K)
-        } else if (m1@Model@ceq.simple.only) {
-          m_a <- m_a %*% t(lav_test_diff_ceq_simple_k(m1@Model))
+        eq_basis_m1 <- lav_con_eq_basis(m1@Model)
+        if (!is.null(eq_basis_m1)) {
+          m_a <- m_a %*% t(eq_basis_m1)
         }
       }
       if (lav_debug()) print(m_a)
@@ -109,10 +104,9 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
       # m1, m0 OR m0, m1 (works for delta, but not for exact)
       m_a <- lav_test_diff_a(m1, m0, method = a_method, reference = "H0")
       # take into account equality constraints m1
-      if (m0@Model@eq.constraints) {
-        m_a <- m_a %*% t(m0@Model@eq.constraints.K)
-      } else if (m0@Model@ceq.simple.only) {
-        m_a <- m_a %*% t(lav_test_diff_ceq_simple_k(m0@Model))
+      eq_basis_m0 <- lav_con_eq_basis(m0@Model)
+      if (!is.null(eq_basis_m0)) {
+        m_a <- m_a %*% t(eq_basis_m0)
       }
       if (lav_debug()) print(m_a)
     }
@@ -120,7 +114,6 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
 
   # compute tr UG per group
   ngroups <- m1@SampleStats@ngroups
-  ug_group <- vector("list", length = ngroups)
 
   # safety check: m_a %*% p_inv %*% t(m_a) should NOT contain all-zero
   # rows/columns
@@ -148,50 +141,42 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
   # compute scaling factor
   fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal
 
+  # both traces live in the npar x npar space: with M = paapaap
+  # (symmetric) and K_g = Pi_g' V_g Gamma_g V_g Pi_g, we have
+  # U = V Pi M Pi' V, so that (Satorra 2000, eq. 23)
+  #   tr(U Gamma)     = sum_g fg_g tr(M K_g)
+  #   tr((U Gamma)^2) = tr((M K)^2), K = sum_g fg_g K_g
+  # this replaces the stacked pstar x pstar computation; the fg * Gamma_g
+  # with UNweighted V blocks convention is trace-equivalent to the
+  # Gamma_g / fg + fg-weighted-V convention used elsewhere (see the
+  # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
+  k_group <- vector("list", length = ngroups)
+  trace_ugamma_group <- numeric(ngroups)
+  for (g in 1:ngroups) {
+    vp <- wls_v[[g]] %*% m_pi[[g]] # pstar x npar
+    k_group[[g]] <- crossprod(vp, m_gamma[[g]] %*% vp)
+    trace_ugamma_group[g] <- sum(paapaap * k_group[[g]])
+  }
+  trace_ugamma <- sum(fg * trace_ugamma_group)
 
-  # this is what we did <0.6-13
-  if (old_approach) {
-    trace_ugamma <- numeric(ngroups)
-    trace_ugamma2 <- numeric(ngroups)
-    for (g in 1:ngroups) {
-      ug_group <- wls_v[[g]] %*% m_gamma[[g]] %*% wls_v[[g]] %*%
-        m_pi[[g]] %*% paapaap %*% t(m_pi[[g]])
-      trace_ugamma[g] <- sum(diag(ug_group))
-      if (satterthwaite) {
-        trace_ugamma2[g] <- sum(diag(ug_group %*% ug_group))
+  trace_ugamma2 <- as.numeric(NA)
+  if (satterthwaite) {
+    if (old_approach) {
+      # this is what we did <0.6-13: also the second trace per group
+      trace_ugamma2_group <- numeric(ngroups)
+      for (g in 1:ngroups) {
+        mk <- paapaap %*% k_group[[g]]
+        trace_ugamma2_group[g] <- sum(mk * t(mk))
       }
-    }
-
-    trace_ugamma <- sum(fg * trace_ugamma)
-    if (satterthwaite) {
-      trace_ugamma2 <- sum(fg * trace_ugamma2)
-    }
-  } else {
-    # for trace_ugamma, we can compute the trace per group
-    # as in Satorra (2000) eq. 23
-    trace_ugamma <- numeric(ngroups)
-    for (g in 1:ngroups) {
-      ug_group <- wls_v[[g]] %*% m_gamma[[g]] %*% wls_v[[g]] %*%
-        m_pi[[g]] %*% paapaap %*% t(m_pi[[g]])
-      trace_ugamma[g] <- sum(diag(ug_group))
-    }
-    trace_ugamma <- sum(fg * trace_ugamma)
-
-    # but for trace_ugamma2, we can no longer compute the trace per group
-    trace_ugamma2 <- as.numeric(NA)
-    if (satterthwaite) {
+      trace_ugamma2 <- sum(fg * trace_ugamma2_group)
+    } else {
       # global approach (not group-specific)
-      gamma_f <- m_gamma
-      for (g in seq_along(m_gamma)) {
-        gamma_f[[g]] <- fg[g] * m_gamma[[g]]
+      k_all <- fg[1] * k_group[[1]]
+      for (g in seq_len(ngroups - 1L) + 1L) {
+        k_all <- k_all + fg[g] * k_group[[g]]
       }
-      gamma_all <- lav_mat_bdiag(gamma_f)
-      v_all <- lav_mat_bdiag(wls_v)
-      pi_all <- do.call(rbind, m_pi)
-      u_all <- v_all %*% pi_all %*% paapaap %*% t(pi_all) %*% v_all
-      ug_all <- u_all %*% gamma_all
-      ug_all2 <- ug_all %*% ug_all
-      trace_ugamma2 <- sum(diag(ug_all2))
+      mk <- paapaap %*% k_all
+      trace_ugamma2 <- sum(mk * t(mk))
     }
   }
 
@@ -407,6 +392,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   options_1$optim.method <- "none"
   options_1$optim.force.converged <- TRUE
   options_1$baseline <- FALSE
+  options_1$fit.by.level <- FALSE
   options_1$h1 <- TRUE # needed after all (yuan.benter.mplus)
   options_1$start <- pt_m0_extended # new in 0.6!
   m10 <- lavaan(
@@ -450,21 +436,17 @@ lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
     delta0 <- do.call(rbind, delta0_list)
 
     # take into account equality constraints m0
-    # note: delta is in the 'unco' space (one column per non-collapsed free
-    # parameter); ceq.simple.K (nx.unco x nx.free) maps it to the compact
-    # (nx.free) space, so we post-multiply by K (NOT t(K)), exactly as for the
-    # eq.constraints.K case above
-    if (m0@Model@eq.constraints) {
-      delta0 <- delta0 %*% m0@Model@eq.constraints.K
-    } else if (m0@Model@ceq.simple.only) {
-      delta0 <- delta0 %*% lav_test_diff_ceq_simple_k(m0@Model)
+    # note: delta has one column per non-collapsed free parameter; the basis
+    # K maps it to the constrained space, so we post-multiply by K (NOT t(K))
+    eq_basis_m0 <- lav_con_eq_basis(m0@Model)
+    if (!is.null(eq_basis_m0)) {
+      delta0 <- delta0 %*% eq_basis_m0
     }
 
     # take into account equality constraints m1
-    if (m1@Model@eq.constraints) {
-      delta1 <- delta1 %*% m1@Model@eq.constraints.K
-    } else if (m1@Model@ceq.simple.only) {
-      delta1 <- delta1 %*% lav_test_diff_ceq_simple_k(m1@Model)
+    eq_basis_m1 <- lav_con_eq_basis(m1@Model)
+    if (!is.null(eq_basis_m1)) {
+      delta1 <- delta1 %*% eq_basis_m1
     }
 
     # H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
@@ -493,9 +475,9 @@ lav_test_diff_af_h1 <- function(m1, m0) {
   pt_m1 <- lav_pt_set_cache(parTable(m1), m1@pta)
 
   # select .p*. parameters only
-  m0_p_idx <- which(grepl("\\.p", pt_m0$plabel))
+  m0_p_idx <- grep(".p", pt_m0$plabel, fixed = TRUE)
   np0 <- length(m0_p_idx)
-  m1_p_idx <- which(grepl("\\.p", pt_m1$plabel))
+  m1_p_idx <- grep(".p", pt_m1$plabel, fixed = TRUE)
   np1 <- length(m1_p_idx)
 
   # check if parameter space is the same

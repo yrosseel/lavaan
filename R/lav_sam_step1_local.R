@@ -206,6 +206,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   }
   m <- vector("list", nblocks)
   lv_names_1 <- vector("list", nblocks)
+  d_std_all <- vector("list", nblocks)
 
   # compute VETA/EETA per block
   for (b in seq_len(nblocks)) {
@@ -409,6 +410,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         veta[[b]] <- t(veta[[b]] / d_std) / d_std
       }
     }
+    d_std_all[[b]] <- d_std
     colnames(veta[[b]]) <- rownames(veta[[b]]) <- lv_names1
 
     # compute model-based RELiability
@@ -515,13 +517,51 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
   # handle conditional.x: add res.slopes, cov.x and mean.x
   if (fit@Model@conditional.x) {
+    if (lv_interaction_flag) {
+      lav_msg_stop(gettext(
+        "sam() does not support latent interactions in combination with
+        conditional.x = TRUE (yet)."))
+    }
     res_slopes <- vector("list", length = nblocks)
+    cov_x  <- fit@h1$implied$cov.x
+    mean_x <- fit@h1$implied$mean.x
     for (b in seq_len(nblocks)) {
-      res_slopes[[b]] <- m[[b]] %*% fit@h1$implied$res.slopes[[b]]
+      x_names <- fit@Data@ov.names.x[[b]]
+      # y-level slopes: read from step1$SLOPES (set by lav_sam_get_cov_ybar,
+      # and perturbed by the categorical numeric jacobian); fall back to the
+      # h1 implied slopes
+      slopes_b <- step1$SLOPES[[b]]
+      if (is.null(slopes_b)) {
+        slopes_b <- fit@h1$implied$res.slopes[[b]]
+      }
+      # categorical/correlation: rescale to the model's latent-response
+      # metric, exactly like COV/YBAR above
+      if (fit@Data@nlevels == 1L &&
+          (fit@Model@categorical || fit@Model@correlation)) {
+        slopes_b <- (1 / drop(mm_delta[[b]])) * slopes_b
+      }
+      # slopes of the latent variables on the exogenous covariates; if
+      # std.lv = TRUE, put them (and EETA, the latent intercepts) on the same
+      # standardized metric as the cov2cor() rescaled VETA above, so that the
+      # full conditional moment vector (intercepts, slopes, residual
+      # covariances) is metric-coherent
+      res_slopes[[b]] <- (m[[b]] %*% slopes_b) / d_std_all[[b]]
+      if (fit@Options$std.lv && !is.null(eeta)) {
+        eeta[[b]] <- eeta[[b]] / d_std_all[[b]]
+      }
+      # (dim)names, so that the step-2 summary-statistics call can align
+      # these statistics with its own internal variable order
+      rownames(res_slopes[[b]]) <- colnames(veta[[b]])
+      colnames(res_slopes[[b]]) <- x_names
+      dimnames(cov_x[[b]]) <- list(x_names, x_names)
+      mean_x[[b]] <- drop(mean_x[[b]])
+      names(mean_x[[b]]) <- x_names
     }
     attr(veta, "res.slopes") <- res_slopes
-    attr(veta, "cov.x") <- fit@h1$implied$cov.x
-    attr(veta, "mean.x") <- fit@h1$implied$mean.x
+    attr(veta, "cov.x") <- cov_x
+    attr(veta, "mean.x") <- mean_x
+    # needed by the (analytic) conditional.x JACb in the Gamma.eta machinery
+    step1$D.STD <- d_std_all
   }
 
   # store EETA/VETA/M/alpha/lambda
@@ -689,9 +729,22 @@ lav_sam_meas_keep_idx <- function(pt_1, ov_names, lavmodel, lv_ind,
 # (a single g for a per-group JACb, or all groups for JACc/psi). This is the
 # function whose jacobian (w.r.t. the sample statistics / measurement params)
 # the numeric-difference helpers below compute.
-lav_sam_veta_vec <- function(step1_obj, groups, meanstructure) {
+#
+# conditional.x: the structural moments follow the conditional WLS.obs layout
+# c( vecr(cbind(EETA, RS_eta)), vech(VETA) ), where RS_eta = the res.slopes
+# attribute of VETA (slopes of the latent variables on the exogenous
+# covariates) and vecr interleaves per variable: (int_1, b_11..b_1q, int_2,
+# ...). The variables are in VETA (measurement) order here; the permutation to
+# the structural model's internal order happens once, on Gamma.eta (see
+# lav_sam_condx_perm_idx()).
+lav_sam_veta_vec <- function(step1_obj, groups, meanstructure,
+                             conditional_x = FALSE) {
   unlist(lapply(groups, function(g) {
-    if (meanstructure) {
+    if (conditional_x) {
+      rs_g <- attr(step1_obj$VETA, "res.slopes")[[g]]
+      c(lav_mat_vecr(cbind(step1_obj$EETA[[g]], rs_g)),
+        lav_mat_vech(step1_obj$VETA[[g]]))
+    } else if (meanstructure) {
       c(step1_obj$EETA[[g]], lav_mat_vech(step1_obj$VETA[[g]]))
     } else {
       lav_mat_vech(step1_obj$VETA[[g]])
@@ -703,12 +756,13 @@ lav_sam_veta_vec <- function(step1_obj, groups, meanstructure) {
 # free-parameter rows of step1$PT$est (rows_idx). Used for JACc (rows_idx =
 # keep_idx) and the psi channel (rows_idx = the joint factor (co)variance rows).
 lav_sam_jac_est_rows <- function(rows_idx, step1, fit, groups, meanstructure) {
+  conditional_x <- fit@Model@conditional.x
   ff <- function(x) {
     step1_1 <- step1
     step1_1$PT$est[rows_idx] <- x
     step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
       sam_method = step1$sam.method, local_options = step1$local.options)
-    lav_sam_veta_vec(step1_1, groups, meanstructure)
+    lav_sam_veta_vec(step1_1, groups, meanstructure, conditional_x)
   }
   verbose_flag <- lav_verbose()
   lav_verbose(FALSE)
@@ -719,8 +773,11 @@ lav_sam_jac_est_rows <- function(rows_idx, step1, fit, groups, meanstructure) {
 # Categorical JACb for one group g: numeric jacobian of vech(VETA_g) w.r.t. the
 # off-diagonal (poly)choric correlations and the free continuous variances of
 # step1$COV[[g]] (keeping theta.mm fixed), with the columns mapped (by label)
-# into group g's joint WLS.obs vector. Thresholds/means stay zero.
+# into group g's joint WLS.obs vector. Thresholds/means stay zero. Under
+# conditional.x the y-on-x slopes (step1$SLOPES[[g]], raw probit metric) are
+# perturbed as well: the structural moments include RS_eta = M %*% slopes.
 lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
+  conditional_x <- fit@Model@conditional.x
   cov_g <- step1$COV[[g]]
   low_idx <- lower.tri(cov_g) # strict lower triangle (column-major)
   n_low <- sum(low_idx)
@@ -728,6 +785,11 @@ lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
   # continuous variables: their variances (the diagonal) are free statistics
   num_idx <- which(!seq_len(nvar_g) %in% fit@SampleStats@th.idx[[g]])
   x0 <- c(cov_g[low_idx], diag(cov_g)[num_idx])
+  n_covvar <- length(x0)
+  if (conditional_x) {
+    slopes_g <- step1$SLOPES[[g]]
+    x0 <- c(x0, as.vector(slopes_g)) # column-major, like lav_mat_vec()
+  }
   ffb_cat <- function(xx) {
     step1_1 <- step1
     this_cov <- step1$COV[[g]]
@@ -739,9 +801,14 @@ lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
       diag(this_cov) <- dd
     }
     step1_1$COV[[g]] <- this_cov
+    if (conditional_x) {
+      step1_1$SLOPES[[g]] <- matrix(xx[-seq_len(n_covvar)],
+                                    nrow = nrow(slopes_g),
+                                    ncol = ncol(slopes_g))
+    }
     step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
       sam_method = step1$sam.method, local_options = step1$local.options)
-    lav_sam_veta_vec(step1_1, g, meanstructure)
+    lav_sam_veta_vec(step1_1, g, meanstructure, conditional_x)
   }
   verbose_flag <- lav_verbose()
   lav_verbose(FALSE)
@@ -764,6 +831,12 @@ lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
   my_labels <- c(vapply(seq_along(r_idx), function(k) {
     paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
   }, character(1L)), var_labels)
+  if (conditional_x) {
+    x_names_g <- fit@Data@ov.names.x[[g]]
+    my_labels <- c(my_labels,
+      paste0(rep(ov_g, times = length(x_names_g)), "~",
+             rep(x_names_g, each = nvar_g)))
+  }
   col_idx <- match(my_labels, joint_labels_g)
   if (anyNA(col_idx)) {
     lav_msg_stop(gettext(
@@ -787,6 +860,91 @@ lav_sam_jacb_cont_g <- function(mb, meanstructure) {
     jb <- lav_mat_bdiag(mb, jb)
   }
   jb
+}
+
+# Continuous JACb for one group g under conditional.x. Rows follow the
+# conditional structural-moment layout c(vecr(cbind(EETA, RS_eta)),
+# vech(VETA)) of lav_sam_veta_vec(); columns follow the joint conditional
+# WLS.obs layout c(vecr(cbind(res.int, res.slopes)), vech(res.cov)).
+# With C_eta = cbind(EETA, RS_eta) = M_g %*% C_y - [M_g nu, 0] and
+# vecr(A) = vec(A'):
+#   d vecr(C_eta) / d vecr(C_y)     = M_g %x% I_(q+1)
+#   d vech(VETA)  / d vech(res.cov) = as in the unconditional case
+# (theta.mm -- and hence M_g -- is held fixed here; its influence goes
+# through the JACc channel). If std.lv = TRUE, the intercept/slope rows are
+# on the same standardized metric as VETA (divide the M_g rows by d_std,
+# matching the res.slopes attribute); the vech(VETA) block keeps the raw
+# M_g %x% M_g map, as in the unconditional case.
+lav_sam_jacb_cont_condx_g <- function(mb, nexo, d_std = NULL) {
+  mb_m <- mb
+  if (!is.null(d_std)) {
+    mb_m <- mb / d_std
+  }
+  jb_mean <- mb_m %x% diag(nexo + 1L)
+  row_idx <- lav_mat_vech_idx(nrow(mb))
+  jb_cov <- lav_mat_dup_post(mb %x% mb)[row_idx, , drop = FALSE]
+  lav_mat_bdiag(jb_mean, jb_cov)
+}
+
+# conditional.x, continuous measurement blocks: the blocks themselves are fit
+# unconditionally (their unconditional sample moments are exact functions of
+# the joint conditional statistics, given the -- fixed -- moments of the
+# exogenous covariates):
+#   ybar_B = res.int_B + res.slopes_B %*% mean.x
+#   S_BB   = res.cov_BB + res.slopes_B %*% cov.x %*% res.slopes_B'
+# This helper returns the jacobian T of the block statistics c(ybar_B,
+# vech(S_BB)) w.r.t. the joint conditional WLS.obs vector, so that the
+# block influence (columns = block statistics) can be mapped into the joint
+# conditional statistics space as mm_jac %*% T.
+lav_sam_condx_t_g <- function(fit, g, ov_block, meanstructure) {
+  ov_nox <- fit@pta$vnames$ov.nox[[g]]
+  ov_x <- fit@Data@ov.names.x[[g]]
+  ny <- length(ov_nox)
+  q <- length(ov_x)
+  bs <- fit@h1$implied$res.slopes[[g]] # ny x q
+  bsx <- bs %*% fit@h1$implied$cov.x[[g]] # ny x q
+  xbar <- drop(fit@h1$implied$mean.x[[g]])
+
+  y_idx <- match(ov_block, ov_nox)
+  if (anyNA(y_idx)) {
+    lav_msg_stop(gettext(
+      "internal error: unable to map the measurement-block variables into
+      the joint conditional statistics vector (conditional.x JACa)"))
+  }
+  nb <- length(y_idx)
+  ncol_t <- ny * (1L + q) + ny * (ny + 1L) / 2L
+  cov_off <- ny * (1L + q)
+  # column index of the intercept / slopes of joint y-variable j
+  slope_cols <- function(j) (j - 1L) * (q + 1L) + 1L + seq_len(q)
+  # vech position of the joint pair (j, l)
+  pos <- matrix(0L, ny, ny)
+  pos[lower.tri(pos, diag = TRUE)] <- seq_len(ny * (ny + 1L) / 2L)
+  pos[upper.tri(pos)] <- t(pos)[upper.tri(pos)]
+
+  t_mean <- NULL
+  if (meanstructure) {
+    t_mean <- matrix(0, nb, ncol_t)
+    for (i in seq_len(nb)) {
+      j <- y_idx[i]
+      t_mean[i, (j - 1L) * (q + 1L) + 1L] <- 1
+      if (q > 0L) {
+        t_mean[i, slope_cols(j)] <- xbar
+      }
+    }
+  }
+  r_i <- lav_mat_vech_row_idx(nb)
+  c_i <- lav_mat_vech_col_idx(nb)
+  t_cov <- matrix(0, nb * (nb + 1L) / 2L, ncol_t)
+  for (k in seq_len(nrow(t_cov))) {
+    j <- y_idx[r_i[k]]
+    l <- y_idx[c_i[k]]
+    t_cov[k, cov_off + pos[j, l]] <- 1
+    if (q > 0L) {
+      t_cov[k, slope_cols(j)] <- t_cov[k, slope_cols(j)] + bsx[l, ]
+      t_cov[k, slope_cols(l)] <- t_cov[k, slope_cols(l)] + bsx[j, ]
+    }
+  }
+  rbind(t_mean, t_cov)
 }
 
 lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
@@ -817,12 +975,11 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # influence path per block, and JACb also perturbs the free continuous
   # variances. Higher-order categorical models are supported too (the structural
   # part reduces to the second-order factor (co)variances, as in the continuous
-  # case). Still guarded: conditional.x.
-  if (lavmodel@categorical && lavmodel@conditional.x) {
-    lav_msg_stop(gettext(
-      "local SEs: not available for the categorical setting in combination
-       with conditional.x = TRUE (yet)!\n"))
-  }
+  # case). Under conditional.x the measurement blocks are themselves fitted
+  # with conditional.x = TRUE (same latent-response scale as the joint model;
+  # see lav_sam_step1()), the joint statistics gain the y-on-x slope entries
+  # (label "y~x"), and JACb also perturbs step1$SLOPES. Block-wise mixed +
+  # conditional.x is stopped in lav_sam_step1().
 
   # multiple groups: dispatch to the (single-level, no latent interaction)
   # multigroup implementation, which builds one stacked jacobian over all
@@ -857,8 +1014,17 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # WLS statistics vector of the joint model by label
   if (lavmodel@categorical) {
     joint_labels <- lav_sam_wls_obs_labels(
-      ov_names = lavdata@ov.names[[g]],
-      th_idx = fit@SampleStats@th.idx[[g]]
+      ov_names = if (lavmodel@conditional.x) {
+        lavpta$vnames$ov.nox[[g]]
+      } else {
+        lavdata@ov.names[[g]]
+      },
+      th_idx = fit@SampleStats@th.idx[[g]],
+      ov_names_x = if (lavmodel@conditional.x) {
+        lavdata@ov.names.x[[g]]
+      } else {
+        NULL
+      }
     )
   }
 
@@ -936,26 +1102,52 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     # full (unfiltered) influence: needed for the psi channel below
     mm_jac_full <- mm_jac
 
-    # keep only rows that are also in FIT@ParTable
-    mm_keep_idx <- fit_mm_block@ParTable$free[step1$block.ptm.idx[[mm]]]
+    # keep only rows that are also in FIT@ParTable. The rows of mm_jac are in
+    # the *unconstrained* parameter order (Delta and the augmented inverted
+    # information keep one column/row per unconstrained parameter), so under
+    # within-block (ceq.simple) equality constraints the block's constrained
+    # 'free' numbering must be remapped to the unconstrained numbering first
+    # (the constrained members then each select their own -- identical --
+    # influence row); indexing by the constrained numbering would shift every
+    # row after the first constrained pair by one. (Same remap as the
+    # Sigma.11 assembly in lav_sam_step1().)
+    mm_ptm_free <- fit_mm_block@ParTable$free
+    if (fit_mm_block@Model@ceq.simple.only) {
+      mm_ptm_free[mm_ptm_free > 0L] <- seq_len(fit_mm_block@Model@nx.unco)
+    }
+    mm_keep_idx <- mm_ptm_free[step1$block.ptm.idx[[mm]]]
     mm_jac <- mm_jac[mm_keep_idx, , drop = FALSE]
 
     # map the columns of mm_jac (the sample statistics of this
     # measurement block) into the statistics vector of the joint model
+    mm_row_idx <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
     if (lavmodel@categorical) {
       # label-based mapping (handles any variable ordering and a block-wise
       # mix of categorical and continuous measurement blocks)
       mm_col_idx <- lav_sam_mg_cat_col_idx(fit_mm_block, g, joint_labels,
                                            ncol(mm_jac_full))
+      # sign flips (continuous conditional.x block: block intercept vs the
+      # joint NEGATIVE intercept |t1 entry)
+      mm_sign <- attr(mm_col_idx, "sign")
+      if (!is.null(mm_sign)) {
+        mm_jac <- t(t(mm_jac) * mm_sign)
+      }
+      jaca[mm_row_idx, mm_col_idx] <- mm_jac
+    } else if (lavmodel@conditional.x) {
+      # the (unconditional) block statistics are exact functions of the joint
+      # conditional statistics: chain through T (see lav_sam_condx_t_g())
+      t_block <- lav_sam_condx_t_g(fit, g,
+        ov_block = fit_mm_block@Data@ov.names[[g]],
+        meanstructure = fit_mm_block@Model@meanstructure)
+      jaca[mm_row_idx, ] <- mm_jac %*% t_block
     } else {
       mm_ov_idx <- match(step1$MM.FIT[[mm]]@Data@ov.names[[g]],
                          lavdata@ov.names[[g]])
       mm_nvar <- length(lavdata@ov.names[[g]])
       mm_col_idx <- lav_mat_vech_which_idx(mm_nvar, idx = mm_ov_idx,
         add_idx_at_start = lavmodel@meanstructure)
+      jaca[mm_row_idx, mm_col_idx] <- mm_jac
     }
-    mm_row_idx <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
-    jaca[mm_row_idx, mm_col_idx] <- mm_jac
 
     # psi channel: capture the influence d(Psi)/d(stats) for the within-block
     # factor (co)variances (categorical blocks only), mapped to the joint stats
@@ -966,7 +1158,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
                     bpt$free > 0L & !duplicated(bpt$free))
       for (k in bpsi) {
         ja_row <- numeric(ncol(jaca))
-        ja_row[mm_col_idx] <- mm_jac_full[bpt$free[k], ]
+        ja_row[mm_col_idx] <- mm_jac_full[mm_ptm_free[k], ]
         # joint partable row for this factor (co)variance (canonical pair)
         jrow <- which(step1$PT$op == "~~" &
           ((step1$PT$lhs == bpt$lhs[k] & step1$PT$rhs == bpt$rhs[k]) |
@@ -984,14 +1176,23 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   lv_ind <- unlist(lavpta$vnames$lv.ind)
   keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
                                     lavmodel@meanstructure)
-  jaca <- jaca[keep_idx, , drop = FALSE]
   if (p_only) {
     # the rows of P are in ascending free-parameter order; return the
     # free indices, so the caller can align them with step1.free.idx
-    # (which is ordered per measurement block)
-    attr(jaca, "free.idx") <- step1$PT.free[keep_idx]
+    # (which is ordered per measurement block). Under (within-block)
+    # ceq.simple equality constraints, step1.free.idx is in the
+    # *unconstrained* numbering (one entry per constrained member), so
+    # de-duplicate on step1$PT.free instead of pt_1$free: the constrained
+    # members then each keep their own (identical) influence row, exactly
+    # as in the multigroup (_mg) path.
+    p_keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                        lavmodel@meanstructure,
+                                        dedup_key = step1$PT.free)
+    jaca <- jaca[p_keep_idx, , drop = FALSE]
+    attr(jaca, "free.idx") <- step1$PT.free[p_keep_idx]
     return(jaca)
   }
+  jaca <- jaca[keep_idx, , drop = FALSE]
 
   # JACb: jacobian of the function vech(VETA) = f(vech(S), theta.mm)
   #       (treating theta.mm as fixed)
@@ -1045,6 +1246,10 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     # not a simple M %x% M map; obtain it numerically (see lav_sam_jacb_cat_g()).
     jacb <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels,
                                lavmodel@meanstructure)
+  } else if (lavmodel@conditional.x) {
+    jacb <- lav_sam_jacb_cont_condx_g(step1$M[[g]],
+      nexo = length(fit@Data@ov.names.x[[g]]),
+      d_std = step1$D.STD[[g]])
   } else { # no latent interactions
     jacb <- lav_sam_jacb_cont_g(step1$M[[g]], lavmodel@meanstructure)
   }
@@ -1088,6 +1293,152 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
 
   # eventually, this will be a list per group/block
   list(jac)
+}
+
+# PML structural-space Gamma.eta (se = "local" for estimator = "PML").
+#
+# For PML the step-1 estimator is NOT a function of the saturated statistics
+# s = (thresholds, polychoric correlations): the pairwise likelihood loads on
+# the full bivariate tables. The influence route Gamma.eta = JAC Gamma JAC'
+# (which writes theta1.hat as a function of s) therefore does not apply.
+# Instead we build the CASEWISE joint influences of the two ingredients of
+# the structural statistics c(EETA, vech(VETA)) = f(s, theta1.hat):
+#
+#   sqrt(N) (stats - target) ~ (1/sqrt(N)) sum_i u_i,
+#   u_i = JACb zeta_i + JACc h_i
+#
+# with
+#   zeta_i = casewise influence of the saturated statistics: the muthen1984
+#            two-stage estimator's influence function, zeta_i = N B^-1 sc_i
+#            (SC/A11/A21/A22 from muthen1984()); their crossprod/N
+#            reproduces the categorical Gamma (NACOV) exactly;
+#   h_i    = casewise influence of the step-1 (PML) block estimates: per
+#            block, I_b^-1 g1_i with g1_i the casewise pairwise scores
+#            (lav_sc()) and I_b the unit block information;
+#   JACb   = d(stats)/d s'       (theta1 fixed; lav_sam_jacb_cat_g());
+#   JACc   = d(stats)/d theta1'  (s fixed; lav_sam_jac_est_rows() over ALL
+#            free block parameters, which automatically includes the
+#            within-block factor (co)variances -- the 'psi channel' of the
+#            (D)WLS categorical path: in the delta parameterization VETA
+#            depends on Psi through theta_jj = 1 - (Lambda Psi Lambda')_jj).
+#
+# Gamma.eta = (1/N) sum_i (u_i - ubar)(u_i - ubar)': the joint casewise
+# (infinitesimal-jackknife) covariance, including the cross-covariance
+# between s and theta1.hat (same cases). Downstream, step 2 consumes it
+# exactly like the (D)WLS Gamma.eta: robust (local) SEs + the corrected
+# Satorra-Bentler structural test.
+#
+# Scope (guarded): single group, single level, complete data, all-ordinal,
+# no exogenous covariates, no sampling weights, no equality constraints.
+lav_sam_gamma_eta_pml <- function(step1 = NULL, fit = NULL) {
+  lavdata <- fit@Data
+  lavmodel <- fit@Model
+  g <- 1L
+
+  # guards
+  if (lavdata@ngroups > 1L) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with multiple groups (yet)!"))
+  }
+  if (lavdata@nlevels > 1L) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available for multilevel models (yet)!"))
+  }
+  if (lavmodel@conditional.x) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with exogenous covariates
+       (conditional.x = TRUE) (yet)!"))
+  }
+  if (anyNA(lavdata@X[[g]])) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available for missing data (yet)!"))
+  }
+  if (length(lavdata@sampling.weights) > 0L) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with sampling weights (yet)!"))
+  }
+  if (lavmodel@eq.constraints || lavmodel@ceq.simple.only) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: not available with equality constraints (yet)!"))
+  }
+  ov_idx <- match(lavdata@ov.names[[g]], lavdata@ov$name)
+  ov_types <- lavdata@ov$type[ov_idx]
+  if (!all(ov_types == "ordered")) {
+    lav_msg_stop(gettext(
+      "PML Gamma.eta: all observed variables must be ordered (yet)!"))
+  }
+
+  y <- lavdata@X[[g]]
+  n <- nrow(y)
+  meanstructure <- lavmodel@meanstructure
+
+  # --- 1. zeta_i: casewise influence of the saturated (th, rho) statistics
+  cat_1 <- muthen1984(
+    data_1 = y,
+    ov_names = lavdata@ov.names[[g]],
+    ov_types = ov_types,
+    ov_levels = lavdata@ov$nlev[ov_idx],
+    wls_w = TRUE
+  )
+  b_inv <- lav_m84_b_inv(
+    a11 = cat_1$A11, a21 = cat_1$A21, a22 = cat_1$A22
+  )$b_inv
+  zeta <- n * (cat_1$SC %*% t(b_inv)) # N x nstats, WLS.obs layout
+
+  # --- 2. JACb: d(stats)/d s' (theta1 fixed)
+  joint_labels <- lav_sam_wls_obs_labels(
+    ov_names = lavdata@ov.names[[g]],
+    th_idx = fit@SampleStats@th.idx[[g]],
+    ov_names_x = NULL
+  )
+  jacb <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels, meanstructure)
+
+  # --- 3. rows: ALL free block parameters, mapped to step1$PT rows
+  pt_1 <- step1$PT
+  n_mmblocks <- length(step1$MM.FIT)
+  rows_list <- cols_list <- vector("list", n_mmblocks)
+  for (mm in seq_len(n_mmblocks)) {
+    fb <- step1$MM.FIT[[mm]]
+    ptm <- fb@ParTable
+    ptm_idx <- step1$block.ptm.idx[[mm]]
+    ok <- ptm$free[ptm_idx] > 0L
+    rows_list[[mm]] <- step1$block.mm.idx[[mm]][ptm_idx][ok]
+    cols_list[[mm]] <- ptm$free[ptm_idx][ok]
+  }
+  rows_idx <- sort(unique(unlist(rows_list)))
+
+  # JACc: d(stats)/d theta1' (s fixed), columns in rows_idx order
+  jacc <- lav_sam_jac_est_rows(rows_idx, step1, fit, g, meanstructure)
+
+  # --- 4. h_i: casewise influence of the block (PML) estimates,
+  #        columns in rows_idx order
+  h <- matrix(0, n, length(rows_idx))
+  for (mm in seq_len(n_mmblocks)) {
+    fb <- step1$MM.FIT[[mm]]
+    # ignore_constraints: the blocks are fitted with bounds =
+    # "wide.zerovar", which lavaan represents as (inactive) linear
+    # INEQUALITY constraints; lav_sc()'s constraint projection would
+    # project the scores onto them and corrupt the casewise influences.
+    # Equality constraints are excluded from this route (guard above).
+    scb <- lav_sc(fb, remove_empty_cases = FALSE,
+                  ignore_constraints = TRUE)
+    scb[is.na(scb)] <- 0
+    if (nrow(scb) != n) {
+      lav_msg_stop(gettext(
+        "internal error: case alignment failure between a measurement
+         block and the data (PML Gamma.eta)."))
+    }
+    ib <- lavTech(fb, "information") # unit information
+    nb <- fb@SampleStats@ntotal
+    hb <- (n / nb) * scb %*% solve(ib)
+    h[, match(rows_list[[mm]], rows_idx)] <-
+      hb[, cols_list[[mm]], drop = FALSE]
+  }
+
+  # --- 5. assemble the joint casewise influences + Gamma.eta
+  u <- zeta %*% t(jacb) + h %*% t(jacc)
+  u <- t(t(u) - colMeans(u))
+  list(crossprod(u) / n)
 }
 
 # Two-level (single group) Gamma.eta: the NACOV of the structural statistics
@@ -1297,8 +1648,52 @@ lav_sam_gamma_eta_2l <- function(step1 = NULL, fit = NULL) {
 lav_sam_mg_cat_col_idx <- function(fit_mm_block, g, joint_labels, ncol_full) {
   if (fit_mm_block@Model@categorical) {
     mm_labels <- lav_sam_wls_obs_labels(
-      ov_names = fit_mm_block@Data@ov.names[[g]],
-      th_idx = fit_mm_block@SampleStats@th.idx[[g]])
+      ov_names = if (fit_mm_block@Model@conditional.x) {
+        fit_mm_block@pta$vnames$ov.nox[[g]]
+      } else {
+        fit_mm_block@Data@ov.names[[g]]
+      },
+      th_idx = fit_mm_block@SampleStats@th.idx[[g]],
+      ov_names_x = if (fit_mm_block@Model@conditional.x) {
+        fit_mm_block@Data@ov.names.x[[g]]
+      } else {
+        NULL
+      })
+  } else if (fit_mm_block@Model@conditional.x) {
+    # continuous block, fitted with conditional.x = TRUE, within a
+    # categorical + conditional.x joint model: the influence columns follow
+    # the continuous conditional layout c(vecr(cbind(int, slopes)),
+    # vech(res.cov, diag = TRUE)). The joint represents each numeric
+    # variable by its NEGATIVE intercept (|t1), its slopes (~x), its
+    # residual variance (|var) and residual covariances (~~); the |t1 sign
+    # flip is returned in the "sign" attribute.
+    block_ov <- fit_mm_block@Data@ov.names[[g]]
+    block_x <- fit_mm_block@Data@ov.names.x[[g]]
+    nvar_b <- length(block_ov)
+    q_b <- length(block_x)
+    mean_labels <- unlist(lapply(block_ov, function(y) {
+      c(paste0(y, "|t1"), paste0(y, "~", block_x))
+    }))
+    mean_signs <- rep(c(-1, rep(1, q_b)), times = nvar_b)
+    v_lin <- lav_mat_vech_idx(nvar_b)
+    zero_b <- matrix(0L, nvar_b, nvar_b)
+    v_r <- row(zero_b)[v_lin]
+    v_c <- col(zero_b)[v_lin]
+    cov_labels <- ifelse(v_r == v_c,
+      paste0(block_ov[v_r], "|var"),
+      vapply(seq_along(v_r), function(k)
+        paste(sort(c(block_ov[v_r[k]], block_ov[v_c[k]])), collapse = "~~"),
+        character(1L)))
+    mm_labels <- c(mean_labels, cov_labels)
+    mm_signs <- c(mean_signs, rep(1, length(cov_labels)))
+    col_idx <- match(mm_labels, joint_labels)
+    if (anyNA(col_idx)) {
+      lav_msg_stop(gettext(
+        "internal error: unable to map the statistics of a measurement block
+         into the statistics vector of the joint model"))
+    }
+    attr(col_idx, "sign") <- mm_signs
+    return(col_idx)
   } else {
     # continuous block within a categorical joint model: the influence columns
     # are ordered (means, vech(cov)); the joint represents each continuous

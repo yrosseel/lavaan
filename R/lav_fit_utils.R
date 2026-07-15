@@ -100,7 +100,8 @@ lav_fit_catml_dwls <- function(lavobject, nonpd = "na") {
 
     # reduce
     delta_g[[g]] <- delta[[g]][-rm_idx, , drop = FALSE]
-    # reduce and weight
+    # reduce and weight: Gamma_g / fg paired with fg-weighted V blocks (see
+    # the SCALING CONVENTIONS note in lav_samplestats_gamma.R)
     w_dwls_g[[g]] <- fg[g] * w_dwls[[g]][-rm_idx, -rm_idx]
     v_g[[g]] <- fg[g] * v[[g]] # should already have the right dims
     gamma_f[[g]] <- 1 / fg[g] * gamma[[g]][-rm_idx, -rm_idx]
@@ -195,6 +196,7 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     se = "none",
     test = "standard",
     baseline = FALSE,
+    fit.by.level = FALSE,
     check.post = FALSE
   ), silent = TRUE)
   if (inherits(fit_tilde, "try-error")) {
@@ -312,6 +314,7 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     se = "none",
     test = "standard",
     baseline = FALSE,
+    fit.by.level = FALSE,
     check.post = FALSE
   ), silent = TRUE)
   if (inherits(fit_b_tilde, "try-error")) {

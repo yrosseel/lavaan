@@ -42,6 +42,7 @@ lav_model_pt  <- function(
                           auto_fix_single = FALSE,
                           auto_var = FALSE,
                           auto_cov_lv_x = FALSE,
+                          auto_cov_x = FALSE,
                           auto_cov_y = FALSE,
                           auto_th = FALSE,
                           auto_delta = FALSE,
@@ -149,6 +150,7 @@ lav_model_pt  <- function(
   # }
 
   # auto=TRUE?
+  auto_cov_x_explicit <- auto_cov_x # was auto.cov.x requested explicitly?
   if (auto) { # mimic sem/cfa auto behavior
     if (model_type == "sem") {
       int_ov_free <- TRUE
@@ -175,9 +177,47 @@ lav_model_pt  <- function(
     }
   }
 
+  # auto.cov.x implies auto.cov.lv.x; but the covariances between the
+  # exogenous latent variables and the observed exogenous covariates cannot
+  # be represented if conditional.x = TRUE (the covariates are conditioned
+  # out); in that case, auto.cov.x is switched off again -- with a warning,
+  # but only if the user asked for auto.cov.x = TRUE explicitly
+  if (auto_cov_x) {
+    auto_cov_lv_x <- TRUE
+    if (conditional_x) {
+      auto_cov_x <- FALSE
+      if (auto_cov_x_explicit) {
+        lav_msg_warn(gettext(
+          "auto.cov.x = TRUE has no effect if conditional.x = TRUE;
+          covariances between exogenous latent variables and observed
+          exogenous covariates will not be added."))
+      }
+    }
+  }
+
   # check for meanstructure
   if (any(flat$op == "~1")) {
     meanstructure <- TRUE
+  }
+
+  # if there is no data (no var_table) and no explicit nthresholds= argument,
+  # but the syntax specifies thresholds (the "|" operator), derive the number
+  # of thresholds per ordered variable from the syntax. This is needed to set
+  # up ordered variables at blocks/levels where the thresholds are not given
+  # explicitly (e.g. the between level of a two-level categorical model, which
+  # inherits its thresholds from the within level), for instance when
+  # simulating data from a model without a dataset (sample.nobs= only).
+  if (is.null(var_table) && is.null(nthresholds) && any(flat$op == "|")) {
+    th_idx <- which(flat$op == "|")
+    # count the *distinct* thresholds per variable; the same threshold may
+    # appear more than once in 'flat' (e.g. once per group in a multiple-group
+    # model), and should not be counted twice
+    tmp_th_pairs <- unique(data.frame(lhs = flat$lhs[th_idx],
+                                      rhs = flat$rhs[th_idx],
+                                      stringsAsFactors = FALSE))
+    tmp_th_tab <- table(tmp_th_pairs$lhs)
+    nthresholds <- as.integer(tmp_th_tab)
+    names(nthresholds) <- names(tmp_th_tab)
   }
 
   # check for block identifiers in the syntax (op = ":")
@@ -207,9 +247,10 @@ lav_model_pt  <- function(
     block_op_idx <- which(flat$op == ":")
 
     # check for wrong spelled 'group' lhs
-    if (length(grep("group", tmp_blocks_lhs)) > 1L) {
+    if (length(grep("group", tmp_blocks_lhs, fixed = TRUE)) > 1L) {
       lav_msg_warn(gettext("ambiguous block identifiers for group:"),
-        lav_msg_view(tmp_blocks_lhs[grep("group", tmp_blocks_lhs)], "none"))
+        lav_msg_view(tmp_blocks_lhs[grep("group", tmp_blocks_lhs, fixed = TRUE)],
+                    "none"))
     }
 
     # no empty :rhs fields allowed!
@@ -393,6 +434,7 @@ lav_model_pt  <- function(
         auto_fix_first = auto_fix_first, marker = marker,
         auto_fix_single = auto_fix_single,
         auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+        auto_cov_x = auto_cov_x,
         auto_cov_y = auto_cov_y, auto_th = auto_th,
         auto_delta = auto_delta, auto_efa = auto_efa,
         var_table = var_table, group_equal = NULL,
@@ -444,6 +486,7 @@ lav_model_pt  <- function(
       auto_fix_first = auto_fix_first, marker = marker,
       auto_fix_single = auto_fix_single,
       auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+      auto_cov_x = auto_cov_x,
       auto_cov_y = auto_cov_y, auto_th = auto_th,
       auto_delta = auto_delta, auto_efa = auto_efa,
       var_table = var_table, group_equal = group_equal,
@@ -1396,6 +1439,7 @@ lavaanify <- function(                             # nolint
                       auto_fix_single = FALSE,
                       auto_var = FALSE,
                       auto_cov_lv_x = FALSE,
+                      auto_cov_x = FALSE,
                       auto_cov_y = FALSE,
                       auto_th = FALSE,
                       auto_delta = FALSE,
@@ -1439,6 +1483,7 @@ lavaanify <- function(                             # nolint
               auto_fix_single = auto_fix_single,
               auto_var = auto_var,
               auto_cov_lv_x = auto_cov_lv_x,
+              auto_cov_x = auto_cov_x,
               auto_cov_y = auto_cov_y,
               auto_th = auto_th,
               auto_delta = auto_delta,

@@ -124,11 +124,12 @@ lav_object_summary <- function(object, header = TRUE,
     fm_args <- default_fm_args
   }
   if (is.list(fit_measures)) {
+    fit_measures <- lav_fit_measures_list_alias(fit_measures)
     if (is.null(names(fit_measures)) ||
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(
         "If %s is a list, it must contain a named element %s.",
-        "fit.measures"
+        "fit.measures", "fit.measures (or fit_measures)"
       ))
     }
     temp <- fit_measures$fit.measures
@@ -224,6 +225,30 @@ lav_object_summary <- function(object, header = TRUE,
             )
         }
         res$test <- test
+      } else if (!identical(fit_measures, "none") &&
+                 !is.null(lav_sam_struc_object(object))) {
+        # 5c. local family + fit.measures: print the (structural) chi-square
+        # test statistic(s) as usual, instead of the one-line
+        # 'Summary Information Structural part:' (issue #517)
+        fit_pa <- lav_sam_struc_object(object)
+        test <- fit_pa@test
+        if (is.null(attr(test, "info"))) {
+          attr(test, "info") <-
+            list(
+              ngroups = fit_pa@Data@ngroups,
+              group.label = fit_pa@Data@group.label,
+              information = fit_pa@Options$information,
+              h1.information = fit_pa@Options$h1.information,
+              observed.information = fit_pa@Options$observed.information
+            )
+        }
+        # the header is printed before the test statistics, making clear
+        # that the model test (and the fit measures below it) concern the
+        # structural part only
+        attr(test, "header") <- gettext(
+          "Fit measures of the structural part (given the measurement model):")
+        res$test <- test
+        res$sam$sam.struc.fit <- NULL
       }
     } else {
       # SEM version
@@ -307,11 +332,18 @@ lav_object_summary <- function(object, header = TRUE,
   } # efa
 
   # only if requested, add the additional fit measures
-  if (fit_measures != "none") {
+  # (fit_measures may be a vector of measure names; only the single
+  #  "none" turns this section off)
+  if (!identical(fit_measures, "none")) {
     # some early warnings (to avoid a hard stop)
     if (object@Data@data.type == "none") {
       lav_msg_warn(gettext(
         "fit measures not available if there is no data"))
+    } else if (lav_sam_local_flag(object) &&
+      is.null(lav_sam_struc_object(object))) {
+      lav_msg_warn(gettext(
+        "fit measures not available: this sam object was created by an
+         older version of lavaan; please rerun sam()"))
     } else if (length(object@Options$test) == 1L &&
       object@Options$test == "none" &&
       length(object@Model@rv.ov) == 0L &&
@@ -328,7 +360,18 @@ lav_object_summary <- function(object, header = TRUE,
        fit_measures = c(list(fit.measures = fit_measures), fm_args),
        baseline_model = baseline_model,
        h1_model = h1_model)
+      # local sam objects: the 'structural part' header is already printed
+      # once, before the test statistics (see res$test above)
+      if (!is.null(attr(res$test, "header"))) {
+        attr(fit, "header") <- NULL
+      }
       res$fit <- fit
+
+      # multilevel: add level-specific fit measures (based on the stored
+      # partially saturated fits; see fit.by.level option)
+      if (object@Data@nlevels > 1L) {
+        res$fit.by.level <- lav_fit_by_level_fm(object)
+      }
     }
   }
 
@@ -338,6 +381,23 @@ lav_object_summary <- function(object, header = TRUE,
       object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_warn(gettext("residuals not available if model did not converge"))
     residuals <- FALSE
+  }
+  # sam objects: warn-and-skip where lavResiduals() would stop (see the
+  # sam branch in lavResiduals())
+  if ((is.list(residuals) || isTRUE(residuals)) &&
+      !is.null(object@internal$sam.method)) {
+    if (lav_sam_local_flag(object) &&
+        is.null(lav_sam_struc_object(object))) {
+      lav_msg_warn(gettext(
+        "residuals not available: this sam object was created by an older
+         version of lavaan; please rerun sam()"))
+      residuals <- FALSE
+    } else if (!lav_sam_local_flag(object)) {
+      lav_msg_warn(gettext(
+        "residual summary statistics are not available if sam.method =
+        \"global\"; use residuals() to inspect the raw residuals"))
+      residuals <- FALSE
+    }
   }
   if (is.list(residuals) || isTRUE(residuals)) {
     res_args <- if (is.list(residuals)) residuals else list()
@@ -357,10 +417,16 @@ lav_object_summary <- function(object, header = TRUE,
     res_list <- do.call(lavResiduals, res_args)
     res$residuals <- res_list
 
+    # for local sam objects, lavResiduals() delegated to the structural part
+    res_pt <- object@ParTable
+    if (lav_sam_local_flag(object)) {
+      res_pt <- lav_sam_struc_object(object)@ParTable
+    }
+
     # pre-build the text representation used by lav_summary_print()
     res_text <- lav_residuals_list_to_text(
       res_list, type = res_args$type,
-      nblocks = lav_pt_nblocks(object@ParTable), drop_single = TRUE,
+      nblocks = lav_pt_nblocks(res_pt), drop_single = TRUE,
       n_largest = res_args$n.largest, show_se = isTRUE(res_args$se),
       show_z = isTRUE(res_args$zstat), ci_level = res_args$usrmr.ci.level,
       combine = isTRUE(res_args$combine), do_summary = TRUE, do_largest = TRUE

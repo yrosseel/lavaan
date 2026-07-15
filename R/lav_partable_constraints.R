@@ -1,3 +1,38 @@
+# parse user-supplied constraint/definition text, re-raising any parse error
+# as a clean lavaan error (instead of a raw R parser error)
+lav_pt_con_parse <- function(text, what = gettext("constraint(s)")) {
+  res <- tryCatch(parse(file = "", text = text),
+                  error = function(e) conditionMessage(e))
+  if (!is.expression(res)) {
+    lav_msg_stop(gettextf(
+      "could not parse %1$s: %2$s", what, res))
+  }
+  res
+}
+
+# return the function names used in one or more expression strings that
+# can NOT be resolved (as a function) from environment 'env'
+# (used to give a clean error for unknown functions in := / constraints)
+lav_pt_con_undefined_fun <- function(txt, env) {
+  txt <- txt[nchar(txt) > 0L]
+  if (length(txt) == 0L) {
+    return(character(0L))
+  }
+  expr <- tryCatch(parse(file = "", text = txt), error = function(e) NULL)
+  if (is.null(expr)) {
+    return(character(0L))
+  }
+  # function names = all names that are not plain variables
+  fun_names <- setdiff(all.names(expr), all.vars(expr))
+  if (length(fun_names) == 0L) {
+    return(character(0L))
+  }
+  ok <- vapply(fun_names, function(fn) {
+    exists(fn, envir = env, mode = "function", inherits = TRUE)
+  }, logical(1L))
+  fun_names[!ok]
+}
+
 # build def function from partable
 lav_pt_con_def <- function(partable, con = NULL, debug = FALSE, # nolint start
                                          txt_only = FALSE, warn = TRUE) {      # nolint end
@@ -30,13 +65,40 @@ lav_pt_con_def <- function(partable, con = NULL, debug = FALSE, # nolint start
 
   # sort order of def.idx by dependencies
   deps <- lapply(partable$rhs[def_idx], FUN = function(x) {
-                                            all.vars(parse(text = x)) })
+    all.vars(lav_pt_con_parse(x, gettext("parameter definition(s)"))) })
   lab_unsorted <- partable$lhs[def_idx]
   adj_mat <- matrix(0L, nrow = length(def_idx), ncol = length(def_idx))
   for (i in seq_along(lab_unsorted)) {
     adj_mat[lab_unsorted %in% deps[[i]], i] <- 1L
   }
-  def_idx <- def_idx[lav_graph_order_adj_mat(adj_mat, warn = warn)]
+  # note: our validation below gives a clean error for any cyclic system,
+  # so we suppress the (less informative) cycle warning from the sorter
+  def_idx <- def_idx[lav_graph_order_adj_mat(adj_mat, warn = FALSE)]
+
+  # validate that, in sorted order, each ':=' definition only refers to model
+  # parameter labels or to ':=' parameters that have been defined EARLIER;
+  # this catches forward/self/circular references (which would otherwise
+  # produce cryptic 'object not found'/'non-numeric argument' errors)
+  def_lhs_sorted <- as.character(partable$lhs[def_idx])
+  # available names = model parameter labels, EXCLUDING the ':=' parameters
+  # themselves (in a full partable, ':=' rows carry a $label equal to their
+  # name, so we drop the def names from the label set)
+  model_labels <- partable$label[nchar(partable$label) > 0L]
+  available <- setdiff(unique(model_labels), def_lhs_sorted)
+  for (i in seq_along(def_idx)) {
+    rhs_vars <- all.vars(parse(file = "", text = partable$rhs[def_idx[i]]))
+    # only flag references to (other/self) ':=' names not yet available;
+    # genuinely unknown labels are reported by the check further below
+    bad <- rhs_vars[rhs_vars %in% def_lhs_sorted & !rhs_vars %in% available]
+    if (length(bad) > 0L) {
+      lav_msg_stop(gettextf(
+        "defined parameter `%1$s' in `%2$s' refers to parameter(s) that are not (yet) defined: %3$s",
+        def_lhs_sorted[i],
+        paste(def_lhs_sorted[i], ":=", partable$rhs[def_idx[i]]),
+        lav_msg_view(bad, "none")))
+    }
+    available <- c(available, def_lhs_sorted[i])
+  }
 
   # create function
   formals(def_function) <- alist(.x. = , ... = )
@@ -103,6 +165,17 @@ lav_pt_con_def <- function(partable, con = NULL, debug = FALSE, # nolint start
   body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
 
   body(def_function) <- parse(file = "", text = body_txt)
+
+  # check for unknown functions in the definitions (clean error at build time)
+  bad_fun <- lav_pt_con_undefined_fun(partable$rhs[def_idx],
+                                      environment(def_function))
+  if (length(bad_fun) > 0L) {
+    lav_msg_stop(gettext(
+      "could not find function(s) used in variable definition(s):"),
+      lav_msg_view(bad_fun, "none")
+    )
+  }
+
   if (lav_debug()) {
     cat("def.function = \n")
     print(def_function)
@@ -168,8 +241,9 @@ lav_pt_con_ceq <- function(partable, con = NULL, debug = FALSE, # nolint start
 
 
   # extract labels
-  lhs_labels <- all.vars(parse(file = "", text = partable$lhs[eq_idx]))
-  rhs_labels <- all.vars(parse(file = "", text = partable$rhs[eq_idx]))
+  eq_what <- gettext("equality constraint(s)")
+  lhs_labels <- all.vars(lav_pt_con_parse(partable$lhs[eq_idx], eq_what))
+  rhs_labels <- all.vars(lav_pt_con_parse(partable$rhs[eq_idx], eq_what))
   eq_labels <- unique(c(lhs_labels, rhs_labels))
   # remove def.names from eq.labels
   if (length(def_idx) > 0L) {
@@ -273,6 +347,19 @@ lav_pt_con_ceq <- function(partable, con = NULL, debug = FALSE, # nolint start
   body_txt <- paste(body_txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
   body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
   body(ceq_function) <- parse(file = "", text = body_txt)
+
+  # check for unknown functions in the constraints (clean error at build time)
+  bad_fun <- lav_pt_con_undefined_fun(
+    c(partable$lhs[eq_idx], partable$rhs[eq_idx]),
+    environment(ceq_function)
+  )
+  if (length(bad_fun) > 0L) {
+    lav_msg_stop(gettext(
+      "could not find function(s) used in equality constraint(s):"),
+      lav_msg_view(bad_fun, "none")
+    )
+  }
+
   if (lav_debug()) {
     cat("ceq.function = \n")
     print(ceq_function)
@@ -357,8 +444,9 @@ lav_pt_con_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
   body_txt <- paste(body_txt, def_txt, "\n", sep = "")
 
   # extract labels
-  lhs_labels <- all.vars(parse(file = "", text = partable$lhs[ineq_only_idx]))
-  rhs_labels <- all.vars(parse(file = "", text = partable$rhs[ineq_only_idx]))
+  ineq_what <- gettext("inequality constraint(s)")
+  lhs_labels <- all.vars(lav_pt_con_parse(partable$lhs[ineq_only_idx], ineq_what))
+  rhs_labels <- all.vars(lav_pt_con_parse(partable$rhs[ineq_only_idx], ineq_what))
   ineq_labels <- unique(c(lhs_labels, rhs_labels))
   # remove def.names from ineq.labels
   if (length(def_idx) > 0L) {
@@ -475,6 +563,21 @@ lav_pt_con_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
   }
   body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
   body(cin_function) <- parse(file = "", text = body_txt)
+
+  # check for unknown functions in the constraints (clean error at build time)
+  if (length(ineq_only_idx) > 0L) {
+    bad_fun <- lav_pt_con_undefined_fun(
+      c(partable$lhs[ineq_only_idx], partable$rhs[ineq_only_idx]),
+      environment(cin_function)
+    )
+    if (length(bad_fun) > 0L) {
+      lav_msg_stop(gettext(
+        "could not find function(s) used in inequality constraint(s):"),
+        lav_msg_view(bad_fun, "none")
+      )
+    }
+  }
+
   if (lav_debug()) {
     cat("cin.function = \n")
     print(cin_function)
@@ -511,8 +614,8 @@ lav_pt_con_label_id <- function(partable, con = NULL,
   def_idx <- which(partable$op == ":=")
 
   # extract labels
-  lhs_labels <- all.vars(parse(file = "", text = partable$lhs[con_idx]))
-  rhs_labels <- all.vars(parse(file = "", text = partable$rhs[con_idx]))
+  lhs_labels <- all.vars(lav_pt_con_parse(partable$lhs[con_idx]))
+  rhs_labels <- all.vars(lav_pt_con_parse(partable$rhs[con_idx]))
   con_labels <- unique(c(lhs_labels, rhs_labels))
 
   # remove def.names from con.labels (unless def = TRUE)

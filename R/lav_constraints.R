@@ -386,6 +386,79 @@ lav_con_check_simple <- function(lavmodel = NULL) {
   simple
 }
 
+# orthonormal basis 'K' of the equality-constrained (tangent) space, in the
+# column space of lav_model_delta(): post-multiplying Delta by K restricts it
+# to the directions that satisfy the equality constraints.
+#
+# This plays the role of eq.constraints.K, but is also available when
+# equality constraints coexist with inequality constraints or with parameter
+# bounds: in that case BOTH lavmodel@eq.constraints and
+# lavmodel@ceq.simple.only are FALSE (they are *packing* flags, meaning
+# "only equality constraints"), eq.constraints.K is not computed, and code
+# that gates the K-reduction on those flags would silently drop the equality
+# constraints (wrong statistics with unchanged df).
+#
+# Returns NULL when the model has no equality constraints. For nonlinear
+# equality constraints the basis is the null space of the Jacobian
+# (a local, asymptotically correct linearization).
+lav_con_eq_basis <- function(lavmodel = NULL) {
+  if (lavmodel@eq.constraints) {
+    # only linear equality constraints: precomputed orthonormal null space
+    out <- lavmodel@eq.constraints.K
+  } else if (lavmodel@ceq.simple.only) {
+    # ceq.simple.K is a 0/1 duplication matrix (t(K) %*% K != I);
+    # orthonormalize so that K / t(K) round-trips are consistent
+    out <- qr.Q(qr(lavmodel@ceq.simple.K))
+  } else if (nrow(lavmodel@ceq.JAC) > 0L) {
+    # equality constraints together with inequality constraints/bounds
+    out <- lav_mat_ortho_complement(t(lavmodel@ceq.JAC))
+  } else {
+    out <- NULL
+  }
+  out
+}
+
+# classify the inequality constraints at a converged solution: which rows
+# are INACTIVE (not binding)? A constraint is only binding when it is
+# satisfied with (near) equality AND its Lagrange multiplier exerts actual
+# force on the objective gradient (strict complementarity). Both tests are
+# needed: an estimate that merely lands within the slack of a bound, with a
+# vanishing multiplier, is an interior solution -- treating the constraint
+# as a binding equality would (wrongly) collapse its standard error to
+# zero, with a discontinuous jump to the free standard error just across
+# the slack threshold.
+#
+# The multiplier is compared on the scale of the force it exerts on the
+# gradient, |lambda| * ||jac row||, which is invariant to the scaling of
+# the constraint function (for c * g(x) >= 0, lambda scales with 1/c and
+# the jacobian row with c). At an interior optimum the (post-hoc)
+# multiplier is gradient-level noise, many orders of magnitude below the
+# force of even a weakly binding constraint (which is proportional to how
+# deep the unconstrained optimum violates the bound).
+#
+# arguments:
+# - con0: the constraint values c(ceq, cin) at the solution
+# - lambda: the Lagrange multipliers, aligned with con0
+# - jac: the constraint Jacobian, rows aligned with con0
+# - cin_flag: logical, TRUE for the inequality rows
+lav_con_cin_inactive_idx <- function(con0 = NULL, lambda = NULL,
+                                     jac = NULL, cin_flag = NULL,
+                                     slack = 1e-05) {
+  # measured post-hoc multiplier noise at interior optima is <= ~1e-7
+  # (gradient-level), while the force of even a weakly binding constraint
+  # is proportional to how deep the unconstrained optimum violates the
+  # bound (~1e-4 for a violation of 1e-4); 1e-6 separates the two with a
+  # comfortable margin on both sides
+  force_tol <- 1e-06
+  # clearly interior: strictly satisfied beyond the slack
+  interior <- con0 > slack
+  # no force: multiplier (in scale-free force units) vanishing; this also
+  # covers a (wrong-sided) negative multiplier
+  row_norm <- sqrt(rowSums(jac * jac))
+  no_force <- (lambda * row_norm) < force_tol
+  which(cin_flag & (interior | no_force))
+}
+
 lav_con_r2k <- function(lavmodel = NULL) {
   # constraint matrix
   m_r <- NULL

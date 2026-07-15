@@ -22,7 +22,9 @@ lav_pt_subset_mm <- function(pt_1 = NULL,
                              add_lv_cov = TRUE,
                              add_ind_predictors = FALSE,
                              add_idx = FALSE,
-                             idx_only = FALSE) {
+                             idx_only = FALSE,
+                             add_exo_reg = FALSE,
+                             ov_names_x = NULL) {
   # PT
   pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
@@ -254,11 +256,106 @@ lav_pt_subset_mm <- function(pt_1 = NULL,
     )
   }
 
+  # add saturated regressions of the latent variables on the exogenous
+  # covariates? (conditional.x = TRUE measurement blocks)
+  if (add_exo_reg && length(unlist(ov_names_x)) > 0L) {
+    pt_1 <- lav_pt_add_exo_reg(
+      pt_1 = pt_1,
+      lv_names = lv_names,
+      ov_names_x = ov_names_x
+    )
+  }
+
   # clean up
   pt_1 <- lav_pt_complete(pt_1)
 
   if (add_idx) {
     attr(pt_1, "idx") <- keep_idx
+  }
+
+  pt_1
+}
+
+# add (free, saturated) regressions of the latent variables on the exogenous
+# covariates -- used for the measurement blocks when conditional.x = TRUE
+# (categorical data): the blocks must be estimated on the same conditional
+# scale (Var(y*|x) = 1) as the joint model, so every block latent variable is
+# regressed on ALL exogenous covariates (consistent with the h1 model, which
+# conditions on all of them). For higher-order blocks only the first-order
+# factors (those with observed indicators) are regressed on x: the top-factor
+# slopes would not be separately identified from the first-order ones, and
+# regressing the first-order factors is the saturated parameterization.
+lav_pt_add_exo_reg <- function(pt_1, lv_names = NULL, ov_names_x = NULL) {
+  # PT
+  if (!is.data.frame(pt_1)) {
+    pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
+  }
+
+  # lavpta
+  lavpta <- lav_pt_attributes(pt_1)
+
+  # nblocks
+  nblocks <- lavpta$nblocks
+  block_values <- lav_pt_block_values(pt_1)
+
+  # lv.names: list with element per block
+  if (is.null(lv_names)) {
+    lv_names <- lavpta$vnames$lv.regular
+  } else if (!is.list(lv_names)) {
+    lv_names <- rep(list(lv_names), nblocks)
+  }
+  if (!is.list(ov_names_x)) {
+    ov_names_x <- rep(list(ov_names_x), nblocks)
+  }
+
+  for (b in seq_len(nblocks)) {
+    if (length(ov_names_x[[b]]) == 0L) {
+      next
+    }
+    for (lv in lv_names[[b]]) {
+      if (!lv %in% lavpta$vnames$lv.regular[[b]]) {
+        next
+      }
+      # skip higher-order factors (their indicators are latent variables)
+      ind <- pt_1$rhs[pt_1$op == "=~" & pt_1$lhs == lv &
+                      pt_1$block == block_values[b]]
+      if (any(ind %in% lavpta$vnames$lv[[b]])) {
+        next
+      }
+      for (x in ov_names_x[[b]]) {
+        # already present?
+        if (any(pt_1$op == "~" & pt_1$lhs == lv & pt_1$rhs == x &
+                pt_1$block == block_values[b])) {
+          next
+        }
+        add <- list(
+          lhs = lv,
+          op = "~",
+          rhs = x,
+          user = 3L,
+          free = max(pt_1$free) + 1L,
+          exo = 1L,
+          block = b
+        )
+        # add group column
+        if (!is.null(pt_1$group)) {
+          add$group <- unique(pt_1$block[pt_1$block == b])
+        }
+        # add level column
+        if (!is.null(pt_1$level)) {
+          add$level <- unique(pt_1$level[pt_1$block == b])
+        }
+        # add lower column
+        if (!is.null(pt_1$lower)) {
+          add$lower <- as.numeric(-Inf)
+        }
+        # add upper column
+        if (!is.null(pt_1$upper)) {
+          add$upper <- as.numeric(+Inf)
+        }
+        pt_1 <- lav_pt_add(pt_1, add = add)
+      }
+    }
   }
 
   pt_1
@@ -555,6 +652,11 @@ lav_pt_subset_sm <- function(pt_1 = NULL,
   # if meanstructure, 'free' user=0 intercepts
   if (meanstructure) {
     int_idx <- which(pt_1$op == "~1" & pt_1$user == 0L & pt_1$free == 0L)
+    if (conditional_x) {
+      # the moments of the exogenous covariates are not modeled under
+      # conditional.x: keep their intercepts fixed (exo)
+      int_idx <- int_idx[!pt_1$lhs[int_idx] %in% unlist(lavpta$vnames$ov.x)]
+    }
     if (length(int_idx) > 0L) {
       pt_1$free[int_idx] <- max(pt_1$free) + seq_along(int_idx)
       pt_1$ustart[int_idx] <- as.numeric(NA)
@@ -673,6 +775,16 @@ lav_pt_subset_sm <- function(pt_1 = NULL,
     if (length(fixed_var_idx) > 0L) {
       pt_1$free[fixed_var_idx] <- max(pt_1$free) + seq_along(fixed_var_idx)
       pt_1$ustart[fixed_var_idx] <- as.numeric(NA)
+      # reset any stale bounds: when the parent partable carries bounds
+      # columns (explicit inequality constraints, bounds=), a FIXED
+      # parameter has lower == upper == its fixed value; keeping that
+      # lower bound after freeing pins the (residual) variance at 1
+      if (!is.null(pt_1$lower)) {
+        pt_1$lower[fixed_var_idx] <- -Inf
+      }
+      if (!is.null(pt_1$upper)) {
+        pt_1$upper[fixed_var_idx] <- +Inf
+      }
     }
   }
 

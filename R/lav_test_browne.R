@@ -92,13 +92,12 @@ lav_test_browne <- function(lavobject = NULL,
     }
   }
 
-  # linear equality constraints?
-  lineq_flag <- FALSE
-  if (lavmodel@eq.constraints) {
-    lineq_flag <- TRUE
-  } else if (lavmodel@ceq.simple.only) {
-    lineq_flag <- TRUE
-  }
+  # linear equality constraints? NOTE: do not test the packing flags
+  # (@eq.constraints / @ceq.simple.only) here -- they are both FALSE when
+  # equality constraints coexist with inequality constraints or bounds,
+  # and the constraints would silently be dropped from the projection
+  eq_basis <- lav_con_eq_basis(lavmodel)
+  lineq_flag <- !is.null(eq_basis)
 
   # can we use the fast version?
   fast_flag <- FALSE
@@ -116,7 +115,13 @@ lav_test_browne <- function(lavobject = NULL,
   delta <- lav_model_delta(lavmodel)
   if (adf) {
     # ADF version
-    if (!is.null(lavsamplestats@NACOV[[1]]) &&
+    # note: the stored NACOV can only be used for the sample-based
+    # version; the model-based version must recompute Gamma at the
+    # model-implied moments (before 0.7-1, browne.residual.adf.model
+    # silently returned the sample-based statistic whenever a NACOV
+    # was stored, e.g. for the (D)WLS-family estimators)
+    if (!model_based &&
+        !is.null(lavsamplestats@NACOV[[1]]) &&
         !lavoptions$se == "robust.sem.nt") { # eg, estimator = "ULS"/"DWLS"
       gamma_1 <- lavsamplestats@NACOV
     } else {
@@ -209,11 +214,7 @@ lav_test_browne <- function(lavobject = NULL,
   } else if (lineq_flag) {
     res_all <- do.call("c", wls_obs) - do.call("c", wls_est)
     delta_all <- do.call("rbind", delta)
-    if (lavmodel@eq.constraints) {
-      delta_g <- delta_all %*% lavmodel@eq.constraints.K
-    } else if (lavmodel@ceq.simple.only) {
-      delta_g <- delta_all %*% lavmodel@ceq.simple.K
-    }
+    delta_g <- delta_all %*% eq_basis
     gamma_inv_weighted <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
       if (n_minus_one) {
@@ -241,11 +242,8 @@ lav_test_browne <- function(lavobject = NULL,
       res_all)
     stat <- ntotal * (q1 - q2)
     stat_group <- stat * unlist(nobs) / ntotal # proxy only
-
-    # 3. nonlinear equality constraints
-  } else {
-    # TODO
   }
+  # (nonlinear equality constraints were caught at the top)
 
 
   # DF
@@ -253,20 +251,7 @@ lav_test_browne <- function(lavobject = NULL,
     df_1 <- lavobject@test[[1]]$df
   } else {
     # same approach as in lav_test.R
-    df <- lav_pt_df(lavpartable)
-    if (nrow(lavmodel@con.jac) > 0L) {
-      ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
-      if (length(ceq_idx) > 0L) {
-        neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
-        df <- df + neq
-      }
-    } else if (lavmodel@ceq.simple.only) {
-      # needed??
-      ndat <- lav_pt_ndat(lavpartable)
-      npar <- max(lavpartable$free)
-      df <- ndat - npar
-    }
-    df_1 <- df
+    df_1 <- lav_test_df(lavpartable = lavpartable, lavmodel = lavmodel)
   }
 
   if (adf) {

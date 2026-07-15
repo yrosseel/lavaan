@@ -14,7 +14,7 @@ lavSimulateData(model = NULL, model_type = "sem", meanstructure = FALSE,
     auto_cov_y = TRUE, ..., sample_nobs = 500L, ov_var = NULL,
     group_label = NULL, skewness = NULL,
     kurtosis = NULL, cluster_idx = NULL, seed = NULL, empirical = FALSE,
-    mass = FALSE, ordered_center = TRUE, return_type = "data.frame",
+    mass = TRUE, ordered_center = TRUE, return_type = "data.frame",
     return_fit = FALSE, debug = FALSE, standardized = FALSE)
 simulateData(model = NULL, model_type = "sem", meanstructure = FALSE,
     int_ov_free = TRUE, int_lv_free = FALSE,

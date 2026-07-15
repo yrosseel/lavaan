@@ -22,9 +22,9 @@
 #                           method="satorra.bentler.2001/2010"
 
 
-lavTestLRT <- function(object, ..., method = "default", test = "default",   # nolint start
+lavTestLRT <- function(object, ..., method = "default", test = "default",   # nolint
                        a_method = "delta", scaled_shifted = TRUE, # only when method="Satorra.2000"
-                       type = "Chisq", model_names = NULL) {                # nolint end
+                       type = "Chisq", model_names = NULL) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
   type <- tolower(type[1])
@@ -56,6 +56,46 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   object <- lav_object_check_version(object)
   # check models in dotdotdot
   dotdotdot[modp] <- lapply(dotdotdot[modp], lav_object_check_version)
+
+  # sam objects (issue #517): when comparing multiple models that were all
+  # fitted with sam() and a local sam.method, delegate to the stored step-2
+  # structural fits: the LRT then compares the structural parts, assuming
+  # identical (fixed) step-1 measurement models. (A single local sam object
+  # needs no special treatment: its @test slot already holds the structural
+  # test statistics.)
+  if (any(modp)) {
+    all_mods <- c(list(object), dotdotdot[modp])
+    local_flags <- vapply(all_mods, lav_sam_local_flag, logical(1L))
+    if (all(local_flags)) {
+      struc_list <- lapply(all_mods, lav_sam_struc_object)
+      if (any(vapply(struc_list, is.null, logical(1L)))) {
+        lav_msg_stop(gettext(
+          "no stored structural fit found for at least one model: sam
+           object(s) created by an older version of lavaan; please rerun
+           sam()."))
+      }
+      # the comparison only makes sense if the measurement part is the same
+      mm_1 <- all_mods[[1]]@internal$sam.mm.table
+      same_mm <- vapply(all_mods[-1], function(x) {
+        isTRUE(all.equal(x@internal$sam.mm.table, mm_1))
+      }, logical(1L))
+      if (!all(same_mm)) {
+        lav_msg_warn(gettext(
+          "the models do not share the same measurement blocks; the
+           chi-square difference test of the structural parts may not be
+           meaningful"))
+      }
+      lav_msg_note(gettext(
+        "the chi-square difference test compares the structural parts only,
+         conditional on identical (fixed) step-1 measurement models."))
+      object <- struc_list[[1]]
+      dotdotdot[modp] <- struc_list[-1]
+    } else if (any(local_flags)) {
+      lav_msg_stop(gettext(
+        "lavTestLRT() cannot compare a model fitted with sam() (using a
+         local sam.method) with other models."))
+    }
+  }
 
   # some general properties (taken from the first model)
   estimator <- object@Options$estimator
@@ -96,6 +136,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
   # TDJ: Add user-supplied h1 model, if it exists
   if (user_h1_exists) mods$user_h1 <- object@external$h1.model
+
+  # ensure model names are unique (they are used as row.names later)
+  names(mods) <- make.unique(names(mods))
 
   # put them in order (using degrees of freedom)
   ndf <- sapply(mods, function(x) x@test[[1]]$df)
@@ -158,7 +201,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   mods_scaled <- unlist(lapply(mods, function(x) {
     any(c(
       "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
-      "mean.var.adjusted", "scaled.shifted"
+      "mean.var.adjusted", "scaled.shifted",
+      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
     ) %in%
       unlist(sapply(slot(x, "test"), "[[", "test")))
   }))
@@ -173,12 +217,25 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
                          #FIXME: ? If no mods have df > 0,
                          #         this still yields error
                          function(x) !is.null(x$scaled.test.stat))
+    if (!any(scaled_list)) {
+      # no test entry carries a scaled.test.stat field (eg PML objects
+      # created before 0.7-1): fall back to matching the scaled-test names
+      scaled_list <- sapply(mods[[which(ndf > 0)[1]]]@test,
+        function(x) {
+          x$test[1] %in% c(
+            "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
+            "mean.var.adjusted", "scaled.shifted",
+            "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+          )
+        })
+    }
     scaled_idx <- which(scaled_list)[[1]]
     default_test <- object@test[[scaled_idx]]$test
     if (test == "default") {
       test_1 <- default_test
     } else if (!test %in% c("satorra.bentler", "yuan.bentler",
-     "yuan.bentler.mplus", "mean.var.adjusted", "scaled.shifted")) {
+     "yuan.bentler.mplus", "mean.var.adjusted", "scaled.shifted",
+     "mean.var.adjusted.corrected", "scaled.shifted.corrected")) {
       lav_msg_stop(gettextf(
         "test = %s not found in object. See available tests in
         lavInspect(object, \"options\")$test.", dQuote(test)))
@@ -241,6 +298,15 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
         method <- "satorra.bentler.2001"
       } else {
         method <- "satorra.2000"
+        if (test_1 %in% c(
+          "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+        )) {
+          # the corrected (Hayakawa 2018) trace estimator is not (yet)
+          # available for difference tests
+          lav_msg_warn(gettext(
+            "the difference test uses the standard (uncorrected) trace
+            estimates, not the corrected (Hayakawa 2018) versions."))
+        }
       }
     } else {
       # nothing to do
@@ -324,7 +390,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   stat_delta <- stat_delta_orig <- c(NA, diff(stat_1))
   df_delta <- df_delta_orig <- c(NA, diff(df_1))
 
-  # check for negative values in STAT.delta
+  # check for negative values in stat_delta
   # but with a tolerance (0.6-12)!
   if (any(stat_delta[-1] < -1 * .Machine$double.eps^(1 / 3))) {
     lav_msg_warn(gettextf(
@@ -340,6 +406,10 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   } else if (method %in% c("satorra.bentler.2001",
            "satorra.bentler.2010", "satorra.2000")) {
     c_delta <- rep(as.numeric(NA), length(stat_1))
+  } else {
+    # eg method = "mean.var.adjusted.PLRT" or "standard": no scaling
+    # attributes (c_delta is consulted below, so it must exist)
+    c_delta <- NULL
   }
 
   # correction for scaled test statistics
@@ -484,7 +554,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       BIC = bic,
       Chisq = stat_1,
       "Chisq diff" = stat_delta,
-      #"RMSEA" = RMSEA.delta, # if missing, not yet...
+      #"RMSEA" = rmsea_delta, # if missing, not yet...
       "Df diff" = df_delta,
       "Pr(>Chisq)" = pvalue_delta,
       row.names = names(mods),
@@ -492,7 +562,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     )
   }
 
-  # catch Df.delta == 0 cases (reported by Florian Zsok in Zurich)
+  # catch df_delta == 0 cases (reported by Florian Zsok in Zurich)
   # but only if there are no inequality constraints! (0.6-1)
   idx <- which(val[, "Df diff"] == 0)
   if (length(idx) > 0L) {
@@ -591,7 +661,7 @@ lav_test_lrt_single_model <- function(object, method = "default",
     ## More than 1.  Cycle through possible user specifications:
   } else if (method[1] == "standard") {
     test_1 <- 1L
-  } else if (grepl(pattern = "browne", x = type) && type %in% tn) {
+  } else if (grepl("browne", type, fixed = TRUE) && type %in% tn) {
     test_1 <- type
   } else if (test %in% tn) {
     test_1 <- test
@@ -622,7 +692,7 @@ lav_test_lrt_single_model <- function(object, method = "default",
   }
 
   ## heading
-  if (grepl(pattern = "browne", x = test_1)) {
+  if (grepl(pattern = "browne", x = test_1, fixed = TRUE)) {
     attr(val, "heading") <- object@test[[test_1]]$label
 
   } else if (test_1 == 1L) {
@@ -691,9 +761,9 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
     STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
   }
 
-  STAT.delta <- STAT.delta.orig <- c(NA, diff(STAT))
-  Df.delta <- Df.delta.orig <- c(NA, diff(Df))
-  Pvalue.delta <- rep(as.numeric(NA), length(mods))
+  stat_delta <- stat_delta_orig <- c(NA, diff(STAT))
+  df_delta <- df_delta_orig <- c(NA, diff(Df))
+  pvalue_delta <- rep(as.numeric(NA), length(mods))
 
   if (length(mods) > 1L) {
     for (m in seq_len(length(mods) - 1L)) {
@@ -702,16 +772,16 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
         m1 = mods[[m]],
         test = test
       )
-      STAT.delta[m + 1L] <- out$stat
-      Df.delta[m + 1L] <- out$df
-      Pvalue.delta[m + 1L] <- out$pvalue
+      stat_delta[m + 1L] <- out$stat
+      df_delta[m + 1L] <- out$df
+      pvalue_delta[m + 1L] <- out$pvalue
     }
   }
 
-  STAT.delta <- round(unname(STAT.delta), 10)
-  Df.delta <- unname(Df.delta)
-  STAT.delta.orig <- unname(STAT.delta.orig)
-  Df.delta.orig <- unname(Df.delta.orig)
+  stat_delta <- round(unname(stat_delta), 10)
+  df_delta <- unname(df_delta)
+  stat_delta_orig <- unname(stat_delta_orig)
+  df_delta_orig <- unname(df_delta_orig)
 
   aic <- bic <- rep(NA, length(mods))
   if (estimator == "ML") {
@@ -724,12 +794,12 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
   }
 
   if (missing == "listwise") {
-    RMSEA.delta <- c(NA, lav_fit_rmsea(
-      x2 = STAT.delta.orig[-1],
-      df = Df.delta.orig[-1],
+    rmsea_delta <- c(NA, lav_fit_rmsea(
+      x2 = stat_delta_orig[-1],
+      df = df_delta_orig[-1],
       n = ntotal,
       g = ngroups,
-      c_hat = rep(1, length(STAT.delta.orig) - 1L)
+      c_hat = rep(1, length(stat_delta_orig) - 1L)
     ))
 
     val <- data.frame(
@@ -737,10 +807,10 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
       AIC = aic,
       BIC = bic,
       Chisq = STAT,
-      "Chisq diff" = STAT.delta,
-      "RMSEA" = RMSEA.delta,
-      "Df diff" = Df.delta,
-      "Pr(>Chisq)" = Pvalue.delta,
+      "Chisq diff" = stat_delta,
+      "RMSEA" = rmsea_delta,
+      "Df diff" = df_delta,
+      "Pr(>Chisq)" = pvalue_delta,
       row.names = names(mods),
       check.names = FALSE
     )
@@ -750,9 +820,9 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
       AIC = aic,
       BIC = bic,
       Chisq = STAT,
-      "Chisq diff" = STAT.delta,
-      "Df diff" = Df.delta,
-      "Pr(>Chisq)" = Pvalue.delta,
+      "Chisq diff" = stat_delta,
+      "Df diff" = df_delta,
+      "Pr(>Chisq)" = pvalue_delta,
       row.names = names(mods),
       check.names = FALSE
     )

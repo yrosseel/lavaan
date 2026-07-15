@@ -196,6 +196,34 @@ lav_model_objective_fiml <- function(sigma_hat = NULL, mu_hat = NULL, yp = NULL,
   fx
 }
 
+# FIML for the conditional.x case: the (conditional) residual-moment
+# counterpart of lav_model_objective_fiml (mu_hat = res.int,
+# pi0 = res.slopes, sigma_hat = res.cov)
+lav_model_objective_fiml_res <- function(sigma_hat = NULL, mu_hat = NULL,
+                                         pi0 = NULL, yp = NULL,
+                                         h1 = NULL, n = NULL) {
+  if (is.null(n)) {
+    n <- sum(sapply(yp, "[[", "freq"))
+  }
+
+  fx <- lav_mvreg_mi_loglik_samp(
+    yp = yp,
+    res_int = mu_hat, res_slopes = pi0, res_cov = sigma_hat,
+    log2pi = FALSE,
+    minus_two = TRUE
+  ) / n
+
+  # ajust for h1
+  if (!is.null(h1)) {
+    fx <- fx - h1
+
+    # no negative values
+    if (is.finite(fx) && fx < 0.0) fx <- 0.0
+  }
+
+  fx
+}
+
 # pairwise maximum likelihood
 # this is adapted from code written by Myrsini Katsikatsou
 #

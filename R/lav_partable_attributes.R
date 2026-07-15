@@ -23,16 +23,16 @@ lav_pt_attributes <- function(partable, pta = NULL) {
     lapply(seq_len(nblocks), function(b) {
       if (v == "lv.marker") {
         match(pta$vnames[[v]][[b]], tmp_ov[[b]])
-      } else if (grepl("lv", v)) {
+      } else if (grepl("lv", v, fixed = TRUE)) {
         match(pta$vnames[[v]][[b]], tmp_lv[[b]])
-      } else if (grepl("th", v)) {
+      } else if (grepl("th", v, fixed = TRUE)) {
         # thresholds have '|t' pattern
         tmp_th <- sapply(strsplit(pta$vnames[[v]][[b]],
           "|t",
           fixed = TRUE
         ), "[[", 1L)
         match(tmp_th, tmp_ov[[b]])
-      } else if (grepl("eqs", v)) {
+      } else if (grepl("eqs", v, fixed = TRUE)) {
         # mixture of tmp.ov/tmp.lv
         integer(0L)
       } else {

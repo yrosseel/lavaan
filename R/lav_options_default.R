@@ -237,6 +237,9 @@ lav_options_default <- function() {
   elm("auto.fix.single", FALSE, bl = TRUE)
   elm("auto.var", FALSE, bl = TRUE)
   elm("auto.cov.lv.x", FALSE, bl = TRUE)
+  # if TRUE, also add covariances between exogenous latent variables and
+  # observed exogenous covariates (and imply auto.cov.lv.x = TRUE)
+  elm("auto.cov.x", FALSE, bl = TRUE)
   elm("auto.cov.y", FALSE, bl = TRUE)
   elm("auto.th", FALSE, bl = TRUE)
   elm("auto.delta", FALSE, bl = TRUE)
@@ -422,8 +425,12 @@ lav_options_default <- function() {
     "default", "structured", "unstructured"))
 
   # information for 'Omega' (yuan-benter test only)
+  # ("first.order" is what omega.information becomes when information[2] is
+  #  "first.order", eg estimator = "MLF"; it must be accepted here so that
+  #  already-processed options can be fed back into lav_options_set(), as
+  #  sam() does)
   elm("omega.information", "default", chr = c(
-    "default", "expected", "observed"
+    "default", "expected", "observed", "first.order"
   ))
   elm("omega.h1.information", "default", chr = c(
     "default", "structured", "unstructured"
@@ -513,7 +520,7 @@ lav_options_default <- function() {
   elm(c("em.h1.args", "min_variance"), 1e-05, nm = "]0, 0.01]")
   elm(c("em.h1.args", "warn"), TRUE, bl = TRUE)
   # what to do if an EM estimated covariance matrix is (near) singular?
-  elm(c("em.h1.args", "non_pd_action"), "stop",
+  elm(c("em.h1.args", "non_pd_action"), "warn", # "stop" breaks jmv
       chr = c("stop", "warn", "none"))
   elm(c("em.h1.args", "non_pd_tol"), 1e-05, nm = "]0, 0.01]")
   # accelerate the EM iterations?
@@ -522,9 +529,13 @@ lav_options_default <- function() {
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.h1.args", "fused"), TRUE, bl = TRUE)
-  elm("optim.gn.max.iter", 200L, nm = "[100, 1e8]", num2int = TRUE)
-  elm("optim.gn.stephalf.max", 10L, nm = "[1, 1e8]", num2int = TRUE)
-  elm("optim.gn.tol.x", 1e-05, nm = "]0, 0.01]")
+  # gn-args sublist (Gauss-Newton; optim.method = "gn")
+  # (< 0.7-1 these lived at the top level, as optim.gn.max.iter,
+  #  optim.gn.tol.x and optim.gn.stephalf.max; the latter is gone: the
+  #  Levenberg-Marquardt damping replaces the step-halving)
+  elm(c("gn.args", "max_iter"), 200L, nm = "[100, 1e8]", num2int = TRUE)
+  elm(c("gn.args", "tol_x"), 1e-05, nm = "]0, 0.01]")
+  elm(c("gn.args", "tol_g"), 1e-06, nm = "]0, 0.01]")
 
   # numerical integration
   elm("integration.ngh", 21L, nm = "[1, 1000]", num2int = TRUE)
@@ -567,6 +578,7 @@ lav_options_default <- function() {
     independence = "independence", nested = "nested"))
   elm("baseline.conditional.x.free.slopes", TRUE, bl = TRUE)
   elm("baseline.fixed.x.free.cov", TRUE, bl = TRUE)
+  elm("fit.by.level", TRUE, bl = TRUE)
   elm("implied", TRUE, bl = TRUE)
   elm("loglik", TRUE, bl = TRUE)
 
@@ -602,8 +614,8 @@ lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") { # nolint
   # selection only
   if (!is.null(x)) {
     if (is.character(x)) {
-      # lower case only
-      x <- tolower(x)
+      # lower case and dots only
+      x <- lav_option_names(x)
 
       # check if x is in names(lavoptions)
       not_ok <- which(!x %in% names(lavoptions))
@@ -621,7 +633,7 @@ lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") { # nolint
         lavoptions[x]
       }
     } else {
-      lav_msg_stop(gettext("`x' must be a character string"))
+      lav_msg_stop(gettext("x= must be of type character"))
     }
   } else {
     lavoptions

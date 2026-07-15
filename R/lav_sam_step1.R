@@ -92,15 +92,17 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     # the data contains a cluster variable
     clustered_flag <- fit@Data@nlevels == 1L && length(fit@Data@cluster) > 0L
     # categorical?
-    if (fit@Model@categorical) {
+    # (PML first: it is a categorical estimator, but se = "robust.sem" is
+    # not valid for PML -- it needs the huber-white sandwich)
+    if (lavoptions$estimator.orig == "PML") {
+      lavoptions_mm$se <- "robust.huber.white"
+    } else if (fit@Model@categorical) {
       lavoptions_mm$se <- "robust.sem"
     } else if (lavoptions$estimator.orig == "MLM") {
       lavoptions_mm$se <- "robust.sem"
     } else if (lavoptions$estimator.orig == "MLR") {
       lavoptions_mm$se <- if (clustered_flag) "robust.cluster"
                           else "robust.huber.white"
-    } else if (lavoptions$estimator.orig == "PML") {
-      lavoptions_mm$se <- "robust.huber.white"
     } else if (clustered_flag) {
       lavoptions_mm$se <- "robust.cluster"
     } else {
@@ -111,13 +113,23 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   lavoptions_mm$check.post <- FALSE # neg lv variances may be overridden
   lavoptions_mm$check.gradient <- FALSE # too sensitive in large model (global)
   lavoptions_mm$baseline <- FALSE
+  lavoptions_mm$fit.by.level <- FALSE
   lavoptions_mm$bounds <- "wide.zerovar"
 
-  # ALWAYS conditional.x = FALSE!
-  # even if global model uses conditional.x = TRUE
-  # this should not affect the measurement models (if the covariates act on
-  # the structural part only)
-  lavoptions_mm$conditional.x <- FALSE
+  # conditional.x: for CONTINUOUS data the measurement models are always
+  # fitted unconditionally -- this does not affect the measurement parameters
+  # (if the covariates act on the structural part only). For CATEGORICAL
+  # data, however, the latent-response scale differs between the marginal
+  # (Var(y*) = 1) and the conditional (Var(y*|x) = 1) parameterization, and
+  # the marginal polychorics are misspecified when the covariates are
+  # non-normal (eg binary). The measurement blocks are then fitted on the
+  # same conditional scale as the joint model: conditional.x = TRUE, with
+  # saturated eta ~ x regressions (added via lav_pt_subset_mm() below).
+  if (fit@Model@categorical && lavoptions$conditional.x) {
+    lavoptions_mm$conditional.x <- TRUE
+  } else {
+    lavoptions_mm$conditional.x <- FALSE
+  }
 
   # override with user-specified mm.args
   lavoptions_mm <- modifyList(lavoptions_mm, mm_args)
@@ -162,6 +174,8 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       add_lv_cov = add_lv_cov,
       add_idx = TRUE,
       lv_names = mm_list[[mm]],
+      add_exo_reg = slot_options_mm$conditional.x,
+      ov_names_x = fit@pta$vnames$ov.x
     )
     mm_idx <- attr(ptm, "idx")
     attr(ptm, "idx") <- NULL
@@ -170,24 +184,43 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     block_mm_idx[[mm]] <- mm_idx
 
     # check for categorical in PTM in this mm-block
+    # (a fully continuous block is also fitted with conditional.x = TRUE
+    # when the joint model is categorical + conditional.x: its statistics
+    # must live in the same conditional space as the joint model)
     if (!any(ptm$op == "|")) {
       slot_options_mm$categorical <- FALSE
       slot_options_mm$.categorical <- FALSE
     }
 
     # update slot_data for this measurement block
+    # (under conditional.x, lavData keeps the exogenous covariates OUT of
+    # ov.names/X -- they live in ov.names.x/eXo -- so the block ov.names
+    # must be the indicators only)
     ov_names_block <- lapply(1:ngroups, function(g) {
-      unique(unlist(lav_pt_vnames(ptm, type = "ov", group = g)))
+      if (slot_options_mm$conditional.x) {
+        unique(unlist(lav_pt_vnames(ptm, type = "ov.nox", group = g)))
+      } else {
+        unique(unlist(lav_pt_vnames(ptm, type = "ov", group = g)))
+      }
     })
     slot_data_block <- lav_data_update_subset(fit@Data,
       ov_names = ov_names_block
     )
-    # get rid of ov.names.x
     if (!slot_options_mm$conditional.x) {
+      # get rid of ov.names.x
       slot_data_block@ov.names.x <-
         lapply(seq_len(nblocks), function(x) character(0L))
       slot_data_block@eXo <-
         lapply(seq_len(nblocks), function(x) NULL)
+    } else {
+      # keep ALL exogenous covariates for the conditional block
+      # (lav_data_update_subset() dropped them, as they are not part of
+      # ov_names_block); also restore their entries in the ov table
+      slot_data_block@ov.names.x <- fit@Data@ov.names.x
+      slot_data_block@eXo <- fit@Data@eXo
+      ov_keep_idx <- which(fit@Data@ov$name %in%
+        unique(c(unlist(ov_names_block), unlist(fit@Data@ov.names.x))))
+      slot_data_block@ov <- lapply(fit@Data@ov, "[", ov_keep_idx)
     }
 
     # if data.type == "moment", (re)create sample.cov and sample.nobs
@@ -213,7 +246,15 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     }
 
     # handle single block 1-factor CFA with (only) two indicators
-    if (length(unlist(ov_names_block)) == 2L && ngroups == 1L) {
+    # (under conditional.x the block variables include the exogenous
+    # covariates -- count the indicators only)
+    n_ind_block <- length(unlist(ov_names_block))
+    if (slot_options_mm$conditional.x) {
+      n_ind_block <- length(unlist(lapply(1:ngroups, function(g) {
+        unique(unlist(lav_pt_vnames(ptm, type = "ov.nox", group = g)))
+      })))
+    }
+    if (n_ind_block == 2L && ngroups == 1L) {
       lambda_idx <- which(ptm$op == "=~")
       # check if both factor loadings are fixed
       # (note: this assumes std.lv = FALSE)
@@ -256,6 +297,26 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       lav_msg_warn(gettextf(
         "measurement model for %s did not converge!",
         lav_msg_view(mm_list[[mm]], "none")))
+    }
+
+    # check that this measurement block is identified on its own: in the
+    # SAM approach every block is estimated in isolation, so a block with
+    # more free parameters than sample statistics (negative degrees of
+    # freedom) cannot be estimated, even if the full (joint) model is
+    # identified (eg a factor with three indicators plus a residual
+    # covariance between two of them). Without this check the block fit
+    # produces garbage and downstream computations fail cryptically.
+    blk_df <- fit_mm_block@test[[1]]$df
+    if (!is.null(blk_df) && !is.na(blk_df) && blk_df < 0L) {
+      lav_msg_stop(gettextf(
+        "measurement block %1$s is not identified on its own: it has more
+         free parameters than sample statistics (df = %2$d). The SAM
+         approach estimates each measurement block in isolation, so every
+         block must be identified by itself, even if the full model is
+         identified. Consider simplifying the measurement block (eg
+         removing residual covariances), combining blocks via mm.list, or
+         using sem() instead.",
+        lav_msg_view(mm_list[[mm]], "none"), blk_df))
     }
 
     # store fitted measurement model
@@ -304,6 +365,18 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
       # fill in variance matrix for this measurement block
       sigma_11 <- mm_fit[[mm]]@vcov$vcov
+      if (is.null(sigma_11)) {
+        # the block vcov could not be computed (eg the block information
+        # matrix could not be inverted, typically an identification issue
+        # that the df >= 0 check above cannot catch)
+        lav_msg_stop(gettextf(
+          "the variance matrix of measurement block %s could not be
+           computed (its information matrix could not be inverted); the
+           block may not be identified on its own (empirically). Consider
+           simplifying the measurement block, combining blocks via
+           mm.list, or using sem() instead.",
+          lav_msg_view(mm_list[[mm]], "none")))
+      }
       keep_idx <- ptm_free[ptm_idx]
       sigma_11_1[par_idx, par_idx] <-
         sigma_11[keep_idx, keep_idx, drop = FALSE]

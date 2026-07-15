@@ -61,7 +61,7 @@ lav_parse_model_string_orig <- function(model_syntax = "",
   model_syntax <- gsub("\n{2,}", "\n", model_syntax, perl = TRUE)
 
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
-  model_syntax <- gsub(pattern = "\u02dc", replacement = "~", model_syntax)
+  model_syntax <- gsub(pattern = "\u02dc", replacement = "~", model_syntax, fixed = TRUE)
 
   # break up in lines
   model <- unlist(strsplit(model_syntax, "\n"))
@@ -136,7 +136,7 @@ lav_parse_model_string_orig <- function(model_syntax = "",
   }
 
   # but perhaps we have a '+' as the first character?
-  idx_wrong <- which(grepl("^\\+", model))
+  idx_wrong <- grep("^\\+", model)
   if (length(idx_wrong) > 0) {
     cat("lavaan: some formula(s) start with a plus (+) sign:\n")
     print(model[idx_wrong])

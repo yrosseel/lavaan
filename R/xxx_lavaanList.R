@@ -20,7 +20,7 @@ lavaanList <- function(model = NULL, # model                    # nolint
                        cl = NULL,
                        iseed = NULL) {
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
 
   # store_slots call
   mc <- match.call()
@@ -96,6 +96,7 @@ lavaanList <- function(model = NULL, # model                    # nolint
   }
 
   lavoptions <- fit@Options
+  lavoptions$fit.by.level <- FALSE # no partially saturated models
   lavmodel <- fit@Model
   lavpartable <- fit@ParTable
   lavpta <- fit@pta

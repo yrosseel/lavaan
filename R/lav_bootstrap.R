@@ -193,6 +193,7 @@ lav_bootstrap_internal <- function(object = NULL,
   lavoptions_1$check.start <- FALSE
   lavoptions_1$check.post <- FALSE
   lavoptions_1$optim.attempts <- 1L # can save a lot of time
+  lavoptions_1$fit.by.level <- FALSE # no partially saturated models
 
   # if internal or fun == "coef", we can shut off even more
   if (is.null(object) || (is.character(fun_orig) && fun_orig == "coef")) {

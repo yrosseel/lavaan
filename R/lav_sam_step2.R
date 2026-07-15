@@ -65,6 +65,12 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     lavoptions_pa$missing <- "listwise"
     lavoptions_pa$sample.cov.rescale <- FALSE
     lavoptions_pa$loglik <- FALSE
+    # first.order information (eg estimator = "MLF") needs raw data, which
+    # the structural fit does not have (it is fitted from the estimated
+    # latent moments VETA/EETA only); use the expected information instead
+    if (any(lavoptions_pa$information == "first.order")) {
+      lavoptions_pa$information <- rep.int("expected", 2L)
+    }
   } else {
     lavoptions_pa$h1 <- FALSE
     lavoptions_pa$loglik <- FALSE
@@ -104,6 +110,20 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
 
     reg_idx <- attr(pts, "idx")
     attr(pts, "idx") <- NULL
+
+    # edge case: conditional.x = TRUE, but the structural part contains no
+    # exogenous covariates (eg they only affect indicators directly); the
+    # conditional attributes of VETA (res.slopes/cov.x/mean.x) then have no
+    # counterpart in the structural model -> drop them and fit the
+    # structural part unconditionally
+    if (lavoptions_pa$conditional.x &&
+        length(unlist(lav_pt_vnames(pts, type = "ov.x"))) == 0L) {
+      attr(step1$VETA, "res.slopes") <- NULL
+      attr(step1$VETA, "cov.x") <- NULL
+      attr(step1$VETA, "mean.x") <- NULL
+      lavoptions_pa$conditional.x <- FALSE
+      lavoptions_pa$fixed.x <- FALSE
+    }
   } else {
     # global SAM
 
@@ -155,6 +175,15 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
                              pt_1$user[reg_idx] != 1L &
                              pt_1$op[reg_idx] == "~~")] # FIXME: more?
     pts$free[var_idx] <- max(pts$free) + seq_along(var_idx)
+    # reset any stale bounds (a fixed parameter has lower == its fixed
+    # value whenever the partable carries bounds columns; see the same
+    # fix in lav_pt_subset_sm())
+    if (!is.null(pts$lower)) {
+      pts$lower[var_idx] <- -Inf
+    }
+    if (!is.null(pts$upper)) {
+      pts$upper[var_idx] <- +Inf
+    }
 
     # set 'ustart' values for free FIT.PA parameter to NA
     pts$ustart[pts$free > 0L] <- as.numeric(NA)
@@ -194,7 +223,8 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
       # (uncorrected) structural test. For se = local / local.nt the SEs ARE
       # read from this fit, so we cannot silently degrade -> re-raise.
       if (gamma_flag &&
-          lavoptions$se %in% c("twostep", "twostep.robust", "naive")) {
+          lavoptions$se %in% c("twostep", "twostep.robust",
+                               "twostep.huber.white", "naive")) {
         lavoptions_pa$test <- "standard"
         fit_pa <- lavaan::lavaan(pts,
           sample_cov  = step1$VETA,
@@ -209,7 +239,9 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
            this model (eg a bi-factor measurement model); the standard
            (uncorrected) structural test is reported instead."))
       } else {
-        stop(fit_pa)
+        lav_msg_stop(gettextf(
+          "the structural model could not be fitted: %s",
+          conditionMessage(fit_pa)))
       }
     }
   } else {
@@ -223,6 +255,25 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   }
   if (lav_verbose()) {
     cat("Fitting the structural part ... done.\n")
+  }
+
+  # check that the structural part is identified from the latent moments
+  # alone: in the SAM approach the structural model is estimated from the
+  # (estimated) latent variable moments, so it cannot borrow identification
+  # from the measurement part (eg a non-recursive system without
+  # instruments may 'fit' in sem() but has more structural parameters than
+  # latent moments). Without this check the step-2 vcov machinery fails
+  # cryptically further down.
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
+    pa_df <- fit_pa@test[[1]]$df
+    if (!is.null(pa_df) && !is.na(pa_df) && pa_df < 0L) {
+      lav_msg_stop(gettextf(
+        "the structural part of the model is not identified: it has more
+         free parameters than there are (estimated) latent variable moments
+         (df = %d). In the SAM approach the structural model must be
+         identified from the latent variable moments alone. Consider
+         simplifying the structural part, or using sem() instead.", pa_df))
+    }
   }
 
   # which parameters from PTS do we wish to fill in:

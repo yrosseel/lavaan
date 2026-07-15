@@ -37,7 +37,14 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     standard errors take the estimation uncertainty of the first (measurement)
     stage into account. If \code{"standard"}, this uncertainty is ignored,
     and we treat the measurement information as known. If \code{"none"},
-    no standard errors are computed. If the data are clustered (a
+    no standard errors are computed. The experimental
+    \code{"twostep.huber.white"} variant computes the two-step correction
+    as a stacked (Murphy-Topel type) sandwich with casewise-score based
+    (first-order) meat -- the two-step analogue of
+    \code{se = "robust.huber.white"} in \code{\link{sem}}; it is currently
+    available for continuous complete or \code{missing = "ml"} data
+    (single- or multigroup, single level, no equality constraints), and
+    falls back to \code{"twostep.robust"} or \code{"twostep"} otherwise. If the data are clustered (a
     \code{cluster=} argument is provided, without multilevel model syntax),
     \code{se = "twostep"} is automatically replaced by
     \code{se = "twostep.robust"}, and the standard errors (also for
@@ -46,7 +53,12 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{se = "local"} is available for the single-group continuous
     complete-data setting; it uses the cluster-sandwich covariance of the
     saturated (h1) estimates, and also enables the corrected structural
-    test statistic.}
+    test statistic. For \code{estimator = "PML"}, \code{se = "local"} is
+    the only available two-step correction (single group, complete data,
+    all-ordinal indicators): it combines the casewise influences of the
+    saturated thresholds/polychoric correlations with the casewise
+    pairwise-likelihood influences of the measurement-block estimates,
+    and also enables the corrected structural test statistic.}
 \item{mm_list}{List. Define the measurement blocks. 
      Each element of the list should
      be either a single name of a latent variable, or a vector of latent
@@ -78,7 +90,9 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
 \item{bootstrap}{List. Only used when \code{se = "bootstrap"}. Typical
      elements of this list are \code{R}: the number of bootstrap samples, and
      \code{type}, which can be set to \code{"ordinary"} (the default) or
-     \code{"parametric"}.}
+     \code{"parametric"}. A single number is also accepted (as in
+     \code{sem()}) and is interpreted as \code{R}, the number of bootstrap
+     draws.}
 \item{output}{Character. If \code{"lavaan"}, a lavaan object is returned. If
     \code{"list"}, a list is returned with all the ingredients from the 
     different stages.}
@@ -92,9 +106,71 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     Note that in the current implementation, all indicators of latent
     variables must be observed. As a result, second-order factor structures
     are not yet supported.
+
+    If \code{sam.method} is \code{"local"}, \code{"fsr"} or \code{"cfsr"},
+    the structural part of the model is fitted to the estimated latent
+    (co)variances (and means) from step 1. This step-2 structural model is
+    stored in the \code{@internal} slot of the returned object, and can be
+    retrieved by \code{lavInspect(fit, "sam.struc.fit.object")}. The
+    functions \code{\link{fitMeasures}} (and
+    \code{summary(fit, fit.measures = TRUE)}), \code{\link{lavResiduals}}
+    (and \code{summary(fit, residuals = TRUE)}), \code{\link{modindices}}
+    and \code{\link{lavTestLRT}} (when all compared models are local SAM
+    models) operate on this structural model: the reported quantities
+    describe the fit of the structural part only, conditional on the (fixed)
+    measurement model of step 1. When available, the reported (scaled) test
+    statistic and the robust fit measures are corrected for the estimation
+    of the measurement model in step 1.
+
+    If \code{sam.method} is \code{"global"}, the returned object is an
+    ordinary (joint) lavaan object, and \code{fitMeasures} returns the usual
+    fit measures of the joint model. Note, however, that the parameters were
+    estimated using a two-step procedure; the behavior of fit measures in
+    this setting has not been studied, and they should be interpreted with
+    caution.
+}
+\section{Exogenous covariates and conditional.x}{
+    Observed exogenous covariates may enter the structural part of the
+    model. With continuous data, they are simply treated as (pseudo) latent
+    variables (the default \code{conditional.x = FALSE}), but
+    \code{conditional.x = TRUE} is supported as well (single-group,
+    single-level models): the structural part is then fitted to the latent
+    intercepts, the latent-on-covariate slopes, and the residual latent
+    (co)variances, all conditional on the covariates.
+
+    With categorical (ordered) data, \code{conditional.x = TRUE} is the
+    lavaan default (when exogenous covariates are present), and this is also
+    the recommended setting: the covariates are conditioned on (as in a
+    probit regression), rather than being absorbed into the joint polychoric
+    correlation matrix -- which would (wrongly) treat them as jointly normal,
+    a real concern for binary/dummy covariates. In this setting, the
+    measurement blocks of step 1 are estimated with
+    \code{conditional.x = TRUE} as well (each block latent variable is
+    regressed on all exogenous covariates, MIMIC style), so that the
+    measurement parameters live on the same conditional latent-response
+    scale (\code{Var(y*|x) = 1}, delta parameterization) as the joint model.
+    An \emph{ordered endogenous} variable in the structural part is
+    supported too (with or without covariates): it enters the structural
+    model on its latent-response scale, while its thresholds are fixed at
+    their sample-based values.
+
+    When \code{conditional.x = TRUE} is combined with a local
+    \code{sam.method}, the default \code{se = "twostep"} is automatically
+    replaced by \code{se = "twostep.robust"}: the classic two-step formula is
+    built on the joint information matrix, which does not describe the local
+    step-2 estimator in this setting (it underestimates the sampling
+    variability, especially for binary covariates). The robust variant is
+    computed as a structural-space sandwich here, and coincides with
+    \code{se = "local"}.
+
+    Not (yet) available in combination with \code{conditional.x = TRUE}:
+    multiple groups (for the local standard errors and the corrected test
+    statistic), multilevel models, latent interactions, and the Yuan-Chan
+    scaled global test statistic of \code{sam_method = "global"} (the
+    standard, unscaled test is reported instead, with a warning).
 }
 \value{
-  If \code{output = "lavaan"}, an object of class 
+  If \code{output = "lavaan"}, an object of class
   \code{\linkS4class{lavaan}}, for which several methods
   are available, including a \code{summary} method. If \code{output = "list"},
   a list.

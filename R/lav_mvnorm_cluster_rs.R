@@ -87,17 +87,21 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     }
 
     # the random-slope paths at level 1
-    rs_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" & pt$level == 1L)
-    if (length(rs_idx) == 0L) {
-      lav_msg_stop(gettext("no random-slope (rv) regressions found at
-                            level 1."))
-    }
+    # (the level column may hold user-chosen labels instead of 1L/2L)
+    level_values <- lav_pt_level_values(pt)
+    rs_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" &
+                    pt$level == level_values[1])
     # random slopes at level 2 are not allowed
-    bad_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" & pt$level > 1L)
+    bad_idx <- which(nchar(pt$rv) > 0L & pt$op == "~" &
+                     pt$level %in% level_values[-1L])
     if (length(bad_idx) > 0L) {
       lav_msg_stop(gettext(
         "random slopes (rv() modifier) can only be used in the level-1
          (within) part of the model."))
+    }
+    if (length(rs_idx) == 0L) {
+      lav_msg_stop(gettext("no random-slope (rv) regressions found at
+                            level 1."))
     }
 
     path_rv <- pt$rv[rs_idx]
@@ -1110,7 +1114,8 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
       )
       logdet_o <- attr(w_o, "logdet")
       if (!is.finite(logdet_o)) {
-        stop("lav_npd")
+        # caught by the enclosing tryCatch() -> objective returns +Inf
+        lav_msg_stop(gettext("sigma.w is not positive definite."))
       }
       # embed in the full p1 x p1 space
       w_mat <- matrix(0, p1, p1)
@@ -1211,7 +1216,8 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
       if (v_psd) {
         dt <- determinant(z_j, logarithm = TRUE)
         if (dt$sign <= 0 || !is.finite(dt$modulus)) {
-          stop("lav_npd")
+          # caught by the enclosing tryCatch() -> objective returns +Inf
+          lav_msg_stop(gettext("Z matrix is not positive definite."))
         }
         logdet_z <- as.numeric(dt$modulus)
       } else {
@@ -1219,7 +1225,8 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
         # (real and) positive
         lambda <- Re(eigen(z_j, only.values = TRUE)$values)
         if (any(lambda < sqrt(.Machine$double.eps))) {
-          stop("lav_npd")
+          # caught by the enclosing tryCatch() -> objective returns +Inf
+          lav_msg_stop(gettext("Z matrix is not positive definite."))
         }
         logdet_z <- sum(log(lambda))
       }
@@ -2451,6 +2458,7 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
       check.gradient = FALSE,
       check.vcov = FALSE,
       baseline = FALSE,
+      fit.by.level = FALSE,
       h1 = FALSE,
       se = "none",
       test = "none"

@@ -57,6 +57,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
                        parallel = c("auto", "no", "multicore", "snow"),
                        ncpus = NULL, cl = NULL,
                        drop_list_single_group = TRUE,
+                       mdist_draws = 2000L,
                       ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
@@ -162,7 +163,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
     mdist = mdist, append_data = append_data, assemble = assemble,
     level = level, optim_method = optim_method, eta = eta,
     parallel = parallel, ncpus = ncpus, cl = cl,
-    drop_list_single_group = drop_list_single_group
+    drop_list_single_group = drop_list_single_group,
+    mdist_draws = mdist_draws
   )
 
   res
@@ -184,7 +186,8 @@ lav_predict_internal <- function(lavmodel = NULL,
                                append_data = FALSE, assemble = FALSE, # or TRUE?
                                level = 1L, optim_method = "bfgs", eta = NULL,
                                parallel = "no", ncpus = NULL, cl = NULL,
-                               drop_list_single_group = TRUE) {
+                               drop_list_single_group = TRUE,
+                               mdist_draws = 2000L) {
   # type
   type <- tolower(type)
   lavpta <- lav_pt_attributes(lavpartable)
@@ -196,10 +199,13 @@ lav_predict_internal <- function(lavmodel = NULL,
     type <- "resid"
   }
 
-  # if resid, not for categorical
-  if (type == "resid" && lavmodel@categorical) {
+  # if resid, not for categorical, unless mdist = TRUE: in that case the
+  # expected residuals of the latent responses are computed by Monte Carlo
+  # integration (Mansolf & Reise, 2017; see lav_predict_mdist_cat)
+  if (type == "resid" && lavmodel@categorical && !mdist) {
     lav_msg_stop(gettext(
-      "casewise residuals not available if data is categorical"))
+      "casewise residuals not available if data is categorical
+      (unless mdist = TRUE)"))
   }
 
   # append_data? check level
@@ -208,8 +214,11 @@ lav_predict_internal <- function(lavmodel = NULL,
     append_data <- FALSE
   }
 
-  # mdist? -> fsm = TRUE
-  if (mdist) {
+  # mdist? -> fsm = TRUE (continuous data only; for categorical data the
+  # distances are computed by Monte Carlo integration, and no factor score
+  # matrix is involved)
+  mdist_cat_flag <- mdist && lavmodel@categorical
+  if (mdist && !mdist_cat_flag) {
     fsm <- TRUE
   }
 
@@ -306,6 +315,26 @@ lav_predict_internal <- function(lavmodel = NULL,
     }
   }
 
+  # categorical data + mdist: expected (squared) M-distances of the latent
+  # responses, via Monte Carlo integration (Mansolf & Reise, 2017)
+  if (mdist_cat_flag) {
+    if (!type %in% c("lv", "resid", "yhat")) {
+      lav_msg_stop(gettext(
+        "mdist is only available if type is one of: lv resid yhat"))
+    }
+    if (level > 1L) {
+      lav_msg_stop(gettext(
+        "mdist with categorical data is not available if level > 1L"))
+    }
+    mdist_cat <- lav_predict_mdist_cat(
+      lavmodel = lavmodel, lavdata = lavdata, lavimplied = lavimplied,
+      data_obs = data_obs, exo = exo,
+      type = type, method = method, ndraws = mdist_draws
+    )
+    # (squared metric, as in the continuous case)
+    mdist_1 <- lapply(mdist_cat, "[[", "d2")
+  }
+
   if (type == "lv") {
     if (!is.null(eta)) {
       lav_msg_warn(gettext("lvs will be predicted here;
@@ -322,7 +351,8 @@ lav_predict_internal <- function(lavmodel = NULL,
     out <- lav_predict_eta(
       lavobject = NULL, lavmodel = lavmodel,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
-      lavimplied = lavimplied, se = se, acov = acov, level = level,
+      lavimplied = lavimplied, lavpta = lavpta,
+      se = se, acov = acov, level = level,
       data_obs = data_obs, exo = exo, method = method,
       fsm = fsm, rel = rel, transform = transform, optim_method = optim_method,
       parallel = parallel, ncpus = ncpus, cl = cl
@@ -448,15 +478,22 @@ lav_predict_internal <- function(lavmodel = NULL,
 #     }
 
     # new in 0.6-17
-    if (mdist) {
+    if (mdist && !mdist_cat_flag) {
       veta <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = TRUE)
       eeta <- lav_model_eeta(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats, remove_dummy_lv = TRUE
       )
+      # under conditional.x, lavimplied has no joint 'cov'; the relevant Sigma
+      # is Cov(y|x) = res.cov (partial matching would wrongly pick cov.x)
+      implied_cov <- if (lavmodel@conditional.x) {
+        lavimplied$res.cov
+      } else {
+        lavimplied$cov
+      }
       mdist_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
         a <- fsm_1[[g]]
-        sigma <- lavimplied$cov[[g]]
+        sigma <- implied_cov[[g]]
         if (transform) {
           fs_cov <- veta[[g]]
         } else {
@@ -606,35 +643,53 @@ lav_predict_internal <- function(lavmodel = NULL,
     # resid: y - yhat
   } else if (type %in% c("yhat", "resid")) {
     resid_flag <- type == "resid"
-    out <- lav_predict_yhat(
-      lavobject = NULL, lavmodel = lavmodel,
-      lavdata = lavdata, lavsamplestats = lavsamplestats,
-      lavimplied = lavimplied,
-      data_obs = data_obs, exo = exo,
-      eta = eta, method = method, optim_method = optim_method,
-      fsm = fsm,
-      resid_flag = resid_flag
-    )
-    if (fsm) {
-      fsm_1 <- attr(out, "fsm")
+    if (resid_flag && mdist_cat_flag) {
+      # categorical data: the expected casewise residuals of the latent
+      # responses (a by-product of the Monte Carlo integration)
+      out <- lapply(mdist_cat, "[[", "resid")
+    } else {
+      out <- lav_predict_yhat(
+        lavobject = NULL, lavmodel = lavmodel,
+        lavdata = lavdata, lavsamplestats = lavsamplestats,
+        lavimplied = lavimplied,
+        data_obs = data_obs, exo = exo,
+        eta = eta, method = method, optim_method = optim_method,
+        fsm = fsm,
+        resid_flag = resid_flag
+      )
+      if (fsm) {
+        fsm_1 <- attr(out, "fsm")
+      }
     }
 
     # label?
     if (label) {
       for (g in seq_len(lavdata@ngroups)) {
-        colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        if (ncol(out[[g]]) == length(lavpta$vnames$ov[[g]])) {
+          colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        } else {
+          # conditional.x: the columns only cover the non-exogenous ov's
+          colnames(out[[g]]) <- lavpta$vnames$ov.nox[[g]]
+        }
       }
     }
 
     # mdist
-    if (mdist) {
+    if (mdist && !mdist_cat_flag) {
       mm_lambda <- lav_model_lambda(
         lavmodel = lavmodel,
         remove_dummy_lv = FALSE,
         use_wmat = TRUE
       )
+      # under conditional.x, lavimplied has no joint 'cov'; the relevant Sigma
+      # is Cov(y|x) = res.cov (partial matching would wrongly pick cov.x)
+      implied_cov <- if (lavmodel@conditional.x) {
+        lavimplied$res.cov
+      } else {
+        lavimplied$cov
+      }
       mdist_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
-        sigma <- lavimplied$cov[[g]]
+        sigma <- implied_cov[[g]]
         la <- mm_lambda[[g]]
         if (type == "resid") {
           ila <- diag(ncol(sigma)) - la %*% fsm_1[[g]]
@@ -783,7 +838,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
                             # sub objects
                             lavmodel = NULL, lavdata = NULL,
                             lavsamplestats = NULL,
-                            lavimplied = NULL,
+                            lavimplied = NULL, lavpta = NULL,
                             # new data
                             data_obs = NULL, exo = NULL,
                             # options
@@ -822,7 +877,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
     out <- lav_predict_eta_normal(
       lavobject = lavobject,
       lavmodel = lavmodel, lavdata = lavdata,
-      lavimplied = lavimplied, se = se, acov = acov,
+      lavimplied = lavimplied, lavpta = lavpta, se = se, acov = acov,
       level = level, lavsamplestats = lavsamplestats,
       data_obs = data_obs, exo = exo, fsm = fsm, rel = rel,
       transform = transform, method = method
@@ -890,7 +945,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
                                    # sub objects
                                    lavmodel = NULL, lavdata = NULL,
                                    lavsamplestats = NULL,
-                                   lavimplied = NULL,
+                                   lavimplied = NULL, lavpta = NULL,
                                    # optional new data
                                    data_obs = NULL, exo = NULL,
                                    se = "none", acov = "none", level = 1L,
@@ -903,6 +958,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
+    lavpta <- lavobject@pta
   } else {
     stopifnot(
       !is.null(lavmodel), !is.null(lavdata),
@@ -915,10 +971,28 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
   # method-specific factor-score coefficient matrix 'C' (maps centered data to
   # latent scores), as a function of Lambda, Sigma.inv and Psi (= veta_g)
-  compute_fsc <- function(lambda, sigma_inv, veta_g) {
+  #
+  # higher-order factors (Bartlett only): a higher-order factor has no
+  # observed indicators, so its column in Lambda is empty, and the
+  # (pseudo-inverse based) Bartlett mapping returns all-zero scores for this
+  # factor; if lambda_star (the 'collapsed' loadings, see below) is provided,
+  # the rows for the higher-order factors are taken from the Bartlett mapping
+  # based on lambda_star instead (the other rows are left untouched)
+  compute_fsc <- function(lambda, sigma_inv, veta_g, lambda_star = NULL,
+                          fixes = NULL) {
     if (bartlett) {
-      lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) %*%
+      fsc <- lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) %*%
         t(lambda) %*% sigma_inv
+      if (!is.null(lambda_star)) {
+        for (fx in fixes) {
+          ls_t <- lambda_star[, fx$tcols, drop = FALSE]
+          fsc_star <- lav_predict_solve(
+            t(ls_t) %*% sigma_inv %*% ls_t) %*% t(ls_t) %*% sigma_inv
+          fsc[fx$cols, ] <- fsc_star[match(fx$cols, fx$tcols), ,
+                                     drop = FALSE]
+        }
+      }
+      fsc
     } else {
       veta_g %*% t(lambda) %*% sigma_inv
     }
@@ -926,12 +1000,23 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
   # method-specific conditional (co)variance of the factor scores, used for the
   # standard errors and the full sampling covariance matrix (acov)
-  compute_fscov <- function(lambda, sigma_inv, veta_g) {
+  #
+  # if 'fsc' (and 'sigma') are provided (higher-order factors, Bartlett only),
+  # the general expression Var(fs - eta) = C Sigma C' - C Lambda Psi -
+  # Psi Lambda' C' + Psi is used instead: the standard expression below
+  # assumes C Lambda = I, which no longer holds for the higher-order rows
+  compute_fscov <- function(lambda, sigma_inv, veta_g,
+                            fsc = NULL, sigma = NULL) {
     if (bartlett) {
       # traditional formula uses solve(Lambda' Theta.inv Lambda); we use the
       # Sigma.inv version (minus Psi) to handle negative/zero variances, with
       # a pseudo-inverse fallback (lav_predict_solve)
-      lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) - veta_g
+      if (is.null(fsc)) {
+        lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) - veta_g
+      } else {
+        cl_psi <- fsc %*% lambda %*% veta_g
+        fsc %*% sigma %*% t(fsc) - cl_psi - t(cl_psi) + veta_g
+      }
     } else {
       veta_g - veta_g %*% t(lambda) %*% sigma_inv %*% lambda %*% veta_g
     }
@@ -959,11 +1044,99 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
   mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
                                 use_wmat = TRUE)
-  sigma_hat <- lavimplied$cov
+
+  # conditional.x: the model-implied Sigma/means refer to the residual y|x
+  # system, and the exogenous x-part is handled separately (per case). We
+  # therefore use the *conditional* (given-x) model-implied quantities:
+  #  - Sigma      = Cov(y|x) = res.cov (NOT the joint 'cov', which under
+  #                 conditional.x does not exist in lavimplied)
+  #  - V(ETA)     = Cov(eta|x) = (I-B)^-1 Psi (I-B)^-T (no Gamma cov.x Gamma'
+  #                 term), keeping the dummy latent variables so that it stays
+  #                 conformable with the full LAMBDA
+  #  - E(ETA|x_i) and E(Y|x_i) are per-case quantities (computed in the loop)
+  cond_x <- lavmodel@conditional.x
+  if (cond_x) {
+    # exo may be NULL when called via the 'lavobject' convenience path
+    if (is.null(exo)) {
+      exo <- lavdata@eXo
+    }
+    sigma_hat <- lavimplied$res.cov
+    veta <- lav_model_vetax(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+    eetax <- lav_model_eetax(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+      exo = exo, nobs = lapply(data_obs, NROW)
+    )
+    res_int <- lavimplied$res.int
+    res_slopes <- lavimplied$res.slopes
+  } else {
+    sigma_hat <- lavimplied$cov
+    veta <- lav_model_veta(lavmodel = lavmodel)
+    eeta <- lav_model_eeta(lavmodel = lavmodel,
+                           lavsamplestats = lavsamplestats)
+    ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+  }
   sigma_inv <- lapply(sigma_hat, lav_predict_solve)
-  veta <- lav_model_veta(lavmodel = lavmodel)
-  eeta <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-  ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+
+  # Bartlett + higher-order factors (new in 0.7-1): collapse the measurement
+  # chain, just like in sam(): LAMBDA.star = LAMBDA %*% solve(I - B), where B
+  # only contains the factor loadings of the higher-order factors (the rows
+  # of the latent indicators); for each higher-order factor, the columns of
+  # LAMBDA.star for its 'layer' (the factor itself + all factors that are
+  # neither an ancestor nor a descendant in the measurement chain, keeping
+  # only the topmost ones) define a collapsed measurement model
+  # y = LAMBDA.star ETA2 + epsilon.star, and the (Sigma.inv form of the)
+  # Bartlett mapping based on these columns provides the mapping-matrix row
+  # for that factor; factors of the same layer share the same mapping
+  mm_lambda_star <- vector("list", length = length(mm_lambda))
+  ho_fixes <- vector("list", length = length(mm_lambda))
+  if (bartlett && !is.null(lavpta) && !is.null(lavpta$vnames$lv.ind)) {
+    lambda_mm_idx <- which(names(lavmodel@GLIST) == "lambda")
+    mm_idx_block <- lav_model_group_mm_indices(lavmodel@nmat)
+    for (b in seq_along(mm_lambda)) {
+      lv_ind_names <- lavpta$vnames$lv.ind[[b]]
+      if (length(lv_ind_names) == 0L) next
+      empty_idx <- which(apply(mm_lambda[[b]], 2L,
+                               function(x) all(x == 0)))
+      if (length(empty_idx) == 0L) next
+      mlist <- lavmodel@GLIST[mm_idx_block[[b]]]
+      if (is.null(mlist$beta)) next
+      lv_names <- lavmodel@dimNames[[lambda_mm_idx[b]]][[2L]]
+      # keep only the rows of the latent indicators; other (structural)
+      # regressions must not enter the collapsed loadings
+      this_beta <- mlist$beta
+      this_beta[is.na(this_beta)] <- 0
+      keep_row_idx <- match(lv_ind_names, lv_names)
+      bstar <- matrix(0, nrow = nrow(this_beta), ncol = ncol(this_beta))
+      bstar[keep_row_idx, ] <- this_beta[keep_row_idx, , drop = FALSE]
+      ib_inv <- solve(diag(nrow(bstar)) - bstar)
+      lambda_star_b <- mm_lambda[[b]] %*% ib_inv
+      # reach[r, j] = TRUE: factor j influences factor r through the
+      # measurement chain (r is a latent indicator of j, possibly indirectly)
+      reach <- abs(ib_inv) > 1e-12
+      diag(reach) <- FALSE
+      # the factors we can fix: empty column in LAMBDA, but non-empty
+      # column in LAMBDA.star
+      fix_idx <- empty_idx[apply(lambda_star_b[, empty_idx, drop = FALSE],
+                                 2L, function(x) any(x != 0))]
+      if (length(fix_idx) == 0L) next
+      fixes <- list()
+      for (j in fix_idx) {
+        # this factor's layer: neither ancestors nor descendants of j, ...
+        allowed <- which(!reach[j, ] & !reach[, j])
+        # ... keeping only the topmost factors (no ancestor within the set)
+        tcols <- allowed[!apply(reach[allowed, allowed, drop = FALSE],
+                                1L, any)]
+        key <- paste(tcols, collapse = "-")
+        if (is.null(fixes[[key]])) {
+          fixes[[key]] <- list(tcols = tcols, cols = j)
+        } else {
+          fixes[[key]]$cols <- c(fixes[[key]]$cols, j)
+        }
+      }
+      mm_lambda_star[[b]] <- lambda_star_b
+      ho_fixes[[b]] <- fixes
+    }
+  }
 
   fs <- vector("list", length = lavdata@ngroups)
   if (fsm) {
@@ -999,10 +1172,15 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     b <- lav_predict_block_idx(lavdata, g, level)
 
     veta_g <- veta[[b]]
-    eeta_g <- eeta[[b]]
     lambda_g <- mm_lambda[[b]]
-    ey_g <- ey[[b]]
     sigma_inv_g <- sigma_inv[[b]]
+    if (!cond_x) {
+      eeta_g <- eeta[[b]]
+      ey_g <- ey[[b]]
+    }
+    # higher-order factors (Bartlett only; NULL otherwise)
+    lambda_star_g <- mm_lambda_star[[b]]
+    ho_fixes_g <- ho_fixes[[b]]
 
     if (lavdata@nlevels > 1L) {
       lp <- lavdata@Lp[[g]]
@@ -1093,16 +1271,34 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       next
     }
 
-    # center data
-    yc <- t(t(data_obs_g) - ey_g)
+    # center data and set up the per-case latent means (eeta_case_g); under
+    # conditional.x both the observed centering means E(Y|x_i) and the latent
+    # means E(ETA|x_i) vary per case (as a function of x_i)
+    if (cond_x) {
+      exo_g <- exo[[g]]
+      # E(Y|x_i) = res.int + res.slopes %*% x_i
+      eyx_g <- matrix(res_int[[b]], nrow = nrow(data_obs_g),
+                      ncol = length(res_int[[b]]), byrow = TRUE)
+      if (!is.null(exo_g) && ncol(exo_g) > 0L) {
+        eyx_g <- eyx_g + exo_g %*% t(res_slopes[[b]])
+      }
+      yc <- data_obs_g - eyx_g
+      eeta_case_g <- eetax[[b]] # [nobs x nfac]
+    } else {
+      yc <- t(t(data_obs_g) - ey_g)
+      eeta_case_g <- matrix(eeta_g, nrow = nrow(data_obs_g),
+                            ncol = length(eeta_g), byrow = TRUE)
+    }
 
     # NOTE: do NOT scale yc by the sampling weights here. Factor scores are
     # per-case predictions; a case's score must not depend on its own
     # sampling weight. Weights already enter via the (weighted) parameter
-    # estimates and the weighted mean (ey_g) used for centering above.
+    # estimates and the weighted mean used for centering above.
 
     # global factor score coefficient matrix 'C'
-    fsc <- compute_fsc(lambda_g, sigma_inv_g, veta_g)
+    fsc <- compute_fsc(lambda_g, sigma_inv_g, veta_g,
+      lambda_star = lambda_star_g, fixes = ho_fixes_g
+    )
 
     # transform?
     if (transform) {
@@ -1137,10 +1333,10 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       mp <- mp_1[[g]]
 
       # factor scores container
-      fs_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
+      fs_g <- matrix(as.numeric(NA), nrow(yc), ncol = nfac)
 
       if (se == "standard") {
-        se_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
+        se_g <- matrix(as.numeric(NA), nrow(yc), ncol = nfac)
       }
 
       if (acov == "standard") {
@@ -1164,7 +1360,13 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         }
 
         lambda <- lambda_g[var_idx, , drop = FALSE]
-        fsc <- compute_fsc(lambda, sigma_22_inv, veta_g)
+        lambda_star_p <- NULL
+        if (!is.null(lambda_star_g)) {
+          lambda_star_p <- lambda_star_g[var_idx, , drop = FALSE]
+        }
+        fsc <- compute_fsc(lambda, sigma_22_inv, veta_g,
+          lambda_star = lambda_star_p, fixes = ho_fixes_g
+        )
 
         # if FSC contains rows that are all-zero, replace by NA
         #
@@ -1178,6 +1380,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         # (Note that this is not needed for the 'regression' method,
         #  only for Bartlett)
         if (bartlett) {
+          fsc_nona <- fsc # keep a NA-free copy for the SEs below
           zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
           if (length(zero_idx) > 0L) {
             fsc[zero_idx, ] <- NA
@@ -1185,11 +1388,19 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         }
 
         # factor scores for this pattern
-        fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc) + eeta_g)
+        fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc)) +
+          eeta_case_g[mp$case.idx[[p]], , drop = FALSE]
 
         # SE?
         if (se == "standard") {
-          tmp <- compute_fscov(lambda, sigma_22_inv, veta_g)
+          if (is.null(lambda_star_p)) {
+            tmp <- compute_fscov(lambda, sigma_22_inv, veta_g)
+          } else {
+            tmp <- compute_fscov(lambda, sigma_22_inv, veta_g,
+              fsc = fsc_nona, sigma = sigma_hat[[b]][var_idx, var_idx,
+                                                     drop = FALSE]
+            )
+          }
           tmp_d <- diag(tmp)
           tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
 
@@ -1207,7 +1418,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       } # p
     } else {
       # compute factor scores
-      fs_g <- t(fsc %*% t(yc) + eeta_g)
+      fs_g <- t(fsc %*% t(yc)) + eeta_case_g
     }
 
     # replace values in dummy lv's by their observed counterpart
@@ -1240,7 +1451,13 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           acov_1[[g]] <- acov_g
         }
       } else { # complete data
-        tmp <- compute_fscov(lambda_g, sigma_inv_g, veta_g)
+        if (is.null(lambda_star_g)) {
+          tmp <- compute_fscov(lambda_g, sigma_inv_g, veta_g)
+        } else {
+          tmp <- compute_fscov(lambda_g, sigma_inv_g, veta_g,
+            fsc = fsc, sigma = sigma_hat[[b]]
+          )
+        }
         tmp_d <- diag(tmp)
         tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
         se_1[[g]] <- matrix(sqrt(tmp_d), nrow = 1L)

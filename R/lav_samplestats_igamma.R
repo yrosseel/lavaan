@@ -11,6 +11,98 @@
 #       3) conditional_x (conditional_x = TRUE)
 #  - if conditional_x = TRUE, we ignore fixed_x (can be TRUE or FALSE)
 
+# GLS (and DLS with dls.a = 1): the normal-theory weight matrix for one
+# group -- the inverse of the NT Gamma, in the (partial) correlation metric
+# when correlation = TRUE. Shared by lav_samp_from_data() and
+# lav_samp_from_moments().
+lav_samp_wls_v_nt_g <- function(m_cov = NULL, m_mean = NULL, m_icov = NULL,
+                                cor_idx = NULL, correlation = FALSE,
+                                x_idx = integer(0L), fixed_x = FALSE,
+                                conditional_x = FALSE,
+                                meanstructure = FALSE) {
+  if (correlation) {
+    gamma_nt <- lav_samp_partial_cor_gamma_nt(
+      m_cov         = m_cov,
+      cor_idx       = cor_idx,
+      meanstructure = meanstructure,
+      fixed_x       = fixed_x,
+      x_idx         = x_idx
+    )
+    lav_mat_sym_inverse(gamma_nt)
+  } else {
+    lav_samp_gamma_inverse_nt(
+      m_icov         = m_icov,
+      m_cov          = m_cov,
+      m_mean         = m_mean,
+      rescale        = FALSE,
+      x_idx          = x_idx,
+      fixed_x        = fixed_x,
+      conditional_x  = conditional_x,
+      meanstructure  = meanstructure,
+      slopestructure = conditional_x
+    )
+  }
+}
+
+# GLS: compute WLS.V %*% x -- where WLS.V is the (unconditional)
+# normal-theory weight matrix lav_samp_wls_v_nt_g() would return --
+# WITHOUT constructing WLS.V. The cov block of WLS.V is
+#   0.5 t(D) (S.inv %x% S.inv) D
+# so for each column a of x (in vech metric) we have
+#   0.5 t(D) vec(S.inv A S.inv)   with A = vech.reverse(a)
+# and the (optional) mean block is S.inv itself (rescaled by v11_scale
+# for gls.v11.mplus). Cost is O(nvar^3) per column instead of O(nvar^4).
+# note: correlation = TRUE and conditional.x are NOT supported here;
+# their weight matrices are not this simple Kronecker sandwich
+lav_samp_wls_v_nt_prod <- function(m_icov = NULL, x = NULL,
+                                   meanstructure = FALSE,
+                                   fixed_x = FALSE,
+                                   x_idx = integer(0L),
+                                   v11_scale = 1.0) {
+  x <- as.matrix(x)
+  out <- matrix(0, nrow = NROW(x), ncol = NCOL(x))
+  nvar <- NROW(m_icov)
+  pstar <- (nvar * (nvar + 1L)) %/% 2L
+
+  # mean block: V11 = S.inv (zero rows/cols for the x-variables if fixed.x)
+  if (meanstructure) {
+    m_v11 <- m_icov * v11_scale
+    if (fixed_x && length(x_idx) > 0L) {
+      m_v11[x_idx, ] <- 0
+      m_v11[, x_idx] <- 0
+    }
+    out[seq_len(nvar), ] <- m_v11 %*% x[seq_len(nvar), , drop = FALSE]
+    cov_idx <- nvar + seq_len(pstar)
+  } else {
+    cov_idx <- seq_len(pstar)
+  }
+
+  # fixed.x: WLS.V has zero rows/cols for the x/x combinations
+  # (see lav_samp_gamma_inverse_nt); emulate by zeroing the corresponding
+  # elements of x (the zero columns) and of the result (the zero rows)
+  zero_idx <- integer(0L)
+  if (fixed_x && length(x_idx) > 0L) {
+    m_tmp <- matrix(0L, nvar, nvar)
+    m_tmp[lav_mat_vech_idx(nvar)] <- seq_len(pstar)
+    zero_idx <- lav_mat_vech(m_tmp[x_idx, x_idx, drop = FALSE])
+  }
+
+  x_cov <- x[cov_idx, , drop = FALSE]
+  if (length(zero_idx) > 0L) {
+    x_cov[zero_idx, ] <- 0
+  }
+  for (j in seq_len(NCOL(x))) {
+    m_a <- lav_mat_vech_rev(x_cov[, j])
+    out[cov_idx, j] <- 0.5 * lav_mat_dup_pre(
+      matrix(m_icov %*% m_a %*% m_icov, ncol = 1L))
+  }
+  if (length(zero_idx) > 0L) {
+    out[cov_idx[zero_idx], ] <- 0
+  }
+
+  out
+}
+
 # NORMAL-THEORY
 lav_samp_gamma_inverse_nt <- function(m_y = NULL,
                                              m_cov = NULL,
@@ -131,22 +223,25 @@ lav_samp_gamma_inverse_nt <- function(m_y = NULL,
     if (meanstructure || slopestructure) {
       m_c <- m_s[x_idx, x_idx, drop = FALSE]
       m_mx <- m_m[x_idx]
-      c3 <- rbind(
-        c(1, m_mx),
-        cbind(m_mx, m_c + tcrossprod(m_mx))
-      )
+      c3 <- lav_samp_gamma_c3(m_mx, m_c)
     }
 
+    # the [int|slopes] block of Gamma is cov_ybarx %x% solve(c3) (see
+    # lav_samp_gamma_nt): the statistics are in vecr(cbind(res.int,
+    # res.slopes)) order (all coefficients of y1, all coefficients of
+    # y2, ...), so the fast-running index is the coefficient index;
+    # the inverse is then s11 %x% c3 (idem for the sub-cases)
     if (meanstructure) {
       if (slopestructure) {
-        a11 <- c3 %x% s11
+        a11 <- s11 %x% c3
       } else {
         c11 <- 1 / solve(c3)[1, 1, drop = FALSE]
-        a11 <- c11 %x% s11
+        a11 <- s11 %x% c11
       }
     } else {
       if (slopestructure) {
-        a11 <- m_c %x% s11
+        # (solve(c3)[-1, -1])^{-1} == m_c (Schur complement)
+        a11 <- s11 %x% m_c
       } else {
         a11 <- matrix(0, 0, 0)
       }

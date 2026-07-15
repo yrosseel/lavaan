@@ -1,6 +1,10 @@
 # - 0.6-13: fix multiple-group UG^2 bug (reported by Gronneberg, Foldnes and
 #           Moss) when Satterthwaite = TRUE, ngroups > 1, and eq constraints.
 #           Use ug2.old.approach = TRUE to get the old result
+# - 0.7-1:  the traces are computed by the streamed worker
+#           lav_test_ug_trace_stream() (lav_test_utils.R) unless the U or
+#           UGamma matrices themselves are needed; shared helpers for the
+#           E.inv-recompute check, failure entries and labels
 
 lav_test_sb <- function(lavobject = NULL,
                                      lavsamplestats = NULL,
@@ -49,24 +53,9 @@ lav_test_sb <- function(lavobject = NULL,
   }
 
   # E.inv ok?
-  if (length(lavoptions$information) == 1L &&
-    length(lavoptions$h1.information) == 1L &&
-    length(lavoptions$observed.information) == 1L) {
-    e_inv_recompute <- FALSE
-  } else if (
-    (lavoptions$information[1] == lavoptions$information[2]) &&
-      (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-      (lavoptions$information[2] == "expected" ||
-        (lavoptions$observed.information[1] ==
-          lavoptions$observed.information[2]))) {
-    e_inv_recompute <- FALSE
-  } else {
-    e_inv_recompute <- TRUE
-    # change information options
-    lavoptions$information[1] <- lavoptions$information[2]
-    lavoptions$h1.information[1] <- lavoptions$h1.information[2]
-    lavoptions$observed.information[1] <- lavoptions$observed.information[2]
-  }
+  lavoptions <- lav_test_change_options(lavoptions)
+  e_inv_recompute <- attr(lavoptions, "recompute")
+  attr(lavoptions, "recompute") <- NULL
   if (!is.null(e_inv) && !is.null(wls_v) && !is.null(delta)) {
     e_inv_recompute <- FALSE # user-provided
   }
@@ -75,15 +64,29 @@ lav_test_sb <- function(lavobject = NULL,
   if (!all(test %in% c(
     "satorra.bentler",
     "scaled.shifted",
-    "mean.var.adjusted"
+    "mean.var.adjusted",
+    "mean.var.adjusted.corrected",
+    "scaled.shifted.corrected"
   ))) {
     lav_msg_warn(gettext(
-      "test must be one of `satorra.bentler', `scaled.shifted' or
-      `mean.var.adjusted'; will use `satorra.bentler' only"))
+      "test must be one of `satorra.bentler', `scaled.shifted',
+      `mean.var.adjusted', `mean.var.adjusted.corrected' or
+      `scaled.shifted.corrected'; will use `satorra.bentler' only"))
     test <- "satorra.bentler"
   }
 
-  if (return_u) {
+  # corrected trace (Hayakawa 2018) tests need the U matrix and casewise data
+  corrected_trace <- any(test %in% c(
+    "mean.var.adjusted.corrected",
+    "scaled.shifted.corrected"
+  ))
+  if (corrected_trace) {
+    lav_test_hayakawa_check(
+      lavoptions = lavoptions, lavdata = lavdata, lavmodel = lavmodel
+    )
+  }
+
+  if (return_u || corrected_trace) {
     method <- "original"
   }
 
@@ -124,18 +127,14 @@ lav_test_sb <- function(lavobject = NULL,
           "could not invert information matrix needed for UfromUGamma"))
         return(NULL)
       } else {
-        test_1$standard$stat <- as.numeric(NA)
-        test_1$standard$stat.group <- rep(as.numeric(NA), lavdata@ngroups)
-        test_1$standard$pvalue <- as.numeric(NA)
-        test_1[[test[1]]] <- c(test_1$standard,
-          scaling.factor = as.numeric(NA),
-          shift.parameter = as.numeric(NA),
-          label = character(0)
+        na_out <- lav_test_scaled_na(test_1$standard,
+          test1 = test[1],
+          ngroups = lavdata@ngroups
         )
+        test_1$standard <- na_out$standard
+        test_1[[test[1]]] <- na_out$failed
         lav_msg_warn(gettext("could not invert information matrix needed for
                              robust test statistic"))
-        test_1[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when
-                       # robust test is detected for some but not all models
         return(test_1)
       }
     }
@@ -146,34 +145,27 @@ lav_test_sb <- function(lavobject = NULL,
   # catch df == 0
   if ((test_1$standard$df == 0L || test_1$standard$df < 0) &&
     !return_u && !return_ugamma) {
-    test_1[[test[1]]] <- c(test_1$standard,
-      scaling.factor = as.numeric(NA),
-      label = character(0)
+    na_out <- lav_test_scaled_na(test_1$standard,
+      test1 = test[1],
+      na_standard = FALSE, shift = FALSE
     )
-    test_1[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when
-                   # robust test is detected for some but not all models
+    test_1[[test[1]]] <- na_out$failed
     return(test_1)
   }
 
   # Gamma
   if (is.null(m_gamma)) {
-    m_gamma <- lavsamplestats@NACOV
-    # still NULL? (perhaps estimator = ML)
-    if (is.null(m_gamma[[1]])) {
-      if (!is.null(lavobject)) {
-        m_gamma <- lav_object_gamma(lavobject, model_based = FALSE)
-      } else {
-        m_gamma <- lav_object_gamma(
-          lavobject = NULL,
-          lavdata = lavdata,
-          lavoptions = lavoptions,
-          lavsamplestats = lavsamplestats,
-          lavh1 = NULL,
-          lavimplied = NULL,
-          adf = TRUE,
-          model_based = FALSE
-        )
-      }
+    # stored NACOV, else recompute with the fit-time settings
+    if (!is.null(lavobject)) {
+      m_gamma <- lav_gamma_used(lavobject)
+    } else {
+      m_gamma <- lav_gamma_used(
+        lavdata = lavdata,
+        lavoptions = lavoptions,
+        lavsamplestats = lavsamplestats,
+        lavh1 = NULL,
+        lavimplied = NULL
+      )
     }
   }
 
@@ -189,18 +181,21 @@ lav_test_sb <- function(lavobject = NULL,
 
   # mean and variance adjusted?
   satterthwaite <- FALSE
-  if (any(test %in% c("mean.var.adjusted", "scaled.shifted"))) {
+  if (any(test %in% c(
+    "mean.var.adjusted", "scaled.shifted",
+    "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+  ))) {
     satterthwaite <- TRUE
   }
 
   if (npar == 0) {
     # catch npar == 0 (eg baseline model if correlation structure)
-    trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
-    fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-    gamma_f <- m_gamma
-    for (g in 1:ngroups) {
-      gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
-    }
+    u_all <- as.numeric(NA)
+    # Gamma_g / fg: the Cov(sqrt(ntotal) s_g) stacking convention (see the
+    # SCALING CONVENTIONS note in lav_samplestats_gamma.R)
+    gamma_f <- lav_gamma_rescale_ntotal(m_gamma,
+      nobs = lavsamplestats@nobs, ntotal = lavsamplestats@ntotal
+    )
     gamma_all <- lav_mat_bdiag(gamma_f)
     ug <- gamma_all
     trace_ugamma <- sum(diag(gamma_all))
@@ -214,7 +209,7 @@ lav_test_sb <- function(lavobject = NULL,
       m_gamma = m_gamma,
       delta = delta, wls_v = wls_v, e_inv = e_inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
-      ntotal = lavsamplestats@ntotal, return_u = return_u,
+      ntotal = lavsamplestats@ntotal, return_u = return_u || corrected_trace,
       return_ugamma = return_ugamma,
       ug2_old_approach = ug2_old_approach,
       satterthwaite = satterthwaite,
@@ -246,6 +241,34 @@ lav_test_sb <- function(lavobject = NULL,
   trace_ugamma <- out$trace.UGamma
   trace_ugamma2 <- out$trace.UGamma2
 
+  # corrected traces (Hayakawa 2018) from the casewise moment vectors
+  if (corrected_trace) {
+    u_mat <- out$UfromUGamma
+    if (is.list(u_mat)) {
+      u_mat <- u_mat[[1]] # single group only (checked above)
+    }
+    if (is.matrix(u_mat)) {
+      trace_c <- lav_test_hayakawa_trace2(
+        u = u_mat, m_y = lavdata@X[[1]],
+        meanstructure = lavmodel@meanstructure
+      )
+      trace_ugamma_c <- trace_c$trace.UGamma
+      trace_ugamma2_c <- trace_c$trace.UGamma2
+    } else {
+      trace_ugamma_c <- trace_ugamma2_c <- as.numeric(NA)
+    }
+    if (!is.finite(trace_ugamma2_c) || trace_ugamma2_c <= 0 ||
+      !is.finite(trace_ugamma_c) || trace_ugamma_c <= 0) {
+      lav_msg_warn(gettext(
+        "corrected trace estimates are not positive; the corrected
+        adjusted test statistics will be NA."))
+      trace_ugamma_c <- trace_ugamma2_c <- as.numeric(NA)
+    }
+  }
+
+  # Mplus-flavored labels?
+  mplus_flag <- lavoptions$information.expected.mplus
+
   if ("satorra.bentler" %in% test) {
     # same df
     df_scaled <- test_1$standard$df
@@ -260,22 +283,6 @@ lav_test_sb <- function(lavobject = NULL,
     # scaled test statistic global
     stat <- sum(stat_group)
 
-    # label
-    if (lavoptions$information.expected.mplus) {
-      if (lavoptions$estimator == "ML") {
-        label <-
-          "Satorra-Bentler correction (Mplus variant)"
-      } else if (lavoptions$estimator == "DWLS") {
-        label <-
-          "Satorra-Bentler correction (WLSM)"
-      } else if (lavoptions$estimator == "ULS") {
-        label <-
-          "Satorra-Bentler correction (ULSM)"
-      }
-    } else {
-      label <- "Satorra-Bentler correction"
-    }
-
     test_1$satorra.bentler <-
       list(
         test = "satorra.bentler",
@@ -287,12 +294,15 @@ lav_test_sb <- function(lavobject = NULL,
         scaling.factor = scaling_factor,
         scaled.test.stat = test_1$standard$stat,
         scaled.test = test_1$standard$test,
-        label = label
+        label = lav_test_scaled_label(
+          "satorra.bentler",
+          lavoptions$estimator, mplus_flag
+        )
       )
   }
 
   if ("mean.var.adjusted" %in% test) {
-    if (lavoptions$information.expected.mplus) {
+    if (mplus_flag) {
       df_scaled <- floor(trace_ugamma^2 / trace_ugamma2 + 0.5)
     } else {
       # more precise, fractional df
@@ -303,34 +313,14 @@ lav_test_sb <- function(lavobject = NULL,
     scaling_factor <- trace_ugamma / df_scaled
     if (scaling_factor < 0) scaling_factor <- as.numeric(NA)
 
-    if (ug2_old_approach) {
-      # scaled test statistic per group
-      stat_group <- test_1$standard$stat.group / scaling_factor
+    # scaled test statistic per group
+    stat_group <- test_1$standard$stat.group / scaling_factor
 
-      # scaled test statistic global
+    # scaled test statistic global
+    if (ug2_old_approach) {
       stat <- sum(stat_group)
     } else {
-      # scaled test statistic per group
-      stat_group <- test_1$standard$stat.group / scaling_factor
-
-      # scaled test statistic global
       stat <- test_1$standard$stat / scaling_factor
-    }
-
-    # label
-    if (lavoptions$information.expected.mplus) {
-      if (lavoptions$estimator == "ML") {
-        label <-
-          "mean and variance adjusted correction (MLMV)"
-      } else if (lavoptions$estimator == "DWLS") {
-        label <-
-          "mean and variance adjusted correction (WLSMV)"
-      } else if (lavoptions$estimator == "ULS") {
-        label <-
-          "mean and variance adjusted correction (ULSMV)"
-      }
-    } else {
-      label <- "mean and variance adjusted correction"
     }
 
     test_1$mean.var.adjusted <-
@@ -345,7 +335,10 @@ lav_test_sb <- function(lavobject = NULL,
         scaling.factor = scaling_factor,
         scaled.test.stat = test_1$standard$stat,
         scaled.test = test_1$standard$test,
-        label = label
+        label = lav_test_scaled_label(
+          "mean.var.adjusted",
+          lavoptions$estimator, mplus_flag
+        )
       )
   }
 
@@ -377,22 +370,6 @@ lav_test_sb <- function(lavobject = NULL,
       stat_group <- test_1$standard$stat.group * a + fg * shift_parameter
     }
 
-    # label
-    if (lavoptions$information.expected.mplus) {
-      if (lavoptions$estimator == "ML") {
-        label <-
-          "simple second-order correction (MLMV)"
-      } else if (lavoptions$estimator == "DWLS") {
-        label <-
-          "simple second-order correction (WLSMV)"
-      } else if (lavoptions$estimator == "ULS") {
-        label <-
-          "simple second-order correction (ULSMV)"
-      }
-    } else {
-      label <- "simple second-order correction"
-    }
-
     test_1$scaled.shifted <-
       list(
         test = "scaled.shifted",
@@ -406,7 +383,74 @@ lav_test_sb <- function(lavobject = NULL,
         shift.parameter = shift_parameter,
         scaled.test.stat = test_1$standard$stat,
         scaled.test = test_1$standard$test,
-        label = label
+        label = lav_test_scaled_label(
+          "scaled.shifted",
+          lavoptions$estimator, mplus_flag
+        )
+      )
+  }
+
+  if ("mean.var.adjusted.corrected" %in% test) {
+    # Hayakawa (2018): mean and variance adjusted test with the unbiased
+    # (Srivastava 2005; Himeno & Yamada 2014) estimator of tr(UGamma^2)
+    df_scaled <- trace_ugamma_c^2 / trace_ugamma2_c
+
+    # scaling factor
+    scaling_factor <- trace_ugamma2_c / trace_ugamma_c
+    if (isTRUE(scaling_factor < 0)) scaling_factor <- as.numeric(NA)
+
+    # scaled test statistic per group and global
+    stat_group <- test_1$standard$stat.group / scaling_factor
+    stat <- test_1$standard$stat / scaling_factor
+
+    test_1$mean.var.adjusted.corrected <-
+      list(
+        test = "mean.var.adjusted.corrected",
+        stat = stat,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma_c,
+        trace.UGamma2 = trace_ugamma2_c,
+        trace.UGamma2.naive = trace_ugamma2,
+        scaling.factor = scaling_factor,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
+        label =
+          "mean and variance adjusted correction (corrected trace)"
+      )
+  }
+
+  if ("scaled.shifted.corrected" %in% test) {
+    # scaled and shifted test with the corrected estimator of tr(UGamma^2)
+    # (not in Hayakawa 2018, but the same substitution)
+    df_scaled <- test_1$standard$df
+
+    fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
+    a <- sqrt(df_scaled / trace_ugamma2_c)
+    if (isTRUE(a < 0) || is.nan(a)) a <- as.numeric(NA)
+    scaling_factor <- 1 / a
+    if (isTRUE(scaling_factor < 0)) scaling_factor <- as.numeric(NA)
+
+    shift_parameter <- df_scaled - a * trace_ugamma_c
+    stat <- test_1$standard$stat * a + shift_parameter
+    stat_group <- test_1$standard$stat.group * a + fg * shift_parameter
+
+    test_1$scaled.shifted.corrected <-
+      list(
+        test = "scaled.shifted.corrected",
+        stat = stat,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma_c,
+        trace.UGamma2 = trace_ugamma2_c,
+        trace.UGamma2.naive = trace_ugamma2,
+        scaling.factor = scaling_factor,
+        shift.parameter = shift_parameter,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
+        label = "simple second-order correction (corrected trace)"
       )
   }
 
@@ -423,6 +467,12 @@ lav_test_sb <- function(lavobject = NULL,
 
 # using the `classical' formula
 # UG = Gamma * [V - V Delta E.inv Delta' V']
+#
+# if only the traces are needed (no return_u/return_ugamma, no cross-group
+# gamma_full), they are computed by the streamed worker
+# lav_test_ug_trace_stream() without ever forming U or U %*% Gamma
+# (this matters in the categorical setting -- and whenever the number of
+# variables grows -- where pstar is large)
 lav_test_sb_trace_original <- function(m_gamma = NULL,
                                                     delta = NULL,
                                                     wls_v = NULL,
@@ -440,18 +490,33 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
   # constraints, where Gamma has nonzero cross-group blocks), it is used as-is
   # instead of block-diagonalizing the per-group m_gamma list. This forces the
   # full (non per-group) computation path.
-  # this is what we did <0.6-13: everything per group
+  fg <- unlist(nobs) / ntotal
+
+  # fast path: only the traces are needed
+  if (!return_u && !return_ugamma && is.null(gamma_full)) {
+    out <- lav_test_ug_trace_stream(
+      m_gamma = m_gamma, delta = delta, wls_v = wls_v, e_inv = e_inv,
+      fg = fg, satterthwaite = satterthwaite,
+      old_approach = ug2_old_approach
+    )
+    return(list(
+      trace.UGamma = out$trace.UGamma, trace.UGamma2 = out$trace.UGamma2,
+      UGamma = as.numeric(NA), UfromUGamma = as.numeric(NA)
+    ))
+  }
+
+  # explicit path: the U and/or UGamma matrices themselves are needed
+  # (lavInspect, Hayakawa corrected traces, FMG eigenvalues, gamma_full)
   if (ug2_old_approach) {
+    # this is what we did <0.6-13: everything per group
     ufrom_ugamma <- ug <- vector("list", ngroups)
     trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
     for (g in 1:ngroups) {
-      fg <- nobs[[g]] / ntotal
-      gamma_g <- m_gamma[[g]] / fg ## ?? check this
-      # delta_g <- delta[[g]]
+      gamma_g <- m_gamma[[g]] / fg[g]
       if (is.matrix(wls_v[[g]])) {
-        wls_vg <- wls_v[[g]] * fg
+        wls_vg <- wls_v[[g]] * fg[g]
       } else {
-        wls_vg <- diag(wls_v[[g]]) * fg
+        wls_vg <- diag(wls_v[[g]]) * fg[g]
       }
 
       u <- (wls_vg - wls_vg %*% delta[[g]] %*% e_inv %*%
@@ -474,53 +539,16 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
     trace_ugamma2 <- sum(trace_ugamma2)
     u_all <- ufrom_ugamma # group-specific
   } else {
-    trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
-    fg <- unlist(nobs) / ntotal
-    if (satterthwaite || return_ugamma || return_u || !is.null(gamma_full)) {
-      # for trace.UGamma2, we can no longer compute the trace per group
-      v_g <- wls_v
-      for (g in 1:ngroups) {
-        if (is.matrix(wls_v[[g]])) {
-          v_g[[g]] <- fg[g] * wls_v[[g]]
-        } else {
-          v_g[[g]] <- fg[g] * diag(wls_v[[g]])
-        }
-      }
-      v_all <- lav_mat_bdiag(v_g)
-      if (is.null(gamma_full)) {
-        gamma_f <- m_gamma
-        for (g in 1:ngroups) {
-          gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
-        }
-        gamma_all <- lav_mat_bdiag(gamma_f)
-      } else {
-        # full (possibly cross-group) Gamma, supplied by the caller
-        gamma_all <- gamma_full
-      }
-      delta_all <- do.call("rbind", delta)
-      u_all <- v_all - v_all %*% delta_all %*% e_inv %*% t(delta_all) %*% v_all
-      ug <- u_all %*% gamma_all
+    stacked <- lav_test_ug_stack(
+      m_gamma = m_gamma, delta = delta, wls_v = wls_v,
+      nobs = nobs, ntotal = ntotal, gamma_full = gamma_full
+    )
+    u_all <- stacked$v_all - stacked$v_all %*% stacked$delta_all %*%
+      e_inv %*% t(stacked$delta_all) %*% stacked$v_all
+    ug <- u_all %*% stacked$gamma_all
 
-      trace_ugamma <- sum(u_all * gamma_all)
-      trace_ugamma2 <- sum(ug * t(ug))
-    } else {
-      # we only need trace.UGamma - this can be done group-specific
-      trace_ugamma_group <- numeric(ngroups)
-      for (g in 1:ngroups) {
-        gamma_g <- m_gamma[[g]] / fg[g]
-        # delta_g <- delta[[g]]
-        if (is.matrix(wls_v[[g]])) {
-          wls_vg <- wls_v[[g]] * fg[g]
-        } else {
-          wls_vg <- diag(wls_v[[g]]) * fg[g]
-        }
-
-        u <- (wls_vg - wls_vg %*% delta[[g]] %*% e_inv %*%
-          t(delta[[g]]) %*% wls_vg)
-        trace_ugamma_group[g] <- sum(u * gamma_g)
-      }
-      trace_ugamma <- sum(trace_ugamma_group)
-    }
+    trace_ugamma <- sum(u_all * stacked$gamma_all)
+    trace_ugamma2 <- sum(ug * t(ug))
   }
 
   list(
@@ -541,6 +569,10 @@ lav_test_sb_trace_complement <- function(m_gamma = NULL,
                                                       return_ugamma = FALSE,
                                                       ug2_old_approach = FALSE,
                                                       satterthwaite = FALSE) {
+  # handle equality constraints
+  # FIXME: inequality constraints are ignored!
+  eq_basis <- lav_con_eq_basis(lavmodel)
+
   # this is what we did <0.6-13: everything per group
   # does not work when ngroups > 1 + equality constraints
   if (ug2_old_approach) {
@@ -548,7 +580,7 @@ lav_test_sb_trace_complement <- function(m_gamma = NULL,
     trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
     for (g in 1:ngroups) {
       fg <- nobs[[g]] / ntotal
-      gamma_g <- m_gamma[[g]] / fg ## ?? check this
+      gamma_g <- m_gamma[[g]] / fg
       delta_g <- delta[[g]]
       if (is.matrix(wls_v[[g]])) {
         wls_vg <- wls_v[[g]] * fg
@@ -556,12 +588,8 @@ lav_test_sb_trace_complement <- function(m_gamma = NULL,
         wls_vg <- diag(wls_v[[g]]) * fg
       }
 
-      # handle equality constraints
-      # FIXME: inequality constraints are ignored!
-      if (lavmodel@eq.constraints) {
-        delta_g <- delta_g %*% lavmodel@eq.constraints.K
-      } else if (lavmodel@ceq.simple.only) {
-        delta_g <- delta_g %*% lavmodel@ceq.simple.K
+      if (!is.null(eq_basis)) {
+        delta_g <- delta_g %*% eq_basis
       }
 
       # orthogonal complement of Delta.g
@@ -584,38 +612,21 @@ lav_test_sb_trace_complement <- function(m_gamma = NULL,
     trace_ugamma <- sum(trace_ugamma)
     trace_ugamma2 <- sum(trace_ugamma2)
   } else {
-    trace_ugamma <- trace_ugamma2 <- ug <- as.numeric(NA)
-    fg <- unlist(nobs) / ntotal
-
-    v_g <- wls_v
-    for (g in 1:ngroups) {
-      if (is.matrix(wls_v[[g]])) {
-        v_g[[g]] <- fg[g] * wls_v[[g]]
-      } else {
-        v_g[[g]] <- fg[g] * diag(wls_v[[g]])
-      }
-    }
-    v_all <- lav_mat_bdiag(v_g)
-    gamma_f <- m_gamma
-    for (g in 1:ngroups) {
-      gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
-    }
-    gamma_all <- lav_mat_bdiag(gamma_f)
-    delta_all <- do.call("rbind", delta)
-
-    # handle equality constraints
-    # FIXME: inequality constraints are ignored!
-    if (lavmodel@eq.constraints) {
-      delta_all <- delta_all %*% lavmodel@eq.constraints.K
-    } else if (lavmodel@ceq.simple.only) {
-      delta_all <- delta_all %*% lavmodel@ceq.simple.K
+    trace_ugamma2 <- ug <- as.numeric(NA)
+    stacked <- lav_test_ug_stack(
+      m_gamma = m_gamma, delta = delta, wls_v = wls_v,
+      nobs = nobs, ntotal = ntotal
+    )
+    delta_all <- stacked$delta_all
+    if (!is.null(eq_basis)) {
+      delta_all <- delta_all %*% eq_basis
     }
 
-    # orthogonal complement of Delta.g
+    # orthogonal complement of Delta
     delta_c <- lav_mat_ortho_complement(delta_all)
 
-    tmp1 <- solve(t(delta_c) %*% solve(v_all) %*% delta_c)
-    tmp2 <- t(delta_c) %*% gamma_all %*% delta_c
+    tmp1 <- solve(t(delta_c) %*% solve(stacked$v_all) %*% delta_c)
+    tmp2 <- t(delta_c) %*% stacked$gamma_all %*% delta_c
 
     ug <- tmp1 %*% tmp2
 
@@ -657,15 +668,15 @@ lav_test_sb_trace_aba <- function(m_gamma = NULL,
                                                return_ugamma = FALSE,
                                                ug2_old_approach = FALSE,
                                                satterthwaite = FALSE) {
-  # this is what we did <0.6-13: everything per group
-  if (ug2_old_approach) {
-    # ufromugamma <-
-                     ug <- vector("list", ngroups)
+  # per-group computation: either the <0.6-13 approach (also for the
+  # UGamma^2 trace), or (default) for the first trace only
+  if (ug2_old_approach || !(satterthwaite || return_ugamma)) {
+    ug <- vector("list", ngroups)
     trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
 
     for (g in 1:ngroups) {
       fg <- nobs[[g]] / ntotal
-      gamma_g <- m_gamma[[g]] / fg ## ?? check this
+      gamma_g <- m_gamma[[g]] / fg
       delta_g <- m_delta[[g]]
 
       # diagonal wls_v? we check for this since 0.5-17
@@ -682,81 +693,39 @@ lav_test_sb_trace_aba <- function(m_gamma = NULL,
       # note: we have aga1 at the end, to avoid ending up with
       # a transposed matrix (both parts are non-symmetric)
       if (diagonal) {
-        ug <- t(gamma_g * a1) -
+        ug_group <- t(gamma_g * a1) -
           (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
       } else {
-        ug <- (gamma_g %*% aa1) -
+        ug_group <- (gamma_g %*% aa1) -
           (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
       }
 
-      trace_ugamma[g] <- sum(diag(ug))
-      if (satterthwaite) {
-        trace_ugamma2[g] <- sum(ug * t(ug))
+      trace_ugamma[g] <- sum(diag(ug_group))
+      if (ug2_old_approach && satterthwaite) {
+        trace_ugamma2[g] <- sum(ug_group * t(ug_group))
       }
-    }
+    } # g
     # sum over groups
     trace_ugamma <- sum(trace_ugamma)
-    trace_ugamma2 <- sum(trace_ugamma2)
-  } else {
-    trace_ugamma <- trace_ugamma2 <- ug <- as.numeric(NA)
-    fg <- unlist(nobs) / ntotal
-    if (satterthwaite || return_ugamma) {
-      # for trace_ugamma2, we can no longer compute the trace per group
-      v_g <- wls_v
-      for (g in 1:ngroups) {
-        if (is.matrix(wls_v[[g]])) {
-          v_g[[g]] <- fg[g] * wls_v[[g]]
-        } else {
-          v_g[[g]] <- fg[g] * diag(wls_v[[g]])
-        }
-      }
-      v_all <- lav_mat_bdiag(v_g)
-      gamma_f <- m_gamma
-      for (g in 1:ngroups) {
-        gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
-      }
-      gamma_all <- lav_mat_bdiag(gamma_f)
-      delta_all <- do.call("rbind", m_delta)
-
-      aga1 <- v_all %*% gamma_all %*% v_all
-
-      ug <- (gamma_all %*% v_all) -
-        (delta_all %*% tcrossprod(e_inv, delta_all) %*% aga1)
-
-      trace_ugamma <- sum(diag(ug))
-      trace_ugamma2 <- sum(ug * t(ug))
+    if (ug2_old_approach && satterthwaite) {
+      trace_ugamma2 <- sum(trace_ugamma2)
     } else {
-      trace_ugamma_group <- numeric(ngroups)
-      for (g in 1:ngroups) {
-        fg <- nobs[[g]] / ntotal
-        gamma_g <- m_gamma[[g]] / fg ## ?? check this
-        delta_g <- m_delta[[g]]
-
-        # diagonal wls_v? we check for this since 0.5-17
-        diagonal <- FALSE
-        if (is.matrix(wls_v[[g]])) {
-          aa1 <- wls_v[[g]] * fg
-          aga1 <- aa1 %*% gamma_g %*% aa1
-        } else {
-          diagonal <- TRUE
-          a1 <- wls_v[[g]] * fg # numeric vector!
-          aga1 <- gamma_g * tcrossprod(a1)
-        }
-
-        # note: we have aga1 at the end, to avoid ending up with
-        # a transposed matrix (both parts are non-symmetric)
-        if (diagonal) {
-          ug <- t(gamma_g * a1) -
-            (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
-        } else {
-          ug <- (gamma_g %*% aa1) -
-            (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
-        }
-
-        trace_ugamma_group[g] <- sum(diag(ug))
-      } # g
-      trace_ugamma <- sum(trace_ugamma_group)
+      trace_ugamma2 <- as.numeric(NA)
     }
+    ug <- as.numeric(NA)
+  } else {
+    # for trace_ugamma2, we can no longer compute the trace per group
+    stacked <- lav_test_ug_stack(
+      m_gamma = m_gamma, delta = m_delta, wls_v = wls_v,
+      nobs = nobs, ntotal = ntotal
+    )
+    aga1 <- stacked$v_all %*% stacked$gamma_all %*% stacked$v_all
+
+    ug <- (stacked$gamma_all %*% stacked$v_all) -
+      (stacked$delta_all %*% tcrossprod(e_inv, stacked$delta_all) %*% aga1)
+
+    trace_ugamma <- sum(diag(ug))
+    trace_ugamma2 <- sum(ug * t(ug))
   }
 
   if (!return_ugamma) {

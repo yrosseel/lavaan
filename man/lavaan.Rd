@@ -64,7 +64,15 @@ lavaan(model = NULL, data = NULL, ordered = NULL, aux = NULL,
 \item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
-    for each group.}
+    for each group. If \code{conditional.x = TRUE}, this is the
+    \emph{residual} variance-covariance matrix (given the exogenous
+    covariates), and the regression intercepts, slopes and covariate moments
+    are provided through the attributes \code{res.slopes}, \code{cov.x} and
+    \code{mean.x} of \code{sample_cov} (with \code{sample_mean} holding the
+    residual intercepts). It is recommended to supply these attributes with
+    (dim)names, so that they can be matched against the model's internal
+    variable order; unnamed attributes are assumed to be in that internal
+    order already.}
 \item{sample_mean}{A sample mean vector. For a multiple group analysis,
     a list with a mean vector for each group.}
 \item{sample_th}{Vector of sample-based thresholds. For a multiple group

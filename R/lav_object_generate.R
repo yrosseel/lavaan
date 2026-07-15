@@ -94,20 +94,18 @@ lav_object_baseline <- function(object = NULL,
       # nothing to do
     } else {
       lavoptions$estimator.args$dls.GammaNT <- "sample"
-      dls_a <- lavoptions$estimator.args$dls.a
       for (g in 1:lavsamplestats@ngroups) {
-        gamma_nt <- lav_samp_gamma_nt(
-          m_cov          = lavsamplestats@cov[[g]],
-          m_mean         = lavsamplestats@mean[[g]],
-          x_idx          = lavsamplestats@x.idx[[g]],
-          fixed_x        = lavoptions$fixed.x,
-          conditional_x  = lavoptions$conditional.x,
-          meanstructure  = lavoptions$meanstructure,
-          slopestructure = lavoptions$conditional.x
-        )
-        w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
         # overwrite
-        lavsamplestats@WLS.V[[g]] <- lav_mat_sym_inverse(w_dls)
+        lavsamplestats@WLS.V[[g]] <- lav_dls_wls_v_g(
+          m_cov         = lavsamplestats@cov[[g]],
+          m_mean        = lavsamplestats@mean[[g]],
+          nacov_g       = lavsamplestats@NACOV[[g]],
+          dls_a         = lavoptions$estimator.args$dls.a,
+          x_idx         = lavsamplestats@x.idx[[g]],
+          fixed_x       = lavoptions$fixed.x,
+          conditional_x = lavoptions$conditional.x,
+          meanstructure = lavoptions$meanstructure
+        )
       }
     }
   }
@@ -118,24 +116,23 @@ lav_object_baseline <- function(object = NULL,
       lavoptions$se <- "standard"
     }
   } else {
-    # 0.6-18: slower, but safer to just keep it
-
-    # 0.6-20 -- except if se = "bootstrap" -> "none"
-    if (lavoptions$se == "bootstrap") {
+    # the baseline standard errors are never used (only the baseline
+    # test statistics feed CFI/TLI and friends), so skip the vcov step
+    # (since 0.7-1); the scaled/robust tests recompute E.inv, Delta and
+    # WLS.V themselves when no vcov is available -- as has always been
+    # the case for se = "bootstrap", where the baseline was already
+    # fitted with se = "none" since 0.6-20
+    # exception: two.stage/robust.two.stage, where the scaled test
+    # reuses the two-stage vcov ingredients; keep se as-is there
+    if (!any(lavoptions$missing == c("two.stage", "robust.two.stage"))) {
       lavoptions$se <- "none"
     }
-
-    ## FIXME: if test = scaled, we need it anyway?
-    # if(lavoptions$missing %in% c("two.stage", "two.stage.robust")) {
-    # don't touch it
-    # } else {
-    #    lavoptions$se <- "none"
-    # }
   }
 
   # change options
   lavoptions$h1 <- FALSE # already provided by lavh1
   lavoptions$baseline <- FALSE # of course
+  lavoptions$fit.by.level <- FALSE
   lavoptions$loglik <- TRUE # eg for multilevel
   lavoptions$implied <- TRUE # needed for loglik (multilevel)
   lavoptions$check.start <- FALSE
@@ -325,6 +322,9 @@ lav_object_extended <- function(object, add = NULL,
   # (modindices!)
   lavoptions$check.delta.cat.mediator <- FALSE
 
+  # no need for the partially saturated models (multilevel)
+  lavoptions$fit.by.level <- FALSE
+
   fit <- lavaan(list_1,
     slot_options     = lavoptions,
     slot_sample_stats = object@SampleStats,
@@ -458,6 +458,7 @@ lav_object_catml <- function(lavobject = NULL, allow_refit = TRUE) {
   # the robust corrections assume the (default) independence baseline
   # (Savalei, 2021, eq. 6b); never use a 'nested' baseline here
   lavoptions$baseline.type <- "independence"
+  lavoptions$fit.by.level <- FALSE
   if (!refit) {
     lavoptions$optim.method <- "none"
     lavoptions$optim.force.converged <- TRUE

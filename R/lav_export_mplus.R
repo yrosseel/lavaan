@@ -80,22 +80,22 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
   }
 
   # ---- MODEL CONSTRAINT block ----
-  con.df <- lav_export_constraints_df(pt, is_con, display_label)
-  con.block <- ""
-  if (nrow(con.df)) {
+  con_df <- lav_export_constraints_df(pt, is_con, display_label)
+  con_block <- ""
+  if (nrow(con_df)) {
     lines <- character(0L)
-    new.par <- con.df$lhs[con.df$op == ":="]
-    if (length(new.par)) {
-      lines <- c(lines, paste0("  NEW(", paste(new.par, collapse = " "), ");"))
+    new_par <- con_df$lhs[con_df$op == ":="]
+    if (length(new_par)) {
+      lines <- c(lines, paste0("  NEW(", paste(new_par, collapse = " "), ");"))
     }
-    for (i in seq_len(nrow(con.df))) {
-      op <- con.df$op[i]
+    for (i in seq_len(nrow(con_df))) {
+      op <- con_df$op[i]
       mop <- switch(op, "==" = "=", ":=" = "=", op)
-      lhs <- lav_export_mplus_expr(con.df$lhs[i])
-      rhs <- lav_export_mplus_expr(con.df$rhs[i])
+      lhs <- lav_export_mplus_expr(con_df$lhs[i])
+      rhs <- lav_export_mplus_expr(con_df$rhs[i])
       lines <- c(lines, paste0("  ", lhs, " ", mop, " ", rhs, ";"))
     }
-    con.block <- paste0("MODEL CONSTRAINT:\n", paste(lines, collapse = "\n"),
+    con_block <- paste0("MODEL CONSTRAINT:\n", paste(lines, collapse = "\n"),
                         "\n")
   }
 
@@ -107,7 +107,7 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
 
   out <- paste0(head,
                 paste(body, collapse = "\n"), "\n",
-                con.block,
+                con_block,
                 "OUTPUT:\n  sampstat standardized tech1;\n")
   class(out) <- c("lavaan.character", "character")
   out
@@ -174,7 +174,7 @@ lav_export_mplus_mod <- function(free, ustart) {
 
 # sanitize a variable name for Mplus (no dots)
 lav_export_mplus_var <- function(x) {
-  gsub("\\.", "_", x)
+  gsub(".", "_", x, fixed = TRUE)
 }
 
 # Mplus is not case-sensitive: a latent variable (lhs of =~) may never share a
@@ -184,18 +184,18 @@ lav_export_mplus_var <- function(x) {
 # after the usual dot->underscore sanitization, so the map keys/values match the
 # tokens emitted in the MODEL block.
 lav_export_mplus_lv_rename <- function(pt) {
-  lv.names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "lv"))
-  ov.names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov"))
+  lv_names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "lv"))
+  ov_names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov"))
   rename <- character(0L)
-  if (length(lv.names) == 0L) {
+  if (length(lv_names) == 0L) {
     return(rename)
   }
-  ov.lower <- tolower(ov.names)
+  ov_lower <- tolower(ov_names)
   # names already in use (case-insensitive); grow it as we assign new names so
   # that two renamed factors cannot end up clashing with each other
-  taken <- tolower(c(ov.names, lv.names))
-  for (lv in lv.names) {
-    if (!(tolower(lv) %in% ov.lower)) next        # no collision
+  taken <- tolower(c(ov_names, lv_names))
+  for (lv in lv_names) {
+    if (!(tolower(lv) %in% ov_lower)) next        # no collision
     new <- paste0(lv, "F")
     while (tolower(new) %in% taken) {
       new <- paste0(new, "F")
@@ -222,10 +222,9 @@ lav_export_mplus_expr <- function(expr) {
   if (is.na(expr) || !nzchar(expr)) {
     return(expr)
   }
-  expr <- gsub("\\^", "**", expr)
+  expr <- gsub("^", "**", expr, fixed = TRUE)
   # drop any leftover dots inside plabel-style tokens
-  expr <- gsub("\\.", "", expr)
-  expr
+  gsub(".", "", expr, fixed = TRUE)
 }
 
 # Mplus group labels for a multigroup model. We use the actual lavaan group
@@ -272,13 +271,13 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
   information <- opt$information
   if (is.null(information)) information <- "expected"
 
-  ov.names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov"))
-  weight.name <- if (inherits(object, "lavaan")) {
+  ov_names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov"))
+  weight_name <- if (inherits(object, "lavaan")) {
     object@Data@sampling.weights
   } else {
     character(0L)
   }
-  weight.name <- lav_export_mplus_var(weight.name)
+  weight_name <- lav_export_mplus_var(weight_name)
 
   # single-level clustered data (cluster= but no level: structure) -> Mplus
   # TYPE=COMPLEX with a CLUSTER variable (cluster-robust SEs/test, issue #254)
@@ -286,12 +285,12 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
     length(object@Data@cluster) > 0L
 
   # all columns present in the data file (must match the written data)
-  data.cols <- ov.names
-  if (length(weight.name)) data.cols <- c(data.cols, weight.name)
-  if (ngroups > 1L) data.cols <- c(data.cols, "GRP")
-  if (nlevels > 1L || clustered) data.cols <- c(data.cols, "CLUS")
+  data_cols <- ov_names
+  if (length(weight_name)) data_cols <- c(data_cols, weight_name)
+  if (ngroups > 1L) data_cols <- c(data_cols, "GRP")
+  if (nlevels > 1L || clustered) data_cols <- c(data_cols, "CLUS")
 
-  data.type <- if (inherits(object, "lavaan")) {
+  data_type <- if (inherits(object, "lavaan")) {
     object@Data@data.type
   } else {
     "full"
@@ -310,10 +309,10 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
   } else {
     c_data <- paste0(c_data, "  file is ", data_file[1L], ";\n")
   }
-  if (data.type == "full") {
+  if (data_type == "full") {
     c_data <- paste0(c_data, "  type is individual;\n")
     if (listwise) c_data <- paste0(c_data, "  listwise = on;\n")
-  } else if (data.type == "moment") {
+  } else if (data_type == "moment") {
     c_data <- paste0(c_data, "  type is fullcov;\n")
     c_data <- paste0(c_data, "  nobservations are ",
                      object@Data@nobs[[1L]], ";\n")
@@ -321,10 +320,10 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
 
   # VARIABLE
   c_var <- paste0("VARIABLE:\n  names are\n",
-                  lav_export_mplus_wrap(data.cols), ";\n")
+                  lav_export_mplus_wrap(data_cols), ";\n")
   c_var <- paste0(c_var, "  usevariables are\n",
-                  lav_export_mplus_wrap(ov.names), ";\n")
-  if (data.type == "full") {
+                  lav_export_mplus_wrap(ov_names), ";\n")
+  if (data_type == "full") {
     c_var <- paste0(c_var, "  missing are all (-999999);\n")
   }
   if (length(ov_ord)) {
@@ -344,21 +343,21 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
     if (inherits(object, "lavaan")) {
       ovl <- object@Data@ov.names.l[[1L]]
       if (length(ovl) >= 2L) {
-        within.only  <- lav_export_mplus_var(setdiff(ovl[[1L]], ovl[[2L]]))
-        between.only <- lav_export_mplus_var(setdiff(ovl[[2L]], ovl[[1L]]))
-        if (length(within.only)) {
+        within_only  <- lav_export_mplus_var(setdiff(ovl[[1L]], ovl[[2L]]))
+        between_only <- lav_export_mplus_var(setdiff(ovl[[2L]], ovl[[1L]]))
+        if (length(within_only)) {
           c_var <- paste0(c_var, "  within = ",
-                          paste(within.only, collapse = " "), ";\n")
+                          paste(within_only, collapse = " "), ";\n")
         }
-        if (length(between.only)) {
+        if (length(between_only)) {
           c_var <- paste0(c_var, "  between = ",
-                          paste(between.only, collapse = " "), ";\n")
+                          paste(between_only, collapse = " "), ";\n")
         }
       }
     }
   }
-  if (length(weight.name)) {
-    c_var <- paste0(c_var, "  weight is ", weight.name, ";\n")
+  if (length(weight_name)) {
+    c_var <- paste0(c_var, "  weight is ", weight_name, ";\n")
   }
 
   # ANALYSIS

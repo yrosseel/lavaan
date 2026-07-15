@@ -87,12 +87,6 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   allow_empty_cell <- lavoptions$allow.empty.cell
   dls_a <- lavoptions$estimator.args$dls.a
   dls_gamma_nt <- lavoptions$estimator.args$dls.GammaNT
-  # design vs frequency weighting of the (categorical/continuous) Gamma
-  swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
-    lavoptions$sampling.weights.type
-  } else {
-    "design"
-  }
 
   # sample.icov (new in 0.6-9; ensure it exists, for older objects)
   sample_icov <- TRUE
@@ -113,6 +107,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
   # check lavdata
   stopifnot(!is.null(lavdata))
+
+  # the Gamma (NACOV) recipe: the single source of truth for which Gamma
+  # this analysis uses, shared with the post-fit lav_object_gamma()
+  gamma_recipe <- lav_gamma_recipe(lavoptions = lavoptions, lavdata = lavdata)
+  # design vs frequency weighting of the (categorical/continuous) Gamma
+  swt_type <- gamma_recipe$swt.type
 
   # lavdata slots (FIXME: keep lavdata@ names)
   x <- lavdata@X
@@ -224,37 +224,26 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     # FIXME: check dimension of wls_v!!
   }
 
+  # a user-provided WLS.V is not used by the GLS estimation machinery
+  # (since 0.6-10 the objective/gradient are direct functions of the
+  # sample moments); ignore it altogether (and warn), rather than using
+  # it inconsistently
+  if (wls_v_user && estimator == "GLS") {
+    lav_msg_warn(gettext(
+      "WLS.V is ignored when estimator = \"GLS\"; use estimator = \"WLS\" to
+      estimate with a user-provided weight matrix."))
+    wls_v <- vector("list", length = ngroups)
+    wls_vd <- vector("list", length = ngroups)
+    wls_v_user <- FALSE
+  }
+
   nacov_compute <- FALSE # since 0.6-6
   if (is.null(nacov)) {
     nacov <- vector("list", length = ngroups)
     nacov_user <- FALSE
-    if (se %in% c("robust.sem", "robust.sem.nt", "robust.cluster.sem") &&
-                                                    missing == "listwise") {
-      nacov_compute <- TRUE
-    }
-    # note: test can be a vector...
-    if (missing == "listwise" && any(test %in% c(
-      "satorra.bentler",
-      "mean.var.adjusted",
-      "scaled.shifted"
-    ))) {
-      nacov_compute <- TRUE
-    }
-    if (missing == "listwise" &&
-        any(vapply(test, lav_test_fmg_is_fmg, logical(1L)))) {
-      nacov_compute <- TRUE
-    }
-    if (estimator == "IV" &&
-        lavoptions$estimator.args$iv_vcov_stage1 == "gamma") {
-      nacov_compute <- TRUE
-    }
-    # two-stage missing data for the (continuous) least-squares estimators:
-    # the robust.sem SEs (and satorra.bentler test) need the two-stage NACOV
-    # of the EM moments (computed below, see lav_mvn_mi_* functions)
-    if (any(missing == c("two.stage", "robust.two.stage")) &&
-        estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
-      nacov_compute <- TRUE
-    }
+    # default policy (se/test/missing/estimator triggers): see
+    # lav_gamma_recipe() in lav_samplestats_gamma_recipe.R
+    nacov_compute <- gamma_recipe$compute
   } else if (is.logical(nacov)) {
     if (!nacov) {
       nacov_compute <- FALSE
@@ -638,17 +627,20 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             correlation structures."))
         }
 
-        # FIXME!
-        # no handling of missing data yet....
-        if (missing %in% c(
-          "ml", "ml.x",
-          "two.stage", "robust.two.stage"
-        )) {
-          lav_msg_stop(gettextf(
-            "missing = %s + conditional.x not supported yet", missing))
+        # missing values in the exogenous x variables cannot be handled
+        # when we condition on x
+        if (missing == "ml.x") {
+          lav_msg_stop(gettext(
+            "missing = \"ml.x\" is not supported when conditional.x = TRUE
+            (missing values in the exogenous variables); use missing = \"ml\"
+            (listwise deletion of cases with missing x values), or
+            conditional.x = FALSE."))
         }
 
         # residual covariances!
+        # (pairwise-complete sample statistics; if missing = \"ml\" or
+        #  two.stage, these serve as starting values only, and the
+        #  EM-based statistics are computed below)
 
         y <- cbind(x[[g]], exo[[g]])
     cov_1 <- unname(stats::cov(y, use = "pairwise.complete.obs"))
@@ -688,6 +680,112 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
         res_int[[g]] <- coef_1[1, ] # intercepts
         res_slopes[[g]] <- t(coef_1[-1, , drop = FALSE]) # slopes
+
+        # missing data: FIML or two-stage
+        if (missing %in% c("ml", "two.stage", "robust.two.stage")) {
+          if (missing == "ml") {
+            missing_flag <- TRUE
+          } else {
+            # two-stage: the sample statistics ARE the EM estimates
+            missing_flag <- FALSE
+            if (estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+              lav_msg_stop(gettextf(
+                "missing = %1$s + conditional.x is not supported (yet) for
+                estimator %2$s; use estimator = \"ML\", or
+                conditional.x = FALSE.", dQuote(missing), dQuote(estimator)))
+            }
+          }
+
+          # extended pattern statistics: the usual per-pattern moments,
+          # plus the crossproducts with the (complete) exogenous variables
+          missing_1[[g]] <- lav_samp_mi_patterns_res(
+            y = x[[g]], exo = exo[[g]], mp = mp[[g]], wt = wt[[g]]
+          )
+
+          # estimate the joint (y, x) moments of the unrestricted model
+          # via EM; because x is complete, the joint normal likelihood
+          # factorizes as f(y|x) * f(x) with variation-independent
+          # parameter blocks, and the saturated moments of the conditional
+          # model are obtained by partitioning the joint EM moments
+          current_warn <- lav_warn()
+          if (lav_warn(lavoptions$em.h1.args$warn))
+            on.exit(lav_warn(current_warn), TRUE)
+          # zero coverage?
+          if (any(lav_mat_vech(mp[[g]]$coverage, diagonal = FALSE) == 0)) {
+            # no EM estimates (h1 will be NULL)
+          } else if (!allow_empty_cell) {
+            # optionally augment the EM run with auxiliary variables to
+            # improve the h1 moments under MAR (as in the unconditional
+            # case; the auxiliary variables are dropped afterwards)
+            aux_g <- if (length(aux) >= g) aux[[g]] else NULL
+            has_aux <- !is.null(aux_g) && NCOL(aux_g) > 0L
+            y2 <- cbind(x[[g]], exo[[g]])
+            em_y <- if (has_aux) cbind(y2, aux_g) else y2
+            em_out <- lav_mvn_mi_h1_est_moments(
+              y = em_y, wt = wt[[g]],
+              max_iter = lavoptions$em.h1.args$max_iter,
+              tol = lavoptions$em.h1.args$tol,
+              non_pd_action = lavoptions$em.h1.args$non_pd_action,
+              non_pd_tol = lavoptions$em.h1.args$non_pd_tol,
+              acceleration = lavoptions$em.h1.args$acceleration
+            )
+            p_ov <- seq_len(NCOL(y2))
+            sigma_em <- em_out$Sigma[p_ov, p_ov, drop = FALSE]
+            mu_em <- em_out$Mu[p_ov]
+
+            # partition the joint moments into the residual moments of
+            # the saturated conditional model (same algebra as above)
+            a_em <- sigma_em[-x_idx[[g]], -x_idx[[g]], drop = FALSE]
+            b_em <- sigma_em[-x_idx[[g]], x_idx[[g]], drop = FALSE]
+            c_em <- sigma_em[x_idx[[g]], x_idx[[g]], drop = FALSE]
+            res_cov_em <- a_em - b_em %*% solve(c_em) %*% t(b_em)
+            my_em <- mu_em[-x_idx[[g]]]
+            mx_em <- mu_em[x_idx[[g]]]
+            c3_em <- rbind(
+              c(1, mx_em),
+              cbind(mx_em, c_em + tcrossprod(mx_em))
+            )
+            b3_em <- cbind(my_em, b_em + tcrossprod(my_em, mx_em))
+            coef_em <- unname(solve(c3_em, t(b3_em)))
+            res_int_em <- coef_em[1, ]
+            res_slopes_em <- t(coef_em[-1, , drop = FALSE])
+
+            # the saturated value of the conditional (-2/N) loglikelihood
+            h1_em <- lav_mvreg_mi_loglik_samp(
+              yp = missing_1[[g]],
+              res_int = res_int_em, res_slopes = res_slopes_em,
+              res_cov = res_cov_em,
+              log2pi = FALSE, minus_two = TRUE
+            ) / nobs[[g]]
+
+            missing_h1[[g]] <- list(
+              sigma = sigma_em, mu = mu_em, h1 = h1_em,
+              res.cov = res_cov_em, res.int = res_int_em,
+              res.slopes = res_slopes_em
+            )
+            if (has_aux) {
+              # keep the full augmented moments (see the unconditional case)
+              missing_h1[[g]]$sigma.aug <- em_out$Sigma
+              missing_h1[[g]]$mu.aug <- em_out$Mu
+            }
+
+            # for two-stage (or FIML with sampling weights), replace the
+            # sample statistics by the EM estimates
+            if (!missing_flag || !is.null(wt[[g]])) {
+              cov[[g]] <- sigma_em
+              if (ridge) {
+                diag(cov[[g]]) <- diag(cov[[g]]) + ridge_eps
+              }
+              var[[g]] <- diag(cov[[g]])
+              mean[[g]] <- mu_em
+              res_cov[[g]] <- res_cov_em
+              res_var[[g]] <- diag(cov[[g]])
+              res_int[[g]] <- res_int_em
+              res_slopes[[g]] <- res_slopes_em
+            }
+          }
+          lav_warn(current_warn)
+        }
       } else if (missing == "two.stage" ||
         missing == "robust.two.stage") {
         missing_flag <- FALSE # !!! just use sample statistics
@@ -985,11 +1083,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           # (partial) correlation ADF Gamma via the delta method (handles
           # fixed.x); cor_idx lists the unit-variance variables (all, unless
           # a subset was requested via correlation = c(...))
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
-          } else {
-            seq_along(ov_names[[g]])
-          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
           nacov[[g]] <- lav_samp_partial_cor_gamma(
             m_y = y, cor_idx = cor_idx_g,
             meanstructure = meanstructure,
@@ -1005,16 +1099,28 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
               conditional_x = conditional_x,
               meanstructure = meanstructure,
               slopestructure = conditional_x,
-              gamma_n_minus_one =
-                lavoptions$gamma.n.minus.one,
-              unbiased = lavoptions$gamma.unbiased,
-              mplus_wls = FALSE,
+              gamma_n_minus_one = gamma_recipe$n.minus.one,
+              unbiased = gamma_recipe$unbiased,
+              mplus_wls = FALSE, # never for ML/GLS (see recipe)
               wt = wt[[g]],
               sampling_weights_type = swt_type
             )
         }
       } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")) {
-        if (!categorical) {
+        # ULS (continuous): the weight matrix is the identity, so Gamma
+        # is not needed for estimation; skip the (expensive) ADF/NT Gamma
+        # unless a consumer requests it: robust/scaled se or test (via
+        # nacov_compute), or the browne.residual.adf test (the only
+        # browne variant that reads the stored NACOV; the NT and
+        # model-based variants use the fast kernel or recompute at test
+        # time). Note lavInspect(fit, "gamma") will then return nothing,
+        # just as for estimator ML with standard se/test.
+        uls_gamma_skip <- (estimator == "ULS" && !categorical &&
+          !nacov_compute &&
+          !("browne.residual.adf" %in% lavoptions$test))
+        if (uls_gamma_skip) {
+          # no Gamma needed
+        } else if (!categorical) {
           # sample size large enough?
           nvar <- ncol(x[[g]])
           # if(conditional.x && nexo > 0L) {
@@ -1025,7 +1131,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           if (conditional_x && nexo > 0L) {
             pstar <- pstar + (nvar * nexo)
           }
-          if (nrow(x[[g]]) < pstar && estimator != "IV") {
+          # only when the (sample-based) ADF Gamma is computed below;
+          # the normal-theory Gamma has no such sample-size requirement
+          gamma_nt_flavor <- (!correlation &&
+            estimator %in% c("ULS", "DWLS") &&
+            "robust.sem.nt" %in% lavoptions$se)
+          if (nrow(x[[g]]) < pstar && estimator != "IV" &&
+              !gamma_nt_flavor) {
             if (ngroups > 1L) {
               lav_msg_warn(gettextf(
               "number of observations (%s) too small to compute Gamma",
@@ -1050,19 +1162,26 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (correlation) {
             # (partial) correlation ADF Gamma via the delta method (handles
             # fixed.x)
-            cor_idx_g <- if (length(correlation_ov) > 0L) {
-              which(ov_names[[g]] %in% correlation_ov)
-            } else {
-              seq_along(ov_names[[g]])
-            }
+            cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
             nacov[[g]] <- lav_samp_partial_cor_gamma(
               m_y = y, cor_idx = cor_idx_g,
               meanstructure = meanstructure,
               fixed_x = fixed_x, x_idx = x_idx[[g]]
             )
       } else {
-            if ("robust.sem.nt" %in% lavoptions$se ||
-                "browne.residual.nt" %in% lavoptions$test) {
+            # the NT flavor may only replace the ADF Gamma for the
+            # ULS/DWLS(-continuous) estimators when the robust.sem.nt
+            # sandwich needs it (their default se since 0.6-21; for
+            # DWLS the diagonal weights then also derive from the NT
+            # Gamma, by design): for WLS/DLS the (full) weight matrix is
+            # derived from this NACOV, and storing the NT Gamma instead
+            # silently turned WLS into GLS (before 0.7-1, when
+            # test = "browne.residual.nt" was combined with
+            # estimator = "WLS"); note that the browne.residual.nt test
+            # itself never reads this slot (it uses the fast kernel, or
+            # recomputes via lav_object_gamma -- see lav_test_browne)
+            if (estimator %in% c("ULS", "DWLS") &&
+                "robust.sem.nt" %in% lavoptions$se) {
               nacov[[g]] <-
                 lav_samp_gamma_nt(
                   m_y = y,
@@ -1085,11 +1204,9 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                   conditional_x = conditional_x,
                   meanstructure = meanstructure,
                   slopestructure = conditional_x,
-                  gamma_n_minus_one =
-                    lavoptions$gamma.n.minus.one,
-                  unbiased =
-                    lavoptions$gamma.unbiased,
-                  mplus_wls = lavoptions$gamma.wls.mplus,
+                  gamma_n_minus_one = gamma_recipe$n.minus.one,
+                  unbiased = gamma_recipe$unbiased,
+                  mplus_wls = gamma_recipe$mplus.wls,
                   wt = wt[[g]],
                   sampling_weights_type = swt_type
                 )
@@ -1110,7 +1227,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
               nacov[[g]] <- nacov[[g]] * (nc / (nc - 1))
             } else {
               nacov[[g]] <- cat_1$WLS.W * nobs[[g]]
-              if (lavoptions$gamma.n.minus.one) {
+              if (gamma_recipe$n.minus.one) {
                 nacov[[g]] <- nacov[[g]] * (nobs[[g]] / (nobs[[g]] - 1L))
               }
             }
@@ -1146,11 +1263,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (estimator == "DLS" && dls_gamma_nt == "sample" && dls_a < 1.0) {
         # compute GammaNT here
         if (correlation) {
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
-          } else {
-            seq_along(ov_names[[g]])
-          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
           gamma_nt <- lav_samp_partial_cor_gamma_nt(
             m_cov         = cov[[g]],
             cor_idx       = cor_idx_g,
@@ -1172,43 +1285,32 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         }
       }
 
-      if (estimator == "GLS" ||
+      # GLS: since 0.7-1 the estimation machinery no longer needs the
+      # (large) WLS.V matrix (the objective uses the trace shortcut, the
+      # gradient the omega approach, and the expected information is
+      # streamed); when a consumer does need the full matrix (robust
+      # SEs/tests, lavInspect), it is built on demand in
+      # lav_model_h1_information. Only the variants below still
+      # pre-compute it here.
+      gls_v_lazy <- (estimator == "GLS" && !correlation &&
+        !conditional_x && !group_w_free && missing == "listwise")
+      if ((estimator == "GLS" && !gls_v_lazy) ||
         (estimator == "DLS" && dls_gamma_nt == "sample" &&
           dls_a == 1.0)) {
         # Note: we need the 'original' COV/MEAN/ICOV
         #        sample statistics; not the 'residual' version
-        if (correlation) {
-          # (partial) correlation structure: normal-theory weight matrix is
-          # the NT Gamma of the (partial) correlation moments, obtained via
-          # the delta method (this also handles fixed.x). cor_idx lists the
-          # variables that are standardized to unit variance (all, unless a
-          # subset was requested via correlation = c(...)).
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
-          } else {
-            seq_along(ov_names[[g]])
-          }
-          gamma_nt <- lav_samp_partial_cor_gamma_nt(
-            m_cov         = cov[[g]],
-            cor_idx       = cor_idx_g,
-            meanstructure = meanstructure,
-            fixed_x       = fixed_x,
-            x_idx         = x_idx[[g]]
-          )
-          wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
-        } else {
-          wls_v[[g]] <- lav_samp_gamma_inverse_nt(
-            m_icov         = icov[[g]],
-            m_cov          = cov[[g]],
-            m_mean         = mean[[g]],
-            rescale        = FALSE,
-            x_idx          = x_idx[[g]],
-            fixed_x        = fixed_x,
-            conditional_x  = conditional_x,
-            meanstructure  = meanstructure,
-            slopestructure = conditional_x
-          )
-        }
+        wls_v[[g]] <- lav_samp_wls_v_nt_g(
+          m_cov         = cov[[g]],
+          m_mean        = mean[[g]],
+          m_icov        = icov[[g]],
+          cor_idx       = lav_gamma_recipe_cor_idx(gamma_recipe,
+                                                   ov_names[[g]]),
+          correlation   = correlation,
+          x_idx         = x_idx[[g]],
+          fixed_x       = fixed_x,
+          conditional_x = conditional_x,
+          meanstructure = meanstructure
+        )
         if (lavoptions$gls.v11.mplus && !conditional_x && meanstructure) {
           # bug in Mplus? V11 rescaled by nobs[[g]]/(nobs[[g]]-1)
           nvar <- NCOL(cov[[g]])
@@ -1311,7 +1413,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       }
 
       # group.w.free (only if categorical)
-      if (group_w_free && categorical) {
+      # (continuous WLS gets its group-weight row via the bdiag'ed NACOV
+      #  before inversion, see above; the GLS weight matrix is built
+      #  directly from the sample moments, so add the row here)
+      # FIXME: DLS + group.w.free: the (1 - a)*NACOV + a*GammaNT mix is
+      #        non-conformable when group.w.free = TRUE
+      if (group_w_free && (categorical || estimator == "GLS")) {
         if (!is.null(wls_v[[g]])) {
           # unweight!!
           a <- group_w[[g]] * sum(unlist(nobs)) / nobs[[g]]
@@ -1399,6 +1506,71 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   }
 
   lav_sample_stats
+}
+
+# align a summary statistic that was provided as an attribute of sample.cov
+# (res.slopes, cov.x, mean.x) with the model's internal variable order:
+# sample.cov itself is name-matched against ov.names in
+# lav_samp_from_moments(), but these attributes used to be consumed as-is --
+# silently misaligning them whenever the provided order differs from the
+# internal one (e.g., sam() with conditional.x = TRUE, where VETA is in
+# measurement order, but the structural model is y-variables-first); if
+# (dim)names are present, reorder by name; if absent, assume the statistic
+# is already in the internal order (pre-0.7-1 behavior)
+lav_samp_align_by_names <- function(stat = NULL, row_names = NULL,
+                                    col_names = NULL, what = "res.slopes",
+                                    g = 1L) {
+  if (is.null(stat)) {
+    return(NULL)
+  }
+  # a vector is expected (mean.x); accept a one-row/column matrix
+  if (is.null(col_names)) {
+    stat <- drop(stat)
+    if (length(stat) != length(row_names)) {
+      lav_msg_stop(gettextf(
+        "%1$s attribute of sample.cov in group %2$s should contain %3$s
+        elements.", what, g, length(row_names)))
+    }
+    if (!is.null(names(stat))) {
+      idx <- match(row_names, names(stat))
+      if (anyNA(idx)) {
+        lav_msg_stop(gettextf(
+          "names of the %1$s attribute of sample.cov (group %2$s) do not
+          match the model. found: %3$s expected: %4$s", what, g,
+          lav_msg_view(names(stat)), lav_msg_view(row_names)))
+      }
+      stat <- stat[idx]
+    }
+    return(unclass(unname(stat)))
+  }
+  # matrix
+  if (!is.matrix(stat) || nrow(stat) != length(row_names) ||
+      ncol(stat) != length(col_names)) {
+    lav_msg_stop(gettextf(
+      "%1$s attribute of sample.cov in group %2$s should be a %3$s by %4$s
+      matrix.", what, g, length(row_names), length(col_names)))
+  }
+  if (!is.null(rownames(stat))) {
+    row_idx <- match(row_names, rownames(stat))
+    if (anyNA(row_idx)) {
+      lav_msg_stop(gettextf(
+        "rownames of the %1$s attribute of sample.cov (group %2$s) do not
+        match the model. found: %3$s expected: %4$s", what, g,
+        lav_msg_view(rownames(stat)), lav_msg_view(row_names)))
+    }
+    stat <- stat[row_idx, , drop = FALSE]
+  }
+  if (!is.null(colnames(stat))) {
+    col_idx <- match(col_names, colnames(stat))
+    if (anyNA(col_idx)) {
+      lav_msg_stop(gettextf(
+        "colnames of the %1$s attribute of sample.cov (group %2$s) do not
+        match the model. found: %3$s expected: %4$s", what, g,
+        lav_msg_view(colnames(stat)), lav_msg_view(col_names)))
+    }
+    stat <- stat[, col_idx, drop = FALSE]
+  }
+  unclass(unname(stat))
 }
 
 
@@ -1619,6 +1791,19 @@ lav_samp_from_moments <- function(sample_cov = NULL,
     # FIXME: check dimension of wls_v!!
   }
 
+  # a user-provided WLS.V is not used by the GLS estimation machinery
+  # (since 0.6-10 the objective/gradient are direct functions of the
+  # sample moments); ignore it altogether (and warn), rather than using
+  # it inconsistently
+  if (wls_v_user && estimator == "GLS") {
+    lav_msg_warn(gettext(
+      "WLS.V is ignored when estimator = \"GLS\"; use estimator = \"WLS\" to
+      estimate with a user-provided weight matrix."))
+    wls_v <- vector("list", length = ngroups)
+    wls_vd <- vector("list", length = ngroups)
+    wls_v_user <- FALSE
+  }
+
   if (is.null(nacov)) {
     nacov <- vector("list", length = ngroups)
     nacov_user <- FALSE
@@ -1741,9 +1926,14 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         res_var[[g]] <- diag(tmp_cov)
         res_int[[g]] <- tmp_mean
 
-        res_slopes[[g]] <- unclass(unname(sample_res_slopes[[g]]))
-        cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
-        mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+        res_slopes[[g]] <- lav_samp_align_by_names(sample_res_slopes[[g]],
+          row_names = ov_names[[g]][-x_idx[[g]]],
+          col_names = ov_names_x[[g]], what = "res.slopes", g = g)
+        cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+          row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+          what = "cov.x", g = g)
+        mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+          row_names = ov_names_x[[g]], what = "mean.x", g = g)
 
         # th.idx and th.names are already ok
 
@@ -1770,8 +1960,11 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
         # fixed.x? (needed?)
         if (fixed_x) {
-          cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
-          mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+          cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+            row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+            what = "cov.x", g = g)
+          mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+            row_names = ov_names_x[[g]], what = "mean.x", g = g)
         }
 
         # th, th.idx and th.names are already ok
@@ -1792,9 +1985,14 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
         res_var[[g]] <- diag(tmp_cov)
         res_int[[g]] <- tmp_mean
-        res_slopes[[g]] <- unclass(unname(sample_res_slopes[[g]]))
-        cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
-        mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+        res_slopes[[g]] <- lav_samp_align_by_names(sample_res_slopes[[g]],
+          row_names = ov_names[[g]][-x_idx[[g]]],
+          col_names = ov_names_x[[g]], what = "res.slopes", g = g)
+        cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+          row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+          what = "cov.x", g = g)
+        mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+          row_names = ov_names_x[[g]], what = "mean.x", g = g)
 
         # no rescale!
 
@@ -1846,12 +2044,15 @@ lav_samp_from_moments <- function(sample_cov = NULL,
               drop = FALSE
             ]
           } else {
-            cov_x[[g]] <- unclass(unname(sample_cov_x[[g]]))
+            cov_x[[g]] <- lav_samp_align_by_names(sample_cov_x[[g]],
+              row_names = ov_names_x[[g]], col_names = ov_names_x[[g]],
+              what = "cov.x", g = g)
           }
           if (is.null(sample_mean_x)) {
             mean_x[[g]] <- mean[[g]][x_idx[[g]]]
           } else {
-            mean_x[[g]] <- unclass(unname(sample_mean_x[[g]]))
+            mean_x[[g]] <- lav_samp_align_by_names(sample_mean_x[[g]],
+              row_names = ov_names_x[[g]], what = "mean.x", g = g)
           }
         }
       }
@@ -1897,41 +2098,36 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
     # wls_v
     if (!wls_v_user) {
-      if (estimator == "GLS") {
+      # GLS: build WLS.V lazily (see lav_samp_from_data); note that this
+      # moments-based branch never applied the gls.v11.mplus rescale, and
+      # the on-demand build in lav_model_h1_information preserves that
+      # (it checks lavdata@data.type)
+      gls_v_lazy <- (estimator == "GLS" && !correlation &&
+        !conditional_x && !group_w_free)
+      if (estimator == "GLS" && !gls_v_lazy) {
         # FIXME: in <0.5-21, we had
         # V11 <- icov[[g]]
         #    if(mimic == "Mplus") { # is this a bug in Mplus?
         #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
         #    }
-        if (correlation) {
-          cor_idx_g <- if (length(correlation_ov) > 0L) {
+        wls_v[[g]] <- lav_samp_wls_v_nt_g(
+          m_cov         = cov[[g]],
+          m_mean        = mean[[g]],
+          m_icov        = icov[[g]],
+          cor_idx       = if (length(correlation_ov) > 0L) {
             which(ov_names[[g]] %in% correlation_ov)
           } else {
             seq_along(ov_names[[g]])
-          }
-          gamma_nt <- lav_samp_partial_cor_gamma_nt(
-            m_cov         = cov[[g]],
-            cor_idx       = cor_idx_g,
-            meanstructure = meanstructure,
-            fixed_x       = fixed_x,
-            x_idx         = x_idx[[g]]
-          )
-          wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
-        } else {
-          wls_v[[g]] <- lav_samp_gamma_inverse_nt(
-            m_icov = icov[[g]],
-            m_cov = cov[[g]],
-            m_mean = mean[[g]],
-            rescale = FALSE,
-            x_idx = x_idx[[g]],
-            fixed_x = fixed_x,
-            conditional_x = conditional_x,
-            meanstructure = meanstructure,
-            slopestructure = conditional_x
-          )
-        }
+          },
+          correlation   = correlation,
+          x_idx         = x_idx[[g]],
+          fixed_x       = fixed_x,
+          conditional_x = conditional_x,
+          meanstructure = meanstructure
+        )
       } else if (estimator == "ULS") {
-        wls_v[[g]] <- diag(length(wls_obs[[g]]))
+        # only the diagonal is stored (as in lav_samp_from_data); no
+        # consumer needs the (pstar x pstar) identity matrix
         wls_vd[[g]] <- rep(1, length(wls_obs[[g]]))
       } else if (estimator == "WLS" || estimator == "DWLS") {
         if (is.null(wls_v[[g]])) {
@@ -1945,6 +2141,32 @@ lav_samp_from_moments <- function(sample_cov = NULL,
       if (!is.null(wls_v[[g]]) && group_w_free) {
         # FIXME!!!
         wls_v[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), wls_v[[g]])
+      }
+    }
+
+    # NACOV: nothing can be computed from moments alone, except the
+    # normal-theory Gamma; compute it when the robust.sem.nt sandwich
+    # asks for it (the default se for continuous ULS) -- before 0.7-1,
+    # this failed with a cryptic error. (The browne.residual.nt test
+    # does not read this slot: it uses the fast kernel, or recomputes
+    # at test time.)
+    if (!nacov_user && is.null(nacov[[g]]) &&
+      !categorical && !correlation &&
+      estimator %in% c("WLS", "DWLS", "ULS", "DLS") &&
+      "robust.sem.nt" %in% lavoptions$se) {
+      nacov[[g]] <- lav_samp_gamma_nt(
+        m_cov          = cov[[g]],
+        m_mean         = mean[[g]],
+        x_idx          = x_idx[[g]],
+        fixed_x        = fixed_x,
+        conditional_x  = conditional_x,
+        meanstructure  = meanstructure,
+        slopestructure = conditional_x
+      )
+      # group.w.free: add the group-weight element (weight 1), as for
+      # the Gamma in lav_samp_from_data
+      if (group_w_free) {
+        nacov[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), nacov[[g]])
       }
     }
   } # ngroups

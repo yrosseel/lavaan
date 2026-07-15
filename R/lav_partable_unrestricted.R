@@ -858,7 +858,8 @@ lav_pt_unrestricted_chol <- function(lavobject = NULL,
       }
 
       # check for zero coverage at level 1 (new in 0.6-18)
-      if (lavdata@missing == "ml" && l == 1 && !is.null(lavdata@Mp[[g]])) {
+      if (lavdata@missing %in% c("ml", "ml.x") && l == 1 &&
+          !is.null(lavdata@Mp[[g]])) {
         coverage <- lavdata@Mp[[g]]$coverage
         sample_cov_vech <- lav_mat_vech(coverage, diagonal = FALSE)
         zero_cov <- which(sample_cov_vech == 0)

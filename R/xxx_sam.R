@@ -29,8 +29,11 @@ sam <- function(model = NULL,
                                       show.progress = FALSE),
                 output = "lavaan",
                 bootstrap_args = bootstrap) {
+  # capture the user's call; it is stored in the @call slot of the returned
+  # object (if output = "lavaan"), so that update() and getCall() work
+  mc <- match.call()
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, FALSE)
+  lav_adapt_func(environment(), dotdotdot, TRUE)
 
   # auxiliary variables: forward via dotdotdot, so they reach the
   # underlying measurement-block (and structural) lavaan() calls
@@ -43,6 +46,16 @@ sam <- function(model = NULL,
     lav_msg_warn(gettext(
       "'bootstrap_args' is deprecated; please use 'bootstrap' instead."))
     bootstrap <- bootstrap_args
+  }
+  # plugin compatibility with sem()/cfa(): bootstrap = <number of draws>
+  if (!is.list(bootstrap) && is.numeric(bootstrap) &&
+      length(bootstrap) == 1L && is.finite(bootstrap)) {
+    bootstrap <- list(R = as.integer(bootstrap))
+  }
+  if (!is.list(bootstrap)) {
+    lav_msg_stop(gettext(
+      "the bootstrap= argument must be a list (eg list(R = 1000L)) or a
+       single number (the number of bootstrap draws)."))
   }
 
   # check model= argument
@@ -111,14 +124,33 @@ sam <- function(model = NULL,
                         "two_step_robust", "two.step.robust",
                         "twostep.robust")) {
       se <- "twostep.robust"
+    } else if (se %in% c("twostep.hw", "twostep.huber.white",
+                         "two-step.huber.white", "two.step.huber.white",
+                         "twostep.huber-white")) {
+      se <- "twostep.huber.white"
     } else if (se %in% c("ij", "local")) {
       se <- "local"
+    } else if (se %in% c("robust", "robust.sem", "robust.huber.white",
+                         "robust.cluster", "robust.cluster.sem")) {
+      # plugin compatibility with sem()/cfa(): map the robust se= variants
+      # to the SAM analogue (the robust two-step correction); clustering is
+      # picked up automatically when cluster= is set
+      lav_msg_note(gettextf(
+        "se = \"%s\" is not a sam() option; using the SAM analogue
+         se = \"twostep.robust\" instead.", se))
+      se <- "twostep.robust"
     }
     # check if valid
     if (!se %in% c("standard", "naive", "twostep", "local", "local.nt",
-                   "twostep.robust", "bootstrap", "none")) {
-      lav_msg_stop(gettext(
-        "se= argument must be twostep, twostep.robust, bootstrap, or local"))
+                   "twostep.robust", "twostep.huber.white",
+                   "bootstrap", "none")) {
+      lav_msg_stop(gettextf(
+        "invalid se= argument (%1$s) for sam(); valid options are %2$s.",
+        se,
+        lav_msg_view(c("twostep", "twostep.robust", "twostep.huber.white",
+                       "local", "local.nt",
+                       "naive", "standard", "bootstrap", "none"),
+                     log_sep = "or")))
     }
     # check for local
     if (se %in% c("local", "local.nt")) {
@@ -133,9 +165,11 @@ sam <- function(model = NULL,
   # check for gamma.unbiased
   if (is.null(dotdotdot$gamma.unbiased)) {
      # put in TRUE in dotdotdot # lavaan default is still FALSE
-     # but not for clustered data: the unbiased Gamma is not available there;
-     # the (biased) cluster-robust Gamma is used instead
-     dotdotdot$gamma.unbiased <- is.null(dotdotdot$cluster)
+     # but not for clustered data or conditional.x = TRUE: the unbiased Gamma
+     # is not available there; the (biased) cluster-robust/conditional Gamma
+     # is used instead
+     dotdotdot$gamma.unbiased <- is.null(dotdotdot$cluster) &&
+       !isTRUE(dotdotdot$conditional.x)
   }
 
 
@@ -236,6 +270,41 @@ sam <- function(model = NULL,
         which does not account for clustering; consider se = \"local\"
         instead."))
     }
+
+    # twostep.huber.white (casewise-score sandwich): current scope is
+    # continuous ML, single level, no equality constraints, no clustering,
+    # complete data or missing = "ml"; single- or multigroup. Outside that
+    # scope, fall back to the closest supported flavour. (PML is handled
+    # earlier, in lav_sam_step0(): although casewise PML scores exist, the
+    # joint-score linearization does not describe the local step-2
+    # estimator for PML -- see the note there.)
+    if (se == "twostep.huber.white") {
+      hw_fallback <- NULL
+      if (fit@Data@nlevels > 1L) {
+        hw_fallback <- "twostep" # no casewise scores for multilevel (yet)
+      } else if (fit@Model@conditional.x) {
+        hw_fallback <- "twostep.robust" # no scores under conditional.x (yet)
+      } else if (fit@Model@categorical) {
+        hw_fallback <- "twostep.robust" # untested for (D)WLS scores (yet)
+      } else if (fit@Model@eq.constraints || fit@Model@ceq.simple.only ||
+        nrow(fit@Model@ceq.JAC) > 0L) {
+        # the block-to-joint free-parameter mapping of the casewise influence
+        # does not handle equality constraints (yet); the extra ceq.JAC check
+        # catches equality constraints coexisting with inequality
+        # constraints/bounds, where both packing flags are FALSE
+        hw_fallback <- "twostep.robust"
+      } else if (length(fit@Data@cluster) > 0L) {
+        # the casewise meat would need within-cluster score aggregation (yet)
+        hw_fallback <- "twostep.robust"
+      }
+      if (!is.null(hw_fallback)) {
+        lav_msg_warn(gettextf(
+          "se = \"twostep.huber.white\" is not available (yet) for this
+           setting; using se = \"%s\" instead.", hw_fallback))
+        se <- hw_fallback
+        fit@Options$se <- se
+      }
+    }
   }
 
   lavoptions <- lavInspect(fit, "options")
@@ -271,6 +340,9 @@ sam <- function(model = NULL,
     out <- lav_sam_get_cov_ybar(fit = fit, local_options = local_options)
     step1$COV  <- out$COV
     step1$YBAR <- out$YBAR
+    if (fit@Model@conditional.x) {
+      step1$SLOPES <- out$SLOPES # res.slopes of y on x
+    }
 
     # compute EETA/VETA
     step1 <- lav_sam_step1_local(
@@ -298,7 +370,8 @@ sam <- function(model = NULL,
   #          corrected test. local/local.nt require #
   #          it (re-raise on failure).              #
   ##################################################
-  if (se %in% c("local", "local.nt", "twostep", "twostep.robust", "naive")) {
+  if (se %in% c("local", "local.nt", "twostep", "twostep.robust",
+                "twostep.huber.white", "naive")) {
     gamma_eta_required <- se %in% c("local", "local.nt")
     ge_try <- tryCatch({
       gamma_eta <- vector("list", length = fit@Data@ngroups)
@@ -320,6 +393,12 @@ sam <- function(model = NULL,
         step1$JAC <- tmp_2l$JAC
         step1$Gamma.eta.full <- tmp_2l$Gamma.eta.full
         step1$caseB <- TRUE
+      } else if (identical(fit@Options$estimator.orig, "PML")) {
+        # PML: theta1.hat is not a function of the saturated statistics
+        # (the pairwise likelihood loads on the full bivariate tables), so
+        # the influence route below does not apply; build the casewise
+        # joint-influence Gamma.eta instead (see lav_sam_gamma_eta_pml())
+        gamma_eta <- lav_sam_gamma_eta_pml(step1 = step1, fit = fit)
       } else {
         jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
 
@@ -346,23 +425,20 @@ sam <- function(model = NULL,
           if (se == "local.nt") {
             gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
           } else {
-            gamma <- fit@SampleStats@NACOV
+            # stored NACOV, else recompute with the fit-time settings. The
+            # (unbiased) ADF Gamma is unavailable for fixed.x / conditional.x
+            # (lav_samp_gamma() stops), which the default se = "twostep" can
+            # hit (its default is fixed.x = TRUE); fall back to the *biased*
+            # ADF Gamma there, exactly as the global yuan.chan test does.
+            gamma <- tryCatch(lav_gamma_used(fit), error = function(e) NULL)
             if (is.null(gamma) || is.null(gamma[[1]])) {
-              # NACOV not stored (skipped in step 0) -> compute on demand. The
-              # (unbiased) ADF Gamma is unavailable for fixed.x / conditional.x
-              # (lav_samp_gamma() stops), which the default se = "twostep" can
-              # hit (its default is fixed.x = TRUE); fall back to the *biased*
-              # ADF Gamma there, exactly as the global yuan.chan test does.
-              gamma <- tryCatch(lavTech(fit, "gamma"), error = function(e) NULL)
-              if (is.null(gamma) || is.null(gamma[[1]])) {
-                opts <- fit@Options
-                opts$gamma.unbiased <- FALSE
-                gamma <- lav_object_gamma(
-                  lavdata = fit@Data, lavoptions = opts,
-                  lavsamplestats = fit@SampleStats, lavh1 = fit@h1,
-                  lavimplied = fit@implied, model_based = FALSE
-                )
-              }
+              opts <- fit@Options
+              opts$gamma.unbiased <- FALSE
+              gamma <- lav_gamma_used(
+                lavdata = fit@Data, lavoptions = opts,
+                lavsamplestats = fit@SampleStats, lavh1 = fit@h1,
+                lavimplied = fit@implied
+              )
             }
           }
           for (g in seq_len(fit@Data@ngroups)) {
@@ -400,7 +476,10 @@ sam <- function(model = NULL,
     }, error = function(e) e)
     if (inherits(ge_try, "error")) {
       if (gamma_eta_required) {
-        stop(ge_try) # local / local.nt SEs cannot be computed without Gamma.eta
+        # the local / local.nt SEs cannot be computed without Gamma.eta
+        lav_msg_stop(gettextf(
+          "Gamma.eta (needed for se = %s) could not be computed: %s",
+          dQuote(se, q = FALSE), conditionMessage(ge_try)))
       }
       # twostep / twostep.robust / naive: the SEs do not need Gamma.eta, so a
       # failure is non-fatal -- we simply do not report the corrected structural
@@ -442,18 +521,73 @@ sam <- function(model = NULL,
       pos[upper.tri(pos)] <- t(pos)[upper.tri(pos)]
       sub_pos <- pos[keep, keep, drop = FALSE]
       vech_keep <- sub_pos[lower.tri(sub_pos, diag = TRUE)]
-      # Gamma.eta row order per group is c(EETA (means), vech(VETA))
-      ge_keep <- if (meanstr) c(keep, p_full + vech_keep) else vech_keep
+      # Gamma.eta row order per group is c(EETA (means), vech(VETA));
+      # under conditional.x it is c(vecr(cbind(EETA, RS_eta)), vech(VETA)),
+      # i.e. (q+1) interleaved entries per variable, then vech(VETA)
+      res_slopes_attr <- attr(step1$VETA, "res.slopes")
+      if (!is.null(res_slopes_attr)) {
+        q_x <- ncol(res_slopes_attr[[1]])
+        ge_mean <- unlist(lapply(keep, function(j) {
+          (j - 1L) * (q_x + 1L) + seq_len(q_x + 1L)
+        }))
+        ge_keep <- c(ge_mean, p_full * (q_x + 1L) + vech_keep)
+      } else {
+        ge_keep <- if (meanstr) c(keep, p_full + vech_keep) else vech_keep
+      }
       for (g in seq_along(step1$VETA)) {
         step1$VETA[[g]] <- step1$VETA[[g]][keep, keep, drop = FALSE]
         if (meanstr) {
           step1$EETA[[g]] <- step1$EETA[[g]][keep]
+        }
+        # conditional.x: keep only the slopes of the retained variables
+        # (the exogenous covariates are unaffected)
+        if (!is.null(res_slopes_attr)) {
+          res_slopes_attr[[g]] <- res_slopes_attr[[g]][keep, , drop = FALSE]
         }
         if (!is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[g]])) {
           step1$Gamma.eta[[g]] <-
             step1$Gamma.eta[[g]][ge_keep, ge_keep, drop = FALSE]
         }
       }
+      if (!is.null(res_slopes_attr)) {
+        attr(step1$VETA, "res.slopes") <- res_slopes_attr
+      }
+    }
+  }
+
+  # conditional.x: permute Gamma.eta to the structural model's internal order.
+  # VETA/EETA are matched by name in the step-2 lavaan() call, but the NACOV
+  # is consumed as-is, and the structural model's internal variable order
+  # (y-variables first) generally differs from the measurement (VETA) order.
+  # The permutation mirrors the lav_pt_subset_sm() call of lav_sam_step2().
+  if (fit@Model@conditional.x &&
+      sam_method %in% c("local", "fsr", "cfsr") &&
+      !is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[1]])) {
+    perm_ok <- tryCatch({
+      struc_pt <- lav_pt_subset_sm(step1$PT, add_exo_cov = TRUE,
+                    fixed_x = fit@Options$fixed.x,
+                    conditional_x = TRUE,
+                    free_fixed_var = TRUE,
+                    meanstructure = fit@Options$meanstructure)
+      rs <- attr(step1$VETA, "res.slopes")
+      perm <- lav_sam_condx_perm_idx(
+        eta_names  = colnames(step1$VETA[[1]]),
+        x_names    = colnames(rs[[1]]),
+        target_eta = unique(unlist(lav_pt_vnames(struc_pt, type = "ov.nox"))),
+        target_x   = unique(unlist(lav_pt_vnames(struc_pt, type = "ov.x"))))
+      for (g in seq_along(step1$Gamma.eta)) {
+        step1$Gamma.eta[[g]] <- step1$Gamma.eta[[g]][perm, perm, drop = FALSE]
+      }
+      TRUE
+    }, error = function(e) FALSE)
+    if (!isTRUE(perm_ok)) {
+      if (se %in% c("local", "local.nt")) {
+        lav_msg_stop(gettextf(
+          "Gamma.eta (needed for se = %s) could not be aligned with the
+          structural model under conditional.x = TRUE.",
+          dQuote(se, q = FALSE)))
+      }
+      step1$Gamma.eta <- NULL # no corrected structural test
     }
   }
 
@@ -497,6 +631,11 @@ sam <- function(model = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     joint@optim <- step2$FIT.PA@optim
     joint@test <- step2$FIT.PA@test
+    # keep @Options$test consistent with the (structural) tests that ended up
+    # in @test, just like the global branch below does (the joint itself was
+    # fitted with test = "none")
+    joint@Options$test <- unname(vapply(joint@test, `[[`,
+                                        character(1L), "test"))
   } else {
     # global SAM: if requested (the default for sam.method = "global"), augment
     # the standard full-model test with the Yuan & Chan (2002) rescaled GLOBAL
@@ -581,7 +720,7 @@ sam <- function(model = NULL,
       sam_object = sam_object, bootstrap = bootstrap
     )
     joint@boot$coef <- boot_out$boot.coef
-    joint@Options$bootstrap <- boot_out$R
+    joint@Options$bootstrap <- list(R = boot_out$R)
     vcov_1 <- list(se = "bootstrap", VCOV = boot_out$VCOV)
 
     if (lav_verbose()) {
@@ -604,6 +743,21 @@ sam <- function(model = NULL,
     if (lavoptions$se == "bootstrap") {
       joint@vcov$vcov <- vcov_1$VCOV
     } else {
+      # sanity check: the step-2 vcov must match the number of structural
+      # parameters; a mismatch means the structural vcov could not be
+      # computed properly (typically an identification problem that
+      # slipped through, eg an empirically under-identified structural
+      # part) -- give a clear error instead of a cryptic assignment
+      # failure
+      n2 <- length(step2$step2.free.idx)
+      if (is.null(vcov_1$VCOV) || is.null(dim(vcov_1$VCOV)) ||
+          !all(dim(vcov_1$VCOV) == c(n2, n2))) {
+        lav_msg_stop(gettext(
+          "the variance matrix of the structural (step 2) parameters could
+           not be computed; the structural part may not be identified given
+           the (fixed) measurement part. Consider simplifying the
+           structural part, or using sem() instead."))
+      }
       joint@vcov$vcov[step2$step2.free.idx, step2$step2.free.idx] <- vcov_1$VCOV
     }
 
@@ -656,6 +810,9 @@ sam <- function(model = NULL,
     if (!is.null(mc_keep)) {
       res@internal$monte.carlo <- mc_keep
     }
+    # replace the internal 'joint' lavaan call by the original sam() call,
+    # so that update() and getCall() work (issue #514)
+    res@call <- mc
     if (lav_verbose()) {
       cat("done.\n")
     }

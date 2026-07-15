@@ -421,7 +421,77 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     # fg twice for WLS.V, 1/fg1 once for GaMMA
     # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
     # t(Delta) * WLS.V %*% gamma %*% WLS.V %*% Delta
-    wd <- wls_v[[g]] %*% delta[[g]]
+    if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
+      # diagonal weight matrix (stored as a vector)
+      wd <- wls_v[[g]] * delta[[g]]
+    } else {
+      # full weight matrix
+      wd <- wls_v[[g]] %*% delta[[g]]
+    }
+
+    # conditional.x: the stage-1 'saturated' parameters live in the
+    # conditional metric (vec(Beta), vech(res.cov)); compute Omega with
+    # the lav_mvreg_mi_* kernels (x is complete). Note: with complete x,
+    # the joint information is block-diagonal between the conditional
+    # parameters and the x moments, so the conditional Omega is the
+    # correct stage-1 ACOV.
+    if (lavmodel@conditional.x) {
+      aux_g2 <- if (length(lavdata@aux) >= g) lavdata@aux[[g]] else NULL
+      if (!is.null(aux_g2) && NCOL(aux_g2) > 0L) {
+        lav_msg_stop(gettext(
+          "auxiliary variables (aux =) are not supported (yet) for
+          two-stage standard errors when conditional.x = TRUE."))
+      }
+      if (lavoptions$h1.information[1] == "unstructured") {
+        res_int_g <- lavh1$implied$res.int[[g]]
+        res_slopes_g <- lavh1$implied$res.slopes[[g]]
+        res_cov_g <- lavh1$implied$res.cov[[g]]
+      } else {
+        res_int_g <- lavimplied$res.int[[g]]
+        res_slopes_g <- lavimplied$res.slopes[[g]]
+        res_cov_g <- lavimplied$res.cov[[g]]
+      }
+
+      if (lavoptions$se == "two.stage") {
+        # Savalei & Bentler (2009), conditional metric
+        if (lavoptions$information[1] == "expected") {
+          info <- lav_mvreg_mi_info_expected(
+            yp = lavsamplestats@missing[[g]],
+            res_cov = res_cov_g
+          )
+        } else {
+          info <- lav_mvreg_mi_information_observed_samplestats(
+            yp = lavsamplestats@missing[[g]],
+            res_int = res_int_g, res_slopes = res_slopes_g,
+            res_cov = res_cov_g
+          )
+        }
+        omega_g <- lav_mat_sym_inverse(info)
+      } else { # robust.two.stage
+        # Savalei & Falk (2014), conditional metric
+        if (length(lavdata@cluster) > 0L) {
+          cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+        } else {
+          cluster_idx <- NULL
+        }
+        omega_g <- lav_mvreg_mi_h1_omega_sw(
+          y = lavdata@X[[g]],
+          exo = lavdata@eXo[[g]],
+          mp = lavdata@Mp[[g]],
+          yp = lavsamplestats@missing[[g]],
+          wt = lavdata@weights[[g]],
+          cluster_idx = cluster_idx,
+          res_int = res_int_g, res_slopes = res_slopes_g,
+          res_cov = res_cov_g,
+          information = lavoptions$information[1]
+        )
+      }
+      gamma[[g]] <- omega_g
+
+      # compute
+      t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
+      next
+    }
 
     # to compute (incomplete) GAMMA, should we use
     # structured or unstructured mean/sigma?
@@ -691,21 +761,19 @@ lav_model_vcov <- function(lavmodel = NULL,
         symmetric = TRUE,
         only.values = TRUE
       )$values
-      # correct for (in)equality constraints
-      neq <- 0L
-      niq <- 0L
+      # correct for (in)equality constraints: the effective number of
+      # imposed constraints is the RANK of the stacked equality + active
+      # inequality rows (a plain row count over-corrects when rows are
+      # redundant, within or across the two sets)
+      neiq <- 0L
       if (nrow(lavmodel@con.jac) > 0L) {
         ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
         cin_idx <- attr(lavmodel@con.jac, "cin.idx")
         ina_idx <- attr(lavmodel@con.jac, "inactive.idx")
-        if (length(ceq_idx) > 0L) {
-          neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
+        act_idx <- c(ceq_idx, setdiff(cin_idx, ina_idx)) # only active cin
+        if (length(act_idx) > 0L) {
+          neiq <- qr(lavmodel@con.jac[act_idx, , drop = FALSE])$rank
         }
-        if (length(cin_idx) > 0L) {
-          niq <- length(cin_idx) - length(ina_idx) # only active
-        }
-        # total number of relevant constraints
-        neiq <- neq + niq
         if (neiq > 0L) {
           eigvals <- rev(eigvals)[-seq_len(neiq)]
         }

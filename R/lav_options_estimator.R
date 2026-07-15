@@ -73,6 +73,12 @@ lav_options_est_gls <- function(opt) {
     lav_msg_stop(gettext(
       "ordered categorical data is not supported when estimator is GLS."))
   }
+  if (opt$.multilevel) {
+    # no two-level normal-theory weight matrix (yet); before 0.7-1 this
+    # failed silently during estimation
+    lav_msg_stop(gettext(
+      "multilevel data is not supported when estimator is GLS."))
+  }
   # two-stage missing data: estimation uses the (EM) saturated moments, while
   # the SEs use the robust.sem sandwich (with the two-stage NACOV) and the
   # scaled (satorra.bentler) test; se/test/missing are set in lav_options()
@@ -122,7 +128,7 @@ lav_options_est_gls <- function(opt) {
 lav_options_est_ntrls <- function(opt) {
   # NTRLS (experimental)                                           ####
   # optim.gradient
-  opt$optim.gradien <- "numerical"
+  opt$optim.gradient <- "numerical"
   # se
   if (opt$se == "default") {
     opt$se <- "standard"
@@ -184,6 +190,13 @@ lav_options_est_wls <- function(opt) {
   # se
   if (opt$se == "default") {
     opt$se <- "standard"
+  } else if (opt$se == "robust.sem.nt") {
+    # the WLS weight matrix is derived from the (single) NACOV slot,
+    # which must then hold the ADF Gamma; a normal-theory sandwich is
+    # not available
+    lav_msg_stop(gettext(
+      "se = \"robust.sem.nt\" is not supported when estimator is WLS;
+      use se = \"robust.sem\" instead."))
   }
   # test
   if (opt$test[1] == "default") {
@@ -216,6 +229,13 @@ lav_options_est_dls <- function(opt) {
   # se
   if (opt$se == "default") {
     opt$se <- "robust.sem"
+  } else if (opt$se == "robust.sem.nt") {
+    # the DLS weight matrix is derived from the (single) NACOV slot,
+    # which must then hold the ADF Gamma; a normal-theory sandwich is
+    # not available
+    lav_msg_stop(gettext(
+      "se = \"robust.sem.nt\" is not supported when estimator is DLS;
+      use se = \"robust.sem\" instead."))
   }
   # test
   if (opt$test[1] == "default") {
@@ -335,6 +355,11 @@ lav_options_est_dwls <- function(opt) {
     }
   } else if (opt$se == "robust") {
     opt$se <- "robust.sem"
+  } else if (opt$se == "robust.sem.nt" && opt$.categorical) {
+    # no normal-theory Gamma in the categorical setting
+    lav_msg_stop(gettext(
+      "se = \"robust.sem.nt\" is not available for categorical data;
+      use se = \"robust.sem\" instead."))
   }
   # test
   if (!opt$test[1] == "none") {
@@ -403,6 +428,11 @@ lav_options_est_uls <- function(opt) {
     }
   } else if (opt$se == "robust") {
     opt$se <- "robust.sem"
+  } else if (opt$se == "robust.sem.nt" && opt$.categorical) {
+    # no normal-theory Gamma in the categorical setting
+    lav_msg_stop(gettext(
+      "se = \"robust.sem.nt\" is not available for categorical data;
+      use se = \"robust.sem\" instead."))
   }
   # test
   if (!opt$test[1] == "none") {

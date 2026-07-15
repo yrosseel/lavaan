@@ -311,6 +311,19 @@ Diagnostics:
     \item{\code{"mdist.resid"}:}{The Mahalanobis distances for the (Bartlett-based) casewise residuals.}
 }
 
+If (some of) the data is ordered categorical, the Mahalanobis distances are
+generalized as in Mansolf and Reise (2017): each distance is replaced by its
+expected value over the region of the (multivariate normally distributed)
+latent response vector that is consistent with the observed response pattern,
+approximated by Monte Carlo integration (\code{set.seed()} can be used for
+reproducibility). Observed continuous variables are conditioned on, and
+missing values are integrated out. Note that in this case
+\code{"mdist.fs"}/\code{"mdist.resid"} return the expected distance
+\eqn{E[d]} (the person-fit indices \eqn{d_f^*} and \eqn{d_r^*} of Mansolf
+and Reise), while \code{"mdist2.fs"}/\code{"mdist2.resid"} return the
+expected squared distance \eqn{E[d^2]}, which is not the square of the
+former.
+
 Optimizer information:
 
 \describe{
@@ -504,6 +517,13 @@ Miscellaneous:
         data. \code{"hansen"} is an alias. Only available when
         \code{estimator = "IV"}. In the case of multiple groups: a list of
         data.frames.}
+    \item{\code{"sam.struc.fit.object"}:}{The (internal) step-2 structural
+        model of a model fitted with \code{\link{sam}} using a local
+        \code{sam.method} (\code{"local"}, \code{"fsr"} or \code{"cfsr"}):
+        a lavaan object, fitted to the estimated latent (co)variances (and
+        means) of step 1. \code{fitMeasures()}, \code{lavResiduals()} and
+        \code{modindices()} operate on this object when they are called with
+        the sam object itself. \code{"sam.struc"} is an alias.}
     \item{\code{"version"}:}{The lavaan version number that was used to
         construct the fitted lavaan object.}
 }

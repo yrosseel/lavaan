@@ -22,7 +22,7 @@ lav_label_code <- function(label = "", value = "", show = FALSE,
     label <- gsub("^([a-zA-Z]+)([0-9]+)", "\\1_\\2", label)
   }
   rexpression <- FALSE
-  if (grepl("1van", label)) label <- "1"
+  if (grepl("1van", label, fixed = TRUE)) label <- "1"
   if (value == "") {
     splitted <- strsplit(label, "=", fixed =  TRUE)[[1L]]
     if (length(splitted) > 1L) {

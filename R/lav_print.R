@@ -1271,16 +1271,25 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         }
       }
 
-      cat("\n")
-      cat("  Summary Information Structural part:\n\n")
-      tmp <- data.frame(as.list(sam_struc_fit))
-      class(tmp) <- c("lavaan.data.frame", "data.frame")
-      print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+      # skipped if fit.measures were requested: the (structural) test
+      # statistics and fit measures are printed in full further below
+      if (!is.null(sam_struc_fit)) {
+        cat("\n")
+        cat("  Summary Information Structural part:\n\n")
+        tmp <- data.frame(as.list(sam_struc_fit))
+        class(tmp) <- c("lavaan.data.frame", "data.frame")
+        print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+      }
     }
   }
 
   # test statistics
   if (!is.null(y$test)) {
+    # optional header (eg for local sam objects, where the model test and
+    # the fit measures concern the structural part only)
+    if (!is.null(attr(y$test, "header"))) {
+      cat("\n", attr(y$test, "header"), "\n", sep = "")
+    }
     cat("\n")
     lav_test_print(y$test, nd = nd)
   }
@@ -1292,6 +1301,11 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       add_h0 <- isTRUE(attr(y$fit, "add.h0"))
     }
     lav_fitmeasures_print(y$fit, nd = nd, add_h0 = add_h0)
+  }
+
+  # level-specific fit measures (multilevel only, if present)
+  if (!is.null(y$fit.by.level)) {
+    lav_fit_by_level_print(y$fit.by.level, nd = nd)
   }
 
   # efa output

@@ -7,15 +7,6 @@
 #    5a: (unit)    expected information h1 (A1 = gamma_nt^{-1})
 #    5b: (unit)    observed information h1 (A1 = gamma_nt^{-1})
 #    5c: (unit) first.order information h1 (B1 = A1 %*% Gamma %*% A1)
-# 6) inverted information h1 mu + vech(Sigma)
-#    6a: (unit) inverted expected information (A1.inv = gamma_nt)
-#    6b: (unit) inverted observed information (A1.inv = gamma_nt)
-#    6c: (unit) inverted first-order information (B1.inv)
-# 7) ACOV h1 mu + vech(Sigma)
-#    7a: 1/N * gamma_nt
-#    7b: 1/N * gamma_nt
-#    7c: 1/N * (gamma_nt * Gamma^{-1} * gamma_nt)
-#    7d: 1/N * Gamma (sandwich)
 
 
 # YR 25 Mar 2016: first version
@@ -24,6 +15,8 @@
 # YR 22 Jul 2022: adding correlation= argument for information_expected
 #                 (only for catml; not used if correlation = TRUE!)
 # YR 03 Jul 2026: use shared kernels from lav_mvnorm_kernels.R
+# YR 08 Jul 2026: removed the unused 6) inverted-information and 7) ACOV
+#                 families (see note at the end of this file)
 
 # 1. log-likelihood h1
 
@@ -380,161 +373,9 @@ lav_mvn_h1_info_firstorder <- function(
   a1 %*% gamma_1 %*% a1
 }
 
-# 6) inverted information h1 mu + vech(Sigma) (not used?)
-
-#    6a: (unit) inverted expected information (A1.inv = gamma_nt)
-#    6b: (unit) inverted observed information (A1.inv = gamma_nt)
-#        (one body, two names)
-
-lav_mvnorm_h1_inverted_information_expected <-              # nolint
-lav_mvn_h1_inv_info_observed <- function(
-  y = NULL,
-  wt = NULL,
-  sample_cov = NULL,
-  x_idx = integer(0L)) {
-
-  # sample_cov
-  if (is.null(sample_cov)) {
-    sample_cov <- lav_mvn_samp_stats(y = y, wt = wt)$cov
-  }
-
-  if (length(x_idx) > 0L) {
-    gamma_nt <- lav_samp_gamma_nt(
-      m_y = y, wt = wt, x_idx = x_idx,
-      m_cov = sample_cov,
-      meanstructure = TRUE,
-      fixed_x = TRUE
-    )
-  } else {
-    i11 <- sample_cov
-    i22 <- lav_mvn_kron_dup_ginv2(sample_cov)
-    gamma_nt <- lav_mat_bdiag(i11, i22)
-  }
-
-  gamma_nt
-}
-
-#    6c: (unit) inverted first-order information (B1.inv) (not used?)
-#        J1.inv = gamma_nt %*% solve(Gamma) %*%  gamma_nt
-#
-lav_mvn_h1_inv_info_firstorder <- function(
-    y = NULL,
-    wt = NULL,
-    sample_cov = NULL,
-    x_idx = integer(0L),
-    sinv_method = "eigen",
-    sample_cov_inv = NULL,
-    gamma_1 = NULL) {
-
-  # lav_samp_gamma() has no wt argument (yet)
-  if (!is.null(wt)) {
-    lav_msg_stop(gettext("function not supported if wt is not NULL"))
-  }
-
-  # Gamma
-  # what about the 'unbiased = TRUE' option?
-  if (is.null(gamma_1)) {
-    if (length(x_idx) > 0L) {
-      gamma_1 <- lav_samp_gamma(y,
-        x_idx = x_idx, fixed_x = TRUE,
-        meanstructure = TRUE
-      )
-    } else {
-      gamma_1 <- lav_samp_gamma(y, meanstructure = TRUE)
-    }
-  }
-
-  # gamma_nt
-  gamma_nt <-
-    lav_mvnorm_h1_inverted_information_expected(
-      y = y,
-      sample_cov = sample_cov,
-      x_idx = x_idx
-    )
-  if (length(x_idx) > 0L) {
-    # FIXME: surely there is better way
-    out <- gamma_nt %*% MASS::ginv(gamma_1) %*% gamma_nt
-  } else {
-    out <- gamma_nt %*% solve(gamma_1, gamma_nt)
-  }
-
-  out
-}
-
-
-# 7) ACOV h1 mu + vech(Sigma) (not used?)
-
-#    7a: 1/N * gamma_nt
-#    7b: 1/N * gamma_nt
-#        (one body, two names)
-lav_mvn_h1_acov_expected <-
-lav_mvn_h1_acov_observed <- function(
-    y = NULL,
-    wt = NULL,
-    sample_cov = NULL,
-    x_idx = integer(0L)) {
-
-  n <- lav_mvn_nobs(y = y, wt = wt)
-
-  gamma_nt <-
-    lav_mvnorm_h1_inverted_information_expected(
-      y = y,
-      wt = wt,
-      sample_cov = sample_cov,
-      x_idx = x_idx
-    )
-
-  (1 / n) * gamma_nt
-}
-
-#    7c: 1/N * (gamma_nt * Gamma^{-1} * gamma_nt)
-lav_mvn_h1_acov_firstorder <- function(
-    y = NULL,
-    wt = NULL,
-    sample_cov = NULL,
-    sinv_method = "eigen",
-    x_idx = integer(0L),
-    sample_cov_inv = NULL,
-    gamma_1 = NULL) {
-
-  n <- lav_mvn_nobs(y = y, wt = wt)
-
-  j1_inv <- lav_mvn_h1_inv_info_firstorder(
-    y = y, wt = wt,
-    sample_cov = sample_cov,
-    x_idx = x_idx, sinv_method = sinv_method,
-    sample_cov_inv = sample_cov_inv, gamma_1 = gamma_1
-  )
-
-  (1 / n) * j1_inv
-}
-
-#    7d: 1/N * Gamma (sandwich)
-lav_mvn_h1_acov_sandwich <- function(
-    y = NULL,
-    wt = NULL,
-    sample_cov = NULL,
-    x_idx = integer(0L),
-    gamma_1 = NULL) {
-
-  # lav_samp_gamma() has no wt argument (yet)
-  if (!is.null(wt)) {
-    lav_msg_stop(gettext("function not supported if wt is not NULL"))
-  }
-
-  n <- NROW(y)
-
-  # Gamma
-  if (is.null(gamma_1)) {
-    if (length(x_idx) > 0L) {
-      gamma_1 <- lav_samp_gamma(y,
-        x_idx = x_idx, fixed_x = TRUE,
-        meanstructure = TRUE
-      )
-    } else {
-      gamma_1 <- lav_samp_gamma(y, meanstructure = TRUE)
-    }
-  }
-
-  (1 / n) * gamma_1
-}
+# NOTE: the former 6) inverted-information and 7) ACOV families (gamma_nt,
+# B1.inv, 1/N * Gamma, ...) were unused reference implementations of the
+# identity Gamma_ADF = A1^{-1} J1 A1^{-1}; they were removed in 0.7-1.
+# The saturated-model Gamma itself lives in lav_samplestats_gamma.R
+# (lav_samp_gamma / lav_samp_gamma_nt), and Gamma/N for a fitted model in
+# lav_model_h1_acov() (lav_model_h1_information.R).

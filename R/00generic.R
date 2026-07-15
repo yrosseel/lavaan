@@ -13,7 +13,7 @@ fitMeasures <- function(object, fit_measures = "all",           # nolint
                           robust = TRUE,
                           cat.nonpd = "na"
                         ),
-                        output = "vector", ...) {
+                        output = "vector", level = NULL, ...) {
   UseMethod("fitMeasures", object)
 }
 fitmeasures <- function(object, fit_measures = "all",
@@ -27,7 +27,7 @@ fitmeasures <- function(object, fit_measures = "all",
                           robust = TRUE,
                           cat.nonpd = "na"
                         ),
-                        output = "vector", ...) {
+                        output = "vector", level = NULL, ...) {
   UseMethod("fitmeasures", object)
 }
 
@@ -46,7 +46,7 @@ setGeneric(
              robust = TRUE,
              cat.nonpd = "na"
            ),
-           output = "vector", ...) {
+           output = "vector", level = NULL, ...) {
     standardGeneric("fitMeasures")
   }
 )
@@ -63,7 +63,7 @@ setGeneric(
              robust = TRUE,
              cat.nonpd = "na"
            ),
-           output = "vector", ...) {
+           output = "vector", level = NULL, ...) {
     standardGeneric("fitmeasures")
   }
 )

@@ -47,6 +47,71 @@ lav_model_efa_block_lambda <- function(lavmodel = NULL, mlist = NULL, g = 1L) {
   )
 }
 
+# select the target (or target_mask) matrix for a single efa/esem set: a
+# *named* list is keyed by the efa block labels (issue #516), so we return the
+# element matching 'set_name'; an unnamed list is interpreted per group and is
+# returned as-is (the group argument of lav_mat_rotate() selects the element
+# downstream); a plain matrix (used for all sets) is also returned as-is.
+lav_model_efa_target_set <- function(x = NULL, set_name = NULL,
+                                     what = "target") {
+  if (!is.list(x)) {
+    return(x)
+  }
+  x_names <- names(x)
+  if (is.null(x_names) || !any(nzchar(x_names))) {
+    # unnamed list: per-group target/target_mask
+    return(x)
+  }
+  if (length(set_name) == 0L || is.na(set_name)) {
+    lav_msg_stop(gettextf(
+      "rotation.args$%s is a named list, but the efa block labels could not be found in the model.",
+      what))
+  }
+  idx <- match(set_name, x_names)
+  if (is.na(idx)) {
+    lav_msg_stop(gettextf(
+      "rotation.args$%1$s is a named list, but contains no element for efa block \"%2$s\".",
+      what, set_name))
+  }
+  x[[idx]]
+}
+
+# early validation of *named* per-set target/target_mask lists (issue #516):
+# all names must be efa block labels, and every efa block with at least two
+# factors needs an entry. Called by lav_model() so a mismatch is caught
+# before the model is estimated.
+lav_model_efa_check_target <- function(ropts = NULL, lavpartable = NULL,
+                                       efa_values = NULL) {
+  for (what in c("target", "target_mask")) {
+    x <- ropts[[what]]
+    if (!is.list(x)) {
+      next
+    }
+    x_names <- names(x)
+    if (is.null(x_names) || !any(nzchar(x_names))) {
+      # unnamed list: per-group target/target_mask
+      next
+    }
+    unknown <- setdiff(x_names, efa_values)
+    if (length(unknown) > 0L) {
+      lav_msg_stop(gettextf(
+        "some names of the rotation.args$%1$s list (%2$s) do not match any efa block label in the model (%3$s).",
+        what, lav_msg_view(unknown, log_sep = "none"),
+        lav_msg_view(efa_values, log_sep = "none")))
+    }
+    for (set in efa_values) {
+      nfac <- length(unique(lavpartable$lhs[lavpartable$op == "=~" &
+        lavpartable$efa == set]))
+      if (nfac > 1L && !set %in% x_names) {
+        lav_msg_stop(gettextf(
+          "the rotation.args$%1$s list contains no element for efa block \"%2$s\".",
+          what, set))
+      }
+    }
+  }
+  invisible(NULL)
+}
+
 # reconstruct the full block-g THETA from a block's model matrices (filling in
 # the dummy observed variables). Used by the rotation routines below.
 lav_model_efa_block_theta <- function(lavmodel = NULL, mlist = NULL, g = 1L) {
@@ -175,10 +240,14 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         # std.ov? we use diagonal of Sigma for this set of ov's only
         if (ropts$std_ov) {
           if (mg_group_equal_flag) {
-            # compute mean THETA across groups
-            theta_idx <- which(names(lavmodel@GLIST) == "theta")
-            mm_theta <- Reduce("+", lavmodel@GLIST[theta_idx]) /
-                                                    lavmodel@ngroups
+            # compute mean THETA across groups, for this set of ov's only
+            theta_list <- lapply(seq_len(lavmodel@ngroups), function(gg) {
+              mm_in_gg <- (seq_len(lavmodel@nmat[gg]) +
+                            cumsum(c(0, lavmodel@nmat))[gg])
+              lav_model_efa_block_theta(lavmodel, glist[mm_in_gg], gg)
+            })
+            mm_theta <- (Reduce("+", theta_list) /
+                          lavmodel@ngroups)[ov_idx, ov_idx, drop = FALSE]
           } else {
             mm_theta <- theta_g[ov_idx, ov_idx, drop = FALSE]
           }
@@ -196,6 +265,12 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
           init_rot_1 <- NULL
           rstarts <- ropts$rstarts
         }
+        # per-set target/target_mask? (named list, keyed by efa block label)
+        set_name <- names(lavmodel@lv.efa.idx[[g]])[set]
+        this_target <- lav_model_efa_target_set(
+          ropts$target, set_name, what = "target")
+        this_target_mask <- lav_model_efa_target_set(
+          ropts$target_mask, set_name, what = "target_mask")
         # set warn and verbose to ropts-values
         current_warn <- lav_warn()
         current_verbose <- lav_verbose()
@@ -211,11 +286,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
           method_args = list(
             geomin_epsilon = ropts$geomin_epsilon,
             orthomax_gamma = ropts$orthomax_gamma,
-            cf_gamma       = ropts$orthomax_gamma,
+            cf_gamma       = ropts$cf_gamma,
             oblimin_gamma  = ropts$oblimin_gamma,
             promax_kappa   = ropts$promax_kappa,
-            target         = ropts$target,
-            target_mask    = ropts$target_mask
+            target         = this_target,
+            target_mask    = this_target_mask
           ),
           init_rot = init_rot_1,
           init_rot_check = FALSE,
@@ -313,6 +388,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         function(x) x[ov_idx, lv_idx, drop = FALSE])
       this_ov_var <- NULL
 
+      # per-set target/target_mask? (named list, keyed by efa block label)
+      set_name <- names(lavmodel@lv.efa.idx[[1]])[set]
+      this_target <- lav_model_efa_target_set(
+        ropts$target, set_name, what = "target")
+      this_target_mask <- lav_model_efa_target_set(
+        ropts$target_mask, set_name, what = "target_mask")
+
       # init.rot?
       if (!is.null(init_rot) && lavoptions$rotation.args$jac_init_rot) {
         init_rot_list <- vector("list", length = lavmodel@ngroups)
@@ -342,11 +424,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         method_args = list(
           geomin_epsilon = ropts$geomin_epsilon,
           orthomax_gamma = ropts$orthomax_gamma,
-          cf_gamma       = ropts$orthomax_gamma,
+          cf_gamma       = ropts$cf_gamma,
           oblimin_gamma  = ropts$oblimin_gamma,
           promax_kappa   = ropts$promax_kappa,
-          target         = ropts$target,
-          target_mask    = ropts$target_mask
+          target         = this_target,
+          target_mask    = this_target_mask
         ),
         init_rot_list = init_rot_list,
         init_rot_check = FALSE,
@@ -432,9 +514,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
   method_args <- list(
     geomin_epsilon = ropts$geomin_epsilon,
     orthomax_gamma = ropts$orthomax_gamma,
-    cf_gamma = ropts$orthomax_gamma,
+    cf_gamma = ropts$cf_gamma,
     oblimin_gamma = ropts$oblimin_gamma,
-    promax_kappa = ropts$oblimin_kappa,
+    promax_kappa = ropts$promax_kappa,
     target = ropts$target,
     target_mask = ropts$target_mask
   )
@@ -458,16 +540,20 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
   this_method_args <- method_args
 
   # set group-specific target/target_mask (if needed)
-    # if target, check target matrix
+    # if target, check target matrix; an *unnamed* list is interpreted per
+    # group; a *named* list is keyed by the efa block labels and is resolved
+    # per set (in the set loop below)
     if (method == "target.strict" || method == "pst") {
       target <- method_args$target
-      if (is.list(target)) {
+      if (is.list(target) &&
+          (is.null(names(target)) || !any(nzchar(names(target))))) {
         this_method_args$target <- target[[g]]
       }
     }
     if (method == "pst") {
       target_mask <- method_args$target_mask
-      if (is.list(target_mask)) {
+      if (is.list(target_mask) &&
+          (is.null(names(target_mask)) || !any(nzchar(names(target_mask))))) {
         this_method_args$target_mask <- target_mask[[g]]
       }
     }
@@ -512,6 +598,13 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       p <- nrow(a)
       m <- ncol(a)
 
+      # per-set target/target_mask? (named list, keyed by efa block label)
+      set_method_args <- this_method_args
+      set_method_args$target <- lav_model_efa_target_set(
+        this_method_args$target, set_names[set], what = "target")
+      set_method_args$target_mask <- lav_model_efa_target_set(
+        this_method_args$target_mask, set_names[set], what = "target_mask")
+
       # for oblique, we also need PSI
       if (!ropts$orthogonal) {
         mm_psi <- mlist$psi[lv_idx, lv_idx, drop = FALSE]
@@ -533,7 +626,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         "cf-parsimax", "cf-facparsim"
       )) {
         method_fname <- "lav_mat_rotate_cf"
-        this_method_args$cf_gamma <- switch(method,
+        set_method_args$cf_gamma <- switch(method,
           "cf-quartimax" = 0,
           "cf-varimax"   = 1 / p,
           "cf-equamax"   = m / (2 * p),
@@ -574,7 +667,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       # evaluate rotation criterion, extract GRAD
       q_1 <- do.call(
         method_fname,
-        c(list(mm_lambda = a), this_method_args, list(grad = TRUE))
+        c(list(mm_lambda = a), set_method_args, list(grad = TRUE))
       )
       gq <- attr(q_1, "grad")
       attr(q_1, "grad") <- NULL

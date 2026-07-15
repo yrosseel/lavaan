@@ -115,6 +115,18 @@ lav_step03_data <- function(slot_data = NULL,
     if (lavoptions$se == "bootstrap") {
       lav_msg_stop(gettext("bootstrapping requires full data"))
     }
+    # robust (sandwich) standard errors need the raw-data Gamma/NACOV;
+    # robust.sem/robust.sem.nt can be rescued by a user-provided NACOV=,
+    # but robust.huber.white/first.order need the casewise scores (raw data)
+    if (any(lavoptions$se == c("robust.sem", "robust.sem.nt")) &&
+      is.null(nacov)) {
+      lav_msg_stop(gettextf(
+        "se = %s requires full data or a user-provided NACOV= argument.",
+        dQuote(lavoptions$se)))
+    } else if (any(lavoptions$se == c("robust.huber.white", "first.order"))) {
+      lav_msg_stop(gettextf(
+        "se = %s requires full data.", dQuote(lavoptions$se)))
+    }
     # more needed?
   }
   # sanity check

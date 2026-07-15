@@ -179,7 +179,9 @@ lav_test_print <- function(object, nd = 3L) {
           )
         )
 
-        if (test[[block]]$test == "scaled.shifted") {
+        if (test[[block]]$test %in% c(
+          "scaled.shifted", "scaled.shifted.corrected"
+        )) {
           if (ngroups == 1L ||
             length(test[[block]]$shift.parameter) == 1L) {
             c1 <- c(c1, "Shift parameter")

@@ -201,11 +201,19 @@ lav_lavdata <- function(data = NULL, # data.frame
     # list?
     if (is.list(sample_cov)) {
       # multiple groups, multiple cov matrices
-      if (!is.null(sample_mean)) {
-        stopifnot(length(sample_mean) == length(sample_cov))
+      if (!is.null(sample_mean) &&
+          (!is.list(sample_mean) ||
+           length(sample_mean) != length(sample_cov))) {
+        lav_msg_stop(gettextf(
+          "sample.cov is a list of %s matrices; sample.mean should be a
+          list of the same length.", length(sample_cov)))
       }
-      if (!is.null(sample_th)) {
-        stopifnot(length(sample_th) == length(sample_cov))
+      if (!is.null(sample_th) &&
+          (!is.list(sample_th) ||
+           length(sample_th) != length(sample_cov))) {
+        lav_msg_stop(gettextf(
+          "sample.cov is a list of %s matrices; sample.th should be a
+          list of the same length.", length(sample_cov)))
       }
       # multiple groups, multiple cov matrices
       ngroups <- length(sample_cov)
@@ -218,7 +226,11 @@ lav_lavdata <- function(data = NULL, # data.frame
         }
       } else {
         if (is.null(label)) {
-          stopifnot(length(group_label) == ngroups)
+          if (length(group_label) != ngroups) {
+            lav_msg_stop(gettextf(
+              "length(group.label) = %1$s but sample.cov implies
+              ngroups = %2$s.", length(group_label), ngroups))
+          }
         } else {
           # FIXME!!!!
           # check if they match
@@ -232,6 +244,15 @@ lav_lavdata <- function(data = NULL, # data.frame
           "sample_cov must be a matrix or a list of matrices"))
       }
       sample_cov <- list(sample_cov)
+    }
+
+    # check sample_nobs: we need one value per group
+    sample_nobs <- as.list(sample_nobs)
+    if (length(sample_nobs) != ngroups) {
+      lav_msg_stop(gettextf(
+        "length(sample.nobs) = %1$s but sample.cov implies ngroups = %2$s;
+        please provide the number of observations for each group.",
+        length(sample_nobs), ngroups))
     }
 
     # get ov.names
@@ -611,6 +632,12 @@ lav_data_full <- function(data = NULL, # data.frame
 ) {
   # number of groups and group labels
   if (!is.null(group) && length(group) > 0L) {
+    if (length(group) > 1L) {
+      lav_msg_stop(gettext(
+        "lavaan supports only a single grouping variable; if you wish to
+        combine several grouping variables, create a single new variable
+        first (e.g., using interaction())."))
+    }
     if (!(group %in% names(data))) {
       lav_msg_stop(gettextf(
         "grouping variable %1$s not found; variable names
@@ -661,6 +688,10 @@ lav_data_full <- function(data = NULL, # data.frame
   # sampling weights
   if (!is.null(sampling_weights)) {
     if (is.character(sampling_weights)) {
+      if (length(sampling_weights) > 1L) {
+        lav_msg_stop(gettext(
+          "lavaan supports only a single sampling weights variable."))
+      }
       if (!(sampling_weights %in% names(data))) {
         lav_msg_stop(
           gettextf("sampling weights variable %1$s not found;
@@ -682,6 +713,13 @@ lav_data_full <- function(data = NULL, # data.frame
 
   # clustered?
   if (!is.null(cluster) && length(cluster) > 0L) {
+    # only a single clustering variable is supported (two-level models)
+    if (length(cluster) > 1L) {
+      lav_msg_stop(gettext(
+        "lavaan supports only a single clustering variable; if you wish to
+        combine several clustering variables, create a single new variable
+        first (e.g., using interaction())."))
+    }
     # cluster variable in data?
     if (!all(cluster %in% names(data))) {
       # which one did we not find?
@@ -793,7 +831,7 @@ lav_data_full <- function(data = NULL, # data.frame
     ov_all <- unique(c(ov_names[[g]], ov_names_x[[g]])) # no overlap if categ
 
     # handle interactions
-    ov_int_names <- ov_all[grepl(":", ov_all)]
+    ov_int_names <- ov_all[grepl(":", ov_all, fixed = TRUE)]
     n_int <- length(ov_int_names)
     if (n_int > 0L) {
       ov_names_noint <- ov_all[!ov_all %in% ov_int_names]
@@ -844,6 +882,17 @@ lav_data_full <- function(data = NULL, # data.frame
   }
 
   # do some checking
+  # check for character variables that are not declared as ordered;
+  # data.matrix() would silently convert them to (alphabetical) integer
+  # codes and treat them as continuous (new in 0.7-1)
+  if ("character" %in% ov$type) {
+    c_names <- ov$name[ov$type == "character"]
+    lav_msg_stop(gettextf(
+      "Some model variables are of type character: %s. Please convert
+      these variables to numeric values, or declare them as ordered
+      categorical using the ordered= argument.",
+      lav_msg_view(c_names, log_sep = "none")))
+  }
   # check for unordered factors (but only if nlev > 2)
   if ("factor" %in% ov$type) {
     f_names <- ov$name[ov$type == "factor" & ov$nlev > 2L]
@@ -1083,6 +1132,24 @@ lav_data_full <- function(data = NULL, # data.frame
           sQuote(sampling_weights)))
       }
 
+      # check for non-finite values (e.g., Inf) in sampling weight variable
+      # (new in 0.7-1)
+      if (any(!is.finite(wt))) {
+        lav_msg_stop(gettextf(
+          "Sampling.weights variable %s contains non-finite values.",
+          sQuote(sampling_weights)))
+      }
+
+      # check that the sampling weights do not sum to zero (new in 0.7-1)
+      if (sum(wt) == 0) {
+        if (ngroups > 1L) {
+          lav_msg_stop(gettextf(
+            "Sampling weights sum to zero in group %s.", group_label[g]))
+        } else {
+          lav_msg_stop(gettext("Sampling weights sum to zero."))
+        }
+      }
+
       weights[[g]] <- wt
     }
 
@@ -1215,6 +1282,24 @@ lav_data_full <- function(data = NULL, # data.frame
         ov_names_x = ov_names_x[[g]],
         ov_names_l = ov_names_l[[g]]
       )
+
+      # check that we have at least two clusters (per group); with a
+      # single cluster, the between-level moments are undefined
+      # (new in 0.7-1)
+      for (l in 2:length(lp[[g]]$nclusters)) {
+        if (lp[[g]]$nclusters[[l]] < 2L) {
+          gtxt <- if (ngroups > 1L) {
+            gettextf(" in group %s", dQuote(group_label[g]))
+          } else {
+            ""
+          }
+          lav_msg_stop(gettextf(
+            "Cluster variable %1$s contains only %2$s cluster(s)%3$s;
+            at least two clusters are required to fit a model to
+            clustered data.",
+            sQuote(cluster[l - 1L]), lp[[g]]$nclusters[[l]], gtxt))
+        }
+      }
 
       # new in 0.6-4
       # check for 'level-1' variables with zero within variance
