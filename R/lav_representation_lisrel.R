@@ -3024,16 +3024,20 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
                                    group_w_free    = FALSE,
                                    parameterization = "delta") {
 
+  # model matrices in this block
+  mnames <- names(mlist)
+
   delta_flag <- beta_flag <- FALSE
-  if (!is.null(mlist$delta) && any(mlist$delta[, 1] != 1)) {
-    delta_flag <- TRUE
+  if (!is.null(mlist$delta)) {
+    mm_delta_idx0 <- which(mnames == "delta")
+    delta_is_free <- length(m_free_idx[[mm_delta_idx0]]) > 0L
+    if (any(mlist$delta[, 1] != 1) || delta_is_free) {
+      delta_flag <- TRUE
+    }
   }
   if (!is.null(mlist$beta)) {
     beta_flag <- TRUE
   }
-
-  # model matrices in this block
-  mnames <- names(mlist)
 
   mm_lambda_idx <- which(mnames == "lambda")
   x_lambda_idx <- x_free_idx[[mm_lambda_idx]]
@@ -3742,7 +3746,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
     # tau_full: tau values at ordinal TH slots, 0 at numeric TH slots
     tau_full <- numeric(nth_full)
-    if (!is.null(mlist$tau) && n_th > 0L) {
+    if (!is.null(mlist$tau) && nrow(mlist$tau) > 0L) {
       tau_full[ord_slots] <- as.vector(mlist$tau)
     }
 
@@ -3796,7 +3800,6 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       j_v <- rc[, 2L]
       jac_th[, col_th:(col_th + n_bet - 1L)] <-
         -delta_star * m[v_slot, i_v, drop = FALSE] *
-         matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
          matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
       col_th <- col_th + n_bet
     }
