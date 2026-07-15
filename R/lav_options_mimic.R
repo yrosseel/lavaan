@@ -14,6 +14,9 @@ lav_options_mimic <- function(opt) {
   if (opt$information.expected.mplus == "default") {
     opt$information.expected.mplus <- (opt$mimic == "Mplus")
   }
+  if (opt$rmsea.scaled.mplus == "default") {
+    opt$rmsea.scaled.mplus <- (opt$mimic == "Mplus")
+  }
   if (opt$mimic == "lavaan") {
     if (is.character(opt$conditional.x)) { # = "default"
       if (lav_options_estimatorgroup(opt$estimator) == "ML") {

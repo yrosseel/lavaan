@@ -58,8 +58,8 @@ following defaults are used:
 }
 In addition, the various Mplus-specific technical options
 (\code{information.expected.mplus}, \code{gamma.vcov.mplus},
-\code{gamma.wls.mplus} and \code{gls.v11.mplus}) are all set to
-\code{FALSE}.
+\code{gamma.wls.mplus}, \code{gls.v11.mplus} and
+\code{rmsea.scaled.mplus}) are all set to \code{FALSE}.
 
 \strong{mimic = "Mplus"}
 
@@ -78,6 +78,17 @@ attempt to reproduce the output of \code{Mplus}:
   \item{\code{gls.v11.mplus = TRUE}:}{use the Mplus variant of the weight
     matrix used in GLS estimation (when there is a meanstructure and
     \code{conditional.x = FALSE}).}
+  \item{\code{rmsea.scaled.mplus = TRUE}:}{use the Mplus reference
+    distribution for the \emph{scaled} RMSEA confidence interval and
+    p-values. lavaan refers the \emph{unscaled} test statistic to a
+    chi-square distribution with \eqn{tr[U\Gamma]} degrees of freedom, while
+    Mplus refers the \emph{scaled} statistic to a chi-square distribution
+    with the degrees of freedom of the scaled test. Both match the mean of
+    the null distribution, but on a different scale, so they yield different
+    intervals and p-values. This only affects the Satorra-Bentler and
+    Yuan-Bentler family (\code{MLM}, \code{MLR}, \code{MLMVS},
+    \code{WLSM}, ...); for the shifted family (\code{MLMV}, \code{WLSMV},
+    \code{ULSMV}) lavaan already uses the Mplus convention.}
   \item{\code{missing = "ml"}:}{for continuous data and the ML or MLR
     estimator, the default missing-data handling becomes full information
     maximum likelihood (FIML), rather than listwise deletion.}

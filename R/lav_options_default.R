@@ -206,6 +206,7 @@ lav_options_default <- function() {
   elm("gamma.vcov.mplus", "default", chr = "default", bl = TRUE)
   elm("gamma.wls.mplus", "default", chr = "default", bl = TRUE)
   elm("information.expected.mplus", "default", chr = "default", bl = TRUE)
+  elm("rmsea.scaled.mplus", "default", chr = "default", bl = TRUE)
 
   # model modifiers
   elm("meanstructure", "default", chr = "default", bl = TRUE)

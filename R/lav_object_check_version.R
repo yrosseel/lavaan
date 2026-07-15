@@ -558,6 +558,7 @@ lav_object_check_version <- function(object = NULL) {
   new_options$gamma.vcov.mplus <- new_options$mimic == "Mplus"
   new_options$gamma.wls.mplus <- new_options$mimic == "Mplus"
   new_options$gls.v11.mplus <- new_options$mimic == "Mplus"
+  new_options$rmsea.scaled.mplus <- new_options$mimic == "Mplus"
   new_options$cinformation.expected.mplus <- new_options$mimic == "Mplus"
   new_options$h1.information.meat <- "structured"
   new_options$mega.h1.information <- "unstructured"

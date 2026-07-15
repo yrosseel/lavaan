@@ -335,10 +335,38 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   n <- lav_inspect_ntotal(object = lavobject) # N vs N-1
 
   # scaled X2/df values
+  #
+  # Two reference distributions are in use here, and they differ:
+  #
+  #  - lavaan (default): the UNSCALED statistic is referred to a chi-square
+  #    with tr[U Gamma] degrees of freedom. X2 is asymptotically a mixture
+  #    sum(lambda_i * chisq_1), and this matches its MEAN (E[X2] = tr[U Gamma]).
+  #
+  #  - Mplus: the SCALED statistic is referred to a chi-square with the scaled
+  #    test's own df. This matches the mean on the other scale
+  #    (E[X2/c] = df, since c = tr[U Gamma]/df).
+  #
+  # Both are mean-matching approximations; they differ in variance, so they
+  # give different confidence intervals and p-values. lavaan already uses the
+  # Mplus convention for the scaled.shifted family (there is no meaningful
+  # tr[U Gamma] route once the statistic has been shifted), which is why
+  # WLSMV/MLMV agree with Mplus while WLSM/MLM/MLMVS/MLR do not.
+  #
+  # rmsea.scaled.mplus = TRUE (set by mimic = "Mplus") applies the Mplus
+  # convention throughout. See Mplus techappen.pdf, Appendix 5, eq (125) with
+  # (106): "with categorical outcomes, Mplus replaces d in (125) by tr[U Gamma]"
+  # -- which, since tr[U Gamma] = c * d, is the same as referring the scaled
+  # statistic to d.
   if (scaled_flag) {
-    if (scaled_test %in% c("scaled.shifted", "scaled.shifted.corrected")) {
+    if (scaled_test %in% c("scaled.shifted", "scaled.shifted.corrected") ||
+      isTRUE(lavobject@Options$rmsea.scaled.mplus)) {
       xx2 <- test[[scaled_idx]]$stat
-      df2 <- df
+      # the scaled test carries its own df (equal to df for satorra.bentler
+      # and the shifted family; a Satterthwaite value for mean.var.adjusted)
+      df2 <- test[[scaled_idx]]$df
+      if (is.null(df2) || !is.finite(df2) || df2 == 0) {
+        df2 <- df
+      }
     } else {
       xx2 <- x2
       df2 <- sum(test[[scaled_idx]]$trace.UGamma)
