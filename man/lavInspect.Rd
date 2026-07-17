@@ -443,6 +443,64 @@ Variance covariance matrix of the model parameters:
         ignoring any exogenous observed covariates.}
 }
 
+Constraint information (equality/inequality constraints, bounds). All
+matrices and vectors are reconstructed from the fitted model (the
+constraint functions are evaluated at the final parameter estimates),
+and are labeled so that rows correspond to individual constraints and
+columns to free parameters:
+
+\describe{
+    \item{\code{"constraints"}:}{List. All constraint information for the
+        fitted model: \code{$ceq.jac} (the Jacobian of the equality
+        constraints, one row per constraint, evaluated at the final
+        estimates), \code{$ceq.rhs} (right-hand side constants),
+        \code{$ceq.resid} (the values of the equality constraint
+        functions at the solution; all (near) zero), \code{$ceq.rank}
+        (the number of linearly independent equality restrictions; this
+        is the number subtracted from the parameter count in the degrees
+        of freedom), \code{$ceq.lambda} (Lagrange multipliers, when
+        available), \code{$cin.jac}, \code{$cin.rhs}, \code{$cin.slack}
+        (the slack of each inequality constraint at the solution;
+        (near) zero if the constraint is binding), \code{$cin.active}
+        (logical; \code{TRUE} for inequality constraints that were binding
+        at the solution), \code{$cin.lambda}, \code{$k} (see
+        \code{"constraints.nullspace"} below), \code{$k0} (offset
+        vector; only non-\code{NULL} when the model contains only linear
+        equality constraints, in which case any admissible parameter
+        vector can be written as \code{theta = k0 + K \%*\% theta.reduced}),
+        and \code{$ceq.simple} (logical; \code{TRUE} when simple equality
+        constraints (\code{a == b}) were absorbed into the parameter
+        vector (see the \code{ceq.simple} option), so that the free
+        parameter vector already satisfies them and \code{$ceq.jac} is
+        empty). The inequality rows appear in this order: finite upper
+        bounds, finite lower bounds, explicit \code{"<"}/\code{">"}
+        constraints; all are written in slack form (the row value is
+        nonnegative at an admissible point). Alias: \code{"con"}.}
+    \item{\code{"constraints.jacobian"}:}{Matrix. The Jacobian of all
+        constraints: the equality rows stacked above the inequality rows,
+        evaluated at the final estimates. The attribute \code{"active"} is
+        a logical vector flagging, per row, whether the constraint was
+        binding at the solution (equality rows are always active).
+        Alias: \code{"con.jac"}.}
+    \item{\code{"constraints.nullspace"}:}{Matrix. An orthonormal basis
+        \code{K} of the null space of the equality-constraint Jacobian,
+        as used by the standard error and (robust) test statistic
+        machinery: post-multiplying the Jacobian of the model-implied
+        sample statistics (\code{"delta"}) by \code{K} restricts it to
+        the directions that satisfy the (linearized) equality
+        constraints. For example, the information matrix of the
+        constrained model in reduced form is
+        \code{t(K) \%*\% I \%*\% K}, and its constrained
+        (Moore-Penrose) inverse in the full parameter space is
+        \code{K \%*\% solve(t(K) \%*\% I \%*\% K) \%*\% t(K)}. If the model
+        contains no equality constraints, the identity matrix is returned.
+        The row names indicate the parameter space: they correspond to the
+        free parameters, with one row per parameter-table row when simple
+        equality constraints were absorbed (\code{ceq.simple = TRUE}).
+        Aliases: \code{"constraints.k"}, \code{"eq.constraints.k"},
+        \code{"con.k"}.}
+}
+
 Miscellaneous:
 
 \describe{

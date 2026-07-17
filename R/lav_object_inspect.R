@@ -462,6 +462,19 @@ lav_lavaan_lavinspect <- function(object,
       drop_list_single_group = drop_list_single_group)
 
 
+    #### constraints ####
+  } else if (what == "constraints" || what == "con") {
+    lav_inspect_con(object,
+      add_labels = add_labels, add_class = add_class)
+  } else if (what == "constraints.jacobian" || what == "con.jac") {
+    lav_inspect_con_jac(object,
+      add_labels = add_labels, add_class = add_class)
+  } else if (what == "constraints.nullspace" || what == "constraints.k" ||
+    what == "eq.constraints.k" || what == "con.k") {
+    lav_inspect_con_nullspace(object,
+      add_labels = add_labels, add_class = add_class)
+
+
     #### NACOV samplestats ####
   } else if (what == "gamma" || what == "sampstat.nacov") {
     lav_inspect_sampstat_gamma(object,

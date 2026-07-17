@@ -410,8 +410,22 @@ lav_con_eq_basis <- function(lavmodel = NULL) {
     # orthonormalize so that K / t(K) round-trips are consistent
     out <- qr.Q(qr(lavmodel@ceq.simple.K))
   } else if (nrow(lavmodel@ceq.JAC) > 0L) {
-    # equality constraints together with inequality constraints/bounds
-    out <- lav_mat_ortho_complement(t(lavmodel@ceq.JAC))
+    # equality constraints together with inequality constraints/bounds,
+    # or nonlinear equality constraints
+    jac <- lavmodel@ceq.JAC
+    # ceq.JAC is evaluated at the STARTING values; when nonlinear equality
+    # constraints are present, the linearization must be taken at the
+    # solution, so use the optimizer's final Jacobian (con.jac) instead
+    # (for all-linear constraints both are identical, and ceq.JAC is kept
+    # as it is computed with higher numerical accuracy)
+    if (length(lavmodel@ceq.nonlinear.idx) > 0L &&
+        nrow(lavmodel@con.jac) > 0L) {
+      ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
+      if (length(ceq_idx) > 0L) {
+        jac <- lavmodel@con.jac[ceq_idx, , drop = FALSE]
+      }
+    }
+    out <- lav_mat_ortho_complement(t(jac))
   } else {
     out <- NULL
   }
