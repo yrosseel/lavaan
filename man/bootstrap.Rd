@@ -8,12 +8,12 @@ of statistics) you can extract from a fitted lavaan object.}
 lavBootstrap(object, r = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus =  max(1L, parallel::detectCores() - 2L, na.rm = TRUE),
+                ncpus = min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE)),
                 cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
 bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus =  max(1L, parallel::detectCores() - 2L, na.rm = TRUE),
+                ncpus = min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE)),
                 cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
 }
 \arguments{
@@ -45,9 +45,9 @@ the observations that were used for this bootstrap run) as an attribute.}
 \item{parallel}{The type of parallel operation to be used (if any).  If
 missing, the default is \code{"no"}.  }
 \item{ncpus}{Integer: number of processes to be used in parallel operation.
-By default
-this is the number of cores (as detected by \code{parallel::detectCores()})
-minus one.} 
+By default, this is 2 (following CRAN policy). You may set this to a higher
+value (for example, the number of cores as detected by
+\code{parallel::detectCores()} minus one) if you wish to use more processes.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{lavBootstrap} call.}

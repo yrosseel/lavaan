@@ -10,21 +10,21 @@ lavaanList(model = NULL, data_list = NULL, data_function = NULL,
     data_function_args = list(), ndat = length(data_list), cmd = "lavaan", 
     ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
     store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
-    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
+    ncpus = min(2L, max(1L, parallel::detectCores() - 1L, na.rm = TRUE)),
     cl = NULL, iseed = NULL)
 
 semList(model = NULL, data_list = NULL, data_function = NULL,
     data_function_args = list(), ndat = length(data_list),
     ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
     store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
-    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
+    ncpus = min(2L, max(1L, parallel::detectCores() - 1L, na.rm = TRUE)),
     cl = NULL, iseed = NULL)
 
 cfaList(model = NULL, data_list = NULL, data_function = NULL,
     data_function_args = list(), ndat = length(data_list),
     ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
     store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
-    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
+    ncpus = min(2L, max(1L, parallel::detectCores() - 1L, na.rm = TRUE)),
     cl = NULL, iseed = NULL)
 }
 \arguments{
@@ -59,7 +59,9 @@ cfaList(model = NULL, data_list = NULL, data_function = NULL,
 \item{parallel}{The type of parallel operation to be used (if any). If
 missing, the default is \code{"no"}.}
 \item{ncpus}{Integer. The number of processes to be used in parallel operation:
-typically one would set this to the number of available CPUs.}
+By default, this is 2 (following CRAN policy). You may set this to a higher
+value (for example, the number of available CPUs) if you wish to use more
+processes.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{lavaanList} call.}

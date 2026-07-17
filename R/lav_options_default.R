@@ -547,7 +547,9 @@ lav_options_default <- function() {
   ))
   #maxcpu <- max(1L, parallel::detectCores() - 1L) # crashes if NA is returned
   maxcpu <- max(1L, parallel::detectCores() - 1L, na.rm = TRUE)
-  elm("ncpus", maxcpu, nm = paste0("[1,", maxcpu, "]"))
+  # CRAN policy: never use more than 2 cores by default; users may request
+  # more (up to maxcpu) explicitly.
+  elm("ncpus", min(2L, maxcpu), nm = paste0("[1,", maxcpu, "]"))
   elm("cl", NULL, oklen = c(0L, 1L))
   elm("iseed", NULL, oklen = c(0L, 1L))
 

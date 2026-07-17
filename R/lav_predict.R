@@ -1538,7 +1538,9 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   # number of unique cases to optimise is known (see lav_predict_parallel_mode).
   parallel <- parallel[1L]
   if (parallel != "no" && is.null(ncpus)) {
-    ncpus <- max(1L, parallel::detectCores() - 2L, na.rm = TRUE)
+    # CRAN policy: never use more than 2 cores by default; users may request
+    # more explicitly via ncpus=.
+    ncpus <- min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE))
   }
   if (parallel != "no") {
     loadNamespace("parallel")

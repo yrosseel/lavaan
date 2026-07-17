@@ -696,8 +696,10 @@ Parallelization options (currently only used for bootstrapping):
       missing, the default is \code{"no"}.  }
     \item{ncpus}{Integer: number of processes to be used in parallel operation:
       typically one would set this to the number of available CPUs. By
-      default this is the number of cores (as detected by
-      \code{parallel::detectCores()}) minus one.}
+      default this is 2 (following CRAN policy); you may set this to a higher
+      value (for example, the number of cores as detected by
+      \code{parallel::detectCores()} minus one) if you wish to use more
+      processes.}
     \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
       machine is created for the duration of the \code{lavBootstrap} 

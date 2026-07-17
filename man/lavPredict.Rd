@@ -116,7 +116,9 @@ the \code{"optim()"} function is used with the BFGS method.}
   otherwise. Because the computation is deterministic, the results do not
   depend on the value of this argument.}
 \item{ncpus}{Integer. The number of processes to use in parallel computation.
-  The default is to use all available cores, minus two.}
+  By default, this is 2 (following CRAN policy). You may set this to a higher
+  value (for example, the number of available cores, minus two) if you wish to
+  use more processes.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use when
   \code{parallel = "snow"}. If not supplied, a cluster on the local machine is
   created for the duration of the call.}
