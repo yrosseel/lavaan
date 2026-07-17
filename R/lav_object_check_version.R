@@ -177,7 +177,11 @@ lav_object_check_version <- function(object = NULL) {
         lavobject@vcov <- list(se = lavobject@Options$se[1],
                                information = lavobject@Options$information[1],
                                vcov = matrix(0, 0, 0)) # for now
-        lavobject@test <- lavTest(lavobject)
+        # the pre-0.5-19 test statistics live in the (old) @Fit slot; the
+        # @test slot does not exist yet, so we must not read it here (calling
+        # lavTest() would simply return the empty prototype). Note that this
+        # list is not named yet; this is taken care of below.
+        lavobject@test <- lavobject@Fit@test
         lavobject@external <- vector("list", 0L)
       }
     }
