@@ -89,6 +89,12 @@ lavTest <- function(lavobject, test = "standard",               # nolint
       # get requested test statistics
       test_1 <- lav_model_test(lavobject = lavobject)
     }
+  } else {
+    # no 'test' argument given: we return the 'standard' test, unless it is
+    # not available (e.g. estimator = "IV", where the @test slot only holds
+    # a NA placeholder for the standard test); in the latter case, we return
+    # the test statistic(s) that ARE available instead
+    test <- lav_test_default_names(test_1)
   }
 
   if (output == "list") {

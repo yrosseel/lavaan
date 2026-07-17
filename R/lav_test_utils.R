@@ -264,6 +264,41 @@ lav_test_ug_trace_stream <- function(m_gamma = NULL, delta = NULL,
   )
 }
 
+# is this test statistic available? the @test slot may contain a
+# placeholder entry with a NA statistic: e.g. the 'standard' test when
+# estimator = "IV", where no standard chi-square is defined
+lav_test_is_available <- function(test_element = NULL) {
+  !is.null(test_element$stat) &&
+    length(test_element$stat) > 0L &&
+    !is.na(test_element$stat[1])
+}
+
+# which test statistic(s) to return when lavTest() is called without a
+# 'test' argument? normally the 'standard' one, but if that one is not
+# available (see above), fall back to the test statistic(s) that are
+# (e.g. Browne's residual based test when estimator = "IV")
+lav_test_default_names <- function(test_1 = NULL) {
+  test_names <- names(test_1)
+
+  # no names at all (e.g. test = "none") -> nothing to fall back to
+  if (is.null(test_names)) {
+    return("standard")
+  }
+
+  standard_idx <- which(test_names == "standard")
+  if (length(standard_idx) > 0L &&
+      lav_test_is_available(test_1[[standard_idx[1]]])) {
+    return("standard")
+  }
+
+  ok_idx <- which(vapply(test_1, lav_test_is_available, logical(1L)))
+  if (length(ok_idx) == 0L) {
+    return("standard")
+  }
+
+  test_names[ok_idx]
+}
+
 # which (non-scaled) test statistic shall we scale? (the scaled.test
 # option; e.g. scaled.test = "browne.residual.nt.model" gives the
 # RLS-based scaled tests)
