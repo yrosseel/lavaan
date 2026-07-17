@@ -131,6 +131,16 @@ lav_step01_ovnames_composites <- function(flat_model = NULL) {
   nc <- length(c_names)
   mod_val <- max(flat_model$mod.idx)
 
+  # the 'open' parser (the default since 0.7) produces a flat_model without
+  # a 'fixed' column (modifiers live in the 'modifiers' attribute only);
+  # create a full-length one here, because 1) the c() extensions below would
+  # otherwise silently build a length-2 column that recycles downstream, and
+  # 2) the "0" markers we add are read back by lav_pt_vnames() when
+  # classifying formative latent variables
+  if (is.null(flat_model$fixed)) {
+    flat_model$fixed <- rep("", length(flat_model$lhs))
+  }
+
   # check block numbers
   max_block <- max(flat_model$block)
   if (max_block > 1L) {
