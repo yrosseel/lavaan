@@ -3519,6 +3519,12 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
                  coef_s * jac_diag_theta[c_s, , drop = FALSE]
   }
 
+  # row map from the full-vech layout to the final jac_sigma layout (set by
+  # the categorical/correlation reorderings below); the composite chain-rule
+  # block at the end of this function needs it to bring its own (full-vech)
+  # contribution into the same layout
+  sigma_row_map <- NULL
+
   # categorical: reorder
   if (categorical) {
     # reorder: first variances (of numeric), then covariances
@@ -3531,6 +3537,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
     )))[num_idx]
     cor_idx <- match(covd_idx, cov_idx)
 
+    sigma_row_map <- c(var_idx, cor_idx)
     jac_sigma <- rbind(
       jac_sigma[var_idx, , drop = FALSE],
       jac_sigma[cor_idx, , drop = FALSE]
@@ -3548,12 +3555,14 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       covd_idx <- lav_mat_vech_idx(nvar, diagonal = FALSE)
       var_idx <- which(is.na(match(cov_idx, covd_idx)))[num_idx]
       offd_idx <- match(covd_idx, cov_idx)
+      sigma_row_map <- c(var_idx, offd_idx)
       jac_sigma <- rbind(
         jac_sigma[var_idx, , drop = FALSE],
         jac_sigma[offd_idx, , drop = FALSE]
       )
     } else {
       rm_idx <- lav_mat_diagh_idx(nvar)
+      sigma_row_map <- seq_len(pstar)[-rm_idx]
       jac_sigma <- jac_sigma[-rm_idx, , drop = FALSE]
     }
   }
@@ -4036,14 +4045,23 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
     sigma_chain <- m_psi %*% j_psi
 
-    if (!categorical && meanstructure) {
-      sigma_row_offset <- nvar
-    } else if (categorical && !is.null(jac_th)) {
-      sigma_row_offset <- nth_full
-    } else {
-      sigma_row_offset <- 0L
+    # delta scaling: the observed-scale rows are Sigma_obs = D Sigma* D,
+    # so the psi* chain picks up the same delta[r]*delta[s] weights as the
+    # direct jac_sigma blocks above
+    if (delta_flag) {
+      sigma_chain <- sigma_chain * delta_weight
     }
-    sig_rows <- sigma_row_offset + seq_len(nrow(jac_sigma))
+
+    # categorical / correlation layouts subset and reorder the sigma rows;
+    # bring the (full-vech) chain term into the same layout
+    if (!is.null(sigma_row_map)) {
+      sigma_chain <- sigma_chain[sigma_row_map, , drop = FALSE]
+    }
+
+    # the sigma block always sits at the bottom of 'out' at this point
+    # (mean/th and pi rows, if any, are on top; the gw row is prepended
+    # later), so index it from the end -- robust for every row layout
+    sig_rows <- nrow(out) - nrow(sigma_chain) + seq_len(nrow(sigma_chain))
     out[sig_rows, ] <- out[sig_rows, , drop = FALSE] + sigma_chain
 
     # dMu/dalpha*[k] for k in clv.idx: column M[, k]
@@ -4051,6 +4069,16 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       j_alpha  <- j_lvc[n_lvc + seq_len(n_lvc), , drop = FALSE]
       mu_chain <- m[, clv_idx, drop = FALSE] %*% j_alpha
       out[seq_len(nvar), ] <- out[seq_len(nvar), , drop = FALSE] + mu_chain
+    } else if (meanstructure && categorical && nth_full > 0L) {
+      # categorical: the implied means enter the TH rows as
+      #   TH[t] = Delta*_v(t) * (tau_t - mu_v(t)),  mu = nu + M alpha,
+      # so the derived alpha*[clv] adds the chain term
+      #   d TH[t] / dphi += -Delta*_v(t) * M[v(t), k] * dalpha*[k] / dphi
+      j_alpha  <- j_lvc[n_lvc + seq_len(n_lvc), , drop = FALSE]
+      th_chain <- -(delta_star *
+                    (m[v_slot, clv_idx, drop = FALSE] %*% j_alpha))
+      out[seq_len(nth_full), ] <- out[seq_len(nth_full), , drop = FALSE] +
+                                  th_chain
     }
   }
 
