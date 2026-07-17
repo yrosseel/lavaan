@@ -291,6 +291,29 @@ lav_step02_options <- function(slot_options = NULL,
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
 
+    # composites (the '<~' operator, composites = TRUE) + conditional.x:
+    # the conditional (residual) moment machinery has no composite support
+    # (yet); stop with a clean message here instead of failing later inside
+    # the optimizer with a cryptic "non-conformable arrays" error. (With
+    # composites = FALSE, the '<~' rows have already been rewritten as
+    # regressions in step01, and this check does not apply.)
+    if (isTRUE(lavoptions$conditional.x) && any(flat_model$op == "<~")) {
+      lav_msg_stop(gettext(
+        "conditional.x = TRUE is not supported (yet) for models with
+         composites (the \"<~\" operator); please use
+         conditional.x = FALSE."))
+    }
+
+    # composites + parameterization = "theta": the implicit-Delta chain
+    # rule for the derived composite variances is not implemented (yet)
+    if (identical(lavoptions$parameterization, "theta") &&
+        any(flat_model$op == "<~")) {
+      lav_msg_stop(gettext(
+        "parameterization = \"theta\" is not supported (yet) for models
+         with composites (the \"<~\" operator); please use the (default)
+         \"delta\" parameterization."))
+    }
+
     # correlation = TRUE with observed product (interaction) terms: the
     # product of standardized variables does not have unit variance, so the
     # product terms must keep a free variance (github issue #427). We turn
