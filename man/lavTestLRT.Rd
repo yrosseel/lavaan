@@ -11,6 +11,7 @@ LRT test for comparing (nested) lavaan models.}
 \usage{
 lavTestLRT(object, ..., method = "default", test = "default",
            a_method = "delta", scaled_shifted = TRUE,
+           check_nested = TRUE,
            type = "Chisq", model_names = NULL)
 anova(object, ...)
 }
@@ -49,6 +50,19 @@ anova(object, ...)
   \code{"yuan.bentler.mplus"}), a scaled (non-shifted) difference test is used.
   The title printed above the anova table reflects the statistic that is
   actually used.}
+\item{check_nested}{Logical. If \code{TRUE} (the default), the nesting of
+  each pair of models (in the covariance sense) is verified with the NET
+  procedure (Bentler & Satorra, 2010; Asparouhov & \enc{Muthén}{Muthen},
+  2019): the less restricted model must be able to exactly reproduce the
+  model-implied moments of the more restricted model. If a pair of models
+  is found \emph{not} to be nested, a warning is issued (the difference
+  test is still computed). For a pair of models with \emph{equal} degrees
+  of freedom, equivalence (nesting in both directions) is checked instead,
+  and the warning states whether the models are equivalent (the difference
+  test is meaningless) or not equivalent (the difference test is invalid).
+  Pairs that cannot be checked are skipped silently; see
+  \code{\link{lavTestNET}} for the details of the procedure (and for its
+  limitations).}
 \item{type}{Character. If \code{"Chisq"}, the test statistic for each
   model is the (scaled or unscaled) model fit test statistic. If \code{"Cf"},
   the test statistic for each model is computed by the
@@ -132,6 +146,14 @@ difference chi-square test statistic. \emph{Psychometrika, 75}(2), 243-248.
 Foldnes, N., Moss, J., & Gronneberg, S. (2024). Improved goodness of fit
 procedures for structural equation models. \emph{Structural Equation Modeling:
 A Multidisciplinary Journal}, 1-13. \doi{10.1080/10705511.2024.2372028}
+
+Bentler, P. M., & Satorra, A. (2010). Testing model nesting and equivalence.
+\emph{Psychological Methods, 15}(2), 111-123. \doi{10.1037/a0019625}
+
+Asparouhov, T., & \enc{Muthén}{Muthen}, B. (2019). Nesting and equivalence
+testing for structural equation models. \emph{Structural Equation Modeling:
+A Multidisciplinary Journal, 26}(2), 302-309.
+\doi{10.1080/10705511.2018.1513795}
 
 Foldnes, N., Gronneberg, S., & Moss, J. (2026). Penalized eigenvalue block
 averaging: Extension to nested model comparison and Monte Carlo evaluations.

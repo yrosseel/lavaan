@@ -24,6 +24,7 @@
 
 lavTestLRT <- function(object, ..., method = "default", test = "default",   # nolint
                        a_method = "delta", scaled_shifted = TRUE, # only when method="Satorra.2000"
+                       check_nested = TRUE,
                        type = "Chisq", model_names = NULL) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
@@ -168,9 +169,53 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     # if(!all(sapply(COVS, all.equal, COVS[[1]]))) {
     #    stop("lavaan ERROR: models must be fit to the same data")
     # }
-    # 2. nested models? *different* npars?
-
-    # TODO!
+    # 2. nested models? verify with the NET procedure (Bentler & Satorra,
+    #    2010; Asparouhov & Muthen, 2019): the less restricted model must
+    #    be able to exactly reproduce the model-implied moments of the more
+    #    restricted model. Only a *conclusive* non-nesting verdict triggers
+    #    a warning; pairs that cannot be checked are skipped silently
+    #    (details are available through lavTestNET()).
+    #    For pairs with EQUAL degrees of freedom, we check equivalence
+    #    instead (nesting in both directions); the verdict is stored in
+    #    equiv_status, and reported near the end (where the p-value of
+    #    such pairs is set to NA).
+    equiv_status <- rep(as.logical(NA), length(mods))
+    if (isTRUE(check_nested) && type != "cf") {
+      for (m in seq_len(length(mods) - 1L)) {
+        net_out <- try(
+          lav_test_net_pair(m1 = mods[[m]], m0 = mods[[m + 1L]]),
+          silent = TRUE
+        )
+        if (inherits(net_out, "try-error")) {
+          next
+        }
+        if (ndf[m + 1L] == ndf[m]) {
+          # equal df: equivalent if (and only if) nested in both directions
+          net_rev <- try(
+            lav_test_net_pair(m1 = mods[[m + 1L]], m0 = mods[[m]]),
+            silent = TRUE
+          )
+          if (inherits(net_rev, "try-error")) {
+            next
+          }
+          if (isTRUE(net_out$nested) && isTRUE(net_rev$nested)) {
+            equiv_status[m + 1L] <- TRUE
+          } else if (isFALSE(net_out$nested) || isFALSE(net_rev$nested)) {
+            equiv_status[m + 1L] <- FALSE
+          }
+        } else if (isFALSE(net_out$nested)) {
+          lav_msg_warn(gettextf(
+            "model %1$s does not appear to be nested within model %2$s:
+             the less restricted model cannot exactly reproduce the
+             model-implied moments of the more restricted model (NET check;
+             fit function value = %3$s). The chi-squared difference test
+             may be invalid. (Use check_nested = FALSE to skip this
+             check.)",
+            dQuote(names(mods)[m + 1L]), dQuote(names(mods)[m]),
+            format(net_out$fx, digits = 3L)))
+        }
+      }
+    }
 
     # 3. all meanstructure?
     mean_structure <- sapply(mods, lavInspect, "meanstructure")
@@ -577,7 +622,29 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
   if (length(idx) > 0L) {
     val[idx, "Pr(>Chisq)"] <- as.numeric(NA)
-    lav_msg_warn(gettext("some models have the same degrees of freedom"))
+    # if the NET check (see above) reached a verdict for such a pair,
+    # report it; otherwise fall back to the generic warning
+    generic_flag <- FALSE
+    for (i in idx) {
+      if (isTRUE(equiv_status[i])) {
+        lav_msg_warn(gettextf(
+          "models %1$s and %2$s are equivalent: they imply the same set of
+           moment structures (NET check), and the chi-squared difference
+           test between them is meaningless.",
+          dQuote(names(mods)[i - 1L]), dQuote(names(mods)[i])))
+      } else if (isFALSE(equiv_status[i])) {
+        lav_msg_warn(gettextf(
+          "models %1$s and %2$s have the same degrees of freedom, but they
+           are not equivalent (NET check): the chi-squared difference test
+           between them is invalid.",
+          dQuote(names(mods)[i - 1L]), dQuote(names(mods)[i])))
+      } else {
+        generic_flag <- TRUE
+      }
+    }
+    if (generic_flag) {
+      lav_msg_warn(gettext("some models have the same degrees of freedom"))
+    }
   }
 
   if (type == "chisq") {

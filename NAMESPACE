@@ -82,6 +82,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lavTablesFitCp", "lavTablesFitCf", "lavTablesFitCm",
        "lavExport",
        "lavTest", "lavTestLRT", "lavTestWald", "lavTestScore",
+       "lavTestNET",
        "lavMatrixRepresentation",
        "lav_mplus_lavaan", "mplus2lavaan",
        "lav_mplus_syntax_model", "mplus2lavaan.modelSyntax",
@@ -271,6 +272,7 @@ exportMethods(
 S3method(print, lavaan.data.frame, lav_dataframe_print)
 S3method(print, lavaan.list, lav_lavaanlist_print)
 S3method(print, lavaan.matrix, lav_mat_print)
+S3method(print, lavaan.net, lav_net_print)
 S3method(print, lavaan.matrix.symmetric, lav_mat_sym_print)
 S3method(print, lavaan.vector, lav_vector_print)
 S3method(print, lavaan.parameterEstimates, lav_parameterestimates_print)
