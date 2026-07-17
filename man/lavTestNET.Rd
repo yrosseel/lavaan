@@ -20,7 +20,7 @@ lavTestNET(object, ..., crit = 1e-7, npoints = 1L,
   moments of the more restricted model: values below \code{crit} imply
   nesting (or equivalence, if the degrees of freedom are equal), values
   above \code{10 * crit} imply non-nesting, and values in between are
-  inconclusive (following Asparouhov & \enc{Muthén}{Muthen}, 2019).}
+  inconclusive (following Asparouhov & Muthen, 2019).}
 \item{npoints}{Integer. The number of parameter points of the restricted
   model where the check is carried out. The first point is always the
   vector of parameter estimates. If \code{npoints > 1L}, additional
@@ -28,7 +28,7 @@ lavTestNET(object, ..., crit = 1e-7, npoints = 1L,
   and inequality constraints). This protects against \sQuote{data
   specific} conclusions: two models may accidentally appear to be nested
   (or equivalent) at the estimated parameter values only. See the
-  discussion in Asparouhov & \enc{Muthén}{Muthen} (2019).}
+  discussion in Asparouhov & Muthen (2019).}
 \item{iseed}{Integer. The seed for the random perturbations (only used if
   \code{npoints > 1L}). The state of the random generator of the user is
   left untouched.}
@@ -74,7 +74,7 @@ the models, in the order used in the matrix), \code{crit} and
 Bentler, P. M., & Satorra, A. (2010). Testing model nesting and equivalence.
 \emph{Psychological Methods, 15}(2), 111-123. \doi{10.1037/a0019625}
 
-Asparouhov, T., & \enc{Muthén}{Muthen}, B. (2019). Nesting and equivalence
+Asparouhov, T., & Muthen, B. (2019). Nesting and equivalence
 testing for structural equation models. \emph{Structural Equation Modeling:
 A Multidisciplinary Journal, 26}(2), 302-309.
 \doi{10.1080/10705511.2018.1513795}

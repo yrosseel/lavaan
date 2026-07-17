@@ -52,7 +52,7 @@ anova(object, ...)
   actually used.}
 \item{check_nested}{Logical. If \code{TRUE} (the default), the nesting of
   each pair of models (in the covariance sense) is verified with the NET
-  procedure (Bentler & Satorra, 2010; Asparouhov & \enc{Muthén}{Muthen},
+  procedure (Bentler & Satorra, 2010; Asparouhov & Muthen,
   2019): the less restricted model must be able to exactly reproduce the
   model-implied moments of the more restricted model. If a pair of models
   is found \emph{not} to be nested, a warning is issued (the difference
@@ -150,7 +150,7 @@ A Multidisciplinary Journal}, 1-13. \doi{10.1080/10705511.2024.2372028}
 Bentler, P. M., & Satorra, A. (2010). Testing model nesting and equivalence.
 \emph{Psychological Methods, 15}(2), 111-123. \doi{10.1037/a0019625}
 
-Asparouhov, T., & \enc{Muthén}{Muthen}, B. (2019). Nesting and equivalence
+Asparouhov, T., & Muthen, B. (2019). Nesting and equivalence
 testing for structural equation models. \emph{Structural Equation Modeling:
 A Multidisciplinary Journal, 26}(2), 302-309.
 \doi{10.1080/10705511.2018.1513795}
