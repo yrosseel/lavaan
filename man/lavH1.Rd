@@ -49,8 +49,15 @@ lavH1(model = NULL, data = NULL, ordered = NULL, sampling_weights = NULL,
     a two-level dataset.}
 \item{missing}{How to handle missing data. If \code{"ml"} (alias:
     \code{"fiml"}), an EM algorithm is used to compute the saturated
-    (h1) summary statistics using all available information. See
-    \code{\link{lavOptions}} for further options.}
+    (h1) summary statistics using all available information. If
+    \code{"two.stage"} or \code{"robust.two.stage"} (continuous data
+    only), the EM saturated summary statistics are returned together with
+    the stage-1 \code{NACOV} (the asymptotic covariance matrix of those
+    statistics) when \code{output = "lavMoments"}, so that a follow-up
+    analysis based on the summary statistics only reproduces the same
+    (two-stage) estimates, standard errors and test statistics as when
+    the raw data were provided. See \code{\link{lavOptions}} for further
+    options.}
 \item{ov_names_x}{Character vector. Variables that need to be treated as
     exogenous. Only used if no model is provided.}
 \item{ov_names_l}{List. Only used for two-level data when no model is
@@ -129,6 +136,36 @@ for two-stage estimation procedures. If \code{output = "lavMoments"}, an
 object of class \code{lavMoments} that can be passed directly as the
 \code{data=} argument of \code{lavaan}/\code{cfa}/\code{sem}.
 }
+\section{Reproducing a fit from an output = "lavMoments" object}{
+A \code{lavMoments} object reproduces the original raw-data fit
+\emph{exactly} for the estimators whose estimates, standard errors and
+test statistics are functions of the summary statistics only. This
+includes maximum likelihood (\code{"ML"}) and generalized least squares
+(\code{"GLS"}); the robust variants (\code{"MLM"}, \code{"MLMV"},
+\code{"MLMVS"}, \ldots and the Satorra-Bentler / scaled-shifted /
+mean-variance-adjusted tests), provided the \code{gamma} (\code{NACOV})
+matrix is requested (\code{gamma = TRUE}); the diagonally weighted least
+squares estimators for ordered data (\code{"WLSMV"}, \code{"WLSM"},
+\code{"DWLS"}, \ldots, which include \code{WLS.V} and \code{NACOV} by
+default); and two-stage maximum likelihood for incomplete continuous data
+(\code{missing = "two.stage"} or \code{"robust.two.stage"}).
+
+For the estimators whose \emph{weight matrix} is estimator-specific (for
+example the identity weight of the \code{"ULS"} family, or the ADF weight
+of continuous \code{"WLS"}), pass the SAME \code{estimator} to
+\code{lavH1()} as will be used in the refit, so that the matching
+\code{WLS.V} is returned.
+
+A raw-data fit cannot be reproduced from summary statistics when the
+standard errors or test statistic depend on the individual cases: the
+Huber-White ('robust') sandwich (\code{"MLR"}, \code{se =
+"robust.huber.white"}), the first-order/outer-product information
+(\code{"MLF"}), cluster-robust (\code{cluster =}) standard errors, the
+bootstrap (\code{se = "bootstrap"}), pairwise maximum likelihood
+(\code{"PML"}), and direct full-information maximum likelihood for
+incomplete data (\code{missing = "ml"}; use \code{missing = "two.stage"}
+instead).
+}
 \seealso{
 \code{\link{lavCor}} for (polychoric, polyserial and Pearson)
 correlations (which uses the same machinery), and
@@ -172,4 +209,16 @@ model <- ' visual  =~ x1 + x2 + x3
 moments <- lavH1(model, data = Data, output = "lavMoments")
 moments
 fit <- cfa(model, data = moments)   # identical to cfa(model, data = Data)
+
+# two-stage ML for incomplete (continuous) data: the EM saturated moments
+# plus the stage-1 NACOV allow a moments-only refit to reproduce the exact
+# two-stage estimates, standard errors and (scaled) test statistics
+HS.incomplete <- HolzingerSwineford1939[, paste0("x", 1:9)]
+HS.incomplete$x1[1:20] <- HS.incomplete$x5[15:40] <- NA
+model2 <- ' visual =~ x1 + x2 + x3
+            textual =~ x4 + x5 + x6 '
+moments2 <- lavH1(model2, data = HS.incomplete, missing = "two.stage",
+                  output = "lavMoments")
+fit2 <- cfa(model2, data = moments2)
+# same as: cfa(model2, data = HS.incomplete, missing = "two.stage")
 }

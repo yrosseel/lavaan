@@ -344,6 +344,42 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
 # - Savalei \& Bentler (2009) eq (6) for se = "two.stage"
 # - Savalei \& Falk (2014) eq  (3)   for se = "robust.two.stage"
 # - Yuan \& Bentler (2000)
+
+# compute the stage-1 'Omega': the asymptotic covariance matrix of the
+# (EM) saturated moments for a single group, given the moments (mu,
+# sigma_1) and the missing-data patterns. This is the object that the
+# two-stage sandwich needs, and it only depends on the saturated moments
+# and the missing-data patterns (not on the structural model) -- so it can
+# be precomputed by lavH1() and stored as a NACOV for a later moments-only
+# refit. Shared between lav_model_nvcov_two_stage() and lavH1().
+lav_mvnorm_h1_omega_2stage <- function(y = NULL, mp = NULL, yp = NULL,
+                                       wt = NULL, cluster_idx = NULL,
+                                       mu = NULL, sigma_1 = NULL,
+                                       x_idx = integer(0L),
+                                       se = "two.stage",
+                                       information = "observed") {
+  if (se == "two.stage") {
+    # Savalei & Bentler (2009): Omega = inverse of the h1 information
+    if (information == "expected") {
+      info <- lav_mvn_mi_info_expected(
+        y = y, mp = mp, wt = wt, mu = mu, sigma_1 = sigma_1, x_idx = x_idx
+      )
+    } else {
+      info <- lav_mvnorm_missing_information_observed_samplestats(
+        yp = yp, mu = mu, sigma_1 = sigma_1, x_idx = x_idx
+      )
+    }
+    omega <- lav_mat_sym_inverse(info)
+  } else { # robust.two.stage
+    # Savalei & Falk (2014): Omega = I_1^{-1} J_1 I_1^{-1} (sandwich)
+    omega <- lav_mvn_mi_h1_omega_sw(
+      y = y, mp = mp, yp = yp, wt = wt, cluster_idx = cluster_idx,
+      mu = mu, sigma_1 = sigma_1, x_idx = x_idx, information = information
+    )
+  }
+  omega
+}
+
 lav_model_nvcov_two_stage <- function(lavmodel = NULL,
                                       lavsamplestats = NULL,
                                       lavoptions = NULL,
@@ -427,6 +463,22 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     } else {
       # full weight matrix
       wd <- wls_v[[g]] %*% delta[[g]]
+    }
+
+    # if the USER provided a NACOV (the stage-1 Omega of the saturated
+    # moments), use it directly instead of recomputing it from the raw
+    # data. This is what makes it possible to reproduce a two-stage fit
+    # from summary statistics only (e.g. the output of lavH1(); the raw
+    # data are then not available at all). For h1.information =
+    # "unstructured" (the two.stage default) the Omega only depends on the
+    # (EM) saturated moments and the missing-data patterns, so it can be
+    # precomputed without the model. NOTE: gate on NACOV.user -- a NACOV
+    # that lavaan itself computed (e.g. the ADF Gamma for DWLS) is a
+    # different object and must NOT be treated as the stage-1 Omega.
+    if (lavsamplestats@NACOV.user && !is.null(lavsamplestats@NACOV[[g]])) {
+      gamma[[g]] <- lavsamplestats@NACOV[[g]]
+      t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
+      next
     }
 
     # conditional.x: the stage-1 'saturated' parameters live in the
@@ -544,52 +596,25 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     }
 
     # compute 'gamma' (or Omega.beta)
-    if (lavoptions$se == "two.stage") {
-      # this is Savalei & Bentler (2009)
-      if (lavoptions$information[1] == "expected") {
-        info <- lav_mvn_mi_info_expected(
-          y = y_g, mp = mp_g,
-          wt = lavdata@weights[[g]],
-          mu = mu_g, sigma_1 = sigma_g,
-          x_idx = lavsamplestats@x.idx[[g]]
-        )
-      } else {
-        info <- lav_mvnorm_missing_information_observed_samplestats(
-          yp = if (use_aux) {
-            lav_samp_mi_patterns(y = y_g, mp = mp_g)
-          } else {
-            lavsamplestats@missing[[g]]
-          },
-          # wt not needed
-          mu = mu_g, sigma_1 = sigma_g,
-          x_idx = lavsamplestats@x.idx[[g]]
-        )
-      }
-      omega_g <- lav_mat_sym_inverse(info)
-    } else { # we assume "robust.two.stage"
-      # NACOV is here incomplete gamma
-      # Savalei & Falk (2014)
-      #
-      if (length(lavdata@cluster) > 0L) {
-        cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
-      } else {
-        cluster_idx <- NULL
-      }
-      omega_g <- lav_mvn_mi_h1_omega_sw(
-        y = y_g,
-        mp = mp_g,
-        yp = if (use_aux) {
-          lav_samp_mi_patterns(y = y_g, mp = mp_g)
-        } else {
-          lavsamplestats@missing[[g]]
-        },
-        wt = lavdata@weights[[g]],
-        cluster_idx = cluster_idx,
-        mu = mu_g, sigma_1 = sigma_g,
-        x_idx = lavsamplestats@x.idx[[g]],
-        information = lavoptions$information[1]
-      )
+    if (length(lavdata@cluster) > 0L) {
+      cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+    } else {
+      cluster_idx <- NULL
     }
+    omega_g <- lav_mvnorm_h1_omega_2stage(
+      y = y_g, mp = mp_g,
+      yp = if (use_aux) {
+        lav_samp_mi_patterns(y = y_g, mp = mp_g)
+      } else {
+        lavsamplestats@missing[[g]]
+      },
+      wt = lavdata@weights[[g]],
+      cluster_idx = cluster_idx,
+      mu = mu_g, sigma_1 = sigma_g,
+      x_idx = lavsamplestats@x.idx[[g]],
+      se = lavoptions$se,
+      information = lavoptions$information[1]
+    )
 
     # auxiliary variables: reduce the augmented Omega to the model-variable
     # moments (sub-matrix of the inverse information)

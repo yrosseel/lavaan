@@ -61,6 +61,18 @@ lavH1 <- function(model = NULL, # nolint
     estimator <- "default"
   }
 
+  # two-stage estimation for (continuous) missing data: the stage-1 (EM)
+  # saturated moments are computed with missing = "ml"; the requested
+  # se ("two.stage" or "robust.two.stage") is remembered so that
+  # lav_h1_moments() can add the stage-1 NACOV and the matching options to
+  # the lavMoments object (allowing a later moments-only refit to reproduce
+  # the two-stage results)
+  two_stage_se <- NULL
+  if (tolower(missing) %in% c("two.stage", "robust.two.stage")) {
+    two_stage_se <- tolower(missing)
+    missing <- "ml"
+  }
+
   # these options are set by lavH1() itself
   fixed_names <- c("h1", "do.fit", "baseline")
   drop_idx <- which(names(dotdotdot) %in% fixed_names)
@@ -104,7 +116,7 @@ lavH1 <- function(model = NULL, # nolint
     }
     return(lav_h1_output(lavobject,
       output = output, wls_v = wls_v, gamma = gamma,
-      add_extra = add_extra,
+      two_stage_se = two_stage_se, add_extra = add_extra,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group
     ))
@@ -131,7 +143,7 @@ lavH1 <- function(model = NULL, # nolint
     }
     return(lav_h1_output(fit0,
       output = output, wls_v = wls_v, gamma = gamma,
-      add_extra = add_extra,
+      two_stage_se = two_stage_se, add_extra = add_extra,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group
     ))
@@ -153,7 +165,7 @@ lavH1 <- function(model = NULL, # nolint
 
   lav_h1_output(lavobject,
     output = output, wls_v = wls_v, gamma = gamma,
-    add_extra = add_extra,
+      two_stage_se = two_stage_se, add_extra = add_extra,
     add_labels = add_labels, add_class = add_class,
     drop_list_single_group = drop_list_single_group
   )
@@ -180,6 +192,14 @@ lav_h1_lavobject <- function(object,
   if (!is.null(dotdotdot$do.fit)) {
     do_fit <- dotdotdot$do.fit
     dotdotdot$do.fit <- NULL
+  }
+
+  # two-stage estimation: the stage-1 (EM) saturated moments are the same
+  # as for missing = "ml", so build the saturated object with "ml" (this
+  # also avoids the two.stage machinery, which expects a structural
+  # model). The two-stage NACOV/options are added later, by lav_h1_moments()
+  if (tolower(missing) %in% c("two.stage", "robust.two.stage")) {
+    missing <- "ml"
   }
 
   # extract sampling.weights.normalization from dots (for lav_lavdata() call)
@@ -353,6 +373,7 @@ lav_h1_output <- function(lavobject,
                           output = "list",
                           wls_v = NULL,
                           gamma = NULL,
+                          two_stage_se = NULL,
                           add_extra = TRUE,
                           add_labels = TRUE,
                           add_class = TRUE,
@@ -378,7 +399,7 @@ lav_h1_output <- function(lavobject,
   # directly as the data= argument of lavaan()/cfa()/sem()
   if (output == "lavmoments") {
     return(lav_h1_moments(lavobject,
-      wls_v = wls_v, gamma = gamma,
+      wls_v = wls_v, gamma = gamma, two_stage_se = two_stage_se,
       add_labels = add_labels, add_class = add_class
     ))
   }
@@ -475,6 +496,7 @@ lav_h1_output <- function(lavobject,
 lav_h1_moments <- function(lavobject,
                            wls_v = TRUE,
                            gamma = TRUE,
+                           two_stage_se = NULL,
                            add_labels = TRUE,
                            add_class = TRUE) {
   lavmodel <- lavobject@Model
@@ -520,6 +542,33 @@ lav_h1_moments <- function(lavobject,
     slopes_list <- pick("res.slopes")
     covx_list <- pick("cov.x")
     meanx_list <- pick("mean.x")
+  }
+
+  # continuous data: the h1 covariance is the (biased) divided-by-N
+  # maximum-likelihood version. ML (and the robust MLM/MLMV/... variants)
+  # use that version internally, but the least-squares estimators (GLS,
+  # WLS, ...) use the (unbiased) divided-by-(N-1) version. So for
+  # continuous data, provide the unbiased covariance and let each
+  # estimator apply its own sample.cov.rescale default (below); this makes
+  # the refit reproduce the raw-data fit for BOTH conventions. Categorical
+  # (correlation-based) and two-stage (EM) moments keep the divided-by-N
+  # version (see the sample.cov.rescale = FALSE option below).
+  rescale_unbiased <- !categorical && is.null(two_stage_se)
+  if (rescale_unbiased) {
+    nobs_g <- unlist(lavobject@SampleStats@nobs)
+    resc <- function(lst) {
+      if (is.null(lst)) return(NULL)
+      Map(function(m, n) {
+        a <- attributes(m)
+        m <- m * (n / (n - 1))
+        attributes(m) <- a
+        m
+      }, lst, nobs_g)
+    }
+    cov_list <- resc(cov_list)
+    if (conditional_x) {
+      covx_list <- resc(covx_list)
+    }
   }
 
   # single group: unwrap the per-group lists; multiple groups: keep them.
@@ -571,13 +620,16 @@ lav_h1_moments <- function(lavobject,
 
   # the options that the refit must reproduce (only those that change the
   # interpretation of the summary statistics; step00 copies these into
-  # the call unless the user overrides them). The covariance matrix is the
-  # (divided-by-N) maximum-likelihood version that lavaan uses internally,
-  # so the refit must NOT rescale it by (N-1)/N
-  lav_options <- list(
-    conditional.x = conditional_x,
-    sample.cov.rescale = FALSE
-  )
+  # the call unless the user overrides them). For categorical / two-stage
+  # moments we provide the divided-by-N covariance and switch OFF the
+  # (N-1)/N rescaling; for continuous data we provide the divided-by-(N-1)
+  # covariance (see above) and leave sample.cov.rescale at its
+  # estimator-specific default, so both ML and least-squares estimators
+  # are reproduced.
+  lav_options <- list(conditional.x = conditional_x)
+  if (!rescale_unbiased) {
+    lav_options$sample.cov.rescale <- FALSE
+  }
   if (conditional_x) {
     lav_options$fixed.x <- lavmodel@fixed.x
   }
@@ -607,6 +659,43 @@ lav_h1_moments <- function(lavobject,
       drop_list_single_group = TRUE
     )
   }
+
+  # two-stage estimation (continuous missing data): store the stage-1
+  # 'Omega' (the asymptotic covariance matrix of the EM saturated moments)
+  # as NACOV, together with the options that make a later moments-only
+  # refit reproduce the two-stage estimates and standard errors. Because
+  # the two-stage default uses h1.information = "unstructured", this Omega
+  # depends only on the EM moments and the missing-data patterns, not on
+  # the structural model, so it can be precomputed here.
+  if (!is.null(two_stage_se)) {
+    ss <- lavobject@SampleStats
+    omega_list <- vector("list", ngroups)
+    for (g in seq_len(ngroups)) {
+      omega_g <- lav_mvnorm_h1_omega_2stage(
+        y = lavobject@Data@X[[g]],
+        mp = lavobject@Data@Mp[[g]],
+        yp = ss@missing[[g]],
+        wt = lavobject@Data@weights[[g]],
+        cluster_idx = NULL,
+        mu = lavobject@h1$implied$mean[[g]],
+        sigma_1 = lavobject@h1$implied$cov[[g]],
+        x_idx = ss@x.idx[[g]],
+        se = two_stage_se,
+        information = "observed"
+      )
+      if (add_class) {
+        class(omega_g) <- c("lavaan.matrix.symmetric", "matrix")
+      }
+      omega_list[[g]] <- omega_g
+    }
+    out$NACOV <- if (ngroups == 1L) omega_list[[1]] else omega_list
+    lav_options$se <- two_stage_se
+    lav_options$test <- "satorra.bentler"
+    lav_options$information <- "observed"
+    lav_options$observed.information <- "h1"
+    lav_options$h1.information <- "unstructured"
+  }
+
   out$lavOptions <- lav_options
 
   class(out) <- c("lavMoments", "list")
