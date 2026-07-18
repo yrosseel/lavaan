@@ -183,7 +183,8 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
 # are pooled jointly, reproducing the ML mean estimate (given Sigma). The "vcov"
 # attribute holds the GLS information inverse A^{-1} (= the SE covariance for
 # the continuous, complete-data case).
-lav_sem_miiv_mean_wls <- function(lavmodel, lavsamplestats, x, free_mean_idx) {
+lav_sem_miiv_mean_wls <- function(lavmodel, lavsamplestats, x, free_mean_idx,
+                                  sample_mean = NULL) {
   implied <- lav_model_implied(lav_model_set_parameters(lavmodel, x = x))
   delta_list <- lav_sem_miiv_delta(lav_model_set_parameters(lavmodel, x = x))
   # fixed mean contribution (free mean parameters set to 0)
@@ -197,7 +198,12 @@ lav_sem_miiv_mean_wls <- function(lavmodel, lavsamplestats, x, free_mean_idx) {
   for (g in seq_len(lavmodel@nblocks)) {
     nvar <- lavmodel@nvar[[g]]
     m_g <- delta_list[[g]][seq_len(nvar), free_mean_idx, drop = FALSE]
-    resid <- lavsamplestats@mean[[g]] - implied0$mean[[g]]
+    mean_g <- if (is.null(sample_mean)) {
+      lavsamplestats@mean[[g]]
+    } else {
+      sample_mean[[g]]
+    }
+    resid <- mean_g - implied0$mean[[g]]
     w_g <- try(lav_mat_sym_inverse(implied$cov[[g]]), silent = TRUE)
     if (inherits(w_g, "try-error")) {
       w_g <- diag(nvar)

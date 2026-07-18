@@ -1371,6 +1371,13 @@ lavParameterEstimates <- function(object,                      # nolint
             }
           }
         }
+        # estimator = "JS"/"JSA": delta-method standard errors over the
+        # sample moments; report the type of moment ACOV (Gamma)
+        if (object@Options$estimator %in% c("JS", "JSA")) {
+          attr(tmp_list, "estimator") <- object@Options$estimator
+          attr(tmp_list, "js.gamma") <-
+            toupper(object@Options$estimator.args[["js_gamma"]])
+        }
         # FIXME: add more!!
       }
     } else {

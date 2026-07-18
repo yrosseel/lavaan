@@ -694,14 +694,15 @@ lav_options_est_js <- function(opt) {
   opt$fixed.x <- FALSE # for now
   opt$loglik <- FALSE
 
-  # se: no standard errors (yet)
+  # se: delta-method standard errors over the sample moments (the estimator
+  # has its own machinery; see lav_sem_js_vcov)
   if (opt$se == "default") {
-    opt$se <- "none"
-  } else if (opt$se != "none") {
+    opt$se <- "standard"
+  } else if (!opt$se %in% c("none", "standard", "bootstrap")) {
     lav_msg_warn(gettextf(
-      "standard errors are not available (yet) for estimator = %s;
-       se is set to \"none\".", label))
-    opt$se <- "none"
+      "estimator %s only supports se = \"standard\", \"bootstrap\" or
+       \"none\"; se is set to \"standard\".", label))
+    opt$se <- "standard"
   }
   # bounds
   if (!is.null(opt$bounds) && opt$bounds == "default" &&
@@ -766,6 +767,22 @@ lav_options_est_js <- function(opt) {
         "js_theta_bounds value in estimator.args must be either %s.",
         lav_msg_view(c("wide", "standard", "none"), log_sep = "or")))
     }
+  }
+  if (is.null(ea$js_gamma)) {
+    ea$js_gamma <- "nt"
+  } else {
+    ea$js_gamma <- tolower(ea$js_gamma)
+    if (!ea$js_gamma %in% c("nt", "adf")) {
+      lav_msg_stop(gettextf(
+        "js_gamma value in estimator.args must be either %s.",
+        lav_msg_view(c("nt", "adf"), log_sep = "or")))
+    }
+  }
+  if (is.null(ea$js_vcov_gamma_modelbased)) {
+    ea$js_vcov_gamma_modelbased <- TRUE
+  } else if (!is.logical(ea$js_vcov_gamma_modelbased)) {
+    lav_msg_stop(gettext(
+      "js_vcov_gamma_modelbased in estimator.args must be TRUE or FALSE."))
   }
   if (is.null(ea$js_varcov_method)) {
     ea$js_varcov_method <- "RLS"

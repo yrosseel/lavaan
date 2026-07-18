@@ -60,6 +60,20 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
         lavdata = lavdata,
         eqs = attr(x, "eqs")
       )
+    } else if (lavoptions$estimator %in% c("JS", "JSA") &&
+               lavoptions$se != "bootstrap") {
+      # estimator = "JS"/"JSA": delta-method standard errors over the
+      # sample moments (numerical Jacobian of the complete estimation map)
+      vcov_1 <- lav_sem_js_vcov(
+        lavmodel = lavmodel,
+        lavsamplestats = lavsamplestats,
+        lavoptions = lavoptions,
+        lavpartable = lavpartable,
+        lavimplied = lavimplied,
+        lavh1 = lavh1,
+        lavdata = lavdata,
+        eqs = attr(x, "eqs")
+      )
     } else {
       # everything else:
       vcov_1 <- lav_model_vcov(

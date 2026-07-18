@@ -58,69 +58,18 @@ lav_sem_js_internal <- function(lavmodel = NULL, lavh1 = NULL,
   free_directed_idx <- unique(lavpartable$free[directed_idx])
   free_undirected_idx <- unique(lavpartable$free[undirected_idx])
 
-  # initial parameter vector
-  x <- lav_model_get_parameters(lavmodel)
-
-  ########################################
-  # first stage: directed parameters     #
-  ########################################
-  theta1 <- numeric(0L)
-  if (length(free_directed_idx) > 0L) {
-    theta1 <- lav_sem_js_stage1_samp(
-      x = NULL, samplestats = FALSE, eqs = eqs,
-      lavmodel = lavmodel, lavpartable = lavpartable,
-      lavsamplestats = lavsamplestats, lavh1 = lavh1,
-      lavoptions = lavoptions,
-      free_directed_idx = free_directed_idx,
-      aggregated = aggregated
-    )
-    # update equations
-    eqs <- attr(theta1, "eqs")
-    theta1 <- as.numeric(theta1) # drop attributes
-    # store theta1 elements in x
-    x[free_directed_idx] <- theta1
-  }
-
-  #######################################
-  # second stage: undirected parameters #
-  #######################################
-  js_varcov_method <- toupper(lavoptions$estimator.args[["js_varcov_method"]])
-  if (length(js_varcov_method) == 0L) {
-    js_varcov_method <- "RLS"
-  }
-  if (length(free_undirected_idx) > 0L && js_varcov_method != "NONE") {
-    theta2 <- lav_sem_miiv_varcov(
-      x = theta1,
-      lavmodel = lavmodel, lavpartable = lavpartable,
-      lavsamplestats = lavsamplestats,
-      lavh1 = lavh1, free_directed_idx = free_directed_idx,
-      free_undirected_idx = free_undirected_idx,
-      iv_varcov_method = js_varcov_method
-    )
-  } else {
-    theta2 <- rep(as.numeric(NA), length(free_undirected_idx))
-  }
-  # store theta2 elements in x
-  x[free_undirected_idx] <- theta2
-
-  # mean structure: by default, re-estimate all free mean parameters
-  # (observed intercepts and latent means) jointly by GLS, exactly as the IV
-  # estimator does; this also provides the means of the exogenous latent
-  # variables (which have no equation of their own)
-  js_mean_structure <- tolower(lavoptions$estimator.args[["js_mean_structure"]])
-  if (length(js_mean_structure) == 0L) {
-    js_mean_structure <- "wls"
-  }
-  if (lavmodel@meanstructure && identical(js_mean_structure, "wls")) {
-    free_mean_idx <- unique(lavpartable$free[lavpartable$op == "~1" &
-      lavpartable$free > 0L & !duplicated(lavpartable$free)])
-    if (length(free_mean_idx) > 0L) {
-      x[free_mean_idx] <- lav_sem_miiv_mean_wls(
-        lavmodel = lavmodel, lavsamplestats = lavsamplestats, x = x,
-        free_mean_idx = free_mean_idx
-      )
-    }
-  }
+  # run the (complete) estimation map at the sample moments
+  x <- lav_sem_js_estimate(
+    vec = NULL, eqs = eqs,
+    lavmodel = lavmodel, lavpartable = lavpartable,
+    lavsamplestats = lavsamplestats, lavh1 = lavh1,
+    lavoptions = lavoptions,
+    free_directed_idx = free_directed_idx,
+    free_undirected_idx = free_undirected_idx,
+    aggregated = aggregated
+  )
+  eqs <- attr(x, "eqs")
+  x <- as.numeric(x)
 
   # apply bounds (if any)
   if (!is.null(lavpartable$lower)) {
@@ -142,6 +91,197 @@ lav_sem_js_internal <- function(lavmodel = NULL, lavh1 = NULL,
 
   attr(x, "eqs") <- eqs
   x
+}
+
+
+# the COMPLETE estimation map, as a function of the sample moments: stage 1
+# (directed parameters), stage 2 (variances/covariances) and the joint mean
+# solve. When 'vec' is NULL, the lavh1 moments are used (the point
+# estimates); when 'vec' contains a stacked moment vector (as produced by
+# lav_implied_to_vec), the same map is evaluated at those moments -- this
+# is the function that is differentiated (numerically) for the standard
+# errors, so that the uncertainty of ALL ingredients (the Spearman
+# reliability estimates, the aggregation weights, the pooled solves, the
+# stage-2 weights and the mean solve) is propagated automatically
+lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
+                                lavmodel = NULL, lavpartable = NULL,
+                                lavsamplestats = NULL, lavh1 = NULL,
+                                lavoptions = NULL,
+                                free_directed_idx = NULL,
+                                free_undirected_idx = NULL,
+                                aggregated = FALSE) {
+  samplestats <- !is.null(vec)
+  if (samplestats) {
+    implied <- lav_vec_to_implied(vec, lavmodel = lavmodel)
+  } else {
+    implied <- lavh1$implied
+  }
+
+  # initial parameter vector
+  x <- lav_model_get_parameters(lavmodel)
+
+  ########################################
+  # first stage: directed parameters     #
+  ########################################
+  eqs_out <- eqs
+  if (length(free_directed_idx) > 0L) {
+    theta1 <- lav_sem_js_stage1_samp(
+      x = vec, samplestats = samplestats, eqs = eqs,
+      lavmodel = lavmodel, lavpartable = lavpartable,
+      lavsamplestats = lavsamplestats, lavh1 = lavh1,
+      lavoptions = lavoptions,
+      free_directed_idx = free_directed_idx,
+      aggregated = aggregated
+    )
+    eqs_out <- attr(theta1, "eqs")
+    x[free_directed_idx] <- as.numeric(theta1)
+  }
+
+  #######################################
+  # second stage: undirected parameters #
+  #######################################
+  js_varcov_method <- toupper(lavoptions$estimator.args[["js_varcov_method"]])
+  if (length(js_varcov_method) == 0L) {
+    js_varcov_method <- "RLS"
+  }
+  if (length(free_undirected_idx) > 0L && js_varcov_method != "NONE") {
+    lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+    delta_list <- lav_sem_miiv_delta(lavmodel_tmp)
+    theta2 <- lav_sem_miiv_varcov_block(
+      b = 1L, fu = free_undirected_idx, delta_b = delta_list[[1L]],
+      implied = implied, lavmodel = lavmodel, x = x,
+      iv_varcov_method = js_varcov_method, return_h = FALSE
+    )
+    x[free_undirected_idx] <- as.numeric(theta2)
+  } else if (length(free_undirected_idx) > 0L) {
+    x[free_undirected_idx] <- as.numeric(NA)
+  }
+
+  # mean structure: by default, re-estimate all free mean parameters
+  # (observed intercepts and latent means) jointly by GLS, exactly as the IV
+  # estimator does; this also provides the means of the exogenous latent
+  # variables (which have no equation of their own)
+  js_mean_structure <- tolower(lavoptions$estimator.args[["js_mean_structure"]])
+  if (length(js_mean_structure) == 0L) {
+    js_mean_structure <- "wls"
+  }
+  if (lavmodel@meanstructure && identical(js_mean_structure, "wls")) {
+    free_mean_idx <- unique(lavpartable$free[lavpartable$op == "~1" &
+      lavpartable$free > 0L & !duplicated(lavpartable$free)])
+    if (length(free_mean_idx) > 0L) {
+      x[free_mean_idx] <- lav_sem_miiv_mean_wls(
+        lavmodel = lavmodel, lavsamplestats = lavsamplestats, x = x,
+        free_mean_idx = free_mean_idx,
+        sample_mean = implied$mean
+      )
+    }
+  }
+
+  attr(x, "eqs") <- eqs_out
+  x
+}
+
+
+# VCOV for the free parameters: the delta method over the sample moments.
+# The full estimation map theta(s) is differentiated numerically with
+# respect to the stacked moment vector s = [mean, vech(cov)], and
+# sandwiched with the asymptotic covariance of the sample moments:
+#
+#   vcov = J Gamma J' / n
+#
+# with Gamma the normal-theory moment covariance (js_gamma = "nt", the
+# default; evaluated at the model-implied moments unless
+# js_vcov_gamma_modelbased = FALSE) or the distribution-free (ADF) moment
+# covariance (js_gamma = "adf", requires raw data). Because the Jacobian
+# runs through the complete map, the extra variability caused by
+# estimating the reliability matrix (Burghgraeve et al. 2021, Theorem 2)
+# -- and, for JSA, the aggregation weights -- is included, and the
+# directed/undirected cross-covariances are available (e.g. for defined
+# parameters).
+lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
+                            lavoptions = NULL, lavpartable = NULL,
+                            lavimplied = NULL,
+                            lavh1 = NULL, lavdata = NULL, eqs = NULL) {
+  lavpta <- lav_pt_attributes(lavpartable)
+  lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
+  aggregated <- identical(lavoptions$estimator, "JSA")
+
+  # directed versus undirected (free) parameters
+  undirected_idx <- which(lavpartable$free > 0L &
+    !duplicated(lavpartable$free) &
+    lavpartable$op == "~~")
+  directed_idx <- which(lavpartable$free > 0L &
+    !duplicated(lavpartable$free) &
+    lavpartable$op %in% c("=~", "~", "~1"))
+  free_directed_idx <- unique(lavpartable$free[directed_idx])
+  free_undirected_idx <- unique(lavpartable$free[undirected_idx])
+
+  if (is.null(eqs)) {
+    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
+  }
+
+  # Jacobian of the complete estimation map over the stacked moments
+  vec0 <- lav_implied_to_vec(
+    implied = lavh1$implied, lavmodel = lavmodel, drop_list = TRUE
+  )
+  # r = 2 Richardson extrapolation is accurate to ~1e-6 relative here and
+  # halves the number of map evaluations (the map itself is smooth)
+  jac <- numDeriv::jacobian(
+    func = function(v) {
+      as.numeric(lav_sem_js_estimate(
+        vec = v, eqs = eqs,
+        lavmodel = lavmodel, lavpartable = lavpartable,
+        lavsamplestats = lavsamplestats, lavh1 = lavh1,
+        lavoptions = lavoptions,
+        free_directed_idx = free_directed_idx,
+        free_undirected_idx = free_undirected_idx,
+        aggregated = aggregated
+      ))
+    },
+    x = vec0, method.args = list(r = 2L)
+  )
+
+  # moment covariance (Gamma)
+  js_gamma <- tolower(lavoptions$estimator.args[["js_gamma"]])
+  if (length(js_gamma) == 0L) {
+    js_gamma <- "nt"
+  }
+  gamma_modelbased <-
+    !isFALSE(lavoptions$estimator.args[["js_vcov_gamma_modelbased"]])
+  if (js_gamma == "adf") {
+    if (lavdata@data.type != "full") {
+      lav_msg_warn(gettext(
+        "[JS] js_gamma = \"adf\" requires raw data; using the normal-theory
+         moment covariance instead."))
+      js_gamma <- "nt"
+    }
+  }
+  if (js_gamma == "adf") {
+    gamma <- lav_samp_gamma(
+      m_y = lavdata@X[[1L]],
+      meanstructure = lavmodel@meanstructure
+    )
+  } else {
+    cov_g <- NULL
+    if (gamma_modelbased) {
+      cov_g <- lavimplied$cov[[1L]]
+      # the model-implied covariance may be non-PD (eg a Heywood case)
+      if (inherits(try(chol(cov_g), silent = TRUE), "try-error")) {
+        cov_g <- NULL
+      }
+    }
+    if (is.null(cov_g)) {
+      cov_g <- lavh1$implied$cov[[1L]]
+    }
+    gamma <- lav_mat_k_gammant_kt(
+      m_k = diag(length(vec0)), s = cov_g,
+      meanstructure = lavmodel@meanstructure,
+      x_idx = integer(0L)
+    )
+  }
+
+  vcov <- jac %*% (gamma / lavsamplestats@nobs[[1L]]) %*% t(jac)
+  (vcov + t(vcov)) / 2
 }
 
 

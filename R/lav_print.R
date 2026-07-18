@@ -222,6 +222,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       } else if (identical(attr(x, "estimator"), "IV") &&
                  attr(x, "se") != "bootstrap") {
         tmp_txt <- "two-stage" # estimator = "IV"
+      } else if (isTRUE(attr(x, "estimator") %in% c("JS", "JSA")) &&
+                 attr(x, "se") != "bootstrap") {
+        tmp_txt <- "delta" # estimator = "JS"/"JSA": over the sample moments
       } else {
         tmp_txt <- attr(x, "se")
       }
@@ -241,6 +244,14 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
         if (!is.null(attr(x, "iv.gamma"))) {
           c1 <- c(c1, "Gamma matrix")
           c2 <- c(c2, attr(x, "iv.gamma"))
+        }
+      } else if (attr(x, "se") != "bootstrap" &&
+                 isTRUE(attr(x, "estimator") %in% c("JS", "JSA"))) {
+        # estimator = "JS"/"JSA": report the type of Gamma matrix instead of
+        # the information matrix
+        if (!is.null(attr(x, "js.gamma"))) {
+          c1 <- c(c1, "Gamma matrix")
+          c2 <- c(c2, attr(x, "js.gamma"))
         }
       } else if (attr(x, "se") != "bootstrap") {
         # type for information
