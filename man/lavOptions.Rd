@@ -871,7 +871,7 @@ Miscellaneous:
 }
 
 \seealso{
-\code{\link{lavaan}}, \code{\link{mimic}}, \code{\link{estimator_iv}}
+\code{\link{lavaan}}, \code{\link{mimic}}, \code{\link{estimator_iv}}, \code{\link{estimator_js}}
 }
 
 \examples{

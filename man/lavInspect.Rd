@@ -588,7 +588,7 @@ Miscellaneous:
 
 }
 \seealso{
-\code{\link{lavaan}}, \code{\link{estimator_iv}}
+\code{\link{lavaan}}, \code{\link{estimator_iv}}, \code{\link{estimator_js}}
 }
 \examples{
 # fit model

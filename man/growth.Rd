@@ -104,7 +104,7 @@ Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. 
 \doi{10.18637/jss.v048.i02}}
 \seealso{
-\code{\link{lavaan}}, \code{\link{estimator_iv}}
+\code{\link{lavaan}}, \code{\link{estimator_iv}}, \code{\link{estimator_js}}
 }
 \examples{
 ## linear growth model with a time-varying covariate
