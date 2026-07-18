@@ -145,7 +145,7 @@ lav_model_h1_info_ed <- function(what = "expected",
   if (observed) {
     ml_family <- "ML"
   } else {
-    ml_family <- c("ML", "NTRLS", "catML", "IV")
+    ml_family <- c("ML", "NTRLS", "catML", "IV", "JS", "JSA")
   }
 
   # 1. WLS.V (=A1) for GLS/WLS

@@ -709,9 +709,10 @@ lav_options_est_js <- function(opt) {
     opt$bounds <- "standard"
   }
   # test: only the (sample-based) Browne residual tests are meaningful for
-  # this estimator; anything else is switched off
+  # this estimator; the default is the normal-theory version (as for the
+  # IV estimator), anything else is switched off
   if (length(opt$test) == 1L && opt$test == "default") {
-    opt$test <- "none" # for now
+    opt$test <- "browne.residual.nt" # sample-based (also for the baseline)
   } else if (!all(opt$test %in% c(
     "none", "browne.residual.nt", "browne.residual.adf"
   ))) {
