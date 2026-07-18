@@ -159,6 +159,25 @@ test statistic then uses the model-based variant
 (\code{"browne.residual.nt.model"}).
 }
 
+\subsection{Residual covariances}{
+
+Residual covariances among the indicators (including covariances that
+involve a scaling indicator) are supported: each equation conditions on a
+\emph{clean} proxy set, i.e. observed variables whose residuals are
+uncorrelated with the residual of the equation's dependent variable (and
+with each other). When a default proxy (the scaling indicator, or an
+aggregate member) is invalidated by a residual covariance, it is replaced
+by (an aggregate of) clean pure indicators of the same factor, scaled by
+their estimated loadings -- the James-Stein analog of dropping
+contaminated instruments in MIIV estimation. Contaminated correlations
+are likewise excluded from the Spearman reliability estimates. The
+residual covariances themselves are estimated in the second stage. This
+requires enough clean indicators: every needed reliability must have at
+least one uncontaminated tetrad, and every equation needs at least one
+clean proxy per latent regressor; an informative error is raised
+otherwise.
+}
+
 \subsection{Restrictions}{
 
 The JS/JSA estimators currently require: continuous data (no ordered
@@ -166,9 +185,7 @@ categorical variables), single-level models, a marker/scaling indicator
 for every latent variable (\code{std.lv = TRUE} is not supported), a
 recursive structural part (no feedback loops), and no higher-order
 factors. The disturbance of a dependent variable may not be correlated
-with (an ancestor of) one of its regressors, and residual covariances
-that involve a scaling indicator are not allowed (for JSA, no residual
-covariances among the indicators are allowed at all). Exogenous observed
+with (an ancestor of) one of its regressors. Exogenous observed
 covariates are supported (they are part of the conditioning set of each
 equation; note that \code{fixed.x} is set to \code{FALSE}).
 }

@@ -484,47 +484,127 @@ lav_sem_js_check_block <- function(lavpartable = NULL, lavpta = NULL,
     }
   }
 
-  # residual covariances among the observed variables
-  markers <- lavpta$vnames$lv.marker[[b]]
-  ind_names <- unique(lavpartable$rhs[lavpartable$op == "=~" & in_b])
-  res_names <- unique(c(ind_names, lavpta$vnames$eqs.y[[b]]))
-  ov_cov_idx <- cov_idx[lavpartable$lhs[cov_idx] %in% res_names &
-    lavpartable$rhs[cov_idx] %in% res_names]
-  if (length(ov_cov_idx) > 0L) {
-    # a residual covariance involving a scaling indicator invalidates the
-    # conditional expectations (and the reliability estimates)
-    marker_cov_idx <- ov_cov_idx[lavpartable$lhs[ov_cov_idx] %in% markers |
-      lavpartable$rhs[ov_cov_idx] %in% markers]
-    if (length(marker_cov_idx) > 0L) {
-      lav_msg_stop(gettextf(
-        "estimator %s does not support residual covariances that involve a
-         marker/scaling indicator.", label))
-    }
-    if (aggregated) {
-      # any correlated indicator residual contaminates the aggregates
-      lav_msg_stop(gettext(
-        "estimator JSA does not support residual covariances among the
-         indicators (yet); use estimator JS instead."))
-    }
-    # remaining case (JS): the equations remain valid, but the (Spearman)
-    # reliability estimates may be biased if the correlated residuals belong
-    # to indicators of the same factor
-    lav_msg_warn(gettext(
-      "[JS] residual covariances among indicators may bias the (Spearman)
-       reliability estimates of the scaling indicators."))
-  }
+  # residual covariances among the observed variables are handled by
+  # per-equation clean conditioning sets (see lav_sem_js_eq_plans) and by
+  # masking the contaminated tetrads in the reliability estimates (see
+  # lav_sem_js_theta); unidentifiable configurations (no clean proxy, no
+  # clean tetrad) are caught there with informative messages
 
   invisible(TRUE)
+}
+
+
+# residual-covariance ('contamination') map for one block: a symmetric
+# logical nvar x nvar matrix flagging pairs of residual-bearing observed
+# variables (indicators or endogenous observed variables) with an active
+# (free, or fixed to a nonzero value) residual covariance. Such a pair
+# invalidates any conditioning set that combines one member with the
+# other member's equation, and any Spearman tetrad through the pair.
+lav_sem_js_contam <- function(lavpartable = NULL, pt_block = NULL, b = 1L,
+                              ov_names = NULL, lavpta = NULL) {
+  nvar <- length(ov_names)
+  contam <- matrix(FALSE, nrow = nvar, ncol = nvar)
+  in_b <- pt_block == b
+  ind_names <- unique(lavpartable$rhs[lavpartable$op == "=~" & in_b])
+  res_names <- unique(c(ind_names, lavpta$vnames$eqs.y[[b]]))
+  cov_idx <- which(lavpartable$op == "~~" & in_b &
+    lavpartable$lhs != lavpartable$rhs &
+    (lavpartable$free > 0L |
+      (!is.na(lavpartable$ustart) & lavpartable$ustart != 0)) &
+    lavpartable$lhs %in% res_names & lavpartable$rhs %in% res_names)
+  if (length(cov_idx) > 0L) {
+    ii <- match(lavpartable$lhs[cov_idx], ov_names)
+    jj <- match(lavpartable$rhs[cov_idx], ov_names)
+    ok <- !is.na(ii) & !is.na(jj)
+    contam[cbind(ii[ok], jj[ok])] <- TRUE
+    contam[cbind(jj[ok], ii[ok])] <- TRUE
+  }
+  contam
+}
+
+
+# Spearman/communality residual variances with tetrad masking: like
+# lav_cfa_theta_spearman (h2_i = mean over tetrads r_ia * r_ib / r_ab),
+# but tetrads that run through a contaminated pair (an active residual
+# covariance) are excluded from the averaging. When a variable has no
+# clean within-factor tetrad left, the tetrads are formed with EXTERNAL
+# variables z instead (Kano-1990 style: any observed model variable
+# outside the factor whose residual is uncorrelated with both members;
+# the formula r_ia * r_iz / r_az identifies the communality through the
+# factor correlations). Returns NA for a variable without any clean
+# tetrad at all. With no contaminated pairs within the factor block,
+# this reproduces lav_cfa_theta_spearman exactly.
+#
+# s_full/contam cover ALL observed variables of the block; idx is the
+# factor's indicator set; zpool the external candidates.
+lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
+                                             contam = NULL,
+                                             zpool = integer(0L),
+                                             bounds = "wide") {
+  if (!any(contam[idx, idx])) {
+    return(lav_cfa_theta_spearman(s_full[idx, idx, drop = FALSE],
+      bounds = bounds))
+  }
+  r <- cov2cor(s_full)
+  p <- length(idx)
+  out <- rep(as.numeric(NA), p)
+  for (k in seq_len(p)) {
+    i <- idx[k]
+    others <- setdiff(idx, i)
+    # clean within-factor tetrads
+    vals <- numeric(0L)
+    if (length(others) >= 2L) {
+      pairs <- utils::combn(others, 2L)
+      for (m in seq_len(ncol(pairs))) {
+        a <- pairs[1L, m]
+        b <- pairs[2L, m]
+        if (contam[i, a] || contam[i, b] || contam[a, b]) {
+          next
+        }
+        vals <- c(vals, r[i, a] * r[i, b] / r[a, b])
+      }
+    }
+    # fall back to external tetrads when no clean within-factor tetrad
+    if (length(vals) == 0L && length(zpool) > 0L) {
+      for (a in others) {
+        if (contam[i, a]) {
+          next
+        }
+        for (z in zpool) {
+          if (contam[i, z] || contam[a, z]) {
+            next
+          }
+          vals <- c(vals, r[i, a] * r[i, z] / r[a, z])
+        }
+      }
+    }
+    if (length(vals) == 0L) {
+      next # no clean tetrad: NA
+    }
+    h2 <- mean(vals)
+    if (bounds == "standard") {
+      h2[h2 < 0] <- 0
+      h2[h2 > 1] <- 1
+    } else if (bounds == "wide") {
+      h2[h2 < -0.05] <- -0.05
+      h2[h2 > +1.20] <- +1.20
+    }
+    out[k] <- (1 - h2) * s_full[i, i]
+  }
+  out
 }
 
 
 # residual (measurement-error) variances of the observed indicators, needed
 # for the shrinkage (and, for JSA, the aggregation weights); by default the
 # Spearman/communality estimator applied per factor (Burghgraeve et al.,
-# 2021, Appendix B)
+# 2021, Appendix B), with contaminated tetrads masked (see
+# lav_sem_js_theta_spearman). Indicators without a clean tetrad get NA;
+# whether that is a problem depends on whether they are needed as a
+# conditioning proxy (checked in lav_sem_js_eq_plans).
 lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
                              lv_names = NULL, lavoptions = NULL,
-                             aggregated = FALSE) {
+                             aggregated = FALSE, contam = NULL) {
   label <- if (aggregated) "JSA" else "JS"
   nvar <- ncol(s)
   ea <- lavoptions$estimator.args
@@ -561,19 +641,32 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
            estimator.args = list(js_theta = \"user\", js_theta_values = ...).",
           label, lv_names[f], length(idx)))
       }
-      theta[idx] <- lav_cfa_theta_spearman(s[idx, idx, drop = FALSE],
-        bounds = js_theta_bounds
-      )
+      if (is.null(contam) || !any(contam[idx, idx])) {
+        theta[idx] <- lav_cfa_theta_spearman(s[idx, idx, drop = FALSE],
+          bounds = js_theta_bounds
+        )
+      } else {
+        # contaminated within-factor tetrads: mask them; when a variable
+        # has none left, use external tetrads (all observed variables
+        # outside this factor as candidate z's)
+        theta[idx] <- lav_sem_js_theta_spearman_masked(
+          s_full = s, idx = idx, contam = contam,
+          zpool = setdiff(seq_len(nvar), idx),
+          bounds = js_theta_bounds
+        )
+      }
     }
   }
 
   # non-indicator variables (observed covariates, endogenous observed
-  # variables) are error-free proxies of themselves
-  theta[is.na(theta)] <- 0
+  # variables) are error-free proxies of themselves; indicators without a
+  # clean tetrad keep NA
+  nonind_idx <- which(rowSums(ind_pat != 0) == 0L)
+  theta[nonind_idx] <- 0
 
-  # keep the variances within [0, var(y)]
+  # keep the variances within [0, var(y)] (NA-safe)
   diag_s <- diag(s)
-  theta[theta < 0] <- 0
+  theta[which(theta < 0)] <- 0
   too_large_idx <- which(theta > diag_s)
   if (length(too_large_idx) > 0L) {
     theta[too_large_idx] <- diag_s[too_large_idx]
@@ -606,6 +699,149 @@ lav_sem_js_weights <- function(s = NULL, theta = NULL) {
     return(equal_w)
   }
   w / sw
+}
+
+
+# build the per-equation conditioning-set 'plans' for one block: for every
+# latent regressor of every equation, the set of observed variables used as
+# its conditioning proxy. The plans depend only on the MODEL STRUCTURE
+# (which residual covariances are active), never on the data, so the
+# estimation map remains a smooth function of the sample moments (needed
+# for the delta-method standard errors).
+#
+# Default proxies: the scaling indicator (scaling mode) or the pure
+# indicators of the factor excluding the dependent variable (aggregated
+# mode). A proxy variable is invalid for an equation when it has an active
+# residual covariance with the equation's dependent variable ('tainted'),
+# when its own reliability cannot be estimated (theta NA), or when it has
+# an active residual covariance with a proxy variable used elsewhere in
+# the same conditioning set (which would contaminate the joint conditional
+# expectation). Invalid variables are replaced by clean pure indicators of
+# the same factor whose loadings are identified (fixed, or estimable from
+# their own clean equation). An equation is 'deferred' when any of its
+# proxies is not simply the (fixed-loading) scaling indicator: such
+# equations need loading estimates from the clean equations and are solved
+# in a second pass.
+lav_sem_js_eq_plans <- function(eqs_b = NULL, aggregated = FALSE,
+                                contam = NULL, ind_pat = NULL,
+                                single_pat = NULL, markers = NULL,
+                                ov_names = NULL, lv_names = NULL,
+                                theta = NULL, lavpartable = NULL,
+                                pt_block = NULL, b = 1L, label = "JS") {
+  nvar <- length(ov_names)
+  theta_na <- which(is.na(theta))
+  any_contam <- any(contam)
+
+  # loading availability: lambda(v, f) is identified before the deferred
+  # pass when it is fixed, or when v's own (single-proxy) measurement
+  # equation conditions on a clean scaling indicator
+  mm_idx <- which(lavpartable$op == "=~" & pt_block == b)
+  lam_free <- matrix(FALSE, nrow = nvar, ncol = length(lv_names))
+  if (length(mm_idx) > 0L) {
+    lam_free[cbind(
+      match(lavpartable$rhs[mm_idx], ov_names),
+      match(lavpartable$lhs[mm_idx], lv_names)
+    )] <- lavpartable$free[mm_idx] > 0L
+  }
+  lam_available <- function(v, f) {
+    if (!lam_free[v, f]) {
+      return(TRUE) # fixed value
+    }
+    m_f <- match(markers[[lv_names[f]]], ov_names)
+    !contam[m_f, v] && !v %in% theta_na
+  }
+
+  plans <- vector("list", length(eqs_b))
+  deferred <- logical(length(eqs_b))
+  for (j in seq_along(eqs_b)) {
+    eq <- eqs_b[[j]]
+    if (identical(eq$rhs_new, "1")) {
+      next
+    }
+    y_idx <- match(eq$lhs_new, ov_names)
+    is_lv <- eq$rhs %in% lv_names
+    if (!any(is_lv)) {
+      plans[[j]] <- vector("list", length(eq$rhs))
+      next
+    }
+    tainted <- if (any_contam) which(contam[, y_idx]) else integer(0L)
+
+    # candidate pool per latent regressor: clean pure indicators with an
+    # estimable reliability and an identified loading
+    fac <- match(eq$rhs, lv_names) # NA for observed regressors
+    cand <- vector("list", length(eq$rhs))
+    marker_idx <- rep(NA_integer_, length(eq$rhs))
+    for (i in which(is_lv)) {
+      f <- fac[i]
+      marker_idx[i] <- match(markers[[eq$rhs[i]]], ov_names)
+      pool <- which(ind_pat[, f] != 0 & single_pat)
+      pool <- setdiff(pool, c(y_idx, tainted, theta_na))
+      pool <- pool[vapply(pool, lam_available, logical(1L), f = f)]
+      cand[[i]] <- pool
+    }
+
+    # initial sets
+    sets <- vector("list", length(eq$rhs))
+    for (i in which(is_lv)) {
+      if (!aggregated) {
+        sets[[i]] <- if (marker_idx[i] %in% cand[[i]]) {
+          marker_idx[i]
+        } else {
+          cand[[i]]
+        }
+      } else {
+        sets[[i]] <- cand[[i]]
+      }
+    }
+
+    # fixpoint: drop (both members of) any contaminated pair within or
+    # across the chosen sets; dropped variables never come back, so this
+    # terminates
+    if (any_contam) {
+      dropped <- integer(0L)
+      repeat {
+        used <- unlist(sets[is_lv])
+        pair_idx <- which(contam[used, used, drop = FALSE], arr.ind = TRUE)
+        if (nrow(pair_idx) == 0L) {
+          break
+        }
+        bad_vars <- unique(used[unique(as.vector(pair_idx))])
+        dropped <- c(dropped, bad_vars)
+        for (i in which(is_lv)) {
+          sets[[i]] <- setdiff(sets[[i]], dropped)
+          if (length(sets[[i]]) == 0L) {
+            # refill from the candidate pool (minus everything dropped)
+            sets[[i]] <- setdiff(cand[[i]], dropped)
+          }
+        }
+        if (any(vapply(sets[is_lv], length, integer(1L)) == 0L)) {
+          break
+        }
+      }
+    }
+
+    # identifiable?
+    for (i in which(is_lv)) {
+      if (length(sets[[i]]) == 0L) {
+        lav_msg_stop(gettextf(
+          "estimator %1$s cannot construct a clean conditioning proxy for
+           %2$s in the equation for %3$s: too many residual covariances
+           involve its indicators. Consider fixing some residual
+           covariances, or provide reliabilities via js_theta_values.",
+          label, eq$rhs[i], eq$lhs_new))
+      }
+    }
+
+    plans[[j]] <- sets
+    # deferred: any proxy that is not simply the fixed-loading scaling
+    # indicator (the plain-marker solve needs no loading estimates)
+    deferred[j] <- any(vapply(which(is_lv), function(i) {
+      !(length(sets[[i]]) == 1L && sets[[i]] == marker_idx[i] &&
+          !lam_free[marker_idx[i], fac[i]])
+    }, logical(1L)))
+  }
+
+  list(plans = plans, deferred = deferred)
 }
 
 
@@ -657,11 +893,19 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       )] <- 1
     }
 
-    # residual variances of the proxies (per block)
+    single_pat <- rowSums(ind_pat != 0) == 1L
+    label <- if (aggregated) "JSA" else "JS"
+
+    # residual-covariance (contamination) map + residual variances of the
+    # proxies (per block; contaminated tetrads are masked)
+    contam <- lav_sem_js_contam(
+      lavpartable = lavpartable, pt_block = pt_block, b = b,
+      ov_names = ov_names, lavpta = lavpta
+    )
     theta <- lav_sem_js_theta(
       s = s_mat, ind_pat = ind_pat, ov_names = ov_names,
       lv_names = lv_names,
-      lavoptions = lavoptions, aggregated = aggregated
+      lavoptions = lavoptions, aggregated = aggregated, contam = contam
     )
 
     # small-sample (Efron-Morris) shrinkage factor
@@ -670,37 +914,69 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       csmall <- 1
     }
 
-    # pass 1: scaling (JS); this also provides the loadings needed to scale
-    # the aggregated proxies
+    # conditioning-set plans for the scaling passes
+    pl <- lav_sem_js_eq_plans(
+      eqs_b = eqs[[b]], aggregated = FALSE, contam = contam,
+      ind_pat = ind_pat, single_pat = single_pat, markers = markers,
+      ov_names = ov_names, lv_names = lv_names, theta = theta,
+      lavpartable = lavpartable, pt_block = pt_block, b = b, label = label
+    )
+
+    # pass 1a: scaling; the equations that condition on plain (fixed-
+    # loading) scaling indicators -- this also provides the loadings needed
+    # to scale the other proxies
+    lambda_mat <- lav_sem_js_lambda_mat(
+      x = x, lavpartable = lavpartable, mm_idx = mm_idx,
+      ov_names = ov_names, lv_names = lv_names
+    )
     out <- lav_sem_js_eqs_pass(
-      eqs_b = eqs[[b]], aggregated = FALSE,
+      eqs_b = eqs[[b]], plans = pl$plans, only = which(!pl$deferred),
       s_mat = s_mat, m_vec = m_vec, n = n,
       ov_names = ov_names, lv_names = lv_names, markers = markers,
-      ind_pat = ind_pat, theta = theta, csmall = csmall,
-      lambda_mat = NULL, lavpartable = lavpartable, lavmodel = lavmodel,
-      x = x
+      contam = contam, theta = theta, csmall = csmall,
+      lambda_mat = lambda_mat, lavpartable = lavpartable,
+      lavmodel = lavmodel, x = x
     )
     x <- out$x
     eqs[[b]] <- out$eqs
 
-    # pass 2 (JSA): aggregated proxies, scaled by the pass-1 loadings
-    if (aggregated) {
-      lambda_mat <- matrix(0, nrow = nvar, ncol = nfac)
-      if (length(mm_idx) > 0L) {
-        lambda_val <- lavpartable$ustart[mm_idx]
-        lambda_val[is.na(lambda_val)] <- 0
-        free_mm <- which(lavpartable$free[mm_idx] > 0L)
-        lambda_val[free_mm] <- x[lavpartable$free[mm_idx][free_mm]]
-        lambda_mat[cbind(
-          match(lavpartable$rhs[mm_idx], ov_names),
-          match(lavpartable$lhs[mm_idx], lv_names)
-        )] <- lambda_val
-      }
+    # pass 1b: the deferred equations (clean-proxy conditioning sets that
+    # need the pass-1a loading estimates)
+    if (any(pl$deferred)) {
+      lambda_mat <- lav_sem_js_lambda_mat(
+        x = x, lavpartable = lavpartable, mm_idx = mm_idx,
+        ov_names = ov_names, lv_names = lv_names
+      )
       out <- lav_sem_js_eqs_pass(
-        eqs_b = eqs[[b]], aggregated = TRUE,
+        eqs_b = eqs[[b]], plans = pl$plans, only = which(pl$deferred),
         s_mat = s_mat, m_vec = m_vec, n = n,
         ov_names = ov_names, lv_names = lv_names, markers = markers,
-        ind_pat = ind_pat, theta = theta, csmall = csmall,
+        contam = contam, theta = theta, csmall = csmall,
+        lambda_mat = lambda_mat, lavpartable = lavpartable,
+        lavmodel = lavmodel, x = x
+      )
+      x <- out$x
+      eqs[[b]] <- out$eqs
+    }
+
+    # pass 2 (JSA): aggregated proxies, scaled by the scaling-pass loadings
+    if (aggregated) {
+      pla <- lav_sem_js_eq_plans(
+        eqs_b = eqs[[b]], aggregated = TRUE, contam = contam,
+        ind_pat = ind_pat, single_pat = single_pat, markers = markers,
+        ov_names = ov_names, lv_names = lv_names, theta = theta,
+        lavpartable = lavpartable, pt_block = pt_block, b = b, label = label
+      )
+      lambda_mat <- lav_sem_js_lambda_mat(
+        x = x, lavpartable = lavpartable, mm_idx = mm_idx,
+        ov_names = ov_names, lv_names = lv_names
+      )
+      out <- lav_sem_js_eqs_pass(
+        eqs_b = eqs[[b]], plans = pla$plans,
+        only = seq_along(eqs[[b]]),
+        s_mat = s_mat, m_vec = m_vec, n = n,
+        ov_names = ov_names, lv_names = lv_names, markers = markers,
+        contam = contam, theta = theta, csmall = csmall,
         lambda_mat = lambda_mat, lavpartable = lavpartable,
         lavmodel = lavmodel, x = x
       )
@@ -724,11 +1000,32 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
 }
 
 
-# one pass over the equations of a single block: for each equation, build
-# the conditioning set Z (scaling indicators or weighted aggregates for the
-# latent regressors; the observed regressors themselves), and solve the
-# least-squares regression of the dependent variable on the estimated
-# conditional expectations -- all in moment form:
+# the current loading estimates as an nvar x nfac matrix (fixed values
+# from the parameter table; free values from the parameter vector x)
+lav_sem_js_lambda_mat <- function(x = NULL, lavpartable = NULL,
+                                  mm_idx = NULL, ov_names = NULL,
+                                  lv_names = NULL) {
+  lambda_mat <- matrix(0, nrow = length(ov_names), ncol = length(lv_names))
+  if (length(mm_idx) > 0L && length(lv_names) > 0L) {
+    lambda_val <- lavpartable$ustart[mm_idx]
+    lambda_val[is.na(lambda_val)] <- 0
+    free_mm <- which(lavpartable$free[mm_idx] > 0L)
+    lambda_val[free_mm] <- x[lavpartable$free[mm_idx][free_mm]]
+    lambda_mat[cbind(
+      match(lavpartable$rhs[mm_idx], ov_names),
+      match(lavpartable$lhs[mm_idx], lv_names)
+    )] <- lambda_val
+  }
+  lambda_mat
+}
+
+
+# one pass over (a subset of) the equations of a single block: for each
+# equation, build the conditioning set Z from its plan (a weighted
+# aggregate over the planned proxy variables per latent regressor; the
+# observed regressors themselves), and solve the least-squares regression
+# of the dependent variable on the estimated conditional expectations --
+# all in moment form:
 #
 #   design  d = G S_zz^{-1} Z   with row l of G = Cov(eta_l, Z)
 #   amat = Var(d)  = G S_zz^{-1} G'
@@ -737,18 +1034,20 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
 #
 # for an observed regressor, the corresponding row of G equals the row of
 # S_zz, so its 'conditional expectation' is the variable itself
-lav_sem_js_eqs_pass <- function(eqs_b = NULL, aggregated = FALSE,
+lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
                                 s_mat = NULL, m_vec = NULL, n = NULL,
                                 ov_names = NULL, lv_names = NULL,
-                                markers = NULL, ind_pat = NULL,
+                                markers = NULL, contam = NULL,
                                 theta = NULL, csmall = 1,
                                 lambda_mat = NULL, lavpartable = NULL,
                                 lavmodel = NULL, x = NULL) {
   meanstructure <- lavmodel@meanstructure
   nvar <- length(ov_names)
-  single_pat <- rowSums(ind_pat != 0) == 1L
+  if (is.null(only)) {
+    only <- seq_along(eqs_b)
+  }
 
-  for (j in seq_along(eqs_b)) {
+  for (j in only) {
     eq <- eqs_b[[j]]
     y_idx <- match(eq$lhs_new, ov_names)
 
@@ -769,7 +1068,8 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, aggregated = FALSE,
     is_lv <- eq$rhs %in% lv_names
 
     # conditioning set: one row of u_mat (over the observed variables) per
-    # regressor, plus its scale (kappa) and error variance (errvar)
+    # regressor, plus its scale (kappa) and error variance (errvar); the
+    # proxy variable sets come from the (structural) plan
     u_mat <- matrix(0, nrow = nrhs, ncol = nvar)
     kappa <- rep(1, nrhs)
     errvar <- rep(0, nrhs)
@@ -780,29 +1080,35 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, aggregated = FALSE,
       }
       f <- match(eq$rhs[i], lv_names)
       marker_idx <- match(markers[[eq$rhs[i]]], ov_names)
-      agg_idx <- integer(0L)
-      if (aggregated) {
-        # aggregate over the 'pure' (single-loading) indicators of this
-        # factor, excluding the dependent variable itself (leave-one-out
-        # for the measurement equations)
-        agg_idx <- setdiff(which(ind_pat[, f] != 0 & single_pat), y_idx)
-      }
-      if (length(agg_idx) > 1L) {
+      set <- plans[[j]][[i]]
+      if (length(set) == 1L) {
+        w <- 1
+      } else {
         w <- lav_sem_js_weights(
-          s = s_mat[agg_idx, agg_idx, drop = FALSE],
-          theta = theta[agg_idx]
+          s = s_mat[set, set, drop = FALSE],
+          theta = theta[set]
         )
-        kap <- sum(w * lambda_mat[agg_idx, f])
-        if (is.finite(kap) && abs(kap) > .Machine$double.eps^0.5) {
-          u_mat[i, agg_idx] <- w
-          kappa[i] <- kap
-          errvar[i] <- sum(w * w * theta[agg_idx])
-          next
+      }
+      kap <- sum(w * lambda_mat[set, f])
+      if (!is.finite(kap) || abs(kap) < .Machine$double.eps^0.5) {
+        # degenerate proxy scale; fall back to the scaling indicator when
+        # it is admissible for this equation
+        if (!contam[marker_idx, y_idx] && !is.na(theta[marker_idx]) &&
+            !identical(set, marker_idx)) {
+          set <- marker_idx
+          w <- 1
+          kap <- lambda_mat[marker_idx, f]
+        }
+        if (!is.finite(kap) || abs(kap) < .Machine$double.eps^0.5) {
+          lav_msg_stop(gettextf(
+            "the conditioning proxy for %1$s in the equation for %2$s has a
+             degenerate scale (aggregate loading near zero).",
+            eq$rhs[i], eq$lhs_new))
         }
       }
-      # scaling indicator (also the JSA fallback)
-      u_mat[i, marker_idx] <- 1
-      errvar[i] <- theta[marker_idx]
+      u_mat[i, set] <- w
+      kappa[i] <- kap
+      errvar[i] <- sum(w * w * theta[set])
     }
 
     # moments of the conditioning variables
