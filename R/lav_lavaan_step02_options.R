@@ -167,13 +167,15 @@ lav_step02_options <- function(slot_options = NULL,
       opt$.categorical <- FALSE
     }
 
-    # IV estimator: default to two-stage missing-data handling when the data
-    # contain missing values among the modeled variables and the user did not
-    # request a 'missing' option. (opt$missing is still "default" here; it is
-    # resolved to "listwise" later in lav_options_set().) This must happen
+    # IV/JS estimators: default to two-stage missing-data handling when the
+    # data contain missing values among the modeled variables and the user did
+    # not request a 'missing' option. (opt$missing is still "default" here; it
+    # is resolved to "listwise" later in lav_options_set().) This must happen
     # before lav_options_set() so the two.stage option cascade (meanstructure,
     # information, ...) and lavData (no listwise deletion) are set up correctly.
-    if (toupper(estimator) == "IV" && identical(opt$missing, "default") &&
+    if (toupper(estimator) %in% c("IV", "MIIV", "MIIV.2SLS", "JS", "JSA",
+                                  "JAMES.STEIN", "JAMES.STEIN.AGGREGATED") &&
+        identical(opt$missing, "default") &&
         !opt$.categorical && is.data.frame(data)) {
       tmp_ov <- unique(c(unlist(ov_names_y), unlist(ov_names_x)))
       tmp_ov <- tmp_ov[tmp_ov %in% names(data)]

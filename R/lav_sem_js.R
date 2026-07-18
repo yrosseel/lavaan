@@ -147,12 +147,37 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
   if (length(free_undirected_idx) > 0L && js_varcov_method != "NONE") {
     lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
     delta_list <- lav_sem_miiv_delta(lavmodel_tmp)
-    theta2 <- lav_sem_miiv_varcov_block(
-      b = 1L, fu = free_undirected_idx, delta_b = delta_list[[1L]],
-      implied = implied, lavmodel = lavmodel, x = x,
-      iv_varcov_method = js_varcov_method, return_h = FALSE
-    )
-    x[free_undirected_idx] <- as.numeric(theta2)
+    if (lavmodel@nblocks == 1L) {
+      theta2 <- lav_sem_miiv_varcov_block(
+        b = 1L, fu = free_undirected_idx, delta_b = delta_list[[1L]],
+        implied = implied, lavmodel = lavmodel, x = x,
+        iv_varcov_method = js_varcov_method, return_h = FALSE
+      )
+      x[free_undirected_idx] <- as.numeric(theta2)
+    } else {
+      # multiple groups: each group's moments contribute its own block
+      # (as for the IV estimator; cross-group constraints among the
+      # variances, if any, are handled per block)
+      pt_block <- if (!is.null(lavpartable$block)) {
+        lavpartable$block
+      } else {
+        rep(1L, length(lavpartable$op))
+      }
+      for (b in seq_len(lavmodel@nblocks)) {
+        fu_b <- unique(lavpartable$free[lavpartable$op == "~~" &
+          lavpartable$free > 0L & pt_block == b])
+        fu_b <- fu_b[fu_b %in% free_undirected_idx]
+        if (length(fu_b) == 0L) {
+          next
+        }
+        tb <- lav_sem_miiv_varcov_block(
+          b = b, fu = fu_b, delta_b = delta_list[[b]],
+          implied = implied, lavmodel = lavmodel, x = x,
+          iv_varcov_method = js_varcov_method, return_h = FALSE
+        )
+        x[fu_b] <- as.numeric(tb)
+      }
+    }
   } else if (length(free_undirected_idx) > 0L) {
     x[free_undirected_idx] <- as.numeric(NA)
   }
@@ -241,47 +266,95 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     x = vec0, method.args = list(r = 2L)
   )
 
-  # moment covariance (Gamma)
+  # moment covariance: block-diagonal over the groups,
+  # gamma_big = bdiag(Gamma_b / nobs_b)
   js_gamma <- tolower(lavoptions$estimator.args[["js_gamma"]])
   if (length(js_gamma) == 0L) {
     js_gamma <- "nt"
   }
   gamma_modelbased <-
     !isFALSE(lavoptions$estimator.args[["js_vcov_gamma_modelbased"]])
+  two_stage <- any(lavoptions$missing == c("two.stage", "robust.two.stage"))
   if (js_gamma == "adf") {
-    if (lavdata@data.type != "full") {
+    if (lavdata@data.type != "full" || two_stage) {
       lav_msg_warn(gettext(
-        "[JS] js_gamma = \"adf\" requires raw data; using the normal-theory
-         moment covariance instead."))
+        "[JS] js_gamma = \"adf\" requires complete raw data; using the
+         default moment covariance instead."))
       js_gamma <- "nt"
     }
   }
-  if (js_gamma == "adf") {
-    gamma <- lav_samp_gamma(
-      m_y = lavdata@X[[1L]],
-      meanstructure = lavmodel@meanstructure
-    )
-  } else {
-    cov_g <- NULL
-    if (gamma_modelbased) {
-      cov_g <- lavimplied$cov[[1L]]
-      # the model-implied covariance may be non-PD (eg a Heywood case)
-      if (inherits(try(chol(cov_g), silent = TRUE), "try-error")) {
-        cov_g <- NULL
+  nblocks <- lavmodel@nblocks
+  gamma_g <- vector("list", nblocks)
+  for (b in seq_len(nblocks)) {
+    if (two_stage) {
+      # two-stage missing data: the moments are the (saturated) EM
+      # estimates; their asymptotic covariance is the inverse saturated
+      # information (two.stage; Savalei & Bentler 2009) or its sandwich
+      # (robust.two.stage; Savalei & Falk 2014)
+      mu_b <- lavh1$implied$mean[[b]]
+      sig_b <- lavh1$implied$cov[[b]]
+      if (identical(tolower(lavoptions$missing), "robust.two.stage")) {
+        gg <- lav_mvn_mi_h1_omega_sw(
+          y = lavdata@X[[b]], mp = lavdata@Mp[[b]],
+          yp = lavsamplestats@missing[[b]],
+          mu = mu_b, sigma_1 = sig_b,
+          x_idx = integer(0L), information = "observed"
+        )
+      } else {
+        i1 <- lav_mvnorm_missing_information_observed_samplestats(
+          yp = lavsamplestats@missing[[b]],
+          mu = mu_b, sigma_1 = sig_b, x_idx = integer(0L)
+        )
+        gg <- lav_mat_sym_inverse(i1)
       }
+      gamma_g[[b]] <- gg / lavsamplestats@nobs[[b]]
+    } else if (js_gamma == "adf") {
+      gamma_g[[b]] <- lav_samp_gamma(
+        m_y = lavdata@X[[b]],
+        meanstructure = lavmodel@meanstructure
+      ) / lavsamplestats@nobs[[b]]
+    } else {
+      cov_b <- NULL
+      if (gamma_modelbased) {
+        cov_b <- lavimplied$cov[[b]]
+        # the model-implied covariance may be non-PD (eg a Heywood case)
+        if (inherits(try(chol(cov_b), silent = TRUE), "try-error")) {
+          cov_b <- NULL
+        }
+      }
+      if (is.null(cov_b)) {
+        cov_b <- lavh1$implied$cov[[b]]
+      }
+      nd_b <- if (lavmodel@meanstructure) {
+        nrow(cov_b) + nrow(cov_b) * (nrow(cov_b) + 1L) / 2L
+      } else {
+        nrow(cov_b) * (nrow(cov_b) + 1L) / 2L
+      }
+      gamma_g[[b]] <- lav_mat_k_gammant_kt(
+        m_k = diag(nd_b), s = cov_b,
+        meanstructure = lavmodel@meanstructure,
+        x_idx = integer(0L)
+      ) / lavsamplestats@nobs[[b]]
     }
-    if (is.null(cov_g)) {
-      cov_g <- lavh1$implied$cov[[1L]]
-    }
-    gamma <- lav_mat_k_gammant_kt(
-      m_k = diag(length(vec0)), s = cov_g,
-      meanstructure = lavmodel@meanstructure,
-      x_idx = integer(0L)
-    )
+  }
+  gamma_big <- if (nblocks == 1L) {
+    gamma_g[[1L]]
+  } else {
+    lav_mat_bdiag(gamma_g)
   }
 
-  vcov <- jac %*% (gamma / lavsamplestats@nobs[[1L]]) %*% t(jac)
-  (vcov + t(vcov)) / 2
+  vcov <- jac %*% gamma_big %*% t(jac)
+  vcov <- (vcov + t(vcov)) / 2
+
+  # the rest of lavaan expects the vcov of a ceq.simple.only model in the
+  # 'unco' space (one row/column per non-collapsed parameter); the vcov
+  # above is built in the compact (nx.free) space, so expand it via the
+  # ceq.simple.K mapping (as for the IV estimator)
+  if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
+    vcov <- lavmodel@ceq.simple.K %*% vcov %*% t(lavmodel@ceq.simple.K)
+  }
+
+  vcov
 }
 
 
@@ -293,10 +366,6 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
   label <- if (aggregated) "JSA" else "JS"
 
   stopifnot(lavdata@nlevels == 1L)
-  if (lavmodel@nblocks > 1L) {
-    lav_msg_stop(gettextf(
-      "estimator %s does not support multiple groups (yet).", label))
-  }
   if (lavmodel@categorical) {
     lav_msg_stop(gettextf(
       "estimator %s does not support categorical data (yet).", label))
@@ -322,32 +391,52 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
     lav_msg_stop(gettextf(
       "estimator %s does not support efa blocks (yet).", label))
   }
-  if (!is.null(lavdata@weights[[1L]])) {
+  if (any(!vapply(lavdata@weights, is.null, logical(1L)))) {
     lav_msg_stop(gettextf(
       "estimator %s does not support sampling weights (yet).", label))
-  }
-
-  b <- 1L
-  ov_names <- lavpta$vnames$ov[[b]]
-  lv_names <- lavpta$vnames$lv.regular[[b]]
-
-  # higher-order factors: a latent variable measured by latent variables
-  if (any(lavpartable$op == "=~" & lavpartable$rhs %in% lv_names)) {
-    lav_msg_stop(gettextf(
-      "estimator %s does not support higher-order factors (yet).", label))
   }
 
   # the structural part must be recursive: the conditional expectations are
   # only valid regressors if the disturbance of each equation is
   # uncorrelated with (functions of) its right-hand-side variables
-  if (isFALSE(lavmodel@modprop$acyclic[b])) {
+  if (any(vapply(lavmodel@modprop$acyclic, isFALSE, logical(1L)))) {
     lav_msg_stop(gettextf(
       "estimator %s requires a recursive structural model
        (no feedback loops).", label))
   }
 
+  pt_block <- if (!is.null(lavpartable$block)) {
+    lavpartable$block
+  } else {
+    rep(1L, length(lavpartable$op))
+  }
+  for (b in seq_len(lavmodel@nblocks)) {
+    lav_sem_js_check_block(
+      lavpartable = lavpartable, lavpta = lavpta, b = b,
+      pt_block = pt_block, label = label, aggregated = aggregated
+    )
+  }
+
+  invisible(TRUE)
+}
+
+
+# per-block model-structure checks
+lav_sem_js_check_block <- function(lavpartable = NULL, lavpta = NULL,
+                                   b = 1L, pt_block = NULL, label = "JS",
+                                   aggregated = FALSE) {
+  in_b <- pt_block == b
+  lv_names <- lavpta$vnames$lv.regular[[b]]
+
+  # higher-order factors: a latent variable measured by latent variables
+  if (any(lavpartable$op == "=~" & in_b &
+          lavpartable$rhs %in% lv_names)) {
+    lav_msg_stop(gettextf(
+      "estimator %s does not support higher-order factors (yet).", label))
+  }
+
   # active covariance rows (free, or fixed to a nonzero value)
-  cov_idx <- which(lavpartable$op == "~~" &
+  cov_idx <- which(lavpartable$op == "~~" & in_b &
     lavpartable$lhs != lavpartable$rhs &
     (lavpartable$free > 0L |
       (!is.na(lavpartable$ustart) & lavpartable$ustart != 0)))
@@ -355,7 +444,7 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
   # no disturbance of a dependent variable may be correlated with one of its
   # regressors, or with any ancestor of its regressors (the conditional
   # expectations condition on proxies of these variables)
-  reg_idx <- which(lavpartable$op == "~")
+  reg_idx <- which(lavpartable$op == "~" & in_b)
   if (length(reg_idx) > 0L && length(cov_idx) > 0L) {
     # ancestor sets via the regression graph (edge: rhs -> lhs)
     parents <- split(
@@ -397,7 +486,7 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
 
   # residual covariances among the observed variables
   markers <- lavpta$vnames$lv.marker[[b]]
-  ind_names <- unique(lavpartable$rhs[lavpartable$op == "=~"])
+  ind_names <- unique(lavpartable$rhs[lavpartable$op == "=~" & in_b])
   res_names <- unique(c(ind_names, lavpta$vnames$eqs.y[[b]]))
   ov_cov_idx <- cov_idx[lavpartable$lhs[cov_idx] %in% res_names &
     lavpartable$rhs[cov_idx] %in% res_names]
@@ -542,78 +631,88 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
   x <- lav_model_get_parameters(lavmodel)
 
   lavpta <- lav_pt_attributes(lavpartable)
-  b <- 1L
-  s_mat <- implied$cov[[b]]
-  m_vec <- if (lavmodel@meanstructure) implied$mean[[b]] else NULL
-  n <- lavsamplestats@nobs[[b]]
-  ov_names <- lavpta$vnames$ov[[b]]
-  lv_names <- lavpta$vnames$lv.regular[[b]]
-  markers <- lavpta$vnames$lv.marker[[b]] # named by lv
-  nvar <- length(ov_names)
-  nfac <- length(lv_names)
-
-  # indicator pattern (nvar x nfac)
-  ind_pat <- matrix(0, nrow = nvar, ncol = nfac)
-  mm_idx <- which(lavpartable$op == "=~")
-  if (length(mm_idx) > 0L && nfac > 0L) {
-    ind_pat[cbind(
-      match(lavpartable$rhs[mm_idx], ov_names),
-      match(lavpartable$lhs[mm_idx], lv_names)
-    )] <- 1
+  pt_block <- if (!is.null(lavpartable$block)) {
+    lavpartable$block
+  } else {
+    rep(1L, length(lavpartable$op))
   }
 
-  # residual variances of the proxies
-  theta <- lav_sem_js_theta(
-    s = s_mat, ind_pat = ind_pat, ov_names = ov_names, lv_names = lv_names,
-    lavoptions = lavoptions, aggregated = aggregated
-  )
+  for (b in seq_len(lavmodel@nblocks)) {
+    s_mat <- implied$cov[[b]]
+    m_vec <- if (lavmodel@meanstructure) implied$mean[[b]] else NULL
+    n <- lavsamplestats@nobs[[b]]
+    ov_names <- lavpta$vnames$ov[[b]]
+    lv_names <- lavpta$vnames$lv.regular[[b]]
+    markers <- lavpta$vnames$lv.marker[[b]] # named by lv
+    nvar <- length(ov_names)
+    nfac <- length(lv_names)
 
-  # small-sample (Efron-Morris) shrinkage factor
-  csmall <- (n - 3) / (n - 1)
-  if (isFALSE(lavoptions$estimator.args[["js_small_sample"]])) {
-    csmall <- 1
-  }
-
-  # pass 1: scaling (JS); this also provides the loadings needed to scale
-  # the aggregated proxies
-  out <- lav_sem_js_eqs_pass(
-    eqs_b = eqs[[b]], aggregated = FALSE,
-    s_mat = s_mat, m_vec = m_vec, n = n,
-    ov_names = ov_names, lv_names = lv_names, markers = markers,
-    ind_pat = ind_pat, theta = theta, csmall = csmall,
-    lambda_mat = NULL, lavpartable = lavpartable, lavmodel = lavmodel,
-    x = x
-  )
-  x <- out$x
-  eqs[[b]] <- out$eqs
-
-  # pass 2 (JSA): aggregated proxies, scaled by the pass-1 loadings
-  if (aggregated) {
-    lambda_mat <- matrix(0, nrow = nvar, ncol = nfac)
-    if (length(mm_idx) > 0L) {
-      lambda_val <- lavpartable$ustart[mm_idx]
-      lambda_val[is.na(lambda_val)] <- 0
-      free_mm <- which(lavpartable$free[mm_idx] > 0L)
-      lambda_val[free_mm] <- x[lavpartable$free[mm_idx][free_mm]]
-      lambda_mat[cbind(
+    # indicator pattern (nvar x nfac)
+    ind_pat <- matrix(0, nrow = nvar, ncol = nfac)
+    mm_idx <- which(lavpartable$op == "=~" & pt_block == b)
+    if (length(mm_idx) > 0L && nfac > 0L) {
+      ind_pat[cbind(
         match(lavpartable$rhs[mm_idx], ov_names),
         match(lavpartable$lhs[mm_idx], lv_names)
-      )] <- lambda_val
+      )] <- 1
     }
+
+    # residual variances of the proxies (per block)
+    theta <- lav_sem_js_theta(
+      s = s_mat, ind_pat = ind_pat, ov_names = ov_names,
+      lv_names = lv_names,
+      lavoptions = lavoptions, aggregated = aggregated
+    )
+
+    # small-sample (Efron-Morris) shrinkage factor
+    csmall <- (n - 3) / (n - 1)
+    if (isFALSE(lavoptions$estimator.args[["js_small_sample"]])) {
+      csmall <- 1
+    }
+
+    # pass 1: scaling (JS); this also provides the loadings needed to scale
+    # the aggregated proxies
     out <- lav_sem_js_eqs_pass(
-      eqs_b = eqs[[b]], aggregated = TRUE,
+      eqs_b = eqs[[b]], aggregated = FALSE,
       s_mat = s_mat, m_vec = m_vec, n = n,
       ov_names = ov_names, lv_names = lv_names, markers = markers,
       ind_pat = ind_pat, theta = theta, csmall = csmall,
-      lambda_mat = lambda_mat, lavpartable = lavpartable,
-      lavmodel = lavmodel, x = x
+      lambda_mat = NULL, lavpartable = lavpartable, lavmodel = lavmodel,
+      x = x
     )
     x <- out$x
     eqs[[b]] <- out$eqs
-  }
+
+    # pass 2 (JSA): aggregated proxies, scaled by the pass-1 loadings
+    if (aggregated) {
+      lambda_mat <- matrix(0, nrow = nvar, ncol = nfac)
+      if (length(mm_idx) > 0L) {
+        lambda_val <- lavpartable$ustart[mm_idx]
+        lambda_val[is.na(lambda_val)] <- 0
+        free_mm <- which(lavpartable$free[mm_idx] > 0L)
+        lambda_val[free_mm] <- x[lavpartable$free[mm_idx][free_mm]]
+        lambda_mat[cbind(
+          match(lavpartable$rhs[mm_idx], ov_names),
+          match(lavpartable$lhs[mm_idx], lv_names)
+        )] <- lambda_val
+      }
+      out <- lav_sem_js_eqs_pass(
+        eqs_b = eqs[[b]], aggregated = TRUE,
+        s_mat = s_mat, m_vec = m_vec, n = n,
+        ov_names = ov_names, lv_names = lv_names, markers = markers,
+        ind_pat = ind_pat, theta = theta, csmall = csmall,
+        lambda_mat = lambda_mat, lavpartable = lavpartable,
+        lavmodel = lavmodel, x = x
+      )
+      x <- out$x
+      eqs[[b]] <- out$eqs
+    }
+  } # blocks
 
   # pooled (system) solve for shared free parameters among the directed
-  # coefficients (a no-op when nothing is shared)
+  # coefficients, across all blocks (a no-op when nothing is shared); this
+  # handles simple (cross-group) equality constraints and general linear
+  # equality constraints among the directed coefficients
   x <- lav_sem_miiv_apply_directed_pool(
     eqs_b = do.call(c, eqs), x = x, lavmodel = lavmodel,
     lavpartable = lavpartable

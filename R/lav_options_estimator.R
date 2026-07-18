@@ -694,9 +694,27 @@ lav_options_est_js <- function(opt) {
   opt$fixed.x <- FALSE # for now
   opt$loglik <- FALSE
 
+  # ceq.simple lets the equation-by-equation estimator honor simple equality
+  # constraints via a pooled (system) solve -- see
+  # lav_sem_miiv_pool_directed()
+  opt$ceq.simple <- TRUE
+
+  # missing data
+  # - two.stage / robust.two.stage: use the (saturated) EM moments for point
+  #   estimation, with standard errors based on the two-stage moment
+  #   covariance (see lav_sem_js_vcov()); anything else falls back to
+  #   listwise deletion
+  two_stage <- any(opt$missing == c("two.stage", "robust.two.stage"))
+  if (!two_stage) {
+    opt$missing <- "listwise" # for now
+  }
+
   # se: delta-method standard errors over the sample moments (the estimator
-  # has its own machinery; see lav_sem_js_vcov)
-  if (opt$se == "default") {
+  # has its own machinery; see lav_sem_js_vcov). The general missing =
+  # two.stage handling (in lav_options()) sets se to (robust.)two.stage;
+  # reset to "standard" (the JS machinery reads opt$missing to pick the
+  # two-stage moment covariance)
+  if (any(opt$se == c("default", "two.stage", "robust.two.stage"))) {
     opt$se <- "standard"
   } else if (!opt$se %in% c("none", "standard", "bootstrap")) {
     lav_msg_warn(gettextf(
@@ -709,13 +727,19 @@ lav_options_est_js <- function(opt) {
       length(opt$optim.bounds) == 0L) {
     opt$bounds <- "standard"
   }
-  # test: only the (sample-based) Browne residual tests are meaningful for
-  # this estimator; the default is the normal-theory version (as for the
-  # IV estimator), anything else is switched off
-  if (length(opt$test) == 1L && opt$test == "default") {
-    opt$test <- "browne.residual.nt" # sample-based (also for the baseline)
+  # test: only the Browne residual tests are meaningful for this estimator;
+  # the default is the normal-theory version (as for the IV estimator).
+  # With missing data the sample-based version is not available, so use the
+  # model-based variant.
+  if ((length(opt$test) == 1L && opt$test == "default") || two_stage) {
+    opt$test <- if (two_stage) {
+      "browne.residual.nt.model"
+    } else {
+      "browne.residual.nt" # sample-based (also for the baseline)
+    }
   } else if (!all(opt$test %in% c(
-    "none", "browne.residual.nt", "browne.residual.adf"
+    "none", "browne.residual.nt", "browne.residual.adf",
+    "browne.residual.nt.model", "browne.residual.adf.model"
   ))) {
     lav_msg_warn(gettextf(
       "estimator %s only supports the browne.residual.nt/adf test
@@ -725,8 +749,6 @@ lav_options_est_js <- function(opt) {
   if (length(opt$test) > 0L && opt$test[1] != "none") {
     opt$standard.test <- opt$test[1]
   }
-  # missing
-  opt$missing <- "listwise" # for now
 
   # estimator options
   ea <- opt$estimator.args
