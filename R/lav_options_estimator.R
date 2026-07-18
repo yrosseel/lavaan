@@ -665,6 +665,132 @@ lav_options_est_fabin <- function(opt) {
   opt
 }
 
+lav_options_est_js <- function(opt) {
+  # James-Stein (JS) and aggregated James-Stein (JSA)                ####
+  # Burghgraeve, De Neve & Rosseel (2021)
+  label <- lav_options_estimatorgroup(opt$estimator)
+
+  if (isTRUE(opt$.categorical)) {
+    lav_msg_stop(gettextf(
+      "estimator %s does not support categorical data (yet).", label))
+  }
+  if (isTRUE(opt$.multilevel)) {
+    lav_msg_stop(gettextf(
+      "estimator %s does not support multilevel data (yet).", label))
+  }
+
+  # the JS estimator.args use snake_case names
+  if (is.list(opt$estimator.args) && length(opt$estimator.args) > 0L) {
+    opt$estimator.args <- lav_snake_case(opt$estimator.args)
+  }
+
+  # brute-force override
+  opt$optim.method <- "noniter"
+  opt$start <- "simple"
+  # the estimator relies on the scaling-indicator convention for the means:
+  # E(eta) = E(y_marker), so the marker intercepts are fixed to zero and the
+  # latent means are freed
+  opt$marker.int.zero <- TRUE
+  opt$fixed.x <- FALSE # for now
+  opt$loglik <- FALSE
+
+  # se: no standard errors (yet)
+  if (opt$se == "default") {
+    opt$se <- "none"
+  } else if (opt$se != "none") {
+    lav_msg_warn(gettextf(
+      "standard errors are not available (yet) for estimator = %s;
+       se is set to \"none\".", label))
+    opt$se <- "none"
+  }
+  # bounds
+  if (!is.null(opt$bounds) && opt$bounds == "default" &&
+      length(opt$optim.bounds) == 0L) {
+    opt$bounds <- "standard"
+  }
+  # test: only the (sample-based) Browne residual tests are meaningful for
+  # this estimator; anything else is switched off
+  if (length(opt$test) == 1L && opt$test == "default") {
+    opt$test <- "none" # for now
+  } else if (!all(opt$test %in% c(
+    "none", "browne.residual.nt", "browne.residual.adf"
+  ))) {
+    lav_msg_warn(gettextf(
+      "estimator %s only supports the browne.residual.nt/adf test
+       statistics; test is set to \"none\".", label))
+    opt$test <- "none"
+  }
+  if (length(opt$test) > 0L && opt$test[1] != "none") {
+    opt$standard.test <- opt$test[1]
+  }
+  # missing
+  opt$missing <- "listwise" # for now
+
+  # estimator options
+  ea <- opt$estimator.args
+  if (is.null(ea)) {
+    ea <- list()
+  }
+  if (is.null(ea$js_small_sample)) {
+    ea$js_small_sample <- TRUE
+  } else if (!is.logical(ea$js_small_sample)) {
+    lav_msg_stop(gettext(
+      "js_small_sample in estimator.args must be TRUE or FALSE."))
+  }
+  if (is.null(ea$js_theta)) {
+    ea$js_theta <- "spearman"
+  } else {
+    ea$js_theta <- tolower(ea$js_theta)
+    if (!ea$js_theta %in% c("spearman", "user")) {
+      lav_msg_stop(gettextf(
+        "js_theta value in estimator.args must be either %s.",
+        lav_msg_view(c("spearman", "user"), log_sep = "or")))
+    }
+  }
+  if (ea$js_theta == "user") {
+    if (is.null(ea$js_theta_values) || !is.numeric(ea$js_theta_values) ||
+        is.null(names(ea$js_theta_values))) {
+      lav_msg_stop(gettext(
+        "js_theta = \"user\" requires js_theta_values in estimator.args: a
+         named numeric vector with the residual variances of the
+         indicators."))
+    }
+  }
+  if (is.null(ea$js_theta_bounds)) {
+    ea$js_theta_bounds <- "wide"
+  } else {
+    ea$js_theta_bounds <- tolower(ea$js_theta_bounds)
+    if (!ea$js_theta_bounds %in% c("wide", "standard", "none")) {
+      lav_msg_stop(gettextf(
+        "js_theta_bounds value in estimator.args must be either %s.",
+        lav_msg_view(c("wide", "standard", "none"), log_sep = "or")))
+    }
+  }
+  if (is.null(ea$js_varcov_method)) {
+    ea$js_varcov_method <- "RLS"
+  } else {
+    ea$js_varcov_method <- toupper(ea$js_varcov_method)
+    if (!ea$js_varcov_method %in% c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
+      lav_msg_stop(gettextf(
+        "js_varcov_method value in estimator.args must be either %s.",
+        lav_msg_view(c("ULS", "GLS", "2RLS", "RLS", "NONE"), log_sep = "or")))
+    }
+  }
+  if (is.null(ea$js_mean_structure)) {
+    ea$js_mean_structure <- "wls"
+  } else {
+    ea$js_mean_structure <- tolower(ea$js_mean_structure)
+    if (!ea$js_mean_structure %in% c("wls", "moments")) {
+      lav_msg_stop(gettextf(
+        "js_mean_structure value in estimator.args must be either %s.",
+        lav_msg_view(c("wls", "moments"), log_sep = "or")))
+    }
+  }
+  opt$estimator.args <- ea
+
+  opt
+}
+
 lav_options_est_iv <- function(opt) {
   # (MI)IV-2SLS and friends                                          ####
 

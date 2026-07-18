@@ -76,12 +76,14 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
       lavoptions = lavoptions
     ), silent = TRUE)
   } else if (lavoptions$estimator %in% c("JS", "JSA")) {
-    x <- try(lav_cfa_jamesstein_internal(
-      lavmodel = lavmodel,
+    # no try(): the JS/JSA checks raise informative errors that should
+    # reach the user, rather than a generic "estimation failed"
+    x <- lav_sem_js_internal(
+      lavmodel = lavmodel, lavh1 = lavh1,
       lavsamplestats = lavsamplestats, lavpartable = lavpartable,
       lavdata = lavdata,
       lavoptions = lavoptions
-    ), silent = TRUE)
+    )
   } else if (lavoptions$estimator == "BENTLER1982") {
     x <- try(lav_cfa_bentler1982_internal(
       lavmodel = lavmodel,
