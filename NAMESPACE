@@ -92,6 +92,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lavPredictY_cv",
        "lavResidualsY",
        "lavCor",
+       "lavH1",
 
        # API functions
 
@@ -277,6 +278,7 @@ S3method(print, lavaan.matrix.symmetric, lav_mat_sym_print)
 S3method(print, lavaan.vector, lav_vector_print)
 S3method(print, lavaan.parameterEstimates, lav_parameterestimates_print)
 S3method(print, lavaan.effects, lav_effects_print)
+S3method(print, lavMoments, lav_moments_print)
 S3method(print, lavaan.fitMeasures, lav_fitmeasures_print)
 S3method(print, lavaan.residuals.summary, lav_residuals_summary_print)
 S3method(print, lavaan.summary, lav_summary_print)

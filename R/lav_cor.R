@@ -58,133 +58,17 @@ lav_object_cor <- function(object,
     }
   }
 
-  # extract sampling.weights.normalization from dots (for lav_lavdata() call)
-  dots <- dotdotdot
-  sampling_weights_normalization <- "group"
-  if (!is.null(dots$sampling.weights.normalization)) {
-    sampling_weights_normalization <- dots$sampling.weights.normalization
-  }
-
-
-  # check object class
-  if (inherits(object, "lavData")) {
-    lav_data <- object
-  } else if (inherits(object, "data.frame") ||
-    inherits(object, "matrix")) {
-    object <- as.data.frame(object)
-    names_1 <- names(object)
-    if (!is.null(group)) {
-      names_1 <- names_1[-match(group, names_1)]
-    }
-    if (!is.null(sampling_weights)) {
-      names_1 <- names_1[-match(sampling_weights, names_1)]
-    }
-    if (is.logical(ordered)) {
-      ordered_flag <- ordered
-      if (ordered_flag) {
-        ordered <- names_1
-        if (length(ov_names_x) > 0L) {
-          ordered <- ordered[-which(ordered %in% ov_names_x)]
-        }
-      } else {
-        ordered <- character(0L)
-      }
-    } else if (is.null(ordered)) {
-      ordered <- character(0L)
-    } else if (!is.character(ordered)) {
-      lav_msg_stop(gettext("ordered argument must be a character vector"))
-    } else if (length(ordered) == 1L && nchar(ordered) == 0L) {
-      ordered <- character(0L)
-    } else {
-      # check if all names in "ordered" occur in the dataset?
-      missing_idx <- which(!ordered %in% names_1)
-      if (length(missing_idx) > 0L) {
-        lav_msg_warn(gettextf(
-          "ordered variable(s): %s could not be found
-          in the data and will be ignored",
-          lav_msg_view(ordered[missing_idx])))
-      }
-    }
-    lav_data <- lav_lavdata(
-      data = object, group = group,
-      ov_names = names_1, ordered = ordered,
-      sampling_weights = sampling_weights,
-      ov_names_x = ov_names_x,
-      lavoptions = list(
-        missing = missing,
-        sampling.weights.normalization = sampling_weights_normalization
-      )
-    )
-  } else {
-    lav_msg_stop(gettext("lav_object_cor can not handle objects of class"),
-      paste(class(object), collapse = " ")
-    )
-  }
-
-  # set default estimator if se != "none"
-  categorical <- any(lav_data@ov$type == "ordered")
-  if (se != "none" && estimator == "none") {
-    if (categorical) {
-      estimator <- "WLSMV"
-    } else {
-      estimator <- "ML"
-    }
-  }
-
-  # extract more partable options from dots
-  meanstructure <- FALSE
-  fixed_x <- FALSE
-  mimic <- "lavaan"
-  conditional_x <- FALSE
-  if (!is.null(dots$meanstructure)) {
-    meanstructure <- dots$meanstructure
-  }
-  if (lav_data@ngroups > 1L || categorical ||
-      tolower(missing) %in% c("ml", "fiml", "direct")) {
-    meanstructure <- TRUE
-  }
-  if (!is.null(dots$fixed.x)) {
-    fixed_x <- dots$fixed.x
-  }
-  if (!is.null(dots$mimic)) {
-    mimic <- dots$mimic
-  }
-  if (!is.null(dots$conditional.x)) {
-    conditional_x <- dots$conditional.x
-  }
-
-  # override, only for backwards compatibility (eg moments() in JWileymisc)
-  # if(missing %in% c("ml", "fiml")) {
-  #    meanstructure = TRUE
-  # }
-
-  # generate partable for unrestricted model
-  pt_un <-
-    lav_pt_unrestricted(
-      lavobject = NULL,
-      lavdata = lav_data,
-      lavoptions = list(
-        meanstructure = meanstructure,
-        fixed.x = fixed_x,
-        conditional.x = conditional_x,
-        # sampling.weights.normalization = sampling.weights.normalization,
-        group.w.free = FALSE,
-        missing = missing,
-        estimator = estimator,
-        mimic = mimic
-      ),
-      sample_cov = NULL,
-      sample_mean = NULL,
-      sample_th = NULL
-    )
-
-
-  fit <- do.call(lavaan, c(list(
-    slot_par_table = pt_un, slot_data = lav_data,
-    model.type = "unrestricted",
+  # construct (and possibly fit) the unrestricted model; the workhorse
+  # lav_h1_lavobject() is shared with lavH1()
+  fit <- lav_h1_lavobject(
+    object = object,
+    ordered = ordered, group = group,
     missing = missing,
-    baseline = baseline, h1 = TRUE, # must be TRUE!
-    se = se, test = test, estimator = estimator), dotdotdot)
+    ov_names_x = ov_names_x,
+    sampling_weights = sampling_weights,
+    estimator = estimator, se = se, test = test,
+    baseline = baseline,
+    dotdotdot = dotdotdot
   )
 
   out <- lav_object_cor_output(fit, output = output)
