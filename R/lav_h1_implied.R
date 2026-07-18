@@ -89,6 +89,23 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       h1_implied = implied,
       lavoptions = lavoptions
     )
+  } else if (length(lavdata@ordered) > 0L) {
+    # two-level categorical data: the h1 statistics are produced by the
+    # stage-wise (univariate + bivariate) estimation of the unrestricted
+    # two-level model; the (normal-theory) EM algorithm below does not
+    # apply here
+    if (lavdata@data.type == "none") {
+      lav_msg_stop(gettext(
+        "unable to compute the h1 (unrestricted) statistics for a
+         two-level categorical model without raw data."))
+    }
+    tmp <- lav_samp_wls_2l_cat(
+      lavsamplestats = lavsamplestats,
+      lavdata = lavdata,
+      lavoptions = lavoptions
+    )
+    implied <- tmp$lavh1$implied
+    logl <- tmp$lavh1$logl
   } else {
     # estimate Mu.B, Mu.W, Sigma.B and Sigma.W for unrestricted model
     ngroups <- lavdata@ngroups

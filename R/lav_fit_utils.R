@@ -36,6 +36,7 @@ lav_fit_catml_dwls <- function(lavobject, nonpd = "na") {
 
   # limitations
   if (!lavobject@Model@categorical ||
+    lavobject@Data@nlevels > 1L ||
     lavobject@Options$conditional.x ||
     length(unlist(lavobject@pta$vnames$ov.num)) > 0L) {
     return(empty_list)

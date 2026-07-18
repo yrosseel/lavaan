@@ -12,6 +12,7 @@ lav_test_sb <- function(lavobject = NULL,
                                      lavimplied = NULL,
                                      lavoptions = NULL,
                                      lavdata = NULL,
+                                     lavh1 = NULL,
                                      test_unscaled = NULL,
                                      e_inv = NULL,
                                      delta = NULL,
@@ -37,9 +38,13 @@ lav_test_sb <- function(lavobject = NULL,
     lavoptions <- lavobject@Options
     lavimplied <- lavobject@implied
     lavdata <- lavobject@Data
+    lavh1 <- lavobject@h1
     test_1$standard <- lavobject@test[[1]]
   } else {
     test_1$standard <- test_unscaled
+  }
+  if (length(lavh1) == 0L) {
+    lavh1 <- NULL
   }
   npar <- lavmodel@nx.free
 
@@ -111,6 +116,7 @@ lav_test_sb <- function(lavobject = NULL,
         lavmodel = lavmodel,
         lavimplied = lavimplied,
         lavsamplestats = lavsamplestats, lavdata = lavdata,
+        lavh1 = lavh1,
         lavoptions = lavoptions, extra = TRUE
       )
     }
@@ -163,7 +169,7 @@ lav_test_sb <- function(lavobject = NULL,
         lavdata = lavdata,
         lavoptions = lavoptions,
         lavsamplestats = lavsamplestats,
-        lavh1 = NULL,
+        lavh1 = lavh1,
         lavimplied = NULL
       )
     }
