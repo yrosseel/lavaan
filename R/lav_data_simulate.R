@@ -70,9 +70,11 @@ lav_data_simulate <- function(model = NULL,
 
   if (multilevel) {
     # ------- multilevel worker -------
-    # the multilevel worker does not (yet) support these (single-level) features
+    # the multilevel worker does not (yet) support these (single-level)
+    # features; only warn when the user deviates from the defaults (note
+    # that the default for 'mass' is TRUE, so a user request is FALSE)
     if (!is.null(ov_var) || !is.null(skewness) || !is.null(kurtosis) ||
-        isTRUE(standardized) || isTRUE(mass)) {
+        isTRUE(standardized) || isFALSE(mass)) {
       lav_msg_warn(gettext(
         "arguments 'ov_var', 'skewness', 'kurtosis', 'standardized' and 'mass'
         are not supported for multilevel data and will be ignored"))
