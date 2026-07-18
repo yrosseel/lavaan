@@ -39,9 +39,16 @@ for the measurement-error variance of the proxies, so the estimates are a
 closed-form function of the sample moments (no raw data are needed: the
 model can also be fitted from \code{sample.cov} and \code{sample.nobs}).
 The measurement-error variances of the indicators are estimated by a
-Spearman-type communality estimator, applied per factor (this requires at
-least three indicators per factor, unless the residual variances are
-supplied directly; see \code{js_theta} below).
+Spearman-type communality estimator, applied per factor. Factors with
+three or more indicators use the within-factor tetrads; for 2-indicator
+factors the tetrads are formed with external variables (observed model
+variables outside the factor), which requires the factor to be
+correlated with other variables in the model. For a single-indicator
+factor the reliability must come from a residual variance that is fixed
+in the model (as the default lavaan rules do: the residual variance of a
+single indicator is fixed to zero, so the latent variable coincides with
+its indicator), or the residual variances can be supplied directly (see
+\code{js_theta} below).
 
 The estimator is selected by setting \code{estimator = "JS"} (scaling) or
 \code{estimator = "JSA"} (aggregated), for example
@@ -90,13 +97,14 @@ converted.
   \item{\code{js_theta}:}{Character. How the measurement-error (residual)
     variances of the indicators are estimated. \code{"spearman"} (the
     default) uses the Spearman-type communality estimator per factor
-    (this requires at least three indicators per factor);
-    \code{"user"} takes the values from \code{js_theta_values}.}
+    (within-factor tetrads for 3+ indicators; external tetrads for
+    2-indicator factors; model-fixed residual variances for factors with
+    fewer than 3 indicators); \code{"user"} takes the values from
+    \code{js_theta_values}.}
   \item{\code{js_theta_values}:}{Named numeric vector. The residual
     variances of the indicators (on the same scale as the analyzed
     sample moments), used when \code{js_theta = "user"}. This makes it
-    possible to plug in externally known reliabilities, or to handle
-    factors with fewer than three indicators.}
+    possible to plug in externally known reliabilities.}
   \item{\code{js_theta_bounds}:}{Character. Bounds applied to the
     Spearman communality estimates: \code{"wide"} (the default),
     \code{"standard"} or \code{"none"}. In addition, the resulting

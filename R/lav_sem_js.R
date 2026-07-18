@@ -541,10 +541,6 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
                                              contam = NULL,
                                              zpool = integer(0L),
                                              bounds = "wide") {
-  if (!any(contam[idx, idx])) {
-    return(lav_cfa_theta_spearman(s_full[idx, idx, drop = FALSE],
-      bounds = bounds))
-  }
   r <- cov2cor(s_full)
   p <- length(idx)
   out <- rep(as.numeric(NA), p)
@@ -604,7 +600,8 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
 # conditioning proxy (checked in lav_sem_js_eq_plans).
 lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
                              lv_names = NULL, lavoptions = NULL,
-                             aggregated = FALSE, contam = NULL) {
+                             aggregated = FALSE, contam = NULL,
+                             theta_fixed = NULL) {
   label <- if (aggregated) "JSA" else "JS"
   nvar <- ncol(s)
   ea <- lavoptions$estimator.args
@@ -633,27 +630,45 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
     # spearman, per factor
     for (f in seq_len(ncol(ind_pat))) {
       idx <- which(ind_pat[, f] != 0)
-      if (length(idx) < 3L) {
-        lav_msg_stop(gettextf(
-          "estimator %1$s needs at least 3 indicators per factor to estimate
-           the reliability of the scaling indicators; factor %2$s has only
-           %3$d. Alternatively, provide the residual variances directly via
-           estimator.args = list(js_theta = \"user\", js_theta_values = ...).",
-          label, lv_names[f], length(idx)))
-      }
-      if (is.null(contam) || !any(contam[idx, idx])) {
+      if (length(idx) >= 3L &&
+          (is.null(contam) || !any(contam[idx, idx]))) {
         theta[idx] <- lav_cfa_theta_spearman(s[idx, idx, drop = FALSE],
           bounds = js_theta_bounds
         )
-      } else {
-        # contaminated within-factor tetrads: mask them; when a variable
-        # has none left, use external tetrads (all observed variables
-        # outside this factor as candidate z's)
+      } else if (length(idx) >= 2L) {
+        # contaminated within-factor tetrads are masked; when a variable
+        # has none left -- including the 2-indicator case, which has no
+        # within-factor tetrads at all -- external tetrads take over
+        # (Kano-style, with the observed variables outside the factor in
+        # the z role; this requires the factor to be correlated with
+        # other model variables)
+        contam_f <- if (is.null(contam)) {
+          matrix(FALSE, nrow = nvar, ncol = nvar)
+        } else {
+          contam
+        }
         theta[idx] <- lav_sem_js_theta_spearman_masked(
-          s_full = s, idx = idx, contam = contam,
+          s_full = s, idx = idx, contam = contam_f,
           zpool = setdiff(seq_len(nvar), idx),
           bounds = js_theta_bounds
         )
+      }
+      # else (single indicator): only a model-fixed residual variance can
+      # provide the reliability (below); otherwise theta stays NA and an
+      # informative error is raised when the proxy is actually needed
+    }
+
+    # residual variances that are FIXED in the model provide the
+    # reliability directly for factors where the tetrad estimator is not
+    # available (fewer than 3 indicators); e.g. a single-indicator factor
+    # with its residual variance fixed to zero, or a 2-indicator factor
+    # with one known reliability
+    small_fac <- which(colSums(ind_pat != 0) < 3L)
+    if (length(small_fac) > 0L && !is.null(theta_fixed)) {
+      for (f in small_fac) {
+        idx <- which(ind_pat[, f] != 0)
+        fix_idx <- idx[!is.na(theta_fixed[idx])]
+        theta[fix_idx] <- theta_fixed[fix_idx]
       }
     }
   }
@@ -824,10 +839,13 @@ lav_sem_js_eq_plans <- function(eqs_b = NULL, aggregated = FALSE,
     for (i in which(is_lv)) {
       if (length(sets[[i]]) == 0L) {
         lav_msg_stop(gettextf(
-          "estimator %1$s cannot construct a clean conditioning proxy for
-           %2$s in the equation for %3$s: too many residual covariances
-           involve its indicators. Consider fixing some residual
-           covariances, or provide reliabilities via js_theta_values.",
+          "estimator %1$s cannot construct an admissible conditioning proxy
+           for %2$s in the equation for %3$s: no indicator with an
+           estimable reliability is available (too few indicators without
+           a fixed residual variance, or too many residual covariances).
+           Consider providing the residual variances directly via
+           estimator.args = list(js_theta = \"user\",
+           js_theta_values = ...).",
           label, eq$rhs[i], eq$lhs_new))
       }
     }
@@ -902,10 +920,23 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       lavpartable = lavpartable, pt_block = pt_block, b = b,
       ov_names = ov_names, lavpta = lavpta
     )
+    # residual variances that are FIXED in the model (used for factors
+    # with fewer than 3 indicators, where the tetrad estimator is not
+    # available)
+    theta_fixed <- rep(as.numeric(NA), nvar)
+    var_idx <- which(lavpartable$op == "~~" & pt_block == b &
+      lavpartable$lhs == lavpartable$rhs &
+      lavpartable$free == 0L & !is.na(lavpartable$ustart) &
+      lavpartable$lhs %in% ov_names)
+    if (length(var_idx) > 0L) {
+      theta_fixed[match(lavpartable$lhs[var_idx], ov_names)] <-
+        lavpartable$ustart[var_idx]
+    }
     theta <- lav_sem_js_theta(
       s = s_mat, ind_pat = ind_pat, ov_names = ov_names,
       lv_names = lv_names,
-      lavoptions = lavoptions, aggregated = aggregated, contam = contam
+      lavoptions = lavoptions, aggregated = aggregated, contam = contam,
+      theta_fixed = theta_fixed
     )
 
     # small-sample (Efron-Morris) shrinkage factor
