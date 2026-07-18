@@ -178,9 +178,44 @@ lav_options_set <- function(opt = NULL) {
         opt[[optname]][[optname]] <- opt[[optname]][["R"]]
         opt[[optname]][["R"]] <- NULL
       }
-      opt[[optname_args]] <- opt[[optname]]
-      opt[[optname_args]][[optname]] <- NULL
-      opt[[optname]] <- opt[[optname]][[optname]]
+      # allow the 'positional' convention (as used by efa()) where the
+      # value is given as the first, unnamed element of the list, e.g.
+      # rotation = list("geomin", geomin.epsilon = 0.01). Promote that
+      # first element to a named element (matching optname) so the split
+      # below works as it does for the named convention
+      # (e.g. rotation = list(rotation = "geomin", geomin.epsilon = 0.01)).
+      arg_names <- names(opt[[optname]])
+      if (is.null(arg_names)) {
+        arg_names <- rep("", length(opt[[optname]]))
+      }
+      if (length(arg_names) > 0L && !(optname %in% arg_names) &&
+        !nzchar(arg_names[1L])) {
+        arg_names[1L] <- optname
+        names(opt[[optname]]) <- arg_names
+      }
+      # separate the value (eg the rotation method) from the extra arguments
+      new_value <- opt[[optname]][[optname]]
+      new_args <- opt[[optname]]
+      new_args[[optname]] <- NULL
+      # snake_case the argument names for the options whose OPT.args sublist
+      # uses snake_case (see below); this must happen *before* merging with
+      # the (snake_cased) defaults, otherwise a user-supplied dot.case name
+      # (eg geomin.epsilon) and its default (geomin_epsilon) would coexist
+      # and lav_snake_case() would flag a duplicate.
+      if (length(new_args) &&
+        optname %in% c("rotation", "em", "em.h1")) {
+        new_args <- lav_snake_case(new_args)
+      }
+      # merge the user-supplied arguments into the (default) OPT.args, so
+      # arguments that were not specified keep their default value. This
+      # mirrors the recursive modifyList() merge that happens when OPT.args
+      # is passed directly (eg via efa()), rather than as part of OPT.
+      if (is.list(opt[[optname_args]])) {
+        opt[[optname_args]] <- modifyList(opt[[optname_args]], new_args)
+      } else {
+        opt[[optname_args]] <- new_args
+      }
+      opt[[optname]] <- new_value
     }
   }
 
