@@ -1914,7 +1914,10 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
         if (length(num_idx) > 0L) {
           ord_var_idx <- unique(th_idx[[g]][th_idx[[g]] > 0])
-          th_g[num_idx] <- -1 * sample_mean[[g]][-ord_var_idx]
+          # the numeric-variable slots of the combined threshold/mean
+          # vector hold the (positive) mean; lav_samp_wls_obs() negates
+          # them when it assembles the WLS vector (do NOT negate here too)
+          th_g[num_idx] <- sample_mean[[g]][-ord_var_idx]
         }
         res_th[[g]] <- th_g
         res_th_nox[[g]] <- sample_th[[g]]
@@ -1947,7 +1950,10 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
         if (length(num_idx) > 0L) {
           ord_var_idx <- unique(th_idx[[g]][th_idx[[g]] > 0])
-          th_g[num_idx] <- -1 * sample_mean[[g]][-ord_var_idx]
+          # the numeric-variable slots of the combined threshold/mean
+          # vector hold the (positive) mean; lav_samp_wls_obs() negates
+          # them when it assembles the WLS vector (do NOT negate here too)
+          th_g[num_idx] <- sample_mean[[g]][-ord_var_idx]
         }
         th[[g]] <- th_g
 
