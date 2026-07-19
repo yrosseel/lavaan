@@ -10,10 +10,10 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
 
   # no support for many things:
-  # (the IV and JS/JSA estimators support multiple groups, including
+  # (the IV, JS/JSA and MGM estimators support multiple groups, including
   # cross-group equality constraints for measurement invariance)
   if (lavmodel@ngroups > 1L &&
-      !lavoptions$estimator %in% c("IV", "JS", "JSA")) {
+      !lavoptions$estimator %in% c("IV", "JS", "JSA", "MGM")) {
     lav_msg_stop(gettext(
       "multiple groups not supported (yet) with optim.method = 'NONITER'."))
   }
@@ -42,10 +42,13 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # linear equality constraints are supported by the IV and JS/JSA
-  # estimators (handled by a constrained system solve); other noniterative
-  # estimators do not (yet) support them
+  # estimators (handled by a constrained system solve); the MGM estimator
+  # handles SIMPLE (a == b) constraints among the loadings (which are
+  # absorbed by ceq.simple and never reach ceq.linear.idx -- anything that
+  # remains here is checked inside lav_cfa_guttman1952_internal); other
+  # noniterative estimators do not (yet) support them
   if (length(lavmodel@ceq.linear.idx) > 0L &&
-      !lavoptions$estimator %in% c("IV", "JS", "JSA")) {
+      !lavoptions$estimator %in% c("IV", "JS", "JSA", "MGM")) {
     lav_msg_stop(gettext(
       "equality constraints not supported (yet) with optim.method = 'NONITER'."
       ))
@@ -68,8 +71,9 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     x <- try(lav_cfa_guttman1952_internal(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+      lavdata = lavdata, lavh1 = lavh1,
       lavoptions = lavoptions
-    ), silent = TRUE)
+    ), silent = FALSE)
   } else if (lavoptions$estimator == "BENTLER1982") {
     x <- try(lav_cfa_bentler1982_internal(
       lavmodel = lavmodel,

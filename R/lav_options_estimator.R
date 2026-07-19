@@ -642,22 +642,39 @@ lav_options_est_fabin <- function(opt) {
   # options for guttman1952 multiple group method
   if (lav_options_estimatorgroup(opt$estimator) == "MGM") {
     if (is.null(opt$estimator.args)) {
-      opt$estimator.args <- list(
-        zero.after.efa = TRUE,
-        psi.mapping = FALSE,
-        quadprog = FALSE
-      )
-    } else {
-      if (is.null(opt$estimator.args$zero.after.efa)) {
-        opt$estimator.args$zero.after.efa <- TRUE
-      }
-      if (is.null(opt$estimator.args$psi.mapping)) {
-        opt$estimator.args$psi.mapping <- FALSE
-      }
-      if (is.null(opt$estimator.args$quadprog)) {
-        opt$estimator.args$quadprog <- FALSE
-      }
+      opt$estimator.args <- list()
     }
+    # NOTE: read with [[ ]] -- $ would partially match
+    if (is.null(opt$estimator.args[["zero.after.efa"]])) {
+      opt$estimator.args$zero.after.efa <- TRUE
+    }
+    if (is.null(opt$estimator.args[["psi.mapping"]])) {
+      opt$estimator.args$psi.mapping <- FALSE
+    }
+    if (is.null(opt$estimator.args[["quadprog"]])) {
+      opt$estimator.args$quadprog <- FALSE
+    }
+    # second stage for the variances/covariances (as in the IV/JS
+    # estimators): "none" (classic MGM), or one of "ULS"/"GLS"/"RLS"/"2RLS";
+    # the default ("default") becomes "RLS" when the model contains
+    # residual covariances (which the classic computation cannot handle),
+    # and "none" otherwise
+    if (is.null(opt$estimator.args[["mgm.varcov"]])) {
+      mv <- opt$estimator.args[["mgm_varcov"]] # snake_case alias
+      opt$estimator.args$mgm.varcov <- if (is.null(mv)) "default" else mv
+      opt$estimator.args$mgm_varcov <- NULL
+    }
+    opt$estimator.args$mgm.varcov <-
+      toupper(opt$estimator.args[["mgm.varcov"]])
+    if (!opt$estimator.args[["mgm.varcov"]] %in%
+          c("DEFAULT", "NONE", "ULS", "GLS", "RLS", "2RLS")) {
+      lav_msg_stop(gettextf(
+        "unknown value for estimator.args$mgm.varcov option: %s.",
+        opt$estimator.args[["mgm.varcov"]]))
+    }
+    # simple (a == b) equality constraints (e.g., group.equal = "loadings")
+    # are handled by a pooled solve; represent them compactly
+    opt$ceq.simple <- TRUE
   }
   # brute-force override
   opt$optim.method <- "noniter"
