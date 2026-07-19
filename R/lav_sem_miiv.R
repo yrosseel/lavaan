@@ -1448,44 +1448,23 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       if (iv_vcov_stage1 == "gamma" || iv_vcov_stage2 == "h2") {
         nvar <- nrow(sample_cov)
         pstar <- nvar * (nvar + 1) / 2
-        # Ex[k, j] = 1 iff x.idx[k] == j
-        ex <- matrix(0.0, nx, nvar)
-        if (nx > 0L) {
-          ex[cbind(seq_len(nx), x_idx)] <- 1.0
-        }
         # ---- Jacobian of beta_slopes w.r.t. vech(S) --------------
-        a_vec <- lav_mat_vech_row_idx(nvar)
-        b_vec <- lav_mat_vech_col_idx(nvar)
-        offdiag <- (a_vec > b_vec) # logical: strictly off-diagonal elements
-
-        if (!iv_flag && nx == 0L) {
+        # (Fisher & Bollen 2020, section 2.4): j_slopes_s = amat^{-1} M
+        # with M = d(bvec - amat beta)/dvech(S) at the equation's own
+        # solution (see lav_sem_miiv_eq_dresid_dvech)
+        if (nx == 0L) {
           j_slopes_s <- matrix(0.0, nrow = 0L, ncol = pstar)
-        } else if (!iv_flag) {
-          g <- -as.vector(crossprod(ex, beta_slopes))
-          g[y_idx] <- g[y_idx] + 1.0
-          # build M (p x m) column-by-column in vectorised form
-          m <- sweep(ex[, b_vec, drop = FALSE], 2L, g[a_vec], `*`) +
-            sweep(ex[, a_vec, drop = FALSE], 2L, g[b_vec] * offdiag, `*`)
-          j_slopes_s <- lav_mat_sym_solve_spd(s_xx, m)
         } else {
-          r_z <- drop(s_zy) - s_zx %*% beta_slopes
-          u <- drop(lav_mat_sym_solve_spd(s_zz, r_z))
-          ez <- matrix(0.0, nz, nvar)
-          ez[cbind(seq_len(nz), i_idx)] <- 1.0
-          ew <- crossprod(m_w, ez)
-          cu <- as.vector(crossprod(ez, u))
-          cb_x <- as.vector(crossprod(ex, beta_slopes))
-          h <- -cu
-          h[y_idx] <- h[y_idx] + 1.0
-          # build M (p x m) vectorised
-          m <-
-            sweep(ex[, b_vec, drop = FALSE], 2L, cu[a_vec], `*`) +
-            sweep(ew[, a_vec, drop = FALSE], 2L, h[b_vec], `*`) -
-            sweep(ew[, b_vec, drop = FALSE], 2L, cb_x[a_vec], `*`) +
-            sweep(ex[, a_vec, drop = FALSE], 2L, cu[b_vec] * offdiag, `*`) +
-            sweep(ew[, b_vec, drop = FALSE], 2L, h[a_vec] * offdiag, `*`) -
-            sweep(ew[, a_vec, drop = FALSE], 2L, cb_x[b_vec] * offdiag, `*`)
-          j_slopes_s <- solve(amat, m)
+          m <- lav_sem_miiv_eq_dresid_dvech(
+            sample_cov = sample_cov, x_idx = x_idx, y_idx = y_idx,
+            i_idx = if (iv_flag) i_idx else integer(0L),
+            beta = beta_slopes
+          )
+          if (!iv_flag) {
+            j_slopes_s <- lav_mat_sym_solve_spd(s_xx, m)
+          } else {
+            j_slopes_s <- solve(amat, m)
+          }
         }
 
         # fill in k_mat_int and k_mat
@@ -2070,9 +2049,12 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   #    for the directed block (matches MIIVsem) -- see
   #    lav_sem_miiv_directed_vcov_restricted()
   #  - gamma: the original delta-method (moment-Jacobian) standard errors, with
-  #    a numerical Jacobian of the constrained pooled solve
-  # Either way stage 2 still needs the constraint-aware (numerical) directed
-  # Jacobian to propagate the directed uncertainty into the undirected block.
+  #    a constraint-aware directed Jacobian of the pooled solve
+  # Either way stage 2 still needs the constraint-aware directed Jacobian to
+  # propagate the directed uncertainty into the undirected block. For the
+  # continuous moments engine that Jacobian is analytic (the pooled chain in
+  # lav_sem_miiv_jack_analytic); categorical data and external instruments
+  # fall back to the numerical Jacobian of the constrained pooled solve.
   use_restricted_directed <- FALSE
   if (has_dir_con && length(free_directed_idx) > 0L &&
       iv_vcov_stage1 != "none") {
@@ -2094,7 +2076,10 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
            standard errors."))
       }
     }
-    iv_vcov_jack_numerical <- TRUE
+    if (lavmodel@categorical ||
+        length(unlist(lavdata@ov.names.aux)) > 0L) {
+      iv_vcov_jack_numerical <- TRUE
+    }
   }
 
   # general linear constraints among the undirected parameters: the analytic
@@ -2208,8 +2193,12 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       gamma_big <- lav_mat_bdiag(gamma_aug_b)
     }
 
-    # numerical directed Jacobian over the stacked moments (jac_k differentiates
-    # the per-group 2SLS solve, including the cross-group pooled constraints)
+    # directed Jacobian over the stacked moments (jac_k differentiates the
+    # per-group 2SLS solve, including the cross-group pooled constraints):
+    # analytic (block assembly of the per-equation Jacobians; the pooled
+    # chain when constraints are active) whenever the per-equation k_mat
+    # is available; numerical otherwise (raw-data engine, external
+    # instruments, categorical + constraints)
     jac_k <- NULL
     if (length(free_directed_idx) > 0L && ext_cat_mg) {
       # categorical external instruments: analytic augmented Jacobian
@@ -2222,12 +2211,23 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         jac_k[, moff_aug[b] + seq_len(md_aug[b])] <- jb
       }
     } else if (length(free_directed_idx) > 0L) {
-      vec <- unlist(vec_list)
-      jac_k <- numDeriv::jacobian(lav_sem_miiv_2sls_samp, x = vec,
-        samplestats = TRUE, eqs = eqs, lavmodel = lavmodel,
-        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        lavh1 = lavh1, lavdata = lavdata,
-        free_directed_idx = free_directed_idx)
+      if (!iv_vcov_jack_numerical &&
+          length(unlist(lavdata@ov.names.aux)) == 0L) {
+        jac_k <- lav_sem_miiv_jack_analytic(
+          eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
+          lavdata = lavdata, lavh1 = lavh1,
+          free_directed_idx = free_directed_idx,
+          con = con_dir, x = x, md = md, moff = moff
+        )
+      }
+      if (is.null(jac_k)) {
+        vec <- unlist(vec_list)
+        jac_k <- numDeriv::jacobian(lav_sem_miiv_2sls_samp, x = vec,
+          samplestats = TRUE, eqs = eqs, lavmodel = lavmodel,
+          lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+          lavh1 = lavh1, lavdata = lavdata,
+          free_directed_idx = free_directed_idx)
+      }
     }
 
     # directed covariance. Complete continuous data: restricted-2SLS
@@ -2541,8 +2541,22 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   # compute jac_k if needed
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 != "none"
       && (iv_vcov_stage1 == "gamma" || iv_vcov_stage2 == "h2")) {
-    if (iv_vcov_jack_numerical) {
-      # compute K matrix
+    jac_k <- NULL
+    if (!iv_vcov_jack_numerical) {
+      # analytic version (single block here; the pooled chain handles
+      # equality constraints among the directed coefficients)
+      md_1 <- vapply(lav_implied_to_vec(implied = lavh1$implied,
+        lavmodel = lavmodel, drop_list = FALSE), length, integer(1L))
+      jac_k <- lav_sem_miiv_jack_analytic(
+        eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
+        lavdata = lavdata, lavh1 = lavh1,
+        free_directed_idx = free_directed_idx,
+        con = con_dir, x = x,
+        md = md_1, moff = cumsum(c(0L, md_1))
+      )
+    }
+    if (is.null(jac_k)) {
+      # numerical fallback
       vec <- lav_implied_to_vec(
         implied = lavh1$implied, lavmodel = lavmodel,
         drop_list = TRUE
@@ -2553,14 +2567,6 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavsamplestats = lavsamplestats,
         lavh1 = lavh1, lavdata = lavdata,
-        free_directed_idx = free_directed_idx
-      )
-    } else {
-      # analytic version -- # FIXME: multiple blocks!!!
-      stopifnot(lavmodel@nblocks == 1L)
-      jac_k <- lav_sem_miiv_utils_jack_eqs(
-        eqs = eqs, block = 1L,
-        lavmodel = lavmodel, lavpartable = lavpartable,
         free_directed_idx = free_directed_idx
       )
     }

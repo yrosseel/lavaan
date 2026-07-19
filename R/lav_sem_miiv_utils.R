@@ -640,6 +640,71 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
 # jac_k: d theta1 / d svec
 # see Fisher & Bollen (2020) section 2.4
 
+# d(bvec - amat %*% beta) / d vech(S) for one equation of the moments
+# engine, at an ARBITRARY slope vector beta (the expression is linear in
+# beta). For an OLS equation (no instruments) bvec - amat beta =
+# s_xy - s_xx beta; for a 2SLS equation it is S_xz S_zz^{-1} (s_zy -
+# s_zx beta). Rows = ALL slopes of the equation (free and fixed);
+# columns = vech(S) of the block, diagonal included.
+#
+# Evaluated at the equation's own unconstrained solution this is
+# amat %*% k_mat (the per-equation moment Jacobian of Fisher & Bollen,
+# 2020, section 2.4); evaluated at the POOLED solution it provides the
+# right-hand side of the pooled (equality-constrained) Jacobian chain
+# (see lav_sem_miiv_jack_analytic).
+lav_sem_miiv_eq_dresid_dvech <- function(sample_cov = NULL,
+                                         x_idx = NULL, y_idx = NULL,
+                                         i_idx = integer(0L),
+                                         beta = NULL) {
+  nvar <- nrow(sample_cov)
+  pstar <- nvar * (nvar + 1L) / 2L
+  nx <- length(x_idx)
+  if (nx == 0L) {
+    return(matrix(0, nrow = 0L, ncol = pstar))
+  }
+  iv_flag <- length(i_idx) > 0L
+
+  # Ex[k, j] = 1 iff x_idx[k] == j
+  ex <- matrix(0, nrow = nx, ncol = nvar)
+  ex[cbind(seq_len(nx), x_idx)] <- 1.0
+  a_vec <- lav_mat_vech_row_idx(nvar)
+  b_vec <- lav_mat_vech_col_idx(nvar)
+  offdiag <- (a_vec > b_vec)
+
+  if (!iv_flag) {
+    # d(s_xy - s_xx beta) / d vech(S)
+    g <- -as.vector(crossprod(ex, beta))
+    g[y_idx] <- g[y_idx] + 1.0
+    m <- sweep(ex[, b_vec, drop = FALSE], 2L, g[a_vec], `*`) +
+      sweep(ex[, a_vec, drop = FALSE], 2L, g[b_vec] * offdiag, `*`)
+  } else {
+    # d(S_xz S_zz^{-1} (s_zy - s_zx beta)) / d vech(S)
+    nz <- length(i_idx)
+    s_zx <- sample_cov[i_idx, x_idx, drop = FALSE]
+    s_zz <- sample_cov[i_idx, i_idx, drop = FALSE]
+    s_zy <- sample_cov[i_idx, y_idx, drop = FALSE]
+    m_w <- lav_mat_sym_solve_spd(s_zz, s_zx)
+    r_z <- drop(s_zy) - s_zx %*% beta
+    u <- drop(lav_mat_sym_solve_spd(s_zz, r_z))
+    ez <- matrix(0, nrow = nz, ncol = nvar)
+    ez[cbind(seq_len(nz), i_idx)] <- 1.0
+    ew <- crossprod(m_w, ez)
+    cu <- as.vector(crossprod(ez, u))
+    cb_x <- as.vector(crossprod(ex, beta))
+    h <- -cu
+    h[y_idx] <- h[y_idx] + 1.0
+    m <-
+      sweep(ex[, b_vec, drop = FALSE], 2L, cu[a_vec], `*`) +
+      sweep(ew[, a_vec, drop = FALSE], 2L, h[b_vec], `*`) -
+      sweep(ew[, b_vec, drop = FALSE], 2L, cb_x[a_vec], `*`) +
+      sweep(ex[, a_vec, drop = FALSE], 2L, cu[b_vec] * offdiag, `*`) +
+      sweep(ew[, b_vec, drop = FALSE], 2L, h[a_vec] * offdiag, `*`) -
+      sweep(ew[, a_vec, drop = FALSE], 2L, cb_x[b_vec] * offdiag, `*`)
+  }
+  m
+}
+
+
 # per equation, one block only!
 lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
                                         block = 1L,
@@ -699,6 +764,246 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
 
   k_mat
 }
+
+
+# analytic directed Jacobian d theta1 / d svec over ALL blocks (the
+# stacked moment vector), including the pooled solve for equality
+# constraints among the directed coefficients.
+#
+# - without pooling (no shared slope columns, no shared intercepts, no
+#   general linear constraints): block-diagonal assembly of the
+#   per-equation Jacobians (eq$k_mat / eq$k_mat_int, Fisher & Bollen
+#   2020) -- this also covers categorical data
+# - with pooling (continuous moments engine only): the pooled solve is
+#   theta = D^{-1} sum_e C_e' b_e with D = sum_e C_e' A_e C_e, so
+#     d theta = D^{-1} sum_e C_e' d(b_e - A_e C_e theta)/d svec
+#   where the per-equation term is the Fisher-Bollen M matrix evaluated
+#   at the POOLED coefficients (lav_sem_miiv_eq_dresid_dvech is linear
+#   in beta); general linear constraints add the usual KKT bordering,
+#   and a label repeated within one equation collapses C'AC-style
+#   (matching lav_sem_miiv_pool_directed). Pooled intercepts are the
+#   nobs-weighted averages of ybar - xbar' beta(pooled), and their rows
+#   chain through d theta.
+#
+# Returns ntheta1 x sum(md), or NULL when the configuration is not
+# covered (pooling + categorical data); external instruments and the
+# raw-data engine (no eq$k_mat) must be excluded by the caller.
+lav_sem_miiv_jack_analytic <- function(eqs = NULL, lavmodel = NULL,
+                                       lavpartable = NULL, lavdata = NULL,
+                                       lavh1 = NULL,
+                                       free_directed_idx = integer(0L),
+                                       con = NULL, x = NULL,
+                                       md = NULL, moff = NULL) {
+  nblocks <- lavmodel@nblocks
+  ntheta1 <- length(free_directed_idx)
+  ntot <- sum(md)
+  meanstructure <- lavmodel@meanstructure
+
+  # pooling active? (mirror lav_sem_miiv_apply_directed_pool)
+  all_gcol <- integer(0L)
+  all_int <- integer(0L)
+  for (b in seq_len(nblocks)) {
+    for (eq in eqs[[b]]) {
+      if (is.null(eq$slope_block)) {
+        next
+      }
+      all_gcol <- c(all_gcol, eq$slope_block$gcol)
+      if (!is.null(eq$ptint) && length(eq$ptint) == 1L) {
+        fint <- lavpartable$free[eq$ptint]
+        if (fint > 0L) {
+          all_int <- c(all_int, fint)
+        }
+      }
+    }
+  }
+  pool_active <- anyDuplicated(all_gcol) > 0L || !is.null(con) ||
+    anyDuplicated(all_int) > 0L
+
+  if (!pool_active) {
+    # block-diagonal assembly of the per-equation Jacobians
+    jac <- matrix(0, nrow = ntheta1, ncol = ntot)
+    for (b in seq_len(nblocks)) {
+      jac[, moff[b] + seq_len(md[b])] <- lav_sem_miiv_utils_jack_eqs(
+        eqs = eqs, block = b, lavmodel = lavmodel,
+        lavpartable = lavpartable, free_directed_idx = free_directed_idx
+      )
+    }
+    return(jac)
+  }
+
+  # pooled chain: continuous moments engine only
+  if (lavmodel@categorical) {
+    return(NULL)
+  }
+
+  # 1. the pooled system D (same accumulation as
+  #    lav_sem_miiv_pool_directed, including the within-equation
+  #    duplicate-label collapse)
+  free_slope_idx <- sort(unique(all_gcol))
+  npool <- length(free_slope_idx)
+  dmat <- matrix(0, nrow = npool, ncol = npool)
+  for (b in seq_len(nblocks)) {
+    for (eq in eqs[[b]]) {
+      sb <- eq$slope_block
+      if (is.null(sb)) {
+        next
+      }
+      p <- match(sb$gcol, free_slope_idx)
+      if (anyDuplicated(p) > 0L) {
+        a_c <- rowsum(sb$amat, group = p)
+        a_c <- t(rowsum(t(a_c), group = p))
+        pu <- sort(unique(p))
+        dmat[pu, pu] <- dmat[pu, pu] + a_c
+      } else {
+        dmat[p, p] <- dmat[p, p] + sb$amat
+      }
+    }
+  }
+
+  # 2. right-hand side: sum over equations of C' M(beta_pooled)
+  rhs <- matrix(0, nrow = npool, ncol = ntot)
+  beta_full_list <- vector("list", nblocks)
+  for (b in seq_len(nblocks)) {
+    ov_names_b <- lavdata@ov.names[[b]]
+    cov_b <- lavh1$implied$cov[[b]]
+    nvar_b <- lavmodel@nvar[b]
+    pstar_b <- nvar_b * (nvar_b + 1L) / 2L
+    mean_off <- if (meanstructure) nvar_b else 0L
+    cov_cols <- moff[b] + mean_off + seq_len(pstar_b)
+    beta_full_list[[b]] <- vector("list", length(eqs[[b]]))
+    for (j in seq_along(eqs[[b]])) {
+      eq <- eqs[[b]][[j]]
+      sb <- eq$slope_block
+      if (is.null(sb)) {
+        next
+      }
+      # instruments? (mirror the estimation loop)
+      iv_flag <- TRUE
+      if (!is.null(eq$iv_type)) {
+        iv_flag <- eq$iv_type != "ols"
+      } else if (identical(eq$rhs_new, eq$miiv)) {
+        iv_flag <- FALSE
+      }
+      y_idx <- match(eq$lhs_new, ov_names_b)
+      i_idx <- if (iv_flag) match(eq$iv, ov_names_b) else integer(0L)
+      if (anyNA(y_idx) || anyNA(i_idx)) {
+        # instruments outside the model moments (external instruments):
+        # not covered by the pooled chain
+        return(NULL)
+      }
+      # full slope vector at the POOLED estimates (fixed values kept)
+      eq_free_idx <- lavpartable$free[eq$pt]
+      beta_full <- lavpartable$ustart[eq$pt]
+      beta_full[is.na(beta_full)] <- 0
+      fp <- which(eq_free_idx > 0L)
+      beta_full[fp] <- x[eq_free_idx[fp]]
+      beta_full_list[[b]][[j]] <- beta_full
+      m_star <- lav_sem_miiv_eq_dresid_dvech(
+        sample_cov = cov_b, x_idx = sb$x_idx, y_idx = y_idx,
+        i_idx = i_idx, beta = beta_full
+      )
+      m_free <- m_star[fp, , drop = FALSE]
+      pw <- match(sb$gcol, free_slope_idx)
+      mm <- rowsum(m_free, group = pw)
+      pu <- sort(unique(pw))
+      rhs[pu, cov_cols] <- rhs[pu, cov_cols] + mm
+    }
+  }
+
+  # 3. d theta (KKT bordering for general linear constraints)
+  if (!is.null(con) && nrow(con$jac) > 0L) {
+    ncon <- nrow(con$jac)
+    kkt <- rbind(
+      cbind(dmat, t(con$jac)),
+      cbind(con$jac, matrix(0, ncon, ncon))
+    )
+    dtheta <- solve(kkt, rbind(rhs, matrix(0, ncon, ntot)))
+    dtheta <- dtheta[seq_len(npool), , drop = FALSE]
+  } else {
+    dtheta <- solve(dmat, rhs)
+  }
+
+  # 4. assemble the slope rows
+  jac <- matrix(0, nrow = ntheta1, ncol = ntot)
+  ridx <- match(free_slope_idx, free_directed_idx)
+  ok <- which(!is.na(ridx))
+  jac[ridx[ok], ] <- dtheta[ok, , drop = FALSE]
+
+  # 5. intercept rows (meanstructure): per-equation rows in estimation
+  #    order (last write wins, as in the estimation loop); equations with
+  #    a slope block are then overwritten by the pooled nobs-weighted
+  #    average (as in lav_sem_miiv_apply_directed_pool)
+  if (meanstructure) {
+    int_acc <- list() # fint -> list(num = row-sum, den = weight-sum)
+    for (b in seq_len(nblocks)) {
+      ov_names_b <- lavdata@ov.names[[b]]
+      nvar_b <- lavmodel@nvar[b]
+      mean_cols <- moff[b] + seq_len(nvar_b)
+      for (j in seq_along(eqs[[b]])) {
+        eq <- eqs[[b]][[j]]
+        if (is.null(eq$ptint) || length(eq$ptint) != 1L) {
+          next
+        }
+        fint <- lavpartable$free[eq$ptint]
+        if (fint <= 0L) {
+          next
+        }
+        rrow <- match(fint, free_directed_idx)
+        if (is.na(rrow)) {
+          next
+        }
+        y_idx <- match(eq$lhs_new, ov_names_b)
+        sb <- eq$slope_block
+        if (identical(eq$rhs_new, "1")) {
+          # intercept-only equation: beta0 = ybar(y)
+          row <- numeric(ntot)
+          row[mean_cols[y_idx]] <- 1
+          jac[rrow, ] <- row
+        } else if (is.null(sb)) {
+          # slopes all fixed: beta0 = ybar - xbar' b_fix
+          x_idx <- match(eq$rhs_new, ov_names_b)
+          b_fix <- lavpartable$ustart[eq$pt]
+          b_fix[is.na(b_fix)] <- 0
+          row <- numeric(ntot)
+          row[mean_cols[y_idx]] <- 1
+          row[mean_cols[x_idx]] <- row[mean_cols[x_idx]] - b_fix
+          jac[rrow, ] <- row
+        } else {
+          # beta0 = ybar - xbar' beta(pooled):
+          #   d = e_y - sum_l beta_l e_{x_l} - xbar' d beta
+          x_idx <- sb$x_idx
+          beta_full <- beta_full_list[[b]][[j]]
+          eq_free_idx <- lavpartable$free[eq$pt]
+          row <- numeric(ntot)
+          row[mean_cols[y_idx]] <- 1
+          row[mean_cols[x_idx]] <- row[mean_cols[x_idx]] - beta_full
+          xbar <- sb$x_bar
+          fp <- which(eq_free_idx > 0L)
+          if (length(fp) > 0L) {
+            dbeta <- dtheta[match(sb$gcol, free_slope_idx), ,
+                            drop = FALSE]
+            row <- row - drop(crossprod(dbeta, xbar[fp]))
+          }
+          w_e <- if (!is.null(eq$nobs)) eq$nobs else 1
+          key <- as.character(fint)
+          if (is.null(int_acc[[key]])) {
+            int_acc[[key]] <- list(num = w_e * row, den = w_e)
+          } else {
+            int_acc[[key]]$num <- int_acc[[key]]$num + w_e * row
+            int_acc[[key]]$den <- int_acc[[key]]$den + w_e
+          }
+        }
+      }
+    }
+    for (key in names(int_acc)) {
+      rrow <- match(as.integer(key), free_directed_idx)
+      jac[rrow, ] <- int_acc[[key]]$num / int_acc[[key]]$den
+    }
+  }
+
+  jac
+}
+
 
 # per-equation overidentification test based on Browne's residual-based
 # statistic, using the asymptotic covariance (ACOV/Gamma) of the sample
