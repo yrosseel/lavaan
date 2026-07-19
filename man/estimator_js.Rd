@@ -128,15 +128,27 @@ converted.
     \code{meanstructure = TRUE}: \code{"wls"} (the default) re-estimates
     them jointly by GLS, which also provides the means of the exogenous
     latent variables; \code{"moments"} keeps the per-equation intercepts.}
+  \item{\code{js_jacobian}:}{Character. How the Jacobian of the
+    estimation map (needed for the delta-method standard errors) is
+    computed: \code{"analytic"} (the default) or \code{"numeric"}
+    (numerical differentiation of the complete map; much slower for
+    larger models). A few configurations are not covered by the analytic
+    Jacobian (general linear equality constraints among the
+    variance/covariance parameters, a slope label repeated within a
+    single equation, a non-positive-definite or non-converged
+    second-stage weight matrix); these fall back to the numerical
+    Jacobian automatically.}
 }
 }
 
 \subsection{Standard errors and test statistics}{
 
 By default (\code{se = "standard"}), delta-method standard errors are
-computed by (numerically) differentiating the complete estimation map
-with respect to the sample moments, and combining the resulting Jacobian
-with the asymptotic covariance matrix of the moments (\code{js_gamma}).
+computed by differentiating the complete estimation map with respect to
+the sample moments, and combining the resulting Jacobian with the
+asymptotic covariance matrix of the moments (\code{js_gamma}). The
+Jacobian is computed analytically in a single chain-rule sweep (see
+\code{js_jacobian}), so the standard errors are non-iterative as well.
 Because the Jacobian runs through all estimation steps, the additional
 variability caused by estimating the reliability matrix (Theorem 2 in
 Burghgraeve et al., 2021) -- and, for JSA, the aggregation weights -- is

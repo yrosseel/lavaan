@@ -109,7 +109,8 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
                                 lavoptions = NULL,
                                 free_directed_idx = NULL,
                                 free_undirected_idx = NULL,
-                                aggregated = FALSE) {
+                                aggregated = FALSE,
+                                record = FALSE) {
   samplestats <- !is.null(vec)
   if (samplestats) {
     implied <- lav_vec_to_implied(vec, lavmodel = lavmodel)
@@ -124,6 +125,7 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
   # first stage: directed parameters     #
   ########################################
   eqs_out <- eqs
+  js_trace <- NULL
   if (length(free_directed_idx) > 0L) {
     theta1 <- lav_sem_js_stage1_samp(
       x = vec, samplestats = samplestats, eqs = eqs,
@@ -131,9 +133,11 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
       lavsamplestats = lavsamplestats, lavh1 = lavh1,
       lavoptions = lavoptions,
       free_directed_idx = free_directed_idx,
-      aggregated = aggregated
+      aggregated = aggregated,
+      record = record
     )
     eqs_out <- attr(theta1, "eqs")
+    js_trace <- attr(theta1, "js_trace")
     x[free_directed_idx] <- as.numeric(theta1)
   }
 
@@ -203,14 +207,17 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
   }
 
   attr(x, "eqs") <- eqs_out
+  if (record) {
+    attr(x, "js_trace") <- js_trace
+  }
   x
 }
 
 
 # VCOV for the free parameters: the delta method over the sample moments.
-# The full estimation map theta(s) is differentiated numerically with
-# respect to the stacked moment vector s = [mean, vech(cov)], and
-# sandwiched with the asymptotic covariance of the sample moments:
+# The full estimation map theta(s) is differentiated with respect to the
+# stacked moment vector s = [mean, vech(cov)], and sandwiched with the
+# asymptotic covariance of the sample moments:
 #
 #   vcov = J Gamma J' / n
 #
@@ -223,6 +230,15 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
 # -- and, for JSA, the aggregation weights -- is included, and the
 # directed/undirected cross-covariances are available (e.g. for defined
 # parameters).
+#
+# The Jacobian is computed analytically (js_jacobian = "analytic", the
+# default; see lav_sem_js_deriv.R) -- a single chain-rule sweep, so the
+# standard errors stay 'non-iterative'. js_jacobian = "numeric" requests
+# the numerical (numDeriv) Jacobian of the estimation map instead; the
+# analytic path also falls back to it for the few configurations it does
+# not cover (general linear equality constraints among the
+# variance/covariance parameters, a slope label repeated within a single
+# equation, non-PD or non-converged stage-2 weight matrices).
 lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                             lavoptions = NULL, lavpartable = NULL,
                             lavimplied = NULL,
@@ -245,26 +261,57 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
 
-  # Jacobian of the complete estimation map over the stacked moments
-  vec0 <- lav_implied_to_vec(
-    implied = lavh1$implied, lavmodel = lavmodel, drop_list = TRUE
-  )
-  # r = 2 Richardson extrapolation is accurate to ~1e-6 relative here and
-  # halves the number of map evaluations (the map itself is smooth)
-  jac <- numDeriv::jacobian(
-    func = function(v) {
-      as.numeric(lav_sem_js_estimate(
-        vec = v, eqs = eqs,
-        lavmodel = lavmodel, lavpartable = lavpartable,
-        lavsamplestats = lavsamplestats, lavh1 = lavh1,
-        lavoptions = lavoptions,
-        free_directed_idx = free_directed_idx,
-        free_undirected_idx = free_undirected_idx,
-        aggregated = aggregated
-      ))
-    },
-    x = vec0, method.args = list(r = 2L)
-  )
+  # Jacobian of the complete estimation map over the stacked moments:
+  # analytic (default) or numerical
+  js_jacobian <- tolower(lavoptions$estimator.args[["js_jacobian"]])
+  if (length(js_jacobian) == 0L) {
+    js_jacobian <- "analytic"
+  }
+  jac <- NULL
+  if (js_jacobian == "analytic") {
+    jac <- try(
+      lav_sem_js_jacobian(
+        lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+        lavoptions = lavoptions, lavpartable = lavpartable,
+        lavh1 = lavh1, eqs = eqs
+      ),
+      silent = TRUE
+    )
+    # NULL = configuration not covered (silent, intended); "[JS]"-prefixed
+    # stops = data-dependent conditions the analytic path cannot handle
+    # (silent as well); anything else is an unexpected failure -- fall
+    # back to the numerical Jacobian, but say so
+    if (inherits(jac, "try-error")) {
+      msg <- conditionMessage(attr(jac, "condition"))
+      if (!grepl("[JS]", msg, fixed = TRUE)) {
+        lav_msg_warn(gettextf(
+          "[JS] analytic Jacobian failed (%s); falling back to the
+           numerical Jacobian.", msg))
+      }
+      jac <- NULL
+    }
+  }
+  if (is.null(jac)) {
+    vec0 <- lav_implied_to_vec(
+      implied = lavh1$implied, lavmodel = lavmodel, drop_list = TRUE
+    )
+    # r = 2 Richardson extrapolation is accurate to ~1e-6 relative here
+    # and halves the number of map evaluations (the map itself is smooth)
+    jac <- numDeriv::jacobian(
+      func = function(v) {
+        as.numeric(lav_sem_js_estimate(
+          vec = v, eqs = eqs,
+          lavmodel = lavmodel, lavpartable = lavpartable,
+          lavsamplestats = lavsamplestats, lavh1 = lavh1,
+          lavoptions = lavoptions,
+          free_directed_idx = free_directed_idx,
+          free_undirected_idx = free_undirected_idx,
+          aggregated = aggregated
+        ))
+      },
+      x = vec0, method.args = list(r = 2L)
+    )
+  }
 
   # moment covariance: block-diagonal over the groups,
   # gamma_big = bdiag(Gamma_b / nobs_b)
@@ -283,9 +330,25 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       js_gamma <- "nt"
     }
   }
+  # vcov = sum over blocks of J_b Gamma_b J_b' / nobs_b; for the (default)
+  # normal-theory Gamma the sandwich is computed directly from Sigma_b
+  # (x' GammaNT y = 2 tr(X Sigma Y Sigma) + mean block), without ever
+  # forming the pstar x pstar Gamma matrix -- for larger models building
+  # that matrix dominates the whole standard-error computation
   nblocks <- lavmodel@nblocks
-  gamma_g <- vector("list", nblocks)
+  npar <- nrow(jac)
+  vcov <- matrix(0, nrow = npar, ncol = npar)
+  offset <- 0L
   for (b in seq_len(nblocks)) {
+    nvar_b <- lavmodel@nvar[b]
+    nd_b <- if (lavmodel@meanstructure) {
+      nvar_b + nvar_b * (nvar_b + 1L) / 2L
+    } else {
+      nvar_b * (nvar_b + 1L) / 2L
+    }
+    jac_b <- jac[, offset + seq_len(nd_b), drop = FALSE]
+    offset <- offset + nd_b
+    gg <- NULL
     if (two_stage) {
       # two-stage missing data: the moments are the (saturated) EM
       # estimates; their asymptotic covariance is the inverse saturated
@@ -307,12 +370,11 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         )
         gg <- lav_mat_sym_inverse(i1)
       }
-      gamma_g[[b]] <- gg / lavsamplestats@nobs[[b]]
     } else if (js_gamma == "adf") {
-      gamma_g[[b]] <- lav_samp_gamma(
+      gg <- lav_samp_gamma(
         m_y = lavdata@X[[b]],
         meanstructure = lavmodel@meanstructure
-      ) / lavsamplestats@nobs[[b]]
+      )
     } else {
       cov_b <- NULL
       if (gamma_modelbased) {
@@ -325,25 +387,15 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       if (is.null(cov_b)) {
         cov_b <- lavh1$implied$cov[[b]]
       }
-      nd_b <- if (lavmodel@meanstructure) {
-        nrow(cov_b) + nrow(cov_b) * (nrow(cov_b) + 1L) / 2L
-      } else {
-        nrow(cov_b) * (nrow(cov_b) + 1L) / 2L
-      }
-      gamma_g[[b]] <- lav_mat_k_gammant_kt(
-        m_k = diag(nd_b), s = cov_b,
-        meanstructure = lavmodel@meanstructure,
-        x_idx = integer(0L)
+      vcov <- vcov + lav_sem_js_nt_sandwich(
+        jac_b = jac_b, s = cov_b,
+        meanstructure = lavmodel@meanstructure
       ) / lavsamplestats@nobs[[b]]
     }
+    if (!is.null(gg)) {
+      vcov <- vcov + (jac_b %*% gg %*% t(jac_b)) / lavsamplestats@nobs[[b]]
+    }
   }
-  gamma_big <- if (nblocks == 1L) {
-    gamma_g[[1L]]
-  } else {
-    lav_mat_bdiag(gamma_g)
-  }
-
-  vcov <- jac %*% gamma_big %*% t(jac)
   vcov <- (vcov + t(vcov)) / 2
 
   # the rest of lavaan expects the vcov of a ceq.simple.only model in the
@@ -355,6 +407,48 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   vcov
+}
+
+
+# J GammaNT J' for one block, without forming GammaNT: with
+# GammaNT = bdiag(Sigma, 2 Dplus (Sigma kron Sigma) Dplus') we have, for
+# rows x and y of the vech part of J,
+#   x' GammaNT_cov y = 2 tr(X Sigma Y Sigma)
+# where X (Y) is the symmetric matrix with vech(X) = x and the
+# off-diagonal elements halved (Dplus' x). Cost: one pair of nvar x nvar
+# products per parameter, instead of a pstar^2 matrix.
+lav_sem_js_nt_sandwich <- function(jac_b = NULL, s = NULL,
+                                   meanstructure = FALSE) {
+  nvar <- nrow(s)
+  pstar <- nvar * (nvar + 1L) / 2L
+  npar <- nrow(jac_b)
+  if (meanstructure) {
+    j_mu <- jac_b[, seq_len(nvar), drop = FALSE]
+    j_cov <- jac_b[, nvar + seq_len(pstar), drop = FALSE]
+  } else {
+    j_mu <- NULL
+    j_cov <- jac_b
+  }
+
+  # halve the off-diagonal columns (Dplus' per row)
+  diag_idx <- lav_mat_diagh_idx(nvar)
+  h_mat <- j_cov / 2
+  h_mat[, diag_idx] <- j_cov[, diag_idx]
+
+  # rows of A = vech(Sigma X_p Sigma), weighted for a full-matrix sum
+  wfull <- rep(2, pstar)
+  wfull[diag_idx] <- 1
+  a_mat <- matrix(0, nrow = npar, ncol = pstar)
+  for (p in seq_len(npar)) {
+    x_p <- lav_mat_vech_rev(h_mat[p, ])
+    a_mat[p, ] <- wfull * lav_mat_vech(s %*% x_p %*% s)
+  }
+
+  out <- 2 * h_mat %*% t(a_mat)
+  if (meanstructure) {
+    out <- out + j_mu %*% s %*% t(j_mu)
+  }
+  (out + t(out)) / 2
 }
 
 
@@ -394,6 +488,10 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
   if (any(!vapply(lavdata@weights, is.null, logical(1L)))) {
     lav_msg_stop(gettextf(
       "estimator %s does not support sampling weights (yet).", label))
+  }
+  if (lavmodel@group.w.free) {
+    lav_msg_stop(gettextf(
+      "estimator %s does not support group.w.free = TRUE (yet).", label))
   }
 
   # the structural part must be recursive: the conditional expectations are
@@ -537,18 +635,38 @@ lav_sem_js_contam <- function(lavpartable = NULL, pt_block = NULL, b = 1L,
 #
 # s_full/contam cover ALL observed variables of the block; idx is the
 # factor's indicator set; zpool the external candidates.
+#
+# deriv = TRUE also returns the Jacobian of the theta values with respect
+# to vech(s_full) as the "dtheta" attribute (length(idx) x pstar), using
+# the moment form of the tetrad: r_ia r_ib / r_ab = S_ia S_ib / (S_ii S_ab)
+# (used by the analytic delta-method standard errors; see
+# lav_sem_js_deriv.R)
 lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
                                              contam = NULL,
                                              zpool = integer(0L),
-                                             bounds = "wide") {
+                                             bounds = "wide",
+                                             deriv = FALSE) {
   r <- cov2cor(s_full)
   p <- length(idx)
   out <- rep(as.numeric(NA), p)
+  dout <- NULL
+  cm <- NULL
+  if (deriv) {
+    nvar <- nrow(s_full)
+    pstar <- nvar * (nvar + 1L) / 2L
+    dout <- matrix(0, nrow = p, ncol = pstar)
+    # vech coordinate of the (i, j) entry (lav_mat_vech order)
+    cm <- matrix(0L, nrow = nvar, ncol = nvar)
+    cm[lower.tri(cm, diag = TRUE)] <- seq_len(pstar)
+    cm <- cm + t(cm) - diag(diag(cm))
+  }
   for (k in seq_len(p)) {
     i <- idx[k]
     others <- setdiff(idx, i)
-    # clean within-factor tetrads
+    # clean within-factor tetrads; tet collects the (a, b) pairs actually
+    # used (for the derivative)
     vals <- numeric(0L)
+    tet <- matrix(0L, nrow = 2L, ncol = 0L)
     if (length(others) >= 2L) {
       pairs <- utils::combn(others, 2L)
       for (m in seq_len(ncol(pairs))) {
@@ -558,6 +676,9 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
           next
         }
         vals <- c(vals, r[i, a] * r[i, b] / r[a, b])
+        if (deriv) {
+          tet <- cbind(tet, c(a, b))
+        }
       }
     }
     # fall back to external tetrads when no clean within-factor tetrad
@@ -571,6 +692,9 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
             next
           }
           vals <- c(vals, r[i, a] * r[i, z] / r[a, z])
+          if (deriv) {
+            tet <- cbind(tet, c(a, z))
+          }
         }
       }
     }
@@ -578,14 +702,42 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
       next # no clean tetrad: NA
     }
     h2 <- mean(vals)
+    clipped <- FALSE
     if (bounds == "standard") {
+      clipped <- h2 < 0 || h2 > 1
       h2[h2 < 0] <- 0
       h2[h2 > 1] <- 1
     } else if (bounds == "wide") {
+      clipped <- h2 < -0.05 || h2 > +1.20
       h2[h2 < -0.05] <- -0.05
       h2[h2 > +1.20] <- +1.20
     }
     out[k] <- (1 - h2) * s_full[i, i]
+    if (deriv) {
+      # theta_k = (1 - h2) * S_ii with h2 the mean over the tetrads
+      # v = S_ia S_ib / (S_ii S_ab); when h2 was clipped, dh2 = 0
+      if (!clipped) {
+        dh2 <- numeric(ncol(dout))
+        s_ii <- s_full[i, i]
+        for (m in seq_len(ncol(tet))) {
+          a <- tet[1L, m]
+          b <- tet[2L, m]
+          s_ia <- s_full[i, a]
+          s_ib <- s_full[i, b]
+          s_ab <- s_full[a, b]
+          dh2[cm[i, a]] <- dh2[cm[i, a]] + s_ib / (s_ii * s_ab)
+          dh2[cm[i, b]] <- dh2[cm[i, b]] + s_ia / (s_ii * s_ab)
+          dh2[cm[a, b]] <- dh2[cm[a, b]] - s_ia * s_ib / (s_ii * s_ab^2)
+          dh2[cm[i, i]] <- dh2[cm[i, i]] - s_ia * s_ib / (s_ii^2 * s_ab)
+        }
+        dh2 <- dh2 / ncol(tet)
+        dout[k, ] <- -s_full[i, i] * dh2
+      }
+      dout[k, cm[i, i]] <- dout[k, cm[i, i]] + (1 - h2)
+    }
+  }
+  if (deriv) {
+    attr(out, "dtheta") <- dout
   }
   out
 }
@@ -601,9 +753,10 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
 lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
                              lv_names = NULL, lavoptions = NULL,
                              aggregated = FALSE, contam = NULL,
-                             theta_fixed = NULL) {
+                             theta_fixed = NULL, deriv = FALSE) {
   label <- if (aggregated) "JSA" else "JS"
   nvar <- ncol(s)
+  pstar <- nvar * (nvar + 1L) / 2L
   ea <- lavoptions$estimator.args
   js_theta <- tolower(ea[["js_theta"]])
   if (length(js_theta) == 0L) {
@@ -613,6 +766,9 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
   if (length(js_theta_bounds) == 0L) {
     js_theta_bounds <- "wide"
   }
+
+  # derivative of theta with respect to vech(s) (analytic standard errors)
+  dtheta <- if (deriv) matrix(0, nrow = nvar, ncol = pstar) else NULL
 
   theta <- rep(as.numeric(NA), nvar)
   if (js_theta == "user") {
@@ -632,9 +788,22 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
       idx <- which(ind_pat[, f] != 0)
       if (length(idx) >= 3L &&
           (is.null(contam) || !any(contam[idx, idx]))) {
-        theta[idx] <- lav_cfa_theta_spearman(s[idx, idx, drop = FALSE],
-          bounds = js_theta_bounds
-        )
+        if (!deriv) {
+          theta[idx] <- lav_cfa_theta_spearman(s[idx, idx, drop = FALSE],
+            bounds = js_theta_bounds
+          )
+        } else {
+          # same values as lav_cfa_theta_spearman (no tetrad is masked
+          # when the factor block is clean), but with the derivative
+          tf <- lav_sem_js_theta_spearman_masked(
+            s_full = s, idx = idx,
+            contam = matrix(FALSE, nrow = nvar, ncol = nvar),
+            zpool = integer(0L),
+            bounds = js_theta_bounds, deriv = TRUE
+          )
+          theta[idx] <- as.numeric(tf)
+          dtheta[idx, ] <- attr(tf, "dtheta")
+        }
       } else if (length(idx) >= 2L) {
         # contaminated within-factor tetrads are masked; when a variable
         # has none left -- including the 2-indicator case, which has no
@@ -647,11 +816,15 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
         } else {
           contam
         }
-        theta[idx] <- lav_sem_js_theta_spearman_masked(
+        tf <- lav_sem_js_theta_spearman_masked(
           s_full = s, idx = idx, contam = contam_f,
           zpool = setdiff(seq_len(nvar), idx),
-          bounds = js_theta_bounds
+          bounds = js_theta_bounds, deriv = deriv
         )
+        theta[idx] <- as.numeric(tf)
+        if (deriv) {
+          dtheta[idx, ] <- attr(tf, "dtheta")
+        }
       }
       # else (single indicator): only a model-fixed residual variance can
       # provide the reliability (below); otherwise theta stays NA and an
@@ -669,6 +842,9 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
         idx <- which(ind_pat[, f] != 0)
         fix_idx <- idx[!is.na(theta_fixed[idx])]
         theta[fix_idx] <- theta_fixed[fix_idx]
+        if (deriv && length(fix_idx) > 0L) {
+          dtheta[fix_idx, ] <- 0 # model constants
+        }
       }
     }
   }
@@ -678,13 +854,34 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
   # clean tetrad keep NA
   nonind_idx <- which(rowSums(ind_pat != 0) == 0L)
   theta[nonind_idx] <- 0
+  if (deriv && length(nonind_idx) > 0L) {
+    dtheta[nonind_idx, ] <- 0
+  }
 
   # keep the variances within [0, var(y)] (NA-safe)
   diag_s <- diag(s)
-  theta[which(theta < 0)] <- 0
+  too_small_idx <- which(theta < 0)
+  theta[too_small_idx] <- 0
   too_large_idx <- which(theta > diag_s)
   if (length(too_large_idx) > 0L) {
     theta[too_large_idx] <- diag_s[too_large_idx]
+  }
+  if (deriv) {
+    if (js_theta == "user") {
+      # user-given constants; a value clipped below may still become
+      # data-dependent, so zero the derivative BEFORE the clip handling
+      dtheta[] <- 0
+    }
+    if (length(too_small_idx) > 0L) {
+      dtheta[too_small_idx, ] <- 0
+    }
+    if (length(too_large_idx) > 0L) {
+      # theta_i = S_ii: derivative is the (i, i) vech coordinate
+      cm_diag <- lav_mat_diagh_idx(nvar)
+      dtheta[too_large_idx, ] <- 0
+      dtheta[cbind(too_large_idx, cm_diag[too_large_idx])] <- 1
+    }
+    attr(theta, "dtheta") <- dtheta
   }
 
   theta
@@ -700,7 +897,10 @@ lav_sem_js_weights <- function(s = NULL, theta = NULL) {
   if (p == 1L) {
     return(1)
   }
+  # the "fallback" attribute flags the (locally constant) equal-weights
+  # branches; the analytic Jacobian then uses a zero derivative
   equal_w <- rep(1 / p, p)
+  attr(equal_w, "fallback") <- TRUE
   r_mat <- try(chol(s), silent = TRUE)
   if (inherits(r_mat, "try-error")) {
     return(equal_w)
@@ -875,7 +1075,8 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
                                    lavsamplestats = NULL, lavh1 = NULL,
                                    lavoptions = NULL,
                                    free_directed_idx = NULL,
-                                   aggregated = FALSE) {
+                                   aggregated = FALSE,
+                                   record = FALSE) {
   # sample moments
   if (samplestats) {
     implied <- lav_vec_to_implied(x, lavmodel = lavmodel)
@@ -891,6 +1092,11 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
     rep(1L, length(lavpartable$op))
   }
 
+  block_trace <- if (record) {
+    vector("list", lavmodel@nblocks)
+  } else {
+    NULL
+  }
   for (b in seq_len(lavmodel@nblocks)) {
     s_mat <- implied$cov[[b]]
     m_vec <- if (lavmodel@meanstructure) implied$mean[[b]] else NULL
@@ -936,7 +1142,7 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       s = s_mat, ind_pat = ind_pat, ov_names = ov_names,
       lv_names = lv_names,
       lavoptions = lavoptions, aggregated = aggregated, contam = contam,
-      theta_fixed = theta_fixed
+      theta_fixed = theta_fixed, deriv = record
     )
 
     # small-sample (Efron-Morris) shrinkage factor
@@ -966,7 +1172,8 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       ov_names = ov_names, lv_names = lv_names, markers = markers,
       contam = contam, theta = theta, csmall = csmall,
       lambda_mat = lambda_mat, lavpartable = lavpartable,
-      lavmodel = lavmodel, x = x
+      lavmodel = lavmodel, x = x,
+      record = record, pass_id = "p1a"
     )
     x <- out$x
     eqs[[b]] <- out$eqs
@@ -984,7 +1191,8 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
         ov_names = ov_names, lv_names = lv_names, markers = markers,
         contam = contam, theta = theta, csmall = csmall,
         lambda_mat = lambda_mat, lavpartable = lavpartable,
-        lavmodel = lavmodel, x = x
+        lavmodel = lavmodel, x = x,
+        record = record, pass_id = "p1b"
       )
       x <- out$x
       eqs[[b]] <- out$eqs
@@ -1009,10 +1217,31 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
         ov_names = ov_names, lv_names = lv_names, markers = markers,
         contam = contam, theta = theta, csmall = csmall,
         lambda_mat = lambda_mat, lavpartable = lavpartable,
-        lavmodel = lavmodel, x = x
+        lavmodel = lavmodel, x = x,
+        record = record, pass_id = "jsa"
       )
       x <- out$x
       eqs[[b]] <- out$eqs
+    }
+
+    if (record) {
+      # per-block structure for the analytic Jacobian: the theta
+      # derivative and the pass composition (which equations were solved
+      # in which pass)
+      passes <- list(p1a = which(!pl$deferred))
+      if (any(pl$deferred)) {
+        passes$p1b <- which(pl$deferred)
+      }
+      if (aggregated) {
+        passes$jsa <- seq_along(eqs[[b]])
+      }
+      block_trace[[b]] <- list(
+        theta = as.numeric(theta),
+        dtheta = attr(theta, "dtheta"),
+        csmall = csmall, mm_idx = mm_idx,
+        ov_names = ov_names, lv_names = lv_names,
+        passes = passes
+      )
     }
   } # blocks
 
@@ -1027,6 +1256,9 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
 
   theta1 <- x[free_directed_idx]
   attr(theta1, "eqs") <- eqs
+  if (record) {
+    attr(theta1, "js_trace") <- block_trace
+  }
   theta1
 }
 
@@ -1071,7 +1303,8 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
                                 markers = NULL, contam = NULL,
                                 theta = NULL, csmall = 1,
                                 lambda_mat = NULL, lavpartable = NULL,
-                                lavmodel = NULL, x = NULL) {
+                                lavmodel = NULL, x = NULL,
+                                record = FALSE, pass_id = "p1a") {
   meanstructure <- lavmodel@meanstructure
   nvar <- length(ov_names)
   if (is.null(only)) {
@@ -1092,6 +1325,10 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
       }
       eqs_b[[j]]$coef <- if (meanstructure) m_vec[y_idx] else numeric(0L)
       eqs_b[[j]]$nobs <- n
+      if (record) {
+        eqs_b[[j]]$js_trace[[pass_id]] <- list(int_only = TRUE,
+                                               y_idx = y_idx)
+      }
       next
     }
 
@@ -1104,6 +1341,10 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
     u_mat <- matrix(0, nrow = nrhs, ncol = nvar)
     kappa <- rep(1, nrhs)
     errvar <- rep(0, nrhs)
+    sets_used <- vector("list", nrhs)
+    w_used <- vector("list", nrhs)
+    lam_used <- vector("list", nrhs)
+    w_fb <- logical(nrhs)
     for (i in seq_len(nrhs)) {
       if (!is_lv[i]) {
         u_mat[i, match(eq$rhs_new[i], ov_names)] <- 1
@@ -1119,6 +1360,8 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
           s = s_mat[set, set, drop = FALSE],
           theta = theta[set]
         )
+        w_fb[i] <- isTRUE(attr(w, "fallback"))
+        w <- as.numeric(w)
       }
       kap <- sum(w * lambda_mat[set, f])
       if (!is.finite(kap) || abs(kap) < .Machine$double.eps^0.5) {
@@ -1128,6 +1371,7 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
             !identical(set, marker_idx)) {
           set <- marker_idx
           w <- 1
+          w_fb[i] <- FALSE
           kap <- lambda_mat[marker_idx, f]
         }
         if (!is.finite(kap) || abs(kap) < .Machine$double.eps^0.5) {
@@ -1140,6 +1384,9 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
       u_mat[i, set] <- w
       kappa[i] <- kap
       errvar[i] <- sum(w * w * theta[set])
+      sets_used[[i]] <- set
+      w_used[[i]] <- w
+      lam_used[[i]] <- lambda_mat[set, f]
     }
 
     # moments of the conditioning variables
@@ -1216,6 +1463,22 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
 
     eqs_b[[j]]$coef <- c(if (meanstructure) beta0 else NULL, b_full)
     eqs_b[[j]]$nobs <- n
+
+    # record the resolved structure of this pass (proxy sets, weights,
+    # branch decisions) for the analytic delta-method Jacobian (see
+    # lav_sem_js_deriv.R); the derivative pass replays exactly these
+    # decisions instead of re-deciding them
+    if (record) {
+      eqs_b[[j]]$js_trace[[pass_id]] <- list(
+        int_only = FALSE, y_idx = y_idx, is_lv = is_lv,
+        fac = match(eq$rhs, lv_names),
+        sets = sets_used, w = w_used, lam = lam_used, w_fb = w_fb,
+        u_mat = u_mat, kappa = kappa, errvar = errvar,
+        s_zz = s_zz, g_mat = g_mat, amat = amat, bvec = bvec,
+        fix_idx = fix_idx, gcol_free = gcol_free,
+        b_full = b_full, x_bar = x_bar, y_bar = y_bar
+      )
+    }
   }
 
   list(x = x, eqs = eqs_b)

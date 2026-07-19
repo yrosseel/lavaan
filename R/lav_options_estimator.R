@@ -751,79 +751,96 @@ lav_options_est_js <- function(opt) {
   }
 
   # estimator options
+  # NOTE: read with [[ ]] -- $ would partially match (e.g. ea$js_theta
+  # picks up js_theta_bounds when js_theta itself is absent)
   ea <- opt$estimator.args
   if (is.null(ea)) {
     ea <- list()
   }
-  if (is.null(ea$js_small_sample)) {
+  if (is.null(ea[["js_small_sample"]])) {
     ea$js_small_sample <- TRUE
-  } else if (!is.logical(ea$js_small_sample)) {
+  } else if (!is.logical(ea[["js_small_sample"]])) {
     lav_msg_stop(gettext(
       "js_small_sample in estimator.args must be TRUE or FALSE."))
   }
-  if (is.null(ea$js_theta)) {
+  if (is.null(ea[["js_theta"]])) {
     ea$js_theta <- "spearman"
   } else {
-    ea$js_theta <- tolower(ea$js_theta)
-    if (!ea$js_theta %in% c("spearman", "user")) {
+    ea$js_theta <- tolower(ea[["js_theta"]])
+    if (!ea[["js_theta"]] %in% c("spearman", "user")) {
       lav_msg_stop(gettextf(
         "js_theta value in estimator.args must be either %s.",
         lav_msg_view(c("spearman", "user"), log_sep = "or")))
     }
   }
-  if (ea$js_theta == "user") {
-    if (is.null(ea$js_theta_values) || !is.numeric(ea$js_theta_values) ||
-        is.null(names(ea$js_theta_values))) {
+  if (ea[["js_theta"]] == "user") {
+    values <- ea[["js_theta_values"]]
+    if (is.null(values) || !is.numeric(values) || is.null(names(values))) {
       lav_msg_stop(gettext(
         "js_theta = \"user\" requires js_theta_values in estimator.args: a
          named numeric vector with the residual variances of the
          indicators."))
     }
   }
-  if (is.null(ea$js_theta_bounds)) {
+  if (is.null(ea[["js_theta_bounds"]])) {
     ea$js_theta_bounds <- "wide"
   } else {
-    ea$js_theta_bounds <- tolower(ea$js_theta_bounds)
-    if (!ea$js_theta_bounds %in% c("wide", "standard", "none")) {
+    ea$js_theta_bounds <- tolower(ea[["js_theta_bounds"]])
+    if (!ea[["js_theta_bounds"]] %in% c("wide", "standard", "none")) {
       lav_msg_stop(gettextf(
         "js_theta_bounds value in estimator.args must be either %s.",
         lav_msg_view(c("wide", "standard", "none"), log_sep = "or")))
     }
   }
-  if (is.null(ea$js_gamma)) {
+  if (is.null(ea[["js_gamma"]])) {
     ea$js_gamma <- "nt"
   } else {
-    ea$js_gamma <- tolower(ea$js_gamma)
-    if (!ea$js_gamma %in% c("nt", "adf")) {
+    ea$js_gamma <- tolower(ea[["js_gamma"]])
+    if (!ea[["js_gamma"]] %in% c("nt", "adf")) {
       lav_msg_stop(gettextf(
         "js_gamma value in estimator.args must be either %s.",
         lav_msg_view(c("nt", "adf"), log_sep = "or")))
     }
   }
-  if (is.null(ea$js_vcov_gamma_modelbased)) {
+  if (is.null(ea[["js_vcov_gamma_modelbased"]])) {
     ea$js_vcov_gamma_modelbased <- TRUE
-  } else if (!is.logical(ea$js_vcov_gamma_modelbased)) {
+  } else if (!is.logical(ea[["js_vcov_gamma_modelbased"]])) {
     lav_msg_stop(gettext(
       "js_vcov_gamma_modelbased in estimator.args must be TRUE or FALSE."))
   }
-  if (is.null(ea$js_varcov_method)) {
+  if (is.null(ea[["js_varcov_method"]])) {
     ea$js_varcov_method <- "RLS"
   } else {
-    ea$js_varcov_method <- toupper(ea$js_varcov_method)
-    if (!ea$js_varcov_method %in% c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
+    ea$js_varcov_method <- toupper(ea[["js_varcov_method"]])
+    if (!ea[["js_varcov_method"]] %in%
+          c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
       lav_msg_stop(gettextf(
         "js_varcov_method value in estimator.args must be either %s.",
         lav_msg_view(c("ULS", "GLS", "2RLS", "RLS", "NONE"), log_sep = "or")))
     }
   }
-  if (is.null(ea$js_mean_structure)) {
+  if (is.null(ea[["js_mean_structure"]])) {
     ea$js_mean_structure <- "wls"
   } else {
-    ea$js_mean_structure <- tolower(ea$js_mean_structure)
-    if (!ea$js_mean_structure %in% c("wls", "moments")) {
+    ea$js_mean_structure <- tolower(ea[["js_mean_structure"]])
+    if (!ea[["js_mean_structure"]] %in% c("wls", "moments")) {
       lav_msg_stop(gettextf(
         "js_mean_structure value in estimator.args must be either %s.",
         lav_msg_view(c("wls", "moments"), log_sep = "or")))
+    }
+  }
+  if (is.null(ea[["js_jacobian"]])) {
+    ea$js_jacobian <- "analytic"
+  } else {
+    ea$js_jacobian <- tolower(ea[["js_jacobian"]])
+    # accept 'numerical' as an alias
+    if (ea[["js_jacobian"]] == "numerical") {
+      ea$js_jacobian <- "numeric"
+    }
+    if (!ea[["js_jacobian"]] %in% c("analytic", "numeric")) {
+      lav_msg_stop(gettextf(
+        "js_jacobian value in estimator.args must be either %s.",
+        lav_msg_view(c("analytic", "numeric"), log_sep = "or")))
     }
   }
   opt$estimator.args <- ea
