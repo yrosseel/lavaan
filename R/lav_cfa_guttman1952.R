@@ -144,7 +144,9 @@ lav_cfa_mgm_purge <- function(s, fac_of, pairs, contam) {
     fi <- fac_of[i]
     fj <- fac_of[j]
     if (is.na(fi) || is.na(fj)) {
-      next # leave as-is
+      # e.g., a cross-loading indicator: no single-factor tetrad ratio
+      failed <- c(failed, r)
+      next
     }
     # admissible ordered anchor pairs (a, b): writing the tetrad ratio in
     # terms of the model, s_ia s_jb / s_ab = lambda_i lambda_j
@@ -208,6 +210,103 @@ lav_cfa_mgm_psi_mapping <- function(lambda, theta, s_min_theta) {
   m <- solve(t(lambda) %*% diag(ti, nvar) %*% lambda) %*%
     t(lambda) %*% diag(ti, nvar)
   m %*% s_min_theta %*% t(m)
+}
+
+# stage 1 for a block WITH cross-loadings.
+#
+# The sum-score composites lose none of the loading information: at the
+# population the unconstrained MGM solution equals Lambda* = Lambda G for
+# some nonsingular k x k mixing G (G = Psi A' (A Psi A')^-1 with
+# A = X'Lambda; G is diagonal only under simple structure). The mixing is
+# recovered from the model's own zero pattern:
+#
+# (1) rotation-to-pattern: column h_f of H is the least-squares null
+#     vector of the CLEAN zero rows of Lambda* (indicators without
+#     cross-loadings that have a specified zero on factor f), scaled so
+#     that the marker row gives 1; Lambda = Lambda* H. A wrong
+#     communality for a cross-loading indicator perturbs only its OWN
+#     row of Lambda* (the perturbation of SminTheta is diagonal), so the
+#     clean rows -- and hence H -- do not depend on it.
+# (2) PSI from the Bartlett/ML mapping over the clean rows only.
+# (3) each cross-loading row is re-estimated against sum scores that
+#     EXCLUDE the cross-loading indicators:
+#        cov(y_i, t_masked) = lambda_i' Psi (X_masked' Lambda)'
+#     which contains no theta_i (y_i is not in its own composites) and
+#     is linear in lambda_i: a small exact/LS solve per row.
+# (4) theta_i of a cross-loading indicator from the model identity
+#     s_ii - lambda_i' Psi lambda_i.
+#
+# All steps are closed-form; with exact input moments the true values
+# are recovered exactly.
+lav_cfa_mgm_cross_block <- function(blk, m_b, marker_idx, s_use, theta,
+                                    cross_idx,
+                                    failed_vars = integer(0L)) {
+  nvar <- nrow(m_b)
+  nfac <- ncol(m_b)
+  clean <- setdiff(seq_len(nvar), cross_idx)
+  # rows touching an unpurged residual covariance are not usable as
+  # zero references (their Lambda* rows are contaminated)
+  zclean <- setdiff(clean, failed_vars)
+
+  # (1) unconstrained solution (any column scaling; absorbed by H)
+  lstar <- t(solve(blk$phi, blk$ys_cor))
+
+  hmat <- matrix(0, nfac, nfac)
+  for (f in seq_len(nfac)) {
+    zrows <- intersect(which(m_b[, f] == 0L), zclean)
+    if (length(zrows) < nfac - 1L) {
+      lav_msg_stop(gettext(
+        "unable to identify the factors from the zero pattern: the
+         rotation step needs, for every factor, at least (nfac - 1)
+         indicators without cross-loadings that do not load on it"))
+    }
+    zf <- lstar[zrows, , drop = FALSE]
+    mrow <- lstar[marker_idx[f], ]
+    kkt <- rbind(cbind(crossprod(zf), mrow), c(mrow, 0))
+    sol <- try(solve(kkt, c(numeric(nfac), 1)), silent = TRUE)
+    if (inherits(sol, "try-error")) {
+      lav_msg_stop(gettext(
+        "the rotation-to-pattern step failed (singular system); the
+         zero pattern may not identify the factors"))
+    }
+    hmat[, f] <- sol[seq_len(nfac)]
+  }
+  lambda <- (lstar %*% hmat) * m_b # zero the off-pattern LS noise
+
+  # (2) PSI from the clean part
+  psi <- lav_cfa_mgm_psi_mapping(
+    lambda = lambda[clean, , drop = FALSE], theta = theta[clean],
+    s_min_theta = blk$s_min_theta[clean, clean, drop = FALSE]
+  )
+
+  # (3) cross-loading rows from masked composites
+  x_masked <- m_b
+  x_masked[cross_idx, ] <- 0
+  if (length(failed_vars) > 0L) {
+    x_masked[failed_vars, ] <- 0 # unpurged cells stay out of the sums
+  }
+  bmat <- psi %*% t(crossprod(x_masked, lambda))
+  for (i in cross_idx) {
+    fidx <- which(m_b[i, ] == 1L)
+    ci <- drop(s_use[i, , drop = FALSE] %*% x_masked)
+    bi <- bmat[fidx, , drop = FALSE]
+    lam_i <- try(solve(tcrossprod(bi), bi %*% ci), silent = TRUE)
+    if (inherits(lam_i, "try-error")) {
+      lav_msg_stop(gettext(
+        "unable to estimate the loadings of a cross-loading indicator
+         (singular masked composite system)"))
+    }
+    lambda[i, ] <- 0
+    lambda[i, fidx] <- lam_i
+  }
+
+  # (4) residual variances of the cross-loading indicators
+  for (i in cross_idx) {
+    theta[i] <- s_use[i, i] -
+      drop(lambda[i, , drop = FALSE] %*% psi %*% lambda[i, ])
+  }
+
+  list(lambda = lambda, psi = psi, theta = theta)
 }
 
 lav_cfa_guttman1952 <- function(s,
@@ -421,11 +520,15 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     m_b[lambda_marker_idx] <- 1L
     m_b[(lam_fac - 1L) * nvar + lam_ov] <- 1L
 
-    # this method does not support crossloadings!
-    if (any(rowSums(m_b) > 1)) {
+    # cross-loadings are handled by the rotation-to-pattern step below,
+    # but the scaling (marker) indicators must be free of them (their row
+    # anchors the metric of exactly one factor)
+    cross_idx <- which(rowSums(m_b) > 1L)
+    if (any(marker_idx %in% cross_idx)) {
       lav_msg_stop(gettext(
-        "the guttman1952 procedure does not support crossloadings;
-         consider fabin or bentler1982 instead"))
+        "the MGM (guttman1952) estimator requires the scaling (marker)
+         indicators to be free of cross-loadings; choose a different
+         scaling indicator"))
     }
 
     # correlated residuals (free, or fixed to a nonzero value)? purge them
@@ -441,6 +544,11 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       fac_of <- rep(NA_integer_, nvar)
       for (f in seq_len(nfac)) {
         fac_of[which(m_b[, f] == 1L)] <- f
+      }
+      if (length(cross_idx) > 0L) {
+        # cross-loading indicators cannot serve as purge anchors, and a
+        # pair involving one cannot be purged by the single-factor ratio
+        fac_of[cross_idx] <- NA_integer_
       }
       cov_idx <- which(lavpartable$op == "~~" & pt_block == b &
         lavpartable$lhs != lavpartable$rhs &
@@ -472,17 +580,30 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
 
     # initial estimate for (the diagonal elements of) THETA: Spearman per
     # factor on the purged matrix (all tetrads are clean after purging);
-    # factors with fewer than 3 indicators -- or factors still touching an
-    # unpurged residual covariance -- use masked/external tetrads
+    # factors with fewer than 3 indicators -- or factors touching an
+    # unpurged residual covariance or a cross-loading -- use
+    # masked/external tetrads. A single cross-loading ANCHOR cancels out
+    # of the tetrad ratio (like the purge anchors), but a pair of
+    # cross-loading anchors does not: mask those pairs. The (biased)
+    # tetrad value for a cross-loading indicator itself is only a
+    # placeholder: a wrong communality there perturbs nothing but its own
+    # row of the unconstrained solution, which the rotation step ignores,
+    # and its final theta is recomputed from the model identity.
+    both_cross <- matrix(FALSE, nvar, nvar)
+    if (length(cross_idx) > 1L) {
+      both_cross[cross_idx, cross_idx] <- TRUE
+    }
+    contam_theta <- contam_left | both_cross
     theta <- numeric(nvar)
     for (f in seq_len(nfac)) {
       ov_idx <- which(m_b[, f] == 1L)
-      if (length(ov_idx) >= 3L && !any(ov_idx %in% failed_vars)) {
+      if (length(ov_idx) >= 3L && !any(ov_idx %in% failed_vars) &&
+          !any(ov_idx %in% cross_idx)) {
         s_fac <- s_use[ov_idx, ov_idx, drop = FALSE]
         theta[ov_idx] <- lav_cfa_theta_spearman(s_fac, bounds = "wide")
       } else {
         theta[ov_idx] <- lav_sem_js_theta_spearman_masked(
-          s_full = s_use, idx = ov_idx, contam = contam_left,
+          s_full = s_use, idx = ov_idx, contam = contam_theta,
           zpool = setdiff(seq_len(nvar), ov_idx), bounds = "wide"
         )
       }
@@ -499,6 +620,7 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       ov_names = ov_names, lv_names = lv_names, nvar = nvar, nfac = nfac,
       marker_idx = marker_idx, m_b = m_b, theta = theta,
       sample_cov = s_use, nobs = nobs_b,
+      cross_idx = cross_idx, failed_vars = failed_vars,
       lambda_nonzero_idx = (lam_fac - 1L) * nvar + lam_ov
     )
 
@@ -560,7 +682,121 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   gl_theta_idx <- which(names(lavmodel@GLIST) == "theta")
   gl_psi_idx <- which(names(lavmodel@GLIST) == "psi")
 
-  if (!has_ties && !quadprog) {
+  any_cross <- any(vapply(block_info,
+    function(bi) length(bi$cross_idx) > 0L, logical(1L)))
+
+  # effective theta_bounds/force_pd (same implications as the worker)
+  tb_eff <- theta_bounds
+  fp_eff <- force_pd
+  if (fp_eff) {
+    tb_eff <- TRUE
+  }
+  if (psi_mapping) {
+    tb_eff <- TRUE
+    fp_eff <- TRUE
+  }
+
+  # JOINT pd-correction factor over all blocks (smallest root, smallest
+  # group size): with cross-group ties, the same fraction of theta must
+  # be subtracted in every group, so that the pooled (averaged)
+  # estimates remain comparable across groups
+  force_pd_shrink <- NULL
+  if (fp_eff && nblocks > 1L && (has_ties || quadprog) && !any_cross) {
+    roots <- numeric(nblocks)
+    roots_ok <- TRUE
+    nobs_min <- Inf
+    for (b in seq_len(nblocks)) {
+      bi <- block_info[[b]]
+      th_b <- bi$theta
+      if (tb_eff) {
+        th_b <- pmin(pmax(th_b, 0), diag(bi$sample_cov))
+      }
+      r_b <- try(lav_mat_sym_diff_smallest_root(
+        bi$sample_cov, diag(th_b, bi$nvar)), silent = TRUE)
+      if (inherits(r_b, "try-error")) {
+        roots_ok <- FALSE
+        break
+      }
+      roots[b] <- r_b
+      nobs_min <- min(nobs_min, bi$nobs)
+    }
+    if (roots_ok) {
+      cutoff <- 1 + 1 / (nobs_min - 1)
+      root_min <- min(roots)
+      force_pd_shrink <- if (root_min < cutoff) {
+        root_min - 1 / (nobs_min - 1)
+      } else {
+        NA_real_ # no shrinkage needed
+      }
+    }
+  }
+
+  if (any_cross) {
+    # cross-loadings: rotation-to-pattern. The unconstrained MGM solution
+    # recovers the loading space exactly (Lambda* = Lambda G for some
+    # nonsingular k x k mixing G); the mixing is undone per factor from
+    # the clean zero rows, and the cross-loading rows are re-estimated
+    # against composites that exclude them (see lav_cfa_mgm_cross_block).
+    # PSI comes from the Bartlett/ML mapping over the clean rows (the
+    # sum-score correlation matrix is not usable here: with
+    # cross-loadings it mixes the factors); the psi.mapping /
+    # zero.after.efa / quadprog options are ignored for such blocks.
+    #
+    # NOTE: the pd correction is DISABLED here. Its root is driven by the
+    # (deliberately rough) communality placeholders of the cross-loading
+    # indicators, and shrinking ALL residual variances would perturb the
+    # clean rows of the unconstrained solution -- the rotation step
+    # requires that perturbations of SminTheta stay confined to the
+    # cross-loading rows (and none of the steps below needs SminTheta to
+    # be positive definite).
+    for (b in seq_len(nblocks)) {
+      bi <- block_info[[b]]
+      blk <- lav_cfa_mgm_block(
+        s = bi$sample_cov, m_b = bi$m_b, theta = bi$theta,
+        theta_bounds = TRUE, force_pd = FALSE, nobs = bi$nobs
+      )
+      out <- lav_cfa_mgm_cross_block(
+        blk = blk, m_b = bi$m_b, marker_idx = bi$marker_idx,
+        s_use = bi$sample_cov, theta = blk$theta,
+        cross_idx = bi$cross_idx, failed_vars = bi$failed_vars
+      )
+      block_info[[b]]$lambda <- out$lambda
+      block_info[[b]]$psi <- out$psi
+      block_info[[b]]$theta <- out$theta
+    }
+
+    # equality ties: average the tied cells (final, marker metric), then
+    # refresh the cross rows' residual variances with the tied values
+    if (has_ties) {
+      cells$value <- numeric(nrow(cells))
+      for (r in seq_len(nrow(cells))) {
+        cells$value[r] <-
+          block_info[[cells$block[r]]]$lambda[cells$ov[r], cells$fac[r]]
+      }
+      for (class_idx in tie_classes) {
+        cells$value[class_idx] <- mean(cells$value[class_idx])
+      }
+      for (r in seq_len(nrow(cells))) {
+        block_info[[cells$block[r]]]$lambda[cells$ov[r], cells$fac[r]] <-
+          cells$value[r]
+      }
+      for (b in seq_len(nblocks)) {
+        bi <- block_info[[b]]
+        for (i in bi$cross_idx) {
+          block_info[[b]]$theta[i] <- bi$sample_cov[i, i] -
+            drop(bi$lambda[i, , drop = FALSE] %*% bi$psi %*%
+                 bi$lambda[i, ])
+        }
+      }
+    }
+
+    for (b in seq_len(nblocks)) {
+      bi <- block_info[[b]]
+      lavmodel@GLIST[[gl_lambda_idx[b]]] <- bi$lambda
+      lavmodel@GLIST[[gl_theta_idx[b]]] <- diag(bi$theta, bi$nvar)
+      lavmodel@GLIST[[gl_psi_idx[b]]] <- bi$psi
+    }
+  } else if (!has_ties && !quadprog) {
     # no equality constraints: the classic per-block computation
     for (b in seq_len(nblocks)) {
       bi <- block_info[[b]]
@@ -587,51 +823,6 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     # are pooled over all groups that are connected through at least one
     # tied loading of that factor, so that tied loadings remain tied after
     # the rescaling to the marker metric.
-    tb_eff <- theta_bounds
-    fp_eff <- force_pd
-    if (fp_eff) {
-      tb_eff <- TRUE
-    }
-    if (psi_mapping) {
-      tb_eff <- TRUE
-      fp_eff <- TRUE
-    }
-
-    # JOINT pd-correction factor over all blocks (smallest root, smallest
-    # group size): with cross-group ties, the same fraction of theta must
-    # be subtracted in every group, so that the pooled (averaged)
-    # normalized structure coefficients remain comparable
-    force_pd_shrink <- NULL
-    if (fp_eff && nblocks > 1L) {
-      roots <- numeric(nblocks)
-      roots_ok <- TRUE
-      nobs_min <- Inf
-      for (b in seq_len(nblocks)) {
-        bi <- block_info[[b]]
-        th_b <- bi$theta
-        if (tb_eff) {
-          th_b <- pmin(pmax(th_b, 0), diag(bi$sample_cov))
-        }
-        r_b <- try(lav_mat_sym_diff_smallest_root(
-          bi$sample_cov, diag(th_b, bi$nvar)), silent = TRUE)
-        if (inherits(r_b, "try-error")) {
-          roots_ok <- FALSE
-          break
-        }
-        roots[b] <- r_b
-        nobs_min <- min(nobs_min, bi$nobs)
-      }
-      if (roots_ok) {
-        cutoff <- 1 + 1 / (nobs_min - 1)
-        root_min <- min(roots)
-        force_pd_shrink <- if (root_min < cutoff) {
-          root_min - 1 / (nobs_min - 1)
-        } else {
-          NA_real_ # no shrinkage needed
-        }
-      }
-    }
-
     blks <- vector("list", nblocks)
     lstar <- vector("list", nblocks) # normalized structure coefficients
     for (b in seq_len(nblocks)) {
