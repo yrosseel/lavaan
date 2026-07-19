@@ -332,9 +332,9 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
   # vcov = sum over blocks of J_b Gamma_b J_b' / nobs_b; for the (default)
   # normal-theory Gamma the sandwich is computed directly from Sigma_b
-  # (x' GammaNT y = 2 tr(X Sigma Y Sigma) + mean block), without ever
-  # forming the pstar x pstar Gamma matrix -- for larger models building
-  # that matrix dominates the whole standard-error computation
+  # (lav_mat_k_gammant_kt with K = J_b), without ever forming the
+  # pstar x pstar Gamma matrix -- for larger models building that matrix
+  # dominates the whole standard-error computation
   nblocks <- lavmodel@nblocks
   npar <- nrow(jac)
   vcov <- matrix(0, nrow = npar, ncol = npar)
@@ -387,9 +387,10 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       if (is.null(cov_b)) {
         cov_b <- lavh1$implied$cov[[b]]
       }
-      vcov <- vcov + lav_sem_js_nt_sandwich(
-        jac_b = jac_b, s = cov_b,
-        meanstructure = lavmodel@meanstructure
+      vcov <- vcov + lav_mat_k_gammant_kt(
+        m_k = jac_b, s = cov_b,
+        meanstructure = lavmodel@meanstructure,
+        x_idx = integer(0L)
       ) / lavsamplestats@nobs[[b]]
     }
     if (!is.null(gg)) {
@@ -407,48 +408,6 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   vcov
-}
-
-
-# J GammaNT J' for one block, without forming GammaNT: with
-# GammaNT = bdiag(Sigma, 2 Dplus (Sigma kron Sigma) Dplus') we have, for
-# rows x and y of the vech part of J,
-#   x' GammaNT_cov y = 2 tr(X Sigma Y Sigma)
-# where X (Y) is the symmetric matrix with vech(X) = x and the
-# off-diagonal elements halved (Dplus' x). Cost: one pair of nvar x nvar
-# products per parameter, instead of a pstar^2 matrix.
-lav_sem_js_nt_sandwich <- function(jac_b = NULL, s = NULL,
-                                   meanstructure = FALSE) {
-  nvar <- nrow(s)
-  pstar <- nvar * (nvar + 1L) / 2L
-  npar <- nrow(jac_b)
-  if (meanstructure) {
-    j_mu <- jac_b[, seq_len(nvar), drop = FALSE]
-    j_cov <- jac_b[, nvar + seq_len(pstar), drop = FALSE]
-  } else {
-    j_mu <- NULL
-    j_cov <- jac_b
-  }
-
-  # halve the off-diagonal columns (Dplus' per row)
-  diag_idx <- lav_mat_diagh_idx(nvar)
-  h_mat <- j_cov / 2
-  h_mat[, diag_idx] <- j_cov[, diag_idx]
-
-  # rows of A = vech(Sigma X_p Sigma), weighted for a full-matrix sum
-  wfull <- rep(2, pstar)
-  wfull[diag_idx] <- 1
-  a_mat <- matrix(0, nrow = npar, ncol = pstar)
-  for (p in seq_len(npar)) {
-    x_p <- lav_mat_vech_rev(h_mat[p, ])
-    a_mat[p, ] <- wfull * lav_mat_vech(s %*% x_p %*% s)
-  }
-
-  out <- 2 * h_mat %*% t(a_mat)
-  if (meanstructure) {
-    out <- out + j_mu %*% s %*% t(j_mu)
-  }
-  (out + t(out)) / 2
 }
 
 

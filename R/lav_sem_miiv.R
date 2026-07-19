@@ -1918,6 +1918,28 @@ lav_sem_miiv_directed_vcov_restricted <- function(eqs, lavpartable,
 }
 
 
+# K Gamma K' over multiple blocks with the block-diagonal NORMAL-THEORY
+# moment covariance, without ever materializing the (pstar x pstar) Gamma
+# blocks: per block the K-sandwich form of lav_mat_k_gammant_kt is used
+# (Gamma_b = NT gamma of block b, divided by its nobs). For larger models
+# building the explicit Gamma dominates the whole vcov computation.
+lav_sem_miiv_k_gammant_kt_blocks <- function(k_mat = NULL, cov_list = NULL,
+                                             md = NULL, moff = NULL,
+                                             meanstructure = FALSE,
+                                             x_idx_list = NULL,
+                                             nobs = NULL) {
+  out <- matrix(0, nrow = nrow(k_mat), ncol = nrow(k_mat))
+  for (b in seq_along(md)) {
+    k_b <- k_mat[, moff[b] + seq_len(md[b]), drop = FALSE]
+    out <- out + lav_mat_k_gammant_kt(
+      m_k = k_b, s = cov_list[[b]],
+      meanstructure = meanstructure, x_idx = x_idx_list[[b]]
+    ) / nobs[[b]]
+  }
+  out
+}
+
+
 # VCOV for free parameters
 lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                               lavoptions = NULL, lavpartable = NULL,
@@ -2089,12 +2111,22 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     # block-diagonal moment covariance gamma_big = bdiag(Gamma_b / nobs_b),
     # where Gamma_b is the (per-observation) asymptotic covariance of the
     # sample moments of group b: the categorical ADF gamma (NACOV) for ordered
-    # data, the two-stage gamma (Savalei & Bentler / Savalei & Falk) under
-    # two-stage missing data, or the normal-theory gamma otherwise
-    gamma_g <- vector("list", nblocks)
+    # data, or the two-stage gamma (Savalei & Bentler / Savalei & Falk) under
+    # two-stage missing data. For complete continuous data (the normal-theory
+    # gamma) gamma_big is never materialized: the K Gamma K' sandwiches below
+    # use the per-block K-form of lav_mat_k_gammant_kt directly (see
+    # lav_sem_miiv_k_gammant_kt_blocks), which only needs the per-block
+    # covariance matrices (nt_cov_b)
+    x_idx_list <- vector("list", nblocks)
+    nt_cov_b <- vector("list", nblocks)
+    gamma_big <- NULL
+    if (use_explicit_gamma) {
+      gamma_g <- vector("list", nblocks)
+    }
     for (b in seq_len(nblocks)) {
       x_idx_b <-
         if (lavmodel@fixed.x) lavsamplestats@x.idx[[b]] else integer(0L)
+      x_idx_list[[b]] <- x_idx_b
       if (lavmodel@categorical) {
         gamma_g[[b]] <- lavsamplestats@NACOV[[b]] / lavsamplestats@nobs[[b]]
       } else if (two_stage) {
@@ -2117,12 +2149,12 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         if (inherits(try(chol(cov_b), silent = TRUE), "try-error")) {
           cov_b <- lavh1$implied$cov[[b]]
         }
-        gamma_g[[b]] <- lav_mat_k_gammant_kt(m_k = diag(md[b]), s = cov_b,
-          meanstructure = lavmodel@meanstructure, x_idx = x_idx_b) /
-          lavsamplestats@nobs[[b]]
+        nt_cov_b[[b]] <- cov_b
       }
     }
-    gamma_big <- lav_mat_bdiag(gamma_g)
+    if (use_explicit_gamma) {
+      gamma_big <- lav_mat_bdiag(gamma_g)
+    }
 
     # external instruments with CATEGORICAL data (multiple groups): replace the
     # per-block model gamma (NACOV) and the directed Jacobian with their
@@ -2188,9 +2220,17 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       }
       if (!is.null(v_dir) && !inherits(v_dir, "try-error")) {
         vcov[free_directed_idx, free_directed_idx] <- v_dir
-      } else {
+      } else if (use_explicit_gamma) {
         vcov[free_directed_idx, free_directed_idx] <-
           jac_k %*% gamma_big %*% t(jac_k)
+      } else {
+        # continuous NT gamma: per-block K-sandwich, no explicit gamma
+        vcov[free_directed_idx, free_directed_idx] <-
+          lav_sem_miiv_k_gammant_kt_blocks(
+            k_mat = jac_k, cov_list = nt_cov_b, md = md, moff = moff,
+            meanstructure = lavmodel@meanstructure,
+            x_idx_list = x_idx_list, nobs = lavsamplestats@nobs
+          )
       }
     }
 
@@ -2251,10 +2291,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         md_aug <- integer(nblocks)
         cov_aug_b <- vector("list", nblocks)
         keep_b <- vector("list", nblocks)
-        gamma_aug_b <- vector("list", nblocks)
         for (b in seq_len(nblocks)) {
-          x_idx_b <-
-            if (lavmodel@fixed.x) lavsamplestats@x.idx[[b]] else integer(0L)
           augb <- lav_sem_miiv_aug_moments(lavdata = lavdata, b = b,
             ov_names = lavdata@ov.names[[b]],
             sample_cov = lavh1$implied$cov[[b]],
@@ -2268,13 +2305,9 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           } else {
             p_aug_b * (p_aug_b + 1L) / 2L
           }
-          gamma_aug_b[[b]] <- lav_mat_k_gammant_kt(m_k = diag(md_aug[b]),
-            s = cov_aug_b[[b]], meanstructure = ms, x_idx = x_idx_b) /
-            lavsamplestats@nobs[[b]]
         }
         moff_aug <- cumsum(c(0L, md_aug))
         ntot_aug <- sum(md_aug)
-        gamma_big_aug <- lav_mat_bdiag(gamma_aug_b)
         jac_k_aug <- matrix(0, length(free_directed_idx), ntot_aug)
         delta1_aug <- matrix(0, ntot_aug, length(free_directed_idx))
         h2_aug <- matrix(0, length(free_undirected_idx), ntot_aug)
@@ -2326,8 +2359,14 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
             lavh1 = lavh1, free_directed_idx = free_directed_idx)
         }
         tmp <- h2_aug %*% (diag(ntot_aug) - delta1_aug %*% jac_k_aug)
+        # continuous NT gamma over the augmented moments: per-block
+        # K-sandwich, no explicit gamma
         vcov[free_undirected_idx, free_undirected_idx] <-
-          tmp %*% gamma_big_aug %*% t(tmp)
+          lav_sem_miiv_k_gammant_kt_blocks(
+            k_mat = tmp, cov_list = cov_aug_b, md = md_aug, moff = moff_aug,
+            meanstructure = ms, x_idx_list = x_idx_list,
+            nobs = lavsamplestats@nobs
+          )
       } else if (ext_cat_mg) {
         # categorical external instruments: build the stage-2 map and directed
         # derivative over the per-block augmented [thresholds, correlations]
@@ -2364,8 +2403,18 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         } else {
           tmp <- h2_full
         }
-        vcov[free_undirected_idx, free_undirected_idx] <-
-          tmp %*% gamma_big %*% t(tmp)
+        if (use_explicit_gamma) {
+          vcov[free_undirected_idx, free_undirected_idx] <-
+            tmp %*% gamma_big %*% t(tmp)
+        } else {
+          # continuous NT gamma: per-block K-sandwich, no explicit gamma
+          vcov[free_undirected_idx, free_undirected_idx] <-
+            lav_sem_miiv_k_gammant_kt_blocks(
+              k_mat = tmp, cov_list = nt_cov_b, md = md, moff = moff,
+              meanstructure = lavmodel@meanstructure,
+              x_idx_list = x_idx_list, nobs = lavsamplestats@nobs
+            )
+        }
       }
     }
 
