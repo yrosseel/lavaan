@@ -631,8 +631,23 @@ lav_sem_miiv_pool_directed <- function(blocks = NULL, con_jac = NULL,
   dvec <- numeric(n)
   for (bl in blocks) {
     p <- match(bl$gcol, free_slope_idx)
-    dmat[p, p] <- dmat[p, p] + bl$amat
-    dvec[p] <- dvec[p] + bl$bvec
+    if (anyDuplicated(p) > 0L) {
+      # a slope label repeated WITHIN one equation (eg y ~ a*x1 + a*x2):
+      # the equation's coefficients are b = C theta with C the duplication
+      # map, so its contribution to the pooled system is C'AC / C'b --
+      # sum the duplicated rows AND columns. (A plain dmat[p, p] <- ...
+      # assignment with duplicated p is last-write-wins per cell and
+      # silently drops the cross terms, giving inconsistent estimates.)
+      a_c <- rowsum(bl$amat, group = p)
+      a_c <- t(rowsum(t(a_c), group = p))
+      b_c <- drop(rowsum(matrix(bl$bvec, ncol = 1L), group = p))
+      pu <- sort(unique(p))
+      dmat[pu, pu] <- dmat[pu, pu] + a_c
+      dvec[pu] <- dvec[pu] + b_c
+    } else {
+      dmat[p, p] <- dmat[p, p] + bl$amat
+      dvec[p] <- dvec[p] + bl$bvec
+    }
   }
 
   if (!is.null(con_jac) && nrow(con_jac) > 0L) {
@@ -1911,6 +1926,15 @@ lav_sem_miiv_directed_vcov_restricted <- function(eqs, lavpartable,
       }
       a_j <- solve(eq$vcov[keep, keep, drop = FALSE])
       fidx <- coef_free[keep]
+      if (anyDuplicated(fidx) > 0L) {
+        # a label repeated WITHIN this equation: the coefficients are
+        # b = C theta, so the information contribution is C' A C -- sum
+        # the duplicated rows and columns (a plain info[fidx, fidx]
+        # assignment with duplicated fidx drops the cross terms)
+        a_j <- rowsum(a_j, group = fidx)
+        a_j <- t(rowsum(t(a_j), group = fidx))
+        fidx <- sort(unique(fidx))
+      }
       info[fidx, fidx] <- info[fidx, fidx] + a_j
     }
   }

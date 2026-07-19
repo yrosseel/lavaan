@@ -237,8 +237,8 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
 # the numerical (numDeriv) Jacobian of the estimation map instead; the
 # analytic path also falls back to it for the few configurations it does
 # not cover (general linear equality constraints among the
-# variance/covariance parameters, a slope label repeated within a single
-# equation, non-PD or non-converged stage-2 weight matrices).
+# variance/covariance parameters, non-PD or non-converged stage-2 weight
+# matrices).
 lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                             lavoptions = NULL, lavpartable = NULL,
                             lavimplied = NULL,

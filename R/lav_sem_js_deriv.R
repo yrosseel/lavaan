@@ -105,19 +105,6 @@ lav_sem_js_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
   x0 <- as.numeric(x0)
   nx <- length(x0)
 
-  # not covered: a free slope index that appears more than once WITHIN a
-  # single equation (eg y ~ a*x1 + a*x2); the point code's pooled system
-  # accumulates such duplicated columns cell-wise with last-write-wins
-  # semantics, which the chain rule below does not reproduce -- fall back
-  # to the numerical Jacobian (which differentiates the map as-is)
-  for (b in seq_len(nblocks)) {
-    for (eq in eqs_rec[[b]]) {
-      if (!is.null(eq$slope_block) &&
-          anyDuplicated(eq$slope_block$gcol) > 0L) {
-        return(NULL)
-      }
-    }
-  }
 
   # 2. moment coordinates (matching lav_implied_to_vec)
   co <- lav_sem_js_deriv_coords(lavmodel)
@@ -624,16 +611,34 @@ lav_sem_js_deriv_pool <- function(eqs_rec = NULL, d_slope_blocks = NULL,
     bl <- slope_blocks[[ib]]
     dbl <- d_sb[[ib]]
     p <- match(bl$gcol, free_slope_idx)
-    dmat[p, p] <- dmat[p, p] + bl$amat
-    dvec[p] <- dvec[p] + bl$bvec
     nf <- length(p)
-    for (j2 in seq_len(nf)) {
-      rows_j <- seq_len(nf) + (j2 - 1L) * nf
-      d_dmat[(p[j2] - 1L) * npool + p, ] <-
-        d_dmat[(p[j2] - 1L) * npool + p, ] +
-        dbl$damat[rows_j, , drop = FALSE]
+    if (anyDuplicated(p) > 0L) {
+      # a slope label repeated WITHIN one equation: collapse the
+      # duplicated rows/columns (C'AC / C'b), exactly as in
+      # lav_sem_miiv_pool_directed(); the derivative rows collapse the
+      # same way, grouped by the global (row, col) cell
+      a_c <- rowsum(bl$amat, group = p)
+      a_c <- t(rowsum(t(a_c), group = p))
+      b_c <- drop(rowsum(matrix(bl$bvec, ncol = 1L), group = p))
+      pu <- sort(unique(p))
+      dmat[pu, pu] <- dmat[pu, pu] + a_c
+      dvec[pu] <- dvec[pu] + b_c
+      grp <- as.vector(outer(p, p, function(i, j) (j - 1L) * npool + i))
+      dd <- rowsum(dbl$damat, group = grp)
+      gu <- sort(unique(grp))
+      d_dmat[gu, ] <- d_dmat[gu, ] + dd
+      d_dvec[pu, ] <- d_dvec[pu, ] + rowsum(dbl$dbvec, group = p)
+    } else {
+      dmat[p, p] <- dmat[p, p] + bl$amat
+      dvec[p] <- dvec[p] + bl$bvec
+      for (j2 in seq_len(nf)) {
+        rows_j <- seq_len(nf) + (j2 - 1L) * nf
+        d_dmat[(p[j2] - 1L) * npool + p, ] <-
+          d_dmat[(p[j2] - 1L) * npool + p, ] +
+          dbl$damat[rows_j, , drop = FALSE]
+      }
+      d_dvec[p, ] <- d_dvec[p, ] + dbl$dbvec
     }
-    d_dvec[p, ] <- d_dvec[p, ] + dbl$dbvec
   }
 
   # pooled point solution: the map already wrote it into x0 (and nothing

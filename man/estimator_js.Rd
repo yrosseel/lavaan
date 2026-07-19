@@ -134,10 +134,9 @@ converted.
     (numerical differentiation of the complete map; much slower for
     larger models). A few configurations are not covered by the analytic
     Jacobian (general linear equality constraints among the
-    variance/covariance parameters, a slope label repeated within a
-    single equation, a non-positive-definite or non-converged
-    second-stage weight matrix); these fall back to the numerical
-    Jacobian automatically.}
+    variance/covariance parameters, a non-positive-definite or
+    non-converged second-stage weight matrix); these fall back to the
+    numerical Jacobian automatically.}
 }
 }
 
