@@ -235,7 +235,9 @@ estimated by the EM algorithm, the model is then estimated from these moments,
 and the standard errors are corrected for the additional uncertainty stemming
 from the EM estimates (Savalei & Bentler, 2009). This default is used when the
 data contain missing values and the user does not set the \code{missing}
-argument. Set \code{missing = "robust.two.stage"} for sandwich-corrected
+argument; \code{missing = "ml"} is interpreted as a request to handle
+missing values and mapped to \code{"two.stage"} as well. Set
+\code{missing = "robust.two.stage"} for sandwich-corrected
 standard errors (Savalei & Falk, 2014), or \code{missing = "listwise"} to
 delete incomplete cases instead. Two-stage missing-data estimation is also
 available for multiple-group models.

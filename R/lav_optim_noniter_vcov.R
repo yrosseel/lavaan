@@ -1586,10 +1586,12 @@ lav_noniter_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     gamma_flavor <- "nt"
   }
   gamma_flavor <- tolower(gamma_flavor)
-  if (gamma_flavor == "adf" && lavdata@data.type != "full") {
+  two_stage <- any(lavoptions$missing == c("two.stage", "robust.two.stage"))
+  if (gamma_flavor == "adf" &&
+      (lavdata@data.type != "full" || two_stage)) {
     lav_msg_warn(gettext(
       "the \"adf\" moment covariance requires complete raw data; using
-       the normal-theory moment covariance instead."))
+       the default moment covariance instead."))
     gamma_flavor <- "nt"
   }
 
@@ -1661,7 +1663,30 @@ lav_noniter_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
     jac_b <- jac[, offset + seq_len(nd_b), drop = FALSE]
     offset <- offset + nd_b
-    if (gamma_flavor == "adf") {
+    if (two_stage) {
+      # two-stage missing data: the moments are the (saturated) EM
+      # estimates; their asymptotic covariance is the inverse saturated
+      # information (two.stage; Savalei & Bentler 2009) or its sandwich
+      # (robust.two.stage; Savalei & Falk 2014) -- as for the JS and IV
+      # estimators
+      mu_b <- implied0$mean[[b]]
+      sig_b <- implied0$cov[[b]]
+      if (identical(tolower(lavoptions$missing), "robust.two.stage")) {
+        gg <- lav_mvn_mi_h1_omega_sw(
+          y = lavdata@X[[b]], mp = lavdata@Mp[[b]],
+          yp = lavsamplestats@missing[[b]],
+          mu = mu_b, sigma_1 = sig_b,
+          x_idx = integer(0L), information = "observed"
+        )
+      } else {
+        i1 <- lav_mvnorm_missing_information_observed_samplestats(
+          yp = lavsamplestats@missing[[b]],
+          mu = mu_b, sigma_1 = sig_b, x_idx = integer(0L)
+        )
+        gg <- lav_mat_sym_inverse(i1)
+      }
+      vcov <- vcov + (jac_b %*% gg %*% t(jac_b)) / lavsamplestats@nobs[[b]]
+    } else if (gamma_flavor == "adf") {
       gg <- lav_samp_gamma(
         m_y = lavdata@X[[b]],
         meanstructure = lavmodel@meanstructure
@@ -1734,8 +1759,12 @@ lav_noniter_se_rows <- function(object = NULL) {
     }
     out <- c(out, "Gamma matrix" = gamma_flavor)
   } else { # MGM
+    # under two-stage missing data the moment ACOV is the two-stage one,
+    # whatever mgm.gamma says (see lav_noniter_vcov)
     gamma_flavor <- toupper(ea[["mgm.gamma"]])
-    if (gamma_flavor == "ADF" && object@Data@data.type != "full") {
+    if (two_stage) {
+      gamma_flavor <- "TS"
+    } else if (gamma_flavor == "ADF" && object@Data@data.type != "full") {
       gamma_flavor <- "NT" # the adf request fell back at fit time
     }
     out <- c(out, "Gamma matrix" = gamma_flavor)

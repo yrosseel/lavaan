@@ -176,7 +176,9 @@ estimator).
 By default, cases with missing values are removed listwise. When the data
 contain missing values, \code{missing = "two.stage"} is selected
 automatically (it can also be requested explicitly, as can
-\code{missing = "robust.two.stage"}): the saturated (EM) moments are used
+\code{missing = "robust.two.stage"}; \code{missing = "ml"} is interpreted
+as a request to handle missing values and mapped to
+\code{"two.stage"}): the saturated (EM) moments are used
 for point estimation, and the standard errors are based on the two-stage
 moment covariance (Savalei & Bentler, 2009; Savalei & Falk, 2014). The
 test statistic then uses the model-based variant

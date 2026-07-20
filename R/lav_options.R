@@ -760,10 +760,13 @@ lav_options_set <- function(opt = NULL) {
         dQuote(opt$missing)
       ))
     }
-    # for the (continuous) least-squares estimators, ML is not available;
-    # interpret missing = "ml"/"fiml" as a generic request to handle missing
-    # values, and silently switch to two-stage estimation
-    if (any(opt$estimator == c("uls", "gls", "wls", "dls"))) {
+    # for the (continuous) least-squares estimators and the noniterative
+    # moment estimators, ML is not available; interpret missing =
+    # "ml"/"fiml" as a generic request to handle missing values, and
+    # silently switch to two-stage estimation (the EM-estimated
+    # unrestricted/h1 moments become the input)
+    if (any(opt$estimator == c("uls", "gls", "wls", "dls",
+                               "iv", "js", "jsa", "mgm"))) {
       opt$missing <- "two.stage"
     } else if (any(opt$estimator == c(
       "mlm", "mlmv", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
@@ -782,7 +785,8 @@ lav_options_set <- function(opt = NULL) {
       ))
     }
     # see missing = "ml" above: handle missing values via two-stage
-    if (any(opt$estimator == c("uls", "gls", "wls", "dls"))) {
+    if (any(opt$estimator == c("uls", "gls", "wls", "dls",
+                               "iv", "js", "jsa", "mgm"))) {
       opt$missing <- "two.stage"
     } else if (any(opt$estimator == c(
       "mlm", "mlmv", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
@@ -892,6 +896,10 @@ lav_options_set <- function(opt = NULL) {
     } else if (opt$missing == "robust.two.stage" &&
       opt$se == "robust.two.stage") {
       # nothing to do
+    } else if (opt$se == "bootstrap" &&
+      any(opt$estimator == c("iv", "js", "jsa", "mgm"))) {
+      # the noniterative estimators refit each bootstrap sample (the EM
+      # moments are re-estimated per draw); keep the bootstrap request
     } else {
       lav_msg_warn(gettextf(
         "se will be set to %1$s if missing = %2$s",

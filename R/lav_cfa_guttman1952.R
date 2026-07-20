@@ -665,6 +665,53 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     rep(1L, length(lavpartable$op))
   }
 
+  # no common factors at all (e.g., the baseline/independence model that
+  # accompanies the Browne residual test statistics): there is no first
+  # stage; estimate all free variances/covariances (and means) directly
+  # with the same second-stage machinery the estimator uses for its
+  # undirected block (ULS is exact here: with no loadings the implied
+  # covariance matrix is linear in the free cells)
+  if (!any(lavpartable$op == "=~")) {
+    x <- lav_model_get_parameters(lavmodel)
+    implied <- if (!is.null(lavh1$implied$cov)) {
+      lavh1$implied
+    } else {
+      list(cov = lavsamplestats@cov, mean = lavsamplestats@mean)
+    }
+    free_undirected_idx <- unique(lavpartable$free[lavpartable$op == "~~" &
+      lavpartable$free > 0L])
+    if (length(free_undirected_idx) > 0L) {
+      lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+      delta_list <- lav_sem_miiv_delta(lavmodel_tmp)
+      for (b in seq_len(nblocks)) {
+        fu_b <- unique(lavpartable$free[lavpartable$op == "~~" &
+          lavpartable$free > 0L & pt_block == b])
+        fu_b <- fu_b[fu_b %in% free_undirected_idx]
+        if (length(fu_b) == 0L) {
+          next
+        }
+        tb <- lav_sem_miiv_varcov_block(
+          b = b, fu = fu_b, delta_b = delta_list[[b]],
+          implied = implied, lavmodel = lavmodel, x = x,
+          iv_varcov_method = "ULS", return_h = FALSE
+        )
+        x[fu_b] <- as.numeric(tb)
+      }
+    }
+    if (lavmodel@meanstructure) {
+      free_mean_idx <- unique(lavpartable$free[lavpartable$op == "~1" &
+        lavpartable$free > 0L])
+      if (length(free_mean_idx) > 0L) {
+        x[free_mean_idx] <- lav_sem_miiv_mean_wls(
+          lavmodel = lavmodel, lavsamplestats = lavsamplestats, x = x,
+          free_mean_idx = free_mean_idx,
+          sample_mean = implied$mean
+        )
+      }
+    }
+    return(x)
+  }
+
   # ------------------------------------------------------------------
   # collect the per-block ingredients
   # ------------------------------------------------------------------

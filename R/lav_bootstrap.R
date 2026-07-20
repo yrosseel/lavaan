@@ -206,9 +206,9 @@ lav_bootstrap_internal <- function(object = NULL,
     if (fun_orig == "coef") {
       lavoptions_1$test <- "none"
     }
-    # the (MI)IV and JS/JSA estimators need the (unrestricted) h1 moments
-    # to estimate each equation, so keep h1 for their refits
-    if (lavoptions_1$estimator %in% c("IV", "JS", "JSA")) {
+    # the (MI)IV, JS/JSA and MGM estimators need the (unrestricted) h1
+    # moments to estimate each equation, so keep h1 for their refits
+    if (lavoptions_1$estimator %in% c("IV", "JS", "JSA", "MGM")) {
       lavoptions_1$h1 <- TRUE
     }
   }

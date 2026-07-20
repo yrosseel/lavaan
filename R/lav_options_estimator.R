@@ -583,34 +583,82 @@ lav_options_est_mml <- function(opt) {
 lav_options_est_fabin <- function(opt) {
   # FABIN, MULTIPLE-GROUP-METHOD (MGM), BENTLER1982, ...           ####
   # experimental, for cfa or sam only
-  # se
-  if (opt$se == "default") {
+  mgm_flag <- lav_options_estimatorgroup(opt$estimator) == "MGM"
+
+  # missing data (MGM only)
+  # - two.stage / robust.two.stage: use the (saturated) EM moments of the
+  #   unrestricted (h1) model for point estimation (they replace the
+  #   sample statistics), with standard errors based on the two-stage
+  #   moment covariance (see lav_noniter_vcov()); missing = "ml" is
+  #   mapped to "two.stage" in lav_options()
+  # - anything else falls back to listwise deletion
+  two_stage <- mgm_flag &&
+    any(opt$missing == c("two.stage", "robust.two.stage"))
+  if (!two_stage) {
+    opt$missing <- "listwise" # for now
+  }
+
+  # se: the general missing = two.stage handling (in lav_options()) sets
+  # se to (robust.)two.stage, but the MGM standard errors have their own
+  # machinery that reads opt$missing to pick the two-stage moment
+  # covariance; reset to "standard" here
+  if (any(opt$se == c("default", "two.stage", "robust.two.stage"))) {
     # the MGM estimator has delta-method standard errors over the sample
     # moments (lav_noniter_vcov); the other noniterative estimators in
     # this family do not (yet)
-    if (lav_options_estimatorgroup(opt$estimator) == "MGM") {
+    if (mgm_flag) {
       opt$se <- "standard"
     } else {
       opt$se <- "none"
     }
-  } else if (opt$se == "robust" &&
-             lav_options_estimatorgroup(opt$estimator) != "MGM") {
-    # only the MGM estimator has the robust (ADF-Gamma) flavor
-    lav_msg_stop(gettextf(
-      "estimator %s does not support se = \"robust\".",
-      lav_options_estimatorgroup(opt$estimator)))
+  } else if (opt$se == "robust") {
+    if (!mgm_flag) {
+      # only the MGM estimator has the robust (ADF-Gamma) flavor
+      lav_msg_stop(gettextf(
+        "estimator %s does not support se = \"robust\".",
+        lav_options_estimatorgroup(opt$estimator)))
+    } else if (two_stage) {
+      # under two-stage missing data the moment ACOV is governed by the
+      # missing= argument (two.stage vs robust.two.stage), not by the
+      # Gamma flavor
+      lav_msg_warn(gettext(
+        "se = \"robust\" is not available with two-stage missing data;
+         use missing = \"robust.two.stage\" for the robust two-stage
+         moment covariance. Se is set to \"standard\"."))
+      opt$se <- "standard"
+    }
   }
   # bounds
   if (!is.null(opt$bounds) && opt$bounds == "default" &&
       length(opt$optim.bounds) == 0L) {
     opt$bounds <- "standard"
   }
-  # test
-  if (opt$test == "default") {
+  # test: for MGM only the Browne residual tests are meaningful; the
+  # default is the normal-theory version (as for the IV/JS estimators).
+  # With missing data the sample-based version is not available, so use
+  # the model-based variant.
+  if (mgm_flag) {
+    if ((length(opt$test) == 1L && opt$test == "default") || two_stage) {
+      opt$test <- if (two_stage) {
+        "browne.residual.nt.model"
+      } else {
+        "browne.residual.nt" # sample-based (also for the baseline)
+      }
+    } else if (!all(opt$test %in% c(
+      "none", "browne.residual.nt", "browne.residual.adf",
+      "browne.residual.nt.model", "browne.residual.adf.model"
+    ))) {
+      lav_msg_warn(gettext(
+        "estimator MGM only supports the browne.residual.nt/adf test
+         statistics; test is set to \"none\"."))
+      opt$test <- "none"
+    }
+    if (length(opt$test) > 0L && opt$test[1] != "none") {
+      opt$standard.test <- opt$test[1]
+    }
+  } else if (opt$test == "default") {
     opt$test <- "none" # for now
   }
-  # missing
-  opt$missing <- "listwise" # for now (until we have two-stage working)
   # options for fabin
   if (lav_options_estimatorgroup(opt$estimator) %in% c("FABIN2", "FABIN3")) {
     if (is.null(opt$estimator.args)) {

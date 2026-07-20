@@ -73,10 +73,13 @@ lav_options_check_se <- function(opt = NULL) {
   } else if (any(opt$estimator == c("fabin2", "fabin3"))) {
     ok_flag <- any(opt$se == c("default", "none", "bootstrap", "external"))
   # GUTTMAN1952 (MGM): delta-method standard errors are available;
-  # se = "robust" is the ADF-Gamma (infinitesimal-jackknife) flavor
+  # se = "robust" is the ADF-Gamma (infinitesimal-jackknife) flavor;
+  # (robust.)two.stage may arrive via the general missing = "two.stage"
+  # handling and is mapped back to "standard" in lav_options_est_fabin()
   } else if (opt$estimator == "mgm") {
     ok_flag <- any(opt$se == c(
-      "default", "none", "standard", "robust", "bootstrap", "external"
+      "default", "none", "standard", "robust", "bootstrap", "external",
+      "two.stage", "robust.two.stage"
     ))
   # OTHERS
   } else if (any(opt$estimator == c("fml", "mml", "reml"))) {
