@@ -140,9 +140,11 @@ lav_cfa_mgm_block <- function(s, m_b, theta,
 #         (NA if none); pairs: data.frame(i, j, value) with value = NA
 #         for a free residual covariance; contam: symmetric logical
 #         matrix flagging all contaminated cells
-lav_cfa_mgm_purge <- function(s, fac_of, pairs, contam) {
+lav_cfa_mgm_purge <- function(s, fac_of, pairs, contam,
+                              return_anchors = FALSE) {
   s0 <- s
   failed <- integer(0L) # rows of 'pairs' without any clean anchor pair
+  anchors <- vector("list", nrow(pairs)) # per pair: 2 x K anchor cells
   for (r in seq_len(nrow(pairs))) {
     i <- pairs$i[r]
     j <- pairs$j[r]
@@ -167,6 +169,8 @@ lav_cfa_mgm_purge <- function(s, fac_of, pairs, contam) {
     #    orientation (g_a, g_b) = (fi, fj)
     cand <- setdiff(seq_along(fac_of), c(i, j))
     vals <- numeric(0L)
+    aa_used <- integer(0L)
+    bb_used <- integer(0L)
     for (a in cand) {
       ga <- fac_of[a]
       if (is.na(ga)) {
@@ -194,6 +198,8 @@ lav_cfa_mgm_purge <- function(s, fac_of, pairs, contam) {
           next
         }
         vals <- c(vals, s[i, a] * s[j, b] / s[a, b])
+        aa_used <- c(aa_used, a)
+        bb_used <- c(bb_used, b)
       }
     }
     if (length(vals) == 0L) {
@@ -201,8 +207,12 @@ lav_cfa_mgm_purge <- function(s, fac_of, pairs, contam) {
       next
     }
     s0[i, j] <- s0[j, i] <- mean(vals)
+    anchors[[r]] <- rbind(aa_used, bb_used)
   }
   attr(s0, "failed") <- failed
+  if (return_anchors) {
+    attr(s0, "anchors") <- anchors
+  }
   s0
 }
 
