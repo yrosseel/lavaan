@@ -153,9 +153,14 @@ variability caused by estimating the reliability matrix (Theorem 2 in
 Burghgraeve et al., 2021) -- and, for JSA, the aggregation weights -- is
 accounted for automatically. The full covariance matrix of the parameter
 estimates is available, so defined parameters (\code{:=}) obtain proper
-delta-method standard errors. Alternatively, \code{se = "bootstrap"}
-computes bootstrap standard errors, and \code{se = "none"} skips the
-standard errors.
+delta-method standard errors. The \code{summary()} header reports the
+method (\code{Delta}) and the flavor of the moment covariance
+(\code{Gamma matrix: NT}, \code{ADF} or \code{TS}). Setting
+\code{se = "robust"} is a shortcut for the ADF flavor
+(\code{js_gamma = "adf"}), which equals the infinitesimal-jackknife
+(sandwich) covariance of the estimator. Alternatively,
+\code{se = "bootstrap"} computes bootstrap standard errors, and
+\code{se = "none"} skips the standard errors.
 
 There is no discrepancy-function chi-square statistic; the default test
 statistic is Browne's (1984) residual-based test

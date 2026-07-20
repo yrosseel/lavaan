@@ -40,7 +40,12 @@ effects (factor loadings and regression coefficients) are estimated
 equation-by-equation by 2SLS. In the second stage, the \emph{undirected}
 effects (residual variances and covariances) are estimated by a weighted
 least-squares step applied to the residual moments. Standard errors are
-available for both stages (see the options below).
+available for both stages (see the options below). The \code{summary()}
+header reports them as \code{Delta} (all analytic standard errors for the
+non-iterative estimators are delta-method expressions over the sample
+moments), followed by the methods used for the two parts of the model
+(\code{iv_vcov_stage1}, \code{iv_vcov_stage2}) and the flavor of the
+moment covariance (\code{Gamma matrix: NT}, \code{ADF} or \code{TS}).
 
 Both continuous and ordered-categorical data are supported (for ordered data,
 the polychoric-based PIV estimator of Bollen & Maydeu-Olivares, 2007 is used).

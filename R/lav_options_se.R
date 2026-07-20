@@ -72,10 +72,11 @@ lav_options_check_se <- function(opt = NULL) {
   # FABIN, BENTLER1982, ...
   } else if (any(opt$estimator == c("fabin2", "fabin3"))) {
     ok_flag <- any(opt$se == c("default", "none", "bootstrap", "external"))
-  # GUTTMAN1952 (MGM): delta-method standard errors are available
+  # GUTTMAN1952 (MGM): delta-method standard errors are available;
+  # se = "robust" is the ADF-Gamma (infinitesimal-jackknife) flavor
   } else if (opt$estimator == "mgm") {
     ok_flag <- any(opt$se == c(
-      "default", "none", "standard", "bootstrap", "external"
+      "default", "none", "standard", "robust", "bootstrap", "external"
     ))
   # OTHERS
   } else if (any(opt$estimator == c("fml", "mml", "reml"))) {

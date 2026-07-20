@@ -1687,3 +1687,59 @@ lav_noniter_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   vcov
 }
+
+# summary() header rows describing the standard errors of the noniterative
+# estimators (MGM, JS/JSA, IV). Every analytic standard-error flavor in
+# this family is a first-order delta-method (sandwich) expression over the
+# sample moments, J Gamma J' / n, so the common label is "Delta"; the
+# remaining rows show the flavor of the moment ACOV (Gamma) and, for the
+# IV estimator, the methods used for the two parts of the model. Returns
+# a named character vector (names = the left-hand labels), or NULL when
+# the generic header applies (bootstrap/external, or another estimator).
+lav_noniter_se_rows <- function(object = NULL) {
+  estimator <- object@Options$estimator
+  se <- object@Options$se
+  if (!estimator %in% c("MGM", "JS", "JSA", "IV") ||
+      !se %in% c("standard", "robust")) {
+    return(NULL)
+  }
+  ea <- object@Options$estimator.args
+  two_stage <- any(object@Options$missing ==
+                   c("two.stage", "robust.two.stage"))
+
+  out <- c("Standard errors" = "Delta")
+  if (estimator == "IV") {
+    out <- c(out,
+      "Regression part (stage 1)" = ea[["iv_vcov_stage1"]],
+      "Variance part (stage 2)"   = ea[["iv_vcov_stage2"]])
+    # type of Gamma (moment ACOV) used in the stage-2 standard errors;
+    # not applicable when no stage-2 covariance is computed
+    if (!identical(tolower(ea[["iv_vcov_stage2"]]), "none")) {
+      out <- c(out, "Gamma matrix" = if (object@Model@categorical) {
+        "ADF"
+      } else if (two_stage) {
+        "TS"
+      } else {
+        "NT"
+      })
+    }
+  } else if (estimator %in% c("JS", "JSA")) {
+    # under two-stage missing data the moment ACOV is the two-stage one,
+    # whatever js_gamma says (see lav_sem_js_vcov)
+    gamma_flavor <- toupper(ea[["js_gamma"]])
+    if (two_stage) {
+      gamma_flavor <- "TS"
+    } else if (gamma_flavor == "ADF" && object@Data@data.type != "full") {
+      gamma_flavor <- "NT" # the adf request fell back at fit time
+    }
+    out <- c(out, "Gamma matrix" = gamma_flavor)
+  } else { # MGM
+    gamma_flavor <- toupper(ea[["mgm.gamma"]])
+    if (gamma_flavor == "ADF" && object@Data@data.type != "full") {
+      gamma_flavor <- "NT" # the adf request fell back at fit time
+    }
+    out <- c(out, "Gamma matrix" = gamma_flavor)
+  }
+
+  out
+}

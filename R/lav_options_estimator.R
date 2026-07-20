@@ -593,6 +593,12 @@ lav_options_est_fabin <- function(opt) {
     } else {
       opt$se <- "none"
     }
+  } else if (opt$se == "robust" &&
+             lav_options_estimatorgroup(opt$estimator) != "MGM") {
+    # only the MGM estimator has the robust (ADF-Gamma) flavor
+    lav_msg_stop(gettextf(
+      "estimator %s does not support se = \"robust\".",
+      lav_options_estimatorgroup(opt$estimator)))
   }
   # bounds
   if (!is.null(opt$bounds) && opt$bounds == "default" &&
@@ -682,6 +688,8 @@ lav_options_est_fabin <- function(opt) {
     # moment covariance (Gamma) flavor for the delta-method standard
     # errors: "nt" (normal-theory, default) or "adf" (distribution-free;
     # equals the infinitesimal-jackknife covariance of the estimator)
+    mgm_gamma_user <- !is.null(opt$estimator.args[["mgm.gamma"]]) ||
+                      !is.null(opt$estimator.args[["mgm_gamma"]])
     if (is.null(opt$estimator.args[["mgm.gamma"]])) {
       mg <- opt$estimator.args[["mgm_gamma"]] # snake_case alias
       opt$estimator.args$mgm.gamma <- if (is.null(mg)) "nt" else mg
@@ -693,6 +701,18 @@ lav_options_est_fabin <- function(opt) {
       lav_msg_stop(gettextf(
         "unknown value for estimator.args$mgm.gamma option: %s.",
         opt$estimator.args[["mgm.gamma"]]))
+    }
+    # se = "robust": the delta-method standard errors with the ADF
+    # (distribution-free) moment ACOV -- the infinitesimal-jackknife
+    # (sandwich) flavor of this estimator family
+    if (opt$se == "robust") {
+      if (mgm_gamma_user &&
+          opt$estimator.args[["mgm.gamma"]] == "nt") {
+        lav_msg_warn(gettext(
+          "se = \"robust\" overrides estimator.args$mgm.gamma = \"nt\";
+           using the ADF moment covariance."))
+      }
+      opt$estimator.args$mgm.gamma <- "adf"
     }
     # Jacobian of the estimation map for the delta-method standard
     # errors: "analytic" (default; classic branch, with an automatic
@@ -771,10 +791,19 @@ lav_options_est_js <- function(opt) {
   # two-stage moment covariance)
   if (any(opt$se == c("default", "two.stage", "robust.two.stage"))) {
     opt$se <- "standard"
-  } else if (!opt$se %in% c("none", "standard", "bootstrap")) {
+  } else if (opt$se == "robust" && two_stage) {
+    # under two-stage missing data the moment ACOV is governed by the
+    # missing= argument (two.stage vs robust.two.stage), not by the
+    # Gamma flavor
+    lav_msg_warn(gettext(
+      "se = \"robust\" is not available with two-stage missing data;
+       use missing = \"robust.two.stage\" for the robust two-stage moment
+       covariance. Se is set to \"standard\"."))
+    opt$se <- "standard"
+  } else if (!opt$se %in% c("none", "standard", "robust", "bootstrap")) {
     lav_msg_warn(gettextf(
-      "estimator %s only supports se = \"standard\", \"bootstrap\" or
-       \"none\"; se is set to \"standard\".", label))
+      "estimator %s only supports se = \"standard\", \"robust\",
+       \"bootstrap\" or \"none\"; se is set to \"standard\".", label))
     opt$se <- "standard"
   }
   # bounds
@@ -847,6 +876,7 @@ lav_options_est_js <- function(opt) {
         lav_msg_view(c("wide", "standard", "none"), log_sep = "or")))
     }
   }
+  js_gamma_user <- !is.null(ea[["js_gamma"]])
   if (is.null(ea[["js_gamma"]])) {
     ea$js_gamma <- "nt"
   } else {
@@ -856,6 +886,17 @@ lav_options_est_js <- function(opt) {
         "js_gamma value in estimator.args must be either %s.",
         lav_msg_view(c("nt", "adf"), log_sep = "or")))
     }
+  }
+  # se = "robust": the delta-method standard errors with the ADF
+  # (distribution-free) moment ACOV -- the infinitesimal-jackknife
+  # (sandwich) flavor of this estimator family
+  if (opt$se == "robust") {
+    if (js_gamma_user && ea[["js_gamma"]] == "nt") {
+      lav_msg_warn(gettext(
+        "se = \"robust\" overrides estimator.args$js_gamma = \"nt\";
+         using the ADF moment covariance."))
+    }
+    ea$js_gamma <- "adf"
   }
   if (is.null(ea[["js_vcov_gamma_modelbased"]])) {
     ea$js_vcov_gamma_modelbased <- TRUE
@@ -941,6 +982,15 @@ lav_options_est_iv <- function(opt) {
   # "standard" here
   if (any(opt$se == c("default", "two.stage", "robust.two.stage"))) {
     opt$se <- "standard" # for now
+  } else if (opt$se == "robust") {
+    # the IV standard errors pick their moment ACOV internally (ADF for
+    # categorical data, two-stage under two-stage missing data,
+    # normal-theory otherwise); a distribution-free flavor for complete
+    # continuous data is not available (yet)
+    lav_msg_stop(gettext(
+      "se = \"robust\" is not available (yet) for estimator IV; note that
+       with categorical data the IV standard errors already use the ADF
+       moment covariance."))
   }
   # bounds
   if (!is.null(opt$bounds) && opt$bounds == "default" &&

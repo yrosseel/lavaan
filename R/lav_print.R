@@ -216,108 +216,91 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       c1 <- c2 <- character(0L)
 
       # which type of standard errors?
-      c1 <- c(c1, "Standard errors")
-      if (attr(x, "se") == "robust.huber.white") {
-        tmp_txt <- "sandwich" # since 0.6-6
-      } else if (identical(attr(x, "estimator"), "IV") &&
-                 attr(x, "se") != "bootstrap") {
-        tmp_txt <- "two-stage" # estimator = "IV"
-      } else if (isTRUE(attr(x, "estimator") %in% c("JS", "JSA")) &&
-                 attr(x, "se") != "bootstrap") {
-        tmp_txt <- "delta" # estimator = "JS"/"JSA": over the sample moments
+      if (!is.null(attr(x, "se.rows"))) {
+        # noniterative estimators (MGM, JS/JSA, IV): delta-method standard
+        # errors over the sample moments; print the pre-assembled rows
+        # (see lav_noniter_se_rows) instead of the information block
+        se.rows <- attr(x, "se.rows")
+        c1 <- c(c1, names(se.rows))
+        c2 <- c(c2, unname(se.rows))
       } else {
-        tmp_txt <- attr(x, "se")
-      }
-      c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
-        substring(tmp_txt, 2),
-        sep = ""
-      ))
-      # information
-      if (attr(x, "se") != "bootstrap" &&
-          identical(attr(x, "estimator"), "IV")) {
-        # estimator = "IV": report the two-stage vcov methods and the type of
-        # Gamma matrix instead of the information matrix
-        c1 <- c(c1, "Standard errors stage 1")
-        c2 <- c(c2, attr(x, "iv.vcov.stage1"))
-        c1 <- c(c1, "Standard errors stage 2")
-        c2 <- c(c2, attr(x, "iv.vcov.stage2"))
-        if (!is.null(attr(x, "iv.gamma"))) {
-          c1 <- c(c1, "Gamma matrix")
-          c2 <- c(c2, attr(x, "iv.gamma"))
-        }
-      } else if (attr(x, "se") != "bootstrap" &&
-                 isTRUE(attr(x, "estimator") %in% c("JS", "JSA"))) {
-        # estimator = "JS"/"JSA": report the type of Gamma matrix instead of
-        # the information matrix
-        if (!is.null(attr(x, "js.gamma"))) {
-          c1 <- c(c1, "Gamma matrix")
-          c2 <- c(c2, attr(x, "js.gamma"))
-        }
-      } else if (attr(x, "se") != "bootstrap") {
-        # type for information
+        c1 <- c(c1, "Standard errors")
         if (attr(x, "se") == "robust.huber.white") {
-          c1 <- c(c1, "Information bread")
+          tmp_txt <- "sandwich" # since 0.6-6
         } else {
-          c1 <- c(c1, "Information")
+          tmp_txt <- attr(x, "se")
         }
-        tmp_txt <- attr(x, "information")
         c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
           substring(tmp_txt, 2),
           sep = ""
         ))
-
-        # if observed, which type? (hessian of h1)
-        if (attr(x, "information") == "observed") {
-          c1 <- c(c1, "Observed information based on")
-          tmp_txt <- attr(x, "observed.information")
-          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
-            substring(tmp_txt, 2),
-            sep = ""
-          ))
-        }
-
-        # if h1 is involved, structured or unstructured?
-        if (attr(x, "information") %in% c("expected", "first.order") ||
-          attr(x, "observed.information") == "h1") {
-          if (attr(x, "se") == "robust.huber.white" &&
-            attr(x, "h1.information") !=
-              attr(x, "h1.information.meat")) {
-            c1 <- c(c1, "Information bread saturated (h1) model")
+        # information
+        if (attr(x, "se") != "bootstrap") {
+          # type for information
+          if (attr(x, "se") == "robust.huber.white") {
+            c1 <- c(c1, "Information bread")
           } else {
-            c1 <- c(c1, "Information saturated (h1) model")
+            c1 <- c(c1, "Information")
           }
-          tmp_txt <- attr(x, "h1.information")
+          tmp_txt <- attr(x, "information")
           c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
             substring(tmp_txt, 2),
             sep = ""
           ))
-        }
 
-        # if sandwich, which information for the meat? (first.order)
-        # only print if it is NOT first.order
-        if (attr(x, "se") == "robust.huber.white" &&
-          attr(x, "information.meat") != "first.order") {
-          c1 <- c(c1, "Information meat")
-          tmp_txt <- attr(x, "information.meat")
-          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
-            substring(tmp_txt, 2),
-            sep = ""
-          ))
-        }
+          # if observed, which type? (hessian of h1)
+          if (attr(x, "information") == "observed") {
+            c1 <- c(c1, "Observed information based on")
+            tmp_txt <- attr(x, "observed.information")
+            c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+              substring(tmp_txt, 2),
+              sep = ""
+            ))
+          }
 
-        # if sandwich, structured or unstructured for the meat?
-        # only print if it is not the same as h1.information
-        if (attr(x, "se") == "robust.huber.white" &&
-          attr(x, "h1.information.meat") !=
-            attr(x, "h1.information")) {
-          c1 <- c(c1, "Information meat saturated (h1) model")
-          tmp_txt <- attr(x, "h1.information.meat")
-          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
-            substring(tmp_txt, 2),
-            sep = ""
-          ))
-        }
-      } # no bootstrap
+          # if h1 is involved, structured or unstructured?
+          if (attr(x, "information") %in% c("expected", "first.order") ||
+            attr(x, "observed.information") == "h1") {
+            if (attr(x, "se") == "robust.huber.white" &&
+              attr(x, "h1.information") !=
+                attr(x, "h1.information.meat")) {
+              c1 <- c(c1, "Information bread saturated (h1) model")
+            } else {
+              c1 <- c(c1, "Information saturated (h1) model")
+            }
+            tmp_txt <- attr(x, "h1.information")
+            c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+              substring(tmp_txt, 2),
+              sep = ""
+            ))
+          }
+
+          # if sandwich, which information for the meat? (first.order)
+          # only print if it is NOT first.order
+          if (attr(x, "se") == "robust.huber.white" &&
+            attr(x, "information.meat") != "first.order") {
+            c1 <- c(c1, "Information meat")
+            tmp_txt <- attr(x, "information.meat")
+            c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+              substring(tmp_txt, 2),
+              sep = ""
+            ))
+          }
+
+          # if sandwich, structured or unstructured for the meat?
+          # only print if it is not the same as h1.information
+          if (attr(x, "se") == "robust.huber.white" &&
+            attr(x, "h1.information.meat") !=
+              attr(x, "h1.information")) {
+            c1 <- c(c1, "Information meat saturated (h1) model")
+            tmp_txt <- attr(x, "h1.information.meat")
+            c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+              substring(tmp_txt, 2),
+              sep = ""
+            ))
+          }
+        } # no bootstrap
+      } # no se.rows
 
       #TDJ: Pooling options for lavaan.mi-class objects (which NEVER bootstrap)
       if (isTRUE(attr(x, "pooled"))) {

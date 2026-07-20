@@ -488,6 +488,11 @@ Estimation options:
       If \code{"robust"}, either \code{"robust.sem"} or
       \code{"robust.huber.white"} is used depending on the estimator,
       the mimic option, and whether the data are complete or not.
+      For the non-iterative estimators with delta-method standard errors
+      over the sample moments (\code{"MGM"}, \code{"JS"}/\code{"JSA"}),
+      \code{"robust"} selects the ADF (distribution-free) moment
+      covariance, which equals the infinitesimal-jackknife (sandwich)
+      covariance of the estimator.
       If \code{"boot"} or \code{"bootstrap"}, bootstrap standard errors are
       computed using standard bootstrapping (unless Bollen-Stine bootstrapping
       is requested for the test statistic; in this case bootstrap standard

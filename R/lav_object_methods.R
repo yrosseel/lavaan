@@ -1348,35 +1348,13 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "h1.information.meat") <-
           object@Options$h1.information.meat
         attr(tmp_list, "header") <- header
-        # estimator = "IV": the standard errors are not based on an information
-        # matrix, but on a two-stage (sandwich) procedure; report the stage-1
-        # and stage-2 vcov methods and the type of moment ACOV (Gamma) instead
-        if (identical(object@Options$estimator, "IV")) {
-          attr(tmp_list, "estimator") <- "IV"
-          attr(tmp_list, "iv.vcov.stage1") <-
-            object@Options$estimator.args$iv_vcov_stage1
-          attr(tmp_list, "iv.vcov.stage2") <-
-            object@Options$estimator.args$iv_vcov_stage2
-          # type of Gamma (moment ACOV) used in the stage-2 standard errors;
-          # not applicable when no stage-2 covariance is computed
-          if (!identical(tolower(object@Options$estimator.args$iv_vcov_stage2),
-                         "none")) {
-            attr(tmp_list, "iv.gamma") <- if (object@Model@categorical) {
-              "ADF"
-            } else if (object@Options$missing %in%
-                       c("two.stage", "robust.two.stage")) {
-              "TS"
-            } else {
-              "NT"
-            }
-          }
-        }
-        # estimator = "JS"/"JSA": delta-method standard errors over the
-        # sample moments; report the type of moment ACOV (Gamma)
-        if (object@Options$estimator %in% c("JS", "JSA")) {
-          attr(tmp_list, "estimator") <- object@Options$estimator
-          attr(tmp_list, "js.gamma") <-
-            toupper(object@Options$estimator.args[["js_gamma"]])
+        # noniterative estimators (MGM, JS/JSA, IV): the standard errors
+        # are not based on an information matrix, but on a delta-method
+        # (sandwich) expression over the sample moments; the header rows
+        # (assembled in lav_noniter_se_rows) replace the information block
+        se.rows <- lav_noniter_se_rows(object)
+        if (!is.null(se.rows)) {
+          attr(tmp_list, "se.rows") <- se.rows
         }
         # FIXME: add more!!
       }
