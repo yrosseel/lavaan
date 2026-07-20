@@ -15,6 +15,16 @@
 #                     estimators) for all variances/covariances, enabling
 #                     correlated residuals
 #                   * mean structure (via the joint WLS mean solve)
+# YR 20 Jul 2026: - std.lv = TRUE (and, more generally, factors scaled by a
+#                   fixed variance or a fixed nonzero loading): the machinery
+#                   runs in a provisional marker = 1 metric, and the factors
+#                   are rescaled afterwards (which leaves the implied
+#                   covariance matrix untouched)
+#                 - restrictions on PSI beyond scale identification (fixed
+#                   factor covariances, equality ties): the restricted PSI
+#                   model is re-fitted to the unrestricted stage-1 estimates
+#                   by (multiple-group) ML, in the spirit of the SAM
+#                   structural step
 
 # per-block MGM ingredients: given the sample covariance matrix 's', the
 # 0/1 pattern matrix 'm_b' (nvar x nfac) and the residual variances 'theta',
@@ -210,6 +220,85 @@ lav_cfa_mgm_psi_mapping <- function(lambda, theta, s_min_theta) {
   m <- solve(t(lambda) %*% diag(ti, nvar) %*% lambda) %*%
     t(lambda) %*% diag(ti, nvar)
   m %*% s_min_theta %*% t(m)
+}
+
+# fit a RESTRICTED PSI model to the unrestricted (saturated) stage-1
+# estimates: minimize
+#
+#    sum_b w_b * ( log|Psi_b(x)| + tr(Psi_b(x)^{-1} V_b) )
+#
+# over the free psi parameters, holding the fixed cells at their pinned
+# values -- the same discrepancy the SAM structural step minimizes when it
+# fits the structural model to the estimated factor covariance matrix.
+# This is needed whenever PSI is restricted beyond scale identification
+# (fixed factor covariances, equality ties, fixed variances that the
+# factor rescaling could not absorb), because then neither the sum-score
+# nor the Bartlett/ML mapping gives the restricted PSI in closed form.
+#
+# veta: per block, the saturated stage-1 PSI estimate (V_b)
+# id:   per block, an nfac x nfac integer matrix: 0 for a fixed cell,
+#       otherwise the (1-based) position in the parameter vector; ties
+#       (within or across blocks) simply share the same position
+# pin:  per block, the fixed values (only the id == 0 cells are used)
+# w:    per block, the relative (sample-size) weight
+# x0:   starting values (the projection of the V_b onto the free cells)
+lav_cfa_mgm_psi_fit <- function(veta = NULL, id = NULL, pin = NULL,
+                                w = NULL, x0 = NULL) {
+  nb <- length(veta)
+  build <- function(x, b) {
+    psi <- pin[[b]]
+    idx <- which(id[[b]] > 0L)
+    psi[idx] <- x[id[[b]][idx]]
+    psi
+  }
+  objective <- function(x) {
+    val <- 0
+    for (b in seq_len(nb)) {
+      ch <- try(chol(build(x, b)), silent = TRUE)
+      if (inherits(ch, "try-error")) {
+        return(1e+14) # outside the positive-definite region
+      }
+      val <- val + w[b] *
+        (2 * sum(log(diag(ch))) + sum(chol2inv(ch) * veta[[b]]))
+    }
+    val
+  }
+
+  # the starting values must be admissible (every PSI positive definite);
+  # if the pinned cells make the projection indefinite, shrink the free
+  # off-diagonal cells towards zero
+  offdiag_par <- rep(TRUE, length(x0))
+  for (b in seq_len(nb)) {
+    diag_ids <- diag(id[[b]])
+    offdiag_par[diag_ids[diag_ids > 0L]] <- FALSE
+  }
+  x_start <- x0
+  ok <- FALSE
+  for (i in seq_len(60L)) {
+    if (objective(x_start) < 1e+14) {
+      ok <- TRUE
+      break
+    }
+    x_start[offdiag_par] <- x_start[offdiag_par] * 0.8
+  }
+  if (!ok) {
+    lav_msg_warn(gettext(
+      "unable to find admissible starting values for the restricted PSI
+       fit; the free factor (co)variances are left at their unrestricted
+       values"))
+    return(x0)
+  }
+
+  out <- nlminb(
+    start = x_start, objective = objective,
+    control = list(iter.max = 500L)
+  )
+  if (out$convergence != 0L) {
+    lav_msg_warn(gettext(
+      "the restricted PSI fit did not converge; the factor (co)variance
+       estimates may be inaccurate"))
+  }
+  out$par
 }
 
 # stage 1 for a block WITH cross-loadings.
@@ -466,11 +555,6 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       "the MGM (guttman1952) estimator is not available for models that
        require a BETA matrix"))
   }
-  # no std.lv = TRUE for now
-  if (lavoptions$std.lv) {
-    lav_msg_stop(gettext(
-      "the MGM (guttman1952) estimator is not available if std.lv = TRUE"))
-  }
   # only simple (a == b) equality constraints are supported (those are
   # absorbed by ceq.simple = TRUE; anything left over is more general)
   if (length(lavmodel@ceq.linear.idx) > 0L ||
@@ -498,7 +582,6 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     lv_names <- lavpta$vnames$lv.regular[[b]]
     nvar <- length(ov_names)
     nfac <- length(lv_names)
-    marker_idx <- lavpta$vidx$lv.marker[[b]]
     sample_cov <- lavsamplestats@cov[[b]]
     nobs_b <- lavsamplestats@nobs[[b]]
 
@@ -514,11 +597,62 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
          an observed indicator to a (first-order) latent variable"))
     }
 
-    # pattern matrix (markers + free cells)
+    # pattern matrix: the free cells
     m_b <- matrix(0, nvar, nfac)
-    lambda_marker_idx <- (seq_len(nfac) - 1L) * nvar + marker_idx
-    m_b[lambda_marker_idx] <- 1L
     m_b[(lam_fac - 1L) * nvar + lam_ov] <- 1L
+
+    # how is the metric (scale) of each factor identified?
+    #  - "marker":   a loading fixed to a nonzero value c; the machinery
+    #                works in the marker = 1 metric, and the final metric
+    #                is restored afterwards by rescaling with s = c
+    #  - "variance": no fixed loading, but a fixed (positive) factor
+    #                variance v (std.lv style); a provisional scaling
+    #                indicator is chosen below, and the factor is rescaled
+    #                afterwards with s = sqrt(psi_ff / v)
+    #  - "tied":     neither; only allowed when the loadings are tied to
+    #                those of an identified block (checked once the tie
+    #                classes are known)
+    scale_type <- rep("tied", nfac)
+    marker_value <- rep(1, nfac)
+    scale_target <- rep(NA_real_, nfac)
+    marker_idx <- rep(0L, nfac)
+    for (f in seq_len(nfac)) {
+      fx <- which(lavpartable$op == "=~" & pt_block == b &
+        lavpartable$lhs == lv_names[f] & lavpartable$free == 0L &
+        !is.na(lavpartable$ustart) & lavpartable$ustart != 0)
+      if (length(fx) > 1L) {
+        lav_msg_stop(gettext(
+          "the MGM (guttman1952) estimator supports at most one fixed
+           nonzero (scaling) loading per factor"))
+      }
+      if (length(fx) == 1L) {
+        ovi <- match(lavpartable$rhs[fx], ov_names)
+        if (is.na(ovi)) {
+          lav_msg_stop(gettext(
+            "the MGM (guttman1952) estimator requires all loadings to
+             connect an observed indicator to a (first-order) latent
+             variable"))
+        }
+        scale_type[f] <- "marker"
+        marker_value[f] <- lavpartable$ustart[fx]
+        marker_idx[f] <- ovi
+        m_b[(f - 1L) * nvar + ovi] <- 1L
+      } else {
+        vrow <- which(lavpartable$op == "~~" & pt_block == b &
+          lavpartable$lhs == lv_names[f] &
+          lavpartable$rhs == lv_names[f] & lavpartable$free == 0L)
+        if (length(vrow) > 0L) {
+          v <- lavpartable$ustart[vrow[1L]]
+          if (is.na(v) || v <= 0) {
+            lav_msg_stop(gettext(
+              "the MGM (guttman1952) estimator requires a fixed factor
+               variance to be strictly positive"))
+          }
+          scale_type[f] <- "variance"
+          scale_target[f] <- v
+        }
+      }
+    }
 
     # cross-loadings are handled by the rotation-to-pattern step below,
     # but the scaling (marker) indicators must be free of them (their row
@@ -529,6 +663,21 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
         "the MGM (guttman1952) estimator requires the scaling (marker)
          indicators to be free of cross-loadings; choose a different
          scaling indicator"))
+    }
+
+    # provisional scaling indicators for the factors without a fixed
+    # loading (the choice does not matter: the provisional marker cell is
+    # itself a free cell, and the final rescaling absorbs the metric)
+    for (f in which(marker_idx == 0L)) {
+      cand <- which(m_b[, f] == 1L)
+      cand <- cand[!cand %in% cross_idx]
+      if (length(cand) == 0L) {
+        lav_msg_stop(gettext(
+          "the MGM (guttman1952) estimator requires, for every factor, at
+           least one indicator that is free of cross-loadings (to serve
+           as its scaling indicator)"))
+      }
+      marker_idx[f] <- cand[1L]
     }
 
     # correlated residuals (free, or fixed to a nonzero value)? purge them
@@ -621,6 +770,8 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       marker_idx = marker_idx, m_b = m_b, theta = theta,
       sample_cov = s_use, nobs = nobs_b,
       cross_idx = cross_idx, failed_vars = failed_vars,
+      scale_type = scale_type, marker_value = marker_value,
+      scale_target = scale_target,
       lambda_nonzero_idx = (lam_fac - 1L) * nvar + lam_ov
     )
 
@@ -663,6 +814,53 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
         lav_msg_stop(gettext(
           "the MGM (guttman1952) estimator does not support equality
            constraints among loadings of different factors"))
+      }
+    }
+  }
+
+  # helper: per factor name, partition the blocks into connected
+  # components (blocks joined by at least one tied loading of that factor)
+  fac_components <- function(fn) {
+    comps <- as.list(seq_len(nblocks))
+    for (class_idx in tie_classes) {
+      if (cells$facname[class_idx[1L]] != fn) {
+        next
+      }
+      bset <- unique(cells$block[class_idx])
+      hit <- which(vapply(comps, function(cc) any(cc %in% bset), TRUE))
+      if (length(hit) > 1L) {
+        comps[[hit[1L]]] <- sort(unique(unlist(comps[hit])))
+        comps[hit[-1L]] <- NULL
+      }
+    }
+    comps
+  }
+
+  # every factor needs scaling information: a fixed (nonzero) loading, a
+  # fixed factor variance, or loadings tied to those of a block where one
+  # of these is present
+  for (b in seq_len(nblocks)) {
+    bi <- block_info[[b]]
+    for (f in which(bi$scale_type == "tied")) {
+      fn <- bi$lv_names[f]
+      anchored <- FALSE
+      if (has_ties) {
+        comps <- fac_components(fn)
+        cc <- comps[[which(vapply(comps, function(x) b %in% x, TRUE))]]
+        for (b2 in setdiff(cc, b)) {
+          bi2 <- block_info[[b2]]
+          f2 <- match(fn, bi2$lv_names)
+          if (!is.na(f2) && bi2$scale_type[f2] != "tied") {
+            anchored <- TRUE
+            break
+          }
+        }
+      }
+      if (!anchored) {
+        lav_msg_stop(gettextf(
+          "the scale of factor %s is not identified: fix a loading
+           (marker), fix the factor variance (std.lv), or tie its
+           loadings to those of a group where the scale is fixed", fn))
       }
     }
   }
@@ -789,13 +987,6 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
         }
       }
     }
-
-    for (b in seq_len(nblocks)) {
-      bi <- block_info[[b]]
-      lavmodel@GLIST[[gl_lambda_idx[b]]] <- bi$lambda
-      lavmodel@GLIST[[gl_theta_idx[b]]] <- diag(bi$theta, bi$nvar)
-      lavmodel@GLIST[[gl_psi_idx[b]]] <- bi$psi
-    }
   } else if (!has_ties && !quadprog) {
     # no equality constraints: the classic per-block computation
     for (b in seq_len(nblocks)) {
@@ -811,9 +1002,9 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
         psi_mapping = psi_mapping,
         nobs = bi$nobs
       )
-      lavmodel@GLIST[[gl_lambda_idx[b]]] <- out$lambda
-      lavmodel@GLIST[[gl_theta_idx[b]]] <- diag(out$theta, bi$nvar)
-      lavmodel@GLIST[[gl_psi_idx[b]]] <- out$psi
+      block_info[[b]]$lambda <- out$lambda
+      block_info[[b]]$theta <- out$theta
+      block_info[[b]]$psi <- out$psi
     }
   } else {
     # equality constraints among the loadings: the constrained LS problem
@@ -850,21 +1041,15 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       names(mh) <- bi$lv_names
       mhat[[b]] <- mh
     }
+    # unpooled copy: the sum-score PSI of each block is scaled by its OWN
+    # normalized marker loading (the pooled value only anchors the metric
+    # of the tied loadings); with cross-group ties the factor variances
+    # remain free per group, and the own marker loading carries that
+    # group-specific scale information
+    mhat_own <- mhat
     for (fn in fac_names) {
       # components over blocks, connected by tie classes of this factor
-      comps <- as.list(seq_len(nblocks))
-      for (class_idx in tie_classes) {
-        if (cells$facname[class_idx[1L]] != fn) {
-          next
-        }
-        bset <- unique(cells$block[class_idx])
-        # merge all components that intersect bset
-        hit <- which(vapply(comps, function(cc) any(cc %in% bset), TRUE))
-        if (length(hit) > 1L) {
-          comps[[hit[1L]]] <- sort(unique(unlist(comps[hit])))
-          comps[hit[-1L]] <- NULL
-        }
-      }
+      comps <- fac_components(fn)
       for (cc in comps) {
         if (length(cc) < 2L) {
           next
@@ -916,15 +1101,224 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
         )
       } else {
         phi_b <- cov2cor(lav_mat_sym_force_pd(blks[[b]]$phi, tol = 1e-04))
-        mh <- as.numeric(mhat[[b]][bi$lv_names])
+        mh <- as.numeric(mhat_own[[b]][bi$lv_names])
         psi_b <- t(phi_b * mh) * mh
       }
 
-      lavmodel@GLIST[[gl_lambda_idx[b]]] <- lambda_b
-      lavmodel@GLIST[[gl_theta_idx[b]]] <- diag(block_info[[b]]$theta,
-                                                bi$nvar)
-      lavmodel@GLIST[[gl_psi_idx[b]]] <- psi_b
+      block_info[[b]]$lambda <- lambda_b
+      block_info[[b]]$psi <- psi_b
     }
+  }
+
+  # ------------------------------------------------------------------
+  # restore the requested metric for the factors that are not scaled by
+  # a loading fixed to 1: rescaling a factor (lambda[, f] * s, and psi
+  # rows/columns divided by s) leaves the implied covariance matrix
+  # untouched; s is chosen so that the identification restriction holds
+  # in the final metric (s = c for a loading fixed to c, and
+  # s = sqrt(psi_ff / v) for a factor variance fixed to v). With
+  # cross-group ties among the loadings of a factor, one common s --
+  # pooled over the blocks that fix the metric -- keeps the tied
+  # loadings tied.
+  # ------------------------------------------------------------------
+  psi_pin_loose <- vector("list", nblocks) # per block: factors whose
+  # fixed variance the rescaling could not absorb exactly (handled by
+  # the restricted PSI fit below)
+  for (b in seq_len(nblocks)) {
+    psi_pin_loose[[b]] <- integer(0L)
+  }
+  need_rescale <- any(vapply(block_info, function(bi) {
+    any(bi$scale_type != "marker") || any(bi$marker_value != 1)
+  }, logical(1L)))
+  if (need_rescale) {
+    svec_list <- lapply(block_info, function(bi) rep(1, bi$nfac))
+    all_fn <- unique(unlist(lapply(block_info, "[[", "lv_names")))
+    for (fn in all_fn) {
+      comps <- if (has_ties) {
+        fac_components(fn)
+      } else {
+        as.list(seq_len(nblocks))
+      }
+      for (cc in comps) {
+        bset <- cc[vapply(cc, function(b) {
+          fn %in% block_info[[b]]$lv_names
+        }, logical(1L))]
+        if (length(bset) == 0L) {
+          next
+        }
+        f_of <- vapply(bset, function(b) {
+          match(fn, block_info[[b]]$lv_names)
+        }, integer(1L))
+        types <- vapply(seq_along(bset), function(k) {
+          block_info[[bset[k]]]$scale_type[f_of[k]]
+        }, character(1L))
+        var_k <- which(types == "variance")
+        if (any(types == "marker")) {
+          # the marker metric wins; fixed variances elsewhere in the
+          # component become pins for the restricted PSI fit
+          s <- mean(vapply(which(types == "marker"), function(k) {
+            block_info[[bset[k]]]$marker_value[f_of[k]]
+          }, numeric(1L)))
+          loose_k <- var_k
+        } else {
+          # pooled over the blocks with a fixed factor variance
+          ratios <- vapply(var_k, function(k) {
+            b <- bset[k]
+            f <- f_of[k]
+            block_info[[b]]$psi[f, f] / block_info[[b]]$scale_target[f]
+          }, numeric(1L))
+          if (any(ratios <= 0)) {
+            lav_msg_warn(gettextf(
+              "the estimated variance of factor %s is not positive; the
+               rescaling to the fixed-variance metric uses its absolute
+               value", fn))
+            ratios <- abs(ratios)
+          }
+          s <- sqrt(mean(ratios))
+          # a single pinned block is absorbed exactly; pooling over
+          # several pinned blocks is a compromise
+          loose_k <- if (length(var_k) > 1L) var_k else integer(0L)
+        }
+        for (k in loose_k) {
+          psi_pin_loose[[bset[k]]] <-
+            c(psi_pin_loose[[bset[k]]], f_of[k])
+        }
+        if (s == 1) {
+          next
+        }
+        for (k in seq_along(bset)) {
+          svec_list[[bset[k]]][f_of[k]] <- s
+        }
+      }
+    }
+    for (b in seq_len(nblocks)) {
+      sv <- svec_list[[b]]
+      if (all(sv == 1)) {
+        next
+      }
+      bi <- block_info[[b]]
+      block_info[[b]]$lambda <- t(t(bi$lambda) * sv)
+      block_info[[b]]$psi <- bi$psi / tcrossprod(sv)
+    }
+  }
+
+  # ------------------------------------------------------------------
+  # restrictions on PSI beyond scale identification? (fixed factor
+  # covariances, equality ties among the factor (co)variances, or fixed
+  # variances that the rescaling could not absorb): re-fit the
+  # restricted PSI model to the unrestricted stage-1 estimates by
+  # (multiple-group) ML, in the spirit of the SAM structural step
+  # ------------------------------------------------------------------
+  psi_id <- vector("list", nblocks)
+  psi_pinval <- vector("list", nblocks)
+  psi_pt_rows <- integer(0L)
+  psi_restricted <- any(vapply(seq_len(nblocks), function(b) {
+    length(psi_pin_loose[[b]]) > 0L
+  }, logical(1L)))
+  for (b in seq_len(nblocks)) {
+    bi <- block_info[[b]]
+    idm <- matrix(0L, bi$nfac, bi$nfac)
+    pinm <- matrix(0, bi$nfac, bi$nfac)
+    rows <- which(lavpartable$op == "~~" & pt_block == b &
+      lavpartable$lhs %in% bi$lv_names & lavpartable$rhs %in% bi$lv_names)
+    psi_pt_rows <- c(psi_pt_rows, rows)
+    ii <- match(lavpartable$lhs[rows], bi$lv_names)
+    jj <- match(lavpartable$rhs[rows], bi$lv_names)
+    for (r in seq_along(rows)) {
+      fr <- lavpartable$free[rows[r]]
+      if (fr > 0L) {
+        idm[ii[r], jj[r]] <- idm[jj[r], ii[r]] <- fr
+      } else {
+        val <- lavpartable$ustart[rows[r]]
+        if (is.na(val)) {
+          val <- 0
+        }
+        pinm[ii[r], jj[r]] <- pinm[jj[r], ii[r]] <- val
+      }
+    }
+    psi_id[[b]] <- idm
+    psi_pinval[[b]] <- pinm
+    # a fixed off-diagonal cell (e.g., orthogonal factors) is a genuine
+    # restriction (unmentioned cells count as fixed-to-zero)
+    if (bi$nfac > 1L && any(idm[upper.tri(idm)] == 0L)) {
+      psi_restricted <- TRUE
+    }
+  }
+  psi_ids_all <- unlist(lapply(psi_id, function(m) {
+    m[upper.tri(m, diag = TRUE) & m > 0L]
+  }))
+  # equality ties among the factor (co)variances (within or across
+  # blocks) are restrictions too
+  if (any(duplicated(psi_ids_all))) {
+    psi_restricted <- TRUE
+  }
+  # ... but ties between a factor (co)variance and another type of
+  # parameter cannot be honored here
+  if (length(psi_ids_all) > 0L) {
+    other_rows <- setdiff(which(lavpartable$free > 0L), psi_pt_rows)
+    if (any(lavpartable$free[other_rows] %in% psi_ids_all)) {
+      lav_msg_stop(gettext(
+        "the MGM (guttman1952) estimator does not support equality
+         constraints between a factor (co)variance and another type of
+         parameter"))
+    }
+  }
+
+  if (psi_restricted) {
+    ids <- sort(unique(psi_ids_all))
+    id_list <- lapply(psi_id, function(m) {
+      matrix(match(m, ids, nomatch = 0L), nrow(m), ncol(m))
+    })
+    # honor the fixed factor variances of the 'loose' pins as well
+    for (b in seq_len(nblocks)) {
+      for (f in psi_pin_loose[[b]]) {
+        id_list[[b]][f, f] <- 0L
+        psi_pinval[[b]][f, f] <- block_info[[b]]$scale_target[f]
+      }
+    }
+    # starting values: project the saturated stage-1 estimates onto the
+    # free cells (ties averaged)
+    x0 <- vapply(seq_along(ids), function(k) {
+      vals <- numeric(0L)
+      for (b in seq_len(nblocks)) {
+        hit <- which(id_list[[b]] == k)
+        if (length(hit) > 0L) {
+          vals <- c(vals, block_info[[b]]$psi[hit])
+        }
+      }
+      mean(vals)
+    }, numeric(1L))
+    w <- vapply(block_info, "[[", numeric(1L), "nobs")
+    w <- w / sum(w)
+    if (length(ids) > 0L) {
+      xfit <- lav_cfa_mgm_psi_fit(
+        veta = lapply(block_info, "[[", "psi"),
+        id = id_list, pin = psi_pinval, w = w, x0 = x0
+      )
+    } else {
+      xfit <- numeric(0L) # PSI is completely fixed
+    }
+    for (b in seq_len(nblocks)) {
+      psi_b <- psi_pinval[[b]]
+      idx <- which(id_list[[b]] > 0L)
+      psi_b[idx] <- xfit[id_list[[b]][idx]]
+      block_info[[b]]$psi <- psi_b
+      # the residual variances of the cross-loading indicators depend on
+      # PSI (model identity): refresh them
+      bi <- block_info[[b]]
+      for (i in bi$cross_idx) {
+        block_info[[b]]$theta[i] <- bi$sample_cov[i, i] -
+          drop(bi$lambda[i, , drop = FALSE] %*% psi_b %*% bi$lambda[i, ])
+      }
+    }
+  }
+
+  # fill in the model matrices
+  for (b in seq_len(nblocks)) {
+    bi <- block_info[[b]]
+    lavmodel@GLIST[[gl_lambda_idx[b]]] <- bi$lambda
+    lavmodel@GLIST[[gl_theta_idx[b]]] <- diag(bi$theta, bi$nvar)
+    lavmodel@GLIST[[gl_psi_idx[b]]] <- bi$psi
   }
 
   # extract free parameters only

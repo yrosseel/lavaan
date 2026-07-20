@@ -1731,6 +1731,26 @@ lav_sem_miiv_varcov_block <- function(b, fu, delta_b, implied, lavmodel, x,
     svec <- lav_mat_vech(sample_cov)
   }
 
+  # fixed variance/covariance contribution: Sigma is affine -- not
+  # homogeneous -- in the undirected parameters whenever some
+  # variance/covariance cells are fixed to a nonzero value (e.g., factor
+  # variances fixed to 1 under std.lv, or a fixed residual covariance);
+  # subtract vech(Sigma(theta2 = 0)) from the sample moments so that the
+  # linearization below solves the exact (affine) system
+  if (!lavmodel@categorical) {
+    x0 <- x
+    x0[fu] <- 0
+    sigma0 <- lav_model_sigma(
+      lavmodel = lav_model_set_parameters(lavmodel = lavmodel, x = x0),
+      extra = FALSE
+    )[[b]]
+    off_cov <- lav_mat_vech(sigma0)
+    if (any(off_cov != 0)) {
+      cov_idx0 <- seq(length(svec) - length(off_cov) + 1L, length(svec))
+      svec[cov_idx0] <- svec[cov_idx0] - off_cov
+    }
+  }
+
   # initial estimate for theta.2
   if (iv_varcov_method == "GLS") {
     s <- sample_cov
