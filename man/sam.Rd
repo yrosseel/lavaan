@@ -65,8 +65,14 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      variable names.  If omitted, a separate measurement
      block is used for each latent variable.}
 \item{mm_args}{List. Optional arguments for the fitting
-    function(s) of the measurement block(s) only. See \code{\link{lavOptions}} 
-    for a complete list.}
+    function(s) of the measurement block(s) only. See \code{\link{lavOptions}}
+    for a complete list. The measurement blocks may also be estimated by the
+    noniterative MGM estimator (\code{mm.args = list(estimator = "MGM")};
+    continuous, single-level data only): the two-step corrected standard
+    errors (for both \code{sam.method = "local"} and \code{"global"}) then
+    use the robust (Yuan-Chan) correction with the MGM influence matrix,
+    and \code{se = "twostep"} is silently upgraded to
+    \code{"twostep.robust"}; \code{se = "local"} is available as well.}
 \item{struc_args}{List. Optional arguments for the fitting function of the
     structural part only. See \code{\link{lavOptions}} for a complete list.}
 \item{sam_method}{Character. Can be set to \code{"local"}, \code{"global"}

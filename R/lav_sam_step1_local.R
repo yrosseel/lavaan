@@ -1072,6 +1072,14 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
         # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
         mm_jac <- mm_e_inv %*% t(mm_wls_v * mm_delta_1)
       }
+    } else if (fit_mm_block@Options$estimator == "MGM") {
+      # influence of the (noniterative) MGM estimator: the (analytic)
+      # jacobian of the complete estimation map over the block moments
+      # (numeric fallback inside), rows already in the unconstrained
+      # order. There is no expected/observed information choice here: the
+      # realized jacobian IS the influence, for both se = "twostep.robust"
+      # (p_only) and se = "local"
+      mm_jac <- lav_noniter_influence(fit_mm_block)
     } else {
       mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
       mm_delta       <- lavTech(fit_mm_block, "Delta")
@@ -1780,6 +1788,22 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
       mm_e_inv  <- attr(tmp, "E.inv")
       mm_delta  <- attr(tmp, "Delta")
       mm_wls_v  <- attr(tmp, "WLS.V")
+    } else if (fit_mm_block@Options$estimator == "MGM") {
+      # influence of the (noniterative) MGM estimator: ONE stacked jacobian
+      # of the complete estimation map over the statistics of all groups
+      # (rows already in the unconstrained order; across-group equality
+      # constraints show up as nonzero columns in the other groups' blocks),
+      # sliced per group in the loop below. No w_g normalization: this is
+      # the direct jacobian d(theta.mm)/d(s_g). There is no
+      # expected/observed information choice: the realized jacobian IS the
+      # influence, for both p_only (twostep.robust) and se = "local"
+      mm_jac_mgm <- lav_noniter_influence(fit_mm_block)
+      mm_nd_g <- vapply(seq_len(ngroups), function(gg) {
+        nvar_g <- fit_mm_block@Model@nvar[gg]
+        as.integer(nvar_g * (nvar_g + 1L) / 2L +
+                   if (fit_mm_block@Model@meanstructure) nvar_g else 0L)
+      }, integer(1L))
+      mm_stat_offset <- cumsum(c(0L, mm_nd_g))
     } else {
       mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
       mm_delta       <- lavTech(fit_mm_block, "Delta")
@@ -1854,6 +1878,10 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
           # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
           mm_jac <- w_g * (mm_e_inv %*% t(wv * mm_delta[[g]]))
         }
+      } else if (fit_mm_block@Options$estimator == "MGM") {
+        # slice group g's columns out of the stacked MGM influence
+        mm_jac <- mm_jac_mgm[,
+          (mm_stat_offset[g] + 1L):mm_stat_offset[g + 1L], drop = FALSE]
       } else {
         mm_jac <- w_g *
           t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)

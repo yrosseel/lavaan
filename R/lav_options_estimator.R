@@ -638,7 +638,12 @@ lav_options_est_fabin <- function(opt) {
   # With missing data the sample-based version is not available, so use
   # the model-based variant.
   if (mgm_flag) {
-    if ((length(opt$test) == 1L && opt$test == "default") || two_stage) {
+    # test = "standard" (eg inherited from a parent sam() call, where the
+    # measurement blocks receive the resolved options of the joint model)
+    # is treated as the default: the browne test IS the standard test for
+    # this estimator
+    if ((length(opt$test) == 1L &&
+         any(opt$test == c("default", "standard"))) || two_stage) {
       opt$test <- if (two_stage) {
         "browne.residual.nt.model"
       } else {

@@ -1601,51 +1601,13 @@ lav_noniter_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   if (is.null(implied0$cov)) {
     implied0 <- list(cov = lavsamplestats@cov, mean = lavsamplestats@mean)
   }
-  vec0 <- numeric(0L)
-  for (b in seq_len(lavmodel@nblocks)) {
-    if (lavmodel@meanstructure) {
-      vec0 <- c(vec0, implied0$mean[[b]])
-    }
-    vec0 <- c(vec0, lav_mat_vech(implied0$cov[[b]]))
-  }
 
-  # Jacobian of the complete estimation map over the stacked moments:
-  # analytic for the classic MGM branch (mgm.jacobian = "analytic", the
-  # default; lav_cfa_mgm_jacobian returns NULL for the branches it does
-  # not cover), numerical otherwise
-  jac <- NULL
-  mgm_jacobian <- lavoptions$estimator.args[["mgm.jacobian"]]
-  if (is.null(mgm_jacobian)) {
-    mgm_jacobian <- "analytic"
-  }
-  if (lavoptions$estimator == "MGM" &&
-      tolower(mgm_jacobian) == "analytic") {
-    jac <- try(lav_cfa_mgm_jacobian(
-      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions, lavpartable = lavpartable,
-      implied0 = implied0
-    ), silent = TRUE)
-    if (inherits(jac, "try-error")) {
-      jac <- NULL
-    }
-  }
-  # numerical fallback; r = 2 Richardson extrapolation is accurate to
-  # ~1e-6 relative and halves the number of map evaluations (the map
-  # itself is smooth); warnings raised on perturbed evaluations (purge
-  # admissibility, RLS iteration counts) merely repeat what the point
-  # estimation already reported, so they are suppressed here
-  if (is.null(jac)) {
-    jac <- suppressWarnings(numDeriv::jacobian(
-      func = function(v) {
-        lav_noniter_estimate_from_vec(
-          vec = v, lavmodel = lavmodel, lavsamplestats = lavsamplestats,
-          lavpartable = lavpartable, lavdata = lavdata,
-          lavh1 = lavh1, lavoptions = lavoptions
-        )
-      },
-      x = vec0, method.args = list(r = 2L)
-    ))
-  }
+  # Jacobian of the complete estimation map over the stacked moments
+  jac <- lav_noniter_jacobian(
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+    lavoptions = lavoptions, lavpartable = lavpartable,
+    lavdata = lavdata, lavh1 = lavh1, implied0 = implied0
+  )
 
   # vcov = sum over blocks of J_b Gamma_b J_b' / nobs_b; for the (default)
   # normal-theory Gamma the sandwich is computed directly from the sample
@@ -1771,4 +1733,91 @@ lav_noniter_se_rows <- function(object = NULL) {
   }
 
   out
+}
+
+# Jacobian of the complete estimation map over the stacked per-block
+# sample moments (per block: mean if meanstructure, then vech(S) -- the
+# lav_implied_to_vec() layout), in the compact (nx.free) parameter space:
+# analytic for the MGM branches covered by lav_cfa_mgm_jacobian (which
+# returns NULL for the others), numerical otherwise
+lav_noniter_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
+                                 lavoptions = NULL, lavpartable = NULL,
+                                 lavdata = NULL, lavh1 = NULL,
+                                 implied0 = NULL) {
+  if (is.null(implied0)) {
+    implied0 <- lavh1$implied
+    if (is.null(implied0$cov)) {
+      implied0 <- list(cov = lavsamplestats@cov, mean = lavsamplestats@mean)
+    }
+  }
+  vec0 <- numeric(0L)
+  for (b in seq_len(lavmodel@nblocks)) {
+    if (lavmodel@meanstructure) {
+      vec0 <- c(vec0, implied0$mean[[b]])
+    }
+    vec0 <- c(vec0, lav_mat_vech(implied0$cov[[b]]))
+  }
+
+  # analytic (mgm.jacobian = "analytic", the default); NOTE: read with
+  # [[ ]] -- $ would partially match
+  jac <- NULL
+  mgm_jacobian <- lavoptions$estimator.args[["mgm.jacobian"]]
+  if (is.null(mgm_jacobian)) {
+    mgm_jacobian <- "analytic"
+  }
+  if (lavoptions$estimator == "MGM" &&
+      tolower(mgm_jacobian) == "analytic") {
+    jac <- try(lav_cfa_mgm_jacobian(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+      lavoptions = lavoptions, lavpartable = lavpartable,
+      implied0 = implied0
+    ), silent = TRUE)
+    if (inherits(jac, "try-error")) {
+      jac <- NULL
+    }
+  }
+  # numerical fallback; r = 2 Richardson extrapolation is accurate to
+  # ~1e-6 relative and halves the number of map evaluations (the map
+  # itself is smooth); warnings raised on perturbed evaluations (purge
+  # admissibility, RLS iteration counts) merely repeat what the point
+  # estimation already reported, so they are suppressed here
+  if (is.null(jac)) {
+    jac <- suppressWarnings(numDeriv::jacobian(
+      func = function(v) {
+        lav_noniter_estimate_from_vec(
+          vec = v, lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+          lavpartable = lavpartable, lavdata = lavdata,
+          lavh1 = lavh1, lavoptions = lavoptions
+        )
+      },
+      x = vec0, method.args = list(r = 2L)
+    ))
+  }
+
+  jac
+}
+
+# influence of the sample moments on the free parameters of a fitted
+# noniterative (MGM) object: the jacobian of the complete estimation map,
+# with the rows expanded to the UNCONSTRAINED (nx.unco) parameter order
+# (one row per constrained member) -- the convention of the sam() step-1
+# machinery (cf. Delta and the augmented inverted information for ML
+# blocks). The columns are the stacked per-block sample moments (mean if
+# meanstructure, then vech(S), per block/group). Used to plug the MGM
+# measurement blocks into the sam() two-step corrections (the P matrix of
+# the Yuan & Chan sandwich, and the JACa part of Gamma.eta); there is no
+# expected/observed information choice here: the realized jacobian IS the
+# influence, for both flavors
+lav_noniter_influence <- function(object = NULL) {
+  lavmodel <- object@Model
+  jac <- lav_noniter_jacobian(
+    lavmodel = lavmodel, lavsamplestats = object@SampleStats,
+    lavoptions = object@Options, lavpartable = object@ParTable,
+    lavdata = object@Data, lavh1 = object@h1
+  )
+  # expand the compact (nx.free) rows to the unconstrained order
+  if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
+    jac <- lavmodel@ceq.simple.K %*% jac
+  }
+  jac
 }

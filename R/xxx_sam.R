@@ -162,6 +162,27 @@ sam <- function(model = NULL,
   }
   # default is twostep
 
+  # measurement blocks estimated by MGM (mm.args = list(estimator = "MGM"))
+  mm_est <- mm_args[["estimator"]]
+  mgm_mm_flag <- is.character(mm_est) && length(mm_est) == 1L &&
+    tolower(mm_est) %in% c("mgm", "guttman", "gutman", "gutmann",
+                           "guttman1952")
+  if (mgm_mm_flag) {
+    # the classic two-step correction linearizes an ML step 1; for the
+    # (moment-based, noniterative) MGM estimator use the robust
+    # (Yuan & Chan) correction instead, which plugs in the MGM influence
+    # matrix P (cf. categorical data in lav_sam_step0())
+    if (se == "twostep") {
+      se <- "twostep.robust"
+    } else if (se == "twostep.huber.white") {
+      # the casewise-score sandwich linearizes an ML step 1
+      lav_msg_warn(gettext(
+        "se = \"twostep.huber.white\" is not available with MGM measurement
+         blocks; using se = \"twostep.robust\" instead."))
+      se <- "twostep.robust"
+    }
+  }
+
   # check for gamma.unbiased
   if (is.null(dotdotdot$gamma.unbiased)) {
      # put in TRUE in dotdotdot # lavaan default is still FALSE
@@ -215,6 +236,16 @@ sam <- function(model = NULL,
     if (missing(cmd)) {
       cmd <- fit@internal$sam.cmd
     }
+    # re-evaluate the MGM flag: mm_args may have been restored from the
+    # stored object only just above
+    mm_est <- mm_args[["estimator"]]
+    mgm_mm_flag <- is.character(mm_est) && length(mm_est) == 1L &&
+      tolower(mm_est) %in% c("mgm", "guttman", "gutman", "gutmann",
+                             "guttman1952")
+    if (mgm_mm_flag && se %in% c("twostep", "twostep.huber.white")) {
+      se <- "twostep.robust"
+      fit@Options$se <- se
+    }
     # remove @internal slot
     fit@internal <- list()
   } else {
@@ -239,6 +270,23 @@ sam <- function(model = NULL,
           !is.null(struc_args[["estimator"]]) &&
           struc_args[["estimator"]] == "ML") {
           struc_args[["estimator"]] <- "DWLS"
+      }
+    }
+
+    # MGM measurement blocks: continuous, single-level, unclustered only
+    if (mgm_mm_flag) {
+      if (fit@Model@categorical) {
+        lav_msg_stop(gettext(
+          "estimator MGM (in mm.args) does not support categorical data."))
+      }
+      if (fit@Data@nlevels > 1L) {
+        lav_msg_stop(gettext(
+          "estimator MGM (in mm.args) does not support multilevel data."))
+      }
+      if (length(fit@Data@cluster) > 0L) {
+        lav_msg_stop(gettext(
+          "estimator MGM (in mm.args) does not support clustered data
+           (no cluster-robust standard errors are available for MGM)."))
       }
     }
 
