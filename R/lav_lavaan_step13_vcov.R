@@ -74,6 +74,20 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
         lavdata = lavdata,
         eqs = attr(x, "eqs")
       )
+    } else if (lavoptions$estimator == "MGM" &&
+               lavoptions$se != "bootstrap") {
+      # estimator = "MGM": delta-method standard errors over the sample
+      # moments (numerical Jacobian of the complete estimation map; the
+      # generic engine for the noniterative estimators)
+      vcov_1 <- lav_noniter_vcov(
+        lavmodel = lavmodel,
+        lavsamplestats = lavsamplestats,
+        lavoptions = lavoptions,
+        lavpartable = lavpartable,
+        lavimplied = lavimplied,
+        lavh1 = lavh1,
+        lavdata = lavdata
+      )
     } else {
       # everything else:
       vcov_1 <- lav_model_vcov(

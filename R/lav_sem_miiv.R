@@ -2012,6 +2012,19 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     iv_vcov_jack_numerical <- TRUE
   }
 
+  # variance/covariance cells FIXED to a nonzero value (e.g., a fixed
+  # residual variance for a single-indicator factor) make the stage-2
+  # moment system affine: the estimator subtracts the fixed contribution
+  # vech(Sigma(theta2 = 0)) from the sample moments (see
+  # lav_sem_miiv_varcov_block), and the analytic jac_a expressions do not
+  # (yet) carry that term -- use the numerical jac_a instead (jac_b, the
+  # derivative over the sample moments, is unaffected: the subtracted
+  # term is constant in the moments)
+  if (any(lavpartable$op == "~~" & lavpartable$free == 0L &
+          !is.na(lavpartable$ustart) & lavpartable$ustart != 0)) {
+    iv_vcov_jaca_numerical <- TRUE
+  }
+
   # directed versus undirected (free) parameters
   undirected_idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple

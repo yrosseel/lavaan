@@ -585,7 +585,14 @@ lav_options_est_fabin <- function(opt) {
   # experimental, for cfa or sam only
   # se
   if (opt$se == "default") {
-    opt$se <- "none"
+    # the MGM estimator has delta-method standard errors over the sample
+    # moments (lav_noniter_vcov); the other noniterative estimators in
+    # this family do not (yet)
+    if (lav_options_estimatorgroup(opt$estimator) == "MGM") {
+      opt$se <- "standard"
+    } else {
+      opt$se <- "none"
+    }
   }
   # bounds
   if (!is.null(opt$bounds) && opt$bounds == "default" &&
@@ -671,6 +678,21 @@ lav_options_est_fabin <- function(opt) {
       lav_msg_stop(gettextf(
         "unknown value for estimator.args$mgm.varcov option: %s.",
         opt$estimator.args[["mgm.varcov"]]))
+    }
+    # moment covariance (Gamma) flavor for the delta-method standard
+    # errors: "nt" (normal-theory, default) or "adf" (distribution-free;
+    # equals the infinitesimal-jackknife covariance of the estimator)
+    if (is.null(opt$estimator.args[["mgm.gamma"]])) {
+      mg <- opt$estimator.args[["mgm_gamma"]] # snake_case alias
+      opt$estimator.args$mgm.gamma <- if (is.null(mg)) "nt" else mg
+      opt$estimator.args$mgm_gamma <- NULL
+    }
+    opt$estimator.args$mgm.gamma <-
+      tolower(opt$estimator.args[["mgm.gamma"]])
+    if (!opt$estimator.args[["mgm.gamma"]] %in% c("nt", "adf")) {
+      lav_msg_stop(gettextf(
+        "unknown value for estimator.args$mgm.gamma option: %s.",
+        opt$estimator.args[["mgm.gamma"]]))
     }
     # simple (a == b) equality constraints (e.g., group.equal = "loadings")
     # are handled by a pooled solve; represent them compactly

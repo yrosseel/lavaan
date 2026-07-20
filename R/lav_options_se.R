@@ -69,10 +69,14 @@ lav_options_check_se <- function(opt = NULL) {
       "bootstrap", "external",
       "robust.huber.white"
     ))
-  # FABIN, GUTTMAN1952, BENTLER1982, ...
-  } else if (any(opt$estimator == c(
-    "fabin2", "fabin3", "mgm"))) {
+  # FABIN, BENTLER1982, ...
+  } else if (any(opt$estimator == c("fabin2", "fabin3"))) {
     ok_flag <- any(opt$se == c("default", "none", "bootstrap", "external"))
+  # GUTTMAN1952 (MGM): delta-method standard errors are available
+  } else if (opt$estimator == "mgm") {
+    ok_flag <- any(opt$se == c(
+      "default", "none", "standard", "bootstrap", "external"
+    ))
   # OTHERS
   } else if (any(opt$estimator == c("fml", "mml", "reml"))) {
     ok_flag <- any(opt$se == c("default", "none", "standard", "external"))

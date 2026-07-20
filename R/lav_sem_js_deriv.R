@@ -85,6 +85,17 @@ lav_sem_js_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
   }
 
+  # not covered (yet): variance/covariance cells FIXED to a nonzero value
+  # (e.g., a fixed residual variance for a single-indicator factor). They
+  # make the stage-2 moment system affine: the estimator subtracts the
+  # fixed contribution vech(Sigma(theta2 = 0)) from the sample moments
+  # (see lav_sem_miiv_varcov_block), and the chain rule below does not
+  # (yet) carry that term; fall back to the numerical Jacobian
+  if (any(lavpartable$op == "~~" & lavpartable$free == 0L &
+          !is.na(lavpartable$ustart) & lavpartable$ustart != 0)) {
+    return(NULL)
+  }
+
   if (is.null(eqs)) {
     eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
