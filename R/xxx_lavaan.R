@@ -582,6 +582,44 @@ lavaan <- function(
     temp <- temp_orig
   }
 
+  # ---- MGM: optional data-driven cross-loading detection ----------------
+  # when a fixed-to-zero loading is clearly nonzero (per the residual EPC + z
+  # screen), free it and refit (steps 07-11), so the factor covariances are
+  # not biased by the omitted cross-loading. Iterative forward search.
+  if (lav_options_estimatorgroup(lavoptions$estimator) == "MGM" &&
+      isTRUE(lavoptions$estimator.args[["crossload.detect"]])) {
+    epc_cut <- lavoptions$estimator.args[["crossload.epc"]]
+    z_cut   <- lavoptions$estimator.args[["crossload.z"]]
+    max_cl  <- lavoptions$estimator.args[["crossload.max"]]
+    freed <- character(0L)
+    repeat {
+      if (length(freed) >= max_cl) break
+      cand <- try(lav_cfa_mgm_crossload_epc(lavmodel = temp$lavmodel,
+        lavsamplestats = lavsamplestats, lavpartable = temp$lavpartable),
+        silent = TRUE)
+      if (inherits(cand, "try-error") || nrow(cand) == 0L) break
+      cand <- cand[abs(cand$epc) > epc_cut & abs(cand$z) > z_cut, ,
+        drop = FALSE]
+      if (nrow(cand) == 0L) break
+      top <- cand[1L, , drop = FALSE] # strongest |z|
+      pt_new <- lav_cfa_mgm_partable_add(temp$lavpartable,
+        data.frame(block = top$block, lhs = top$lhs, rhs = top$rhs,
+          stringsAsFactors = FALSE))
+      temp_new <- try(lav_bounds_to_optim(pt_new, temp$timing), silent = TRUE)
+      if (inherits(temp_new, "try-error") || is.null(temp_new$x) ||
+          anyNA(temp_new$x)) {
+        break # keep the previous (converged) fit
+      }
+      temp <- temp_new
+      freed <- c(freed, paste0(top$lhs, " =~ ", top$rhs))
+    }
+    if (length(freed) > 0L) {
+      lav_msg_note(gettextf(
+        "MGM cross-loading detection freed the following loading(s): %s.",
+        paste(freed, collapse = ", ")))
+    }
+  }
+
   lavpartable <- temp$lavpartable
   lavmodel    <- temp$lavmodel
   lavcache    <- temp$lavcache

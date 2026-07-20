@@ -720,6 +720,33 @@ lav_options_est_fabin <- function(opt) {
     if (is.null(opt$estimator.args[["quadprog"]])) {
       opt$estimator.args$quadprog <- FALSE
     }
+    # data-driven cross-loading detection: when a fixed-to-zero loading is
+    # clearly nonzero (per an EPC + z screen on the residuals), free it and
+    # refit, so the factor covariances are not biased by the omitted
+    # cross-loading. Off by default (it respecifies the user's model).
+    # crossload.epc = minimum |EPC| (the freed loading must be this far from
+    # zero), crossload.z = minimum |z| (n-aware significance screen),
+    # crossload.max = maximum number of cross-loadings to free.
+    if (is.null(opt$estimator.args[["crossload.detect"]])) {
+      cd <- opt$estimator.args[["crossload_detect"]] # snake_case alias
+      opt$estimator.args$crossload.detect <- if (is.null(cd)) FALSE else cd
+      opt$estimator.args$crossload_detect <- NULL
+    }
+    if (is.null(opt$estimator.args[["crossload.epc"]])) {
+      ce <- opt$estimator.args[["crossload_epc"]]
+      opt$estimator.args$crossload.epc <- if (is.null(ce)) 0.10 else ce
+      opt$estimator.args$crossload_epc <- NULL
+    }
+    if (is.null(opt$estimator.args[["crossload.z"]])) {
+      cz <- opt$estimator.args[["crossload_z"]]
+      opt$estimator.args$crossload.z <- if (is.null(cz)) 3 else cz
+      opt$estimator.args$crossload_z <- NULL
+    }
+    if (is.null(opt$estimator.args[["crossload.max"]])) {
+      cm <- opt$estimator.args[["crossload_max"]]
+      opt$estimator.args$crossload.max <- if (is.null(cm)) 5L else as.integer(cm)
+      opt$estimator.args$crossload_max <- NULL
+    }
     # second stage for the variances/covariances (as in the IV/JS
     # estimators): "none" (classic MGM), or one of "ULS"/"GLS"/"RLS"/"2RLS";
     # the default ("default") becomes "RLS" when the model contains

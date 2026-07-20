@@ -1533,3 +1533,149 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
 
   x
 }
+
+# ---------------------------------------------------------------------------
+# data-driven cross-loading detection for the MGM estimator
+# ---------------------------------------------------------------------------
+# When a cross-loading is present in the population but fixed to zero in the
+# analysis model, the MGM factor covariances absorb the misfit and become
+# biased (upward). This helper scans, for every fixed-to-zero loading cell
+# (indicator i on factor f), a normal-theory 'expected parameter change' (EPC)
+# -- the value the cross-loading would take if freed -- together with a z
+# statistic, both computed from the current model residuals. The EPC is the
+# (unweighted) LS coefficient of the residual row of i on the sensitivity
+# direction d = (Lambda Psi)[, f]; its normal-theory variance uses the
+# model-implied covariance matrix and the block sample size. Marker (scaling)
+# indicators are excluded (they cannot carry a cross-loading in MGM). The
+# returned data frame is sorted by decreasing |z|; the caller frees the
+# strongest cell whose |EPC| and |z| exceed the requested cutoffs, refits, and
+# repeats (an iterative forward search). The z statistic makes the search
+# n-aware: at small samples the sampling noise swamps a moderate cross-loading,
+# so nothing is freed (which is also where the covariance bias is masked by
+# variance); at large samples a genuine cross-loading is detected and freed.
+lav_cfa_mgm_crossload_epc <- function(lavmodel = NULL,
+                                      lavsamplestats = NULL,
+                                      lavpartable = NULL,
+                                      lavpta = NULL) {
+  if (is.null(lavpta)) {
+    lavpta <- lav_partable_attributes(lavpartable)
+  }
+  nblocks <- lav_pt_nblocks(lavpartable)
+  pt_block <- if (!is.null(lavpartable$block)) {
+    lavpartable$block
+  } else {
+    rep(1L, length(lavpartable$op))
+  }
+  nmat <- lavmodel@nmat
+  offset <- c(0L, cumsum(nmat))
+
+  out <- data.frame(block = integer(0L), lhs = character(0L),
+                    rhs = character(0L), epc = numeric(0L), z = numeric(0L),
+                    stringsAsFactors = FALSE)
+  for (b in seq_len(nblocks)) {
+    mm <- lavmodel@GLIST[(offset[b] + 1L):(offset[b] + nmat[b])]
+    lambda <- mm$lambda
+    psi <- mm$psi
+    theta <- mm$theta
+    if (is.null(lambda) || is.null(psi) || is.null(theta)) {
+      next
+    }
+    ov_names <- lavpta$vnames$ov[[b]]
+    lv_names <- lavpta$vnames$lv.regular[[b]]
+    nvar <- length(ov_names)
+    nfac <- length(lv_names)
+    if (nfac < 2L) {
+      next # no 'other' factor to cross-load on
+    }
+    sigma <- lambda %*% psi %*% t(lambda) + theta
+    s_cov <- lavsamplestats@cov[[b]]
+    resid <- s_cov - sigma
+    nobs_b <- lavsamplestats@nobs[[b]]
+    lp <- lambda %*% psi # nvar x nfac sensitivity directions
+
+    # marker (scaling) indicators: any indicator with a fixed nonzero loading
+    marker_rows <- which(lavpartable$op == "=~" & pt_block == b &
+      lavpartable$free == 0L & !is.na(lavpartable$ustart) &
+      lavpartable$ustart != 0)
+    marker_ov <- unique(match(lavpartable$rhs[marker_rows], ov_names))
+    marker_ov <- marker_ov[!is.na(marker_ov)]
+
+    dsig <- diag(sigma)
+    for (f in seq_len(nfac)) {
+      d <- lp[, f]
+      for (i in seq_len(nvar)) {
+        if (lambda[i, f] != 0) next        # already loads on f
+        if (i %in% marker_ov) next          # markers cannot cross-load
+        idx <- seq_len(nvar)[-i]
+        den <- sum(d[idx]^2)
+        if (den < 1e-08) next
+        epc <- sum(resid[i, idx] * d[idx]) / den
+        # normal-theory variance of each residual covariance s_ij
+        ntv <- (dsig[i] * dsig[idx] + sigma[i, idx]^2) / nobs_b
+        se <- sqrt(sum(d[idx]^2 * ntv)) / den
+        z <- if (se > 0) epc / se else 0
+        out <- rbind(out, data.frame(block = b, lhs = lv_names[f],
+          rhs = ov_names[i], epc = epc, z = z, stringsAsFactors = FALSE))
+      }
+    }
+  }
+  out[order(-abs(out$z)), , drop = FALSE]
+}
+
+# append fresh (free) cross-loading rows to a parameter table; the existing
+# 'free' numbering is left intact and the new loadings receive the next free
+# indices, so no equality ties are introduced. 'adds' is a data frame with
+# columns block, lhs (factor), rhs (indicator).
+lav_cfa_mgm_partable_add <- function(lavpartable, adds) {
+  n_new <- nrow(adds)
+  if (n_new == 0L) {
+    return(lavpartable)
+  }
+  # the parameter table may be a plain list (in-flight) or a data frame; treat
+  # it column-wise either way
+  base_free <- max(lavpartable$free)
+  pl_int <- suppressWarnings(as.integer(gsub("\\D", "",
+    lavpartable$plabel[nzchar(lavpartable$plabel)])))
+  base_pl <- max(c(0L, pl_int[!is.na(pl_int)]))
+  as_df <- is.data.frame(lavpartable)
+  cn_all <- names(lavpartable)
+  newvals <- vector("list", length(cn_all))
+  names(newvals) <- cn_all
+  for (cn in cn_all) {
+    v <- lavpartable[[cn]]
+    newvals[[cn]] <- switch(cn,
+      lhs = adds$lhs,
+      op = rep("=~", n_new),
+      rhs = adds$rhs,
+      block = as.integer(adds$block),
+      group = as.integer(adds$block),
+      level = rep(1L, n_new),
+      free = base_free + seq_len(n_new),
+      user = rep(1L, n_new),
+      exo = rep(0L, n_new),
+      ustart = rep(NA_real_, n_new),
+      start = rep(0, n_new),
+      est = rep(0, n_new),
+      se = rep(0, n_new),
+      # a cross-loading is unbounded (a 0 bound would pin it to zero!)
+      lower = rep(-Inf, n_new),
+      upper = rep(Inf, n_new),
+      label = rep("", n_new),
+      plabel = paste0(".p", base_pl + seq_len(n_new), "."),
+      if (is.integer(v)) {
+        rep(0L, n_new)
+      } else if (is.numeric(v)) {
+        rep(0, n_new)
+      } else {
+        rep("", n_new)
+      })
+  }
+  for (cn in cn_all) {
+    lavpartable[[cn]] <- c(lavpartable[[cn]], newvals[[cn]])
+  }
+  lavpartable$id <- seq_len(length(lavpartable$lhs))
+  if (as_df) {
+    lavpartable <- as.data.frame(lavpartable, stringsAsFactors = FALSE)
+  }
+  lavpartable
+}
