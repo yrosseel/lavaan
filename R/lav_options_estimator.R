@@ -694,6 +694,22 @@ lav_options_est_fabin <- function(opt) {
         "unknown value for estimator.args$mgm.gamma option: %s.",
         opt$estimator.args[["mgm.gamma"]]))
     }
+    # Jacobian of the estimation map for the delta-method standard
+    # errors: "analytic" (default; classic branch, with an automatic
+    # numerical fallback for the other branches) or "numeric"
+    if (is.null(opt$estimator.args[["mgm.jacobian"]])) {
+      mj <- opt$estimator.args[["mgm_jacobian"]] # snake_case alias
+      opt$estimator.args$mgm.jacobian <- if (is.null(mj)) "analytic" else mj
+      opt$estimator.args$mgm_jacobian <- NULL
+    }
+    opt$estimator.args$mgm.jacobian <-
+      tolower(opt$estimator.args[["mgm.jacobian"]])
+    if (!opt$estimator.args[["mgm.jacobian"]] %in%
+          c("analytic", "numeric")) {
+      lav_msg_stop(gettextf(
+        "unknown value for estimator.args$mgm.jacobian option: %s.",
+        opt$estimator.args[["mgm.jacobian"]]))
+    }
     # simple (a == b) equality constraints (e.g., group.equal = "loadings")
     # are handled by a pooled solve; represent them compactly
     opt$ceq.simple <- TRUE
