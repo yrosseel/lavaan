@@ -308,7 +308,91 @@ lav_cfa_mgm_psi_fit <- function(veta = NULL, id = NULL, pin = NULL,
       "the restricted PSI fit did not converge; the factor (co)variance
        estimates may be inaccurate"))
   }
-  out$par
+
+  # polish with a few Newton steps (analytic gradient and Hessian): the
+  # nlminb solution can carry a gradient of ~1e-6, which is enough to
+  # bias a numerical Jacobian of this map -- and the analytic delta
+  # method differentiates the exact optimum
+  x <- out$par
+  npar <- length(x)
+  fx <- objective(x)
+  for (iter in seq_len(10L)) {
+    grad <- numeric(npar)
+    ok <- TRUE
+    for (b in seq_len(nb)) {
+      psi <- build(x, b)
+      ch <- try(chol(psi), silent = TRUE)
+      if (inherits(ch, "try-error")) {
+        ok <- FALSE
+        break
+      }
+      pinv <- chol2inv(ch)
+      gmat <- pinv - pinv %*% veta[[b]] %*% pinv
+      for (k in seq_len(npar)) {
+        ek <- id[[b]] == k
+        if (any(ek)) {
+          grad[k] <- grad[k] + w[b] * sum(gmat[ek])
+        }
+      }
+    }
+    if (!ok || max(abs(grad)) < 1e-12) {
+      break
+    }
+    hess <- lav_cfa_mgm_psi_fit_hessian(x = x, veta = veta, id = id,
+                                        pin = pin, w = w)
+    step <- try(solve(hess, grad), silent = TRUE)
+    if (inherits(step, "try-error")) {
+      break
+    }
+    x_new <- x - step
+    f_new <- objective(x_new)
+    if (!is.finite(f_new) || f_new > fx + 1e-10) {
+      break
+    }
+    x <- x_new
+    fx <- f_new
+  }
+  x
+}
+
+# analytic Hessian of the restricted-PSI ML discrepancy (used by the
+# Newton polish above and by the implicit-function-theorem derivative
+# of the fit)
+lav_cfa_mgm_psi_fit_hessian <- function(x = NULL, veta = NULL, id = NULL,
+                                        pin = NULL, w = NULL) {
+  npar <- length(x)
+  nb <- length(veta)
+  hess <- matrix(0, npar, npar)
+  for (b in seq_len(nb)) {
+    psi <- pin[[b]]
+    idx <- which(id[[b]] > 0L)
+    psi[idx] <- x[id[[b]][idx]]
+    pinv <- chol2inv(chol(psi))
+    pvp <- pinv %*% veta[[b]] %*% pinv
+    nfac <- nrow(psi)
+    for (k in seq_len(npar)) {
+      ekm <- matrix(0, nfac, nfac)
+      ekm[id[[b]] == k] <- 1
+      if (all(ekm == 0)) {
+        next
+      }
+      for (l in seq_len(k)) {
+        elm <- matrix(0, nfac, nfac)
+        elm[id[[b]] == l] <- 1
+        if (all(elm == 0)) {
+          next
+        }
+        dg_mat <- -pinv %*% elm %*% pinv +
+          pinv %*% elm %*% pvp + pvp %*% elm %*% pinv
+        hh <- w[b] * sum(dg_mat * ekm)
+        hess[k, l] <- hess[k, l] + hh
+        if (k != l) {
+          hess[l, k] <- hess[l, k] + hh
+        }
+      }
+    }
+  }
+  hess
 }
 
 # stage 1 for a block WITH cross-loadings.

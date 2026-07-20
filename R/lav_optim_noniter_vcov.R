@@ -79,7 +79,7 @@ lav_noniter_estimate_from_vec <- function(vec = NULL,
 #
 # Covered branches (everything else returns NULL, and the caller falls
 # back to the numerical Jacobian):
-#  - stage 1, classic (simple structure, marker = 1, saturated PSI):
+#  - stage 1, classic (simple structure, saturated PSI):
 #      theta_p = clip( s_pp - mean_{a<b} s_pa s_pb / s_ab )   (Spearman)
 #      W       = S* - rho_eff * diag(theta)                   (pd corr.)
 #      T       = X' W X,   U = W X T^{-1},   u_f = U[marker_f, f]
@@ -92,29 +92,47 @@ lav_noniter_estimate_from_vec <- function(vec = NULL,
 #      lambda = value / mhat;  psi_fg = phi_fg mhat_f mhat_g
 #    including the JOINT pd-correction shrink (one factor over all
 #    groups -- its derivative has cross-block support)
-#  - residual covariances: the purge s0_ij = mean_(a,b) s_ia s_jb / s_ab
-#    is a smooth map of S; its chain P is composed with the stage-1
-#    derivatives (which are evaluated on the purged matrix)
+#  - stage 1, cross-loadings (rotation-to-pattern; no pd correction in
+#    this branch by design): the bordered KKT rotation solve, the
+#    Bartlett mapping over the clean rows, the masked-composite solves
+#    for the cross rows, and the model-identity thetas
+#  - factors with fewer than 3 indicators, and factors touching a
+#    cross-loading: the masked/external (Kano) tetrad thetas, via the
+#    embedded derivative of lav_sem_js_theta_spearman_masked()
+#  - the metric rescale (std.lv, fixed loading c != 1, tied factors):
+#    a closed-form post-composition lambda -> lambda s,
+#    psi -> psi / (s s'), with s = c or s = sqrt(psi_ff / v), pooled
+#    per connected component
+#  - the restricted PSI fit (fixed factor covariances, psi ties, loose
+#    variance pins): implicit function theorem at the ML optimum,
+#    d x = -H^{-1} (dg/dV) dV, with V the (rescaled) stage-1 psi
+#  - residual covariances: the purge s0_ij = mean_(a,b) s_ia s_jb /
+#    s_ab is composed with the stage-1 derivatives (which are evaluated
+#    on the purged matrix)
 #  - stage 2 (mgm.varcov = ULS/GLS/RLS/2RLS): reuses the JS stage-2
-#    derivative (lav_sem_js_deriv_varcov: direct moment part, chain
-#    through the loadings, RLS implicit-function step at the fixed
-#    point), with the MGM loading derivatives as dx
+#    derivative (lav_sem_js_deriv_varcov), with the MGM loading
+#    derivatives as dx
 #  - mean structure: reuses the JS joint-GLS mean-solve derivative
-#    (lav_sem_js_deriv_mean_wls), so free intercepts, tied intercepts
-#    (scalar invariance) and free latent means are all covered
+#    (free/tied intercepts, free latent means)
 #
-# The pd-correction root rho is a generalized eigenvalue of the pencil
-# (S, Theta): d rho = v' (dS - rho dTheta) v / (v' Theta v). Regime
-# switches (Spearman clips, theta bounds, pd correction active or not,
-# the zero-theta guard of the mapping) are frozen at the point estimate
-# -- exactly what the numerical Jacobian sees locally. A final safety
-# net compares the predicted estimates against the actual ones; any
-# mismatch (an active bound clip, or a branch the coverage checks
-# missed) also triggers the numerical fallback.
+# Remaining fallbacks: cross-loadings combined with equality ties,
+# psi.mapping in the pooled branch, variance/covariance cells fixed to
+# a NONZERO value combined with the second stage (the affine-offset
+# chain), tied residual variances without a second stage, unpurgeable
+# residual covariances, and (near-)non-smooth points (multiple pencil
+# roots, a clipping force-pd step). Regime switches (Spearman clips,
+# theta bounds, pd correction active or not, the zero-theta guard, the
+# diagonal floor of the cross branch) are frozen at the point estimate.
+# A final safety net compares the predicted estimates against the
+# actual ones; any mismatch also triggers the numerical fallback.
 
 # Spearman theta chain for one block: the (clipped) initial residual
-# variances and their derivative with respect to the local vech(S)
-lav_cfa_mgm_jac_theta <- function(s_mat = NULL, m_b = NULL) {
+# variances and their derivative with respect to the local vech(S).
+# Factors with >= 3 indicators and no cross-loading member use the
+# plain per-factor tetrads; the others use the masked/external tetrads
+# (lav_sem_js_theta_spearman_masked, which carries its own derivative)
+lav_cfa_mgm_jac_theta <- function(s_mat = NULL, m_b = NULL,
+                                  cross_idx = integer(0L)) {
   nvar <- nrow(m_b)
   nfac <- ncol(m_b)
   pstar <- nvar * (nvar + 1L) / 2L
@@ -126,38 +144,59 @@ lav_cfa_mgm_jac_theta <- function(s_mat = NULL, m_b = NULL) {
     }
     (j - 1L) * nvar - ((j - 1L) * j) %/% 2L + i
   }
+  both_cross <- matrix(FALSE, nvar, nvar)
+  if (length(cross_idx) > 1L) {
+    both_cross[cross_idx, cross_idx] <- TRUE
+  }
   theta0 <- numeric(nvar)
   dtheta <- matrix(0, nvar, pstar)
   for (f in seq_len(nfac)) {
     f_idx <- which(m_b[, f] == 1L)
+    if (length(f_idx) >= 3L && !any(f_idx %in% cross_idx)) {
+      # plain Spearman on this factor
+      for (p in f_idx) {
+        others <- setdiff(f_idx, p)
+        prs <- utils::combn(others, 2L)
+        nk <- ncol(prs)
+        asum <- 0
+        drow <- numeric(pstar)
+        for (r in seq_len(nk)) {
+          a <- prs[1L, r]
+          bb <- prs[2L, r]
+          rat <- s_mat[p, a] * s_mat[p, bb] / s_mat[a, bb]
+          asum <- asum + rat
+          drow[vpos(p, a)] <- drow[vpos(p, a)] +
+            s_mat[p, bb] / s_mat[a, bb]
+          drow[vpos(p, bb)] <- drow[vpos(p, bb)] +
+            s_mat[p, a] / s_mat[a, bb]
+          drow[vpos(a, bb)] <- drow[vpos(a, bb)] - rat / s_mat[a, bb]
+        }
+        h2 <- asum / (nk * s_mat[p, p])
+        if (h2 < -0.05 || h2 > 1.20) {
+          h2c <- if (h2 < -0.05) -0.05 else 1.20
+          theta0[p] <- (1 - h2c) * s_mat[p, p]
+          dtheta[p, vpos(p, p)] <- 1 - h2c
+        } else {
+          theta0[p] <- s_mat[p, p] - asum / nk
+          dtheta[p, ] <- -drow / nk
+          dtheta[p, vpos(p, p)] <- dtheta[p, vpos(p, p)] + 1
+        }
+      }
+    } else {
+      # masked/external tetrads (the JS helper carries the derivative)
+      out <- lav_sem_js_theta_spearman_masked(
+        s_full = s_mat, idx = f_idx, contam = both_cross,
+        zpool = setdiff(seq_len(nvar), f_idx), bounds = "wide",
+        deriv = TRUE
+      )
+      if (anyNA(out)) {
+        return(NULL) # the estimation would have stopped
+      }
+      theta0[f_idx] <- as.numeric(out)
+      dtheta[f_idx, ] <- attr(out, "dtheta")
+    }
+    # worker bounds: clip to [0, s_pp]
     for (p in f_idx) {
-      others <- setdiff(f_idx, p)
-      prs <- utils::combn(others, 2L)
-      nk <- ncol(prs)
-      asum <- 0
-      drow <- numeric(pstar)
-      for (r in seq_len(nk)) {
-        a <- prs[1L, r]
-        bb <- prs[2L, r]
-        rat <- s_mat[p, a] * s_mat[p, bb] / s_mat[a, bb]
-        asum <- asum + rat
-        drow[vpos(p, a)] <- drow[vpos(p, a)] + s_mat[p, bb] / s_mat[a, bb]
-        drow[vpos(p, bb)] <- drow[vpos(p, bb)] + s_mat[p, a] / s_mat[a, bb]
-        drow[vpos(a, bb)] <- drow[vpos(a, bb)] - rat / s_mat[a, bb]
-      }
-      h2 <- asum / (nk * s_mat[p, p])
-      if (h2 < -0.05 || h2 > 1.20) {
-        # Spearman clip active: theta = (1 - c) s_pp
-        h2c <- if (h2 < -0.05) -0.05 else 1.20
-        theta0[p] <- (1 - h2c) * s_mat[p, p]
-        dtheta[p, vpos(p, p)] <- 1 - h2c
-      } else {
-        # theta = s_pp - asum / nk
-        theta0[p] <- s_mat[p, p] - asum / nk
-        dtheta[p, ] <- -drow / nk
-        dtheta[p, vpos(p, p)] <- dtheta[p, vpos(p, p)] + 1
-      }
-      # worker bounds: clip to [0, s_pp]
       if (theta0[p] < 0) {
         theta0[p] <- 0
         dtheta[p, ] <- 0
@@ -237,12 +276,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
   op <- lavpartable$op
   lam_all <- which(op == "=~" & free > 0L)
   has_ties <- any(duplicated(free[lam_all]))
-  pooled <- has_ties || quadprog
-  # not covered: psi.mapping in the pooled branch, or over an unzeroed
-  # (EFA-style) lambda
-  if (psi_mapping && (pooled || !zae)) {
-    return(NULL)
-  }
 
   lavpta <- lav_pt_attributes(lavpartable)
   nblocks <- lav_pt_nblocks(lavpartable)
@@ -265,9 +298,9 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
   # --------------------------------------------------------------------
   bi_list <- vector("list", nblocks)
   res_cov_flag <- FALSE
-  pin_flag <- FALSE # any ~~ cell fixed to a nonzero value
-  psi_ids_all <- integer(0L)
+  pin_flag <- FALSE # any ~~ cell fixed to a NONZERO value
   th_ids_all <- integer(0L)
+  any_cross <- FALSE
   for (b in seq_len(nblocks)) {
     ov_names <- lavpta$vnames$ov[[b]]
     lv_names <- lavpta$vnames$lv.regular[[b]]
@@ -275,17 +308,13 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
     nfac <- length(lv_names)
     pstar <- nvar * (nvar + 1L) / 2L
 
-    # markers fixed to 1 for every factor
-    marker_idx <- integer(nfac)
-    for (f in seq_len(nfac)) {
-      fx <- which(op == "=~" & pt_block == b &
-        lavpartable$lhs == lv_names[f] & free == 0L &
-        !is.na(lavpartable$ustart) & lavpartable$ustart != 0)
-      if (length(fx) != 1L || lavpartable$ustart[fx] != 1) {
-        return(NULL) # std.lv / fixed value c != 1 / multiple markers
-      }
-      marker_idx[f] <- match(lavpartable$rhs[fx], ov_names)
-    }
+    # scale identification per factor (as in the internal function):
+    # a fixed nonzero loading ("marker", value c), a fixed positive
+    # factor variance ("variance", std.lv), or ties ("tied")
+    scale_type <- rep("tied", nfac)
+    marker_value <- rep(1, nfac)
+    scale_target <- rep(NA_real_, nfac)
+    marker_idx <- rep(0L, nfac)
     lam_pt_idx <- which(op == "=~" & pt_block == b & free > 0L)
     lam_ov <- match(lavpartable$rhs[lam_pt_idx], ov_names)
     lam_fac <- match(lavpartable$lhs[lam_pt_idx], lv_names)
@@ -293,22 +322,46 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       return(NULL)
     }
     m_b <- matrix(0L, nvar, nfac)
-    m_b[(seq_len(nfac) - 1L) * nvar + marker_idx] <- 1L
     m_b[(lam_fac - 1L) * nvar + lam_ov] <- 1L
-    if (any(rowSums(m_b) > 1L)) {
-      return(NULL) # cross-loadings
+    for (f in seq_len(nfac)) {
+      fx <- which(op == "=~" & pt_block == b &
+        lavpartable$lhs == lv_names[f] & free == 0L &
+        !is.na(lavpartable$ustart) & lavpartable$ustart != 0)
+      if (length(fx) > 1L) {
+        return(NULL) # the estimation stops on this
+      }
+      if (length(fx) == 1L) {
+        scale_type[f] <- "marker"
+        marker_value[f] <- lavpartable$ustart[fx]
+        marker_idx[f] <- match(lavpartable$rhs[fx], ov_names)
+        m_b[(f - 1L) * nvar + marker_idx[f]] <- 1L
+      } else {
+        vrow <- which(op == "~~" & pt_block == b &
+          lavpartable$lhs == lv_names[f] &
+          lavpartable$rhs == lv_names[f] & free == 0L)
+        if (length(vrow) > 0L) {
+          scale_type[f] <- "variance"
+          scale_target[f] <- lavpartable$ustart[vrow[1L]]
+        }
+      }
     }
-    if (any(colSums(m_b) < 3L)) {
-      return(NULL) # masked/external tetrads
+    cross_idx <- which(rowSums(m_b) > 1L)
+    if (length(cross_idx) > 0L) {
+      any_cross <- TRUE
     }
-    # saturated PSI, all cells free
-    psi_rows_pt <- which(op == "~~" & pt_block == b &
-      lavpartable$lhs %in% lv_names & lavpartable$rhs %in% lv_names)
-    if (length(psi_rows_pt) != nfac * (nfac + 1L) / 2L ||
-        any(free[psi_rows_pt] == 0L)) {
-      return(NULL) # fixed variance/covariance -> rescale or psi fit
+    # provisional scaling indicators (cross-free)
+    for (f in which(marker_idx == 0L)) {
+      cand <- which(m_b[, f] == 1L)
+      cand <- cand[!cand %in% cross_idx]
+      if (length(cand) == 0L) {
+        return(NULL) # the estimation stops on this
+      }
+      marker_idx[f] <- cand[1L]
     }
-    psi_ids_all <- c(psi_ids_all, free[psi_rows_pt])
+    if (any(marker_idx %in% cross_idx)) {
+      return(NULL) # the estimation stops on this
+    }
+
     # theta diagonal
     th_pt_idx <- which(op == "~~" & pt_block == b &
       lavpartable$lhs %in% ov_names &
@@ -319,6 +372,40 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
             lavpartable$lhs == lavpartable$rhs & free == 0L &
             !is.na(lavpartable$ustart) & lavpartable$ustart != 0)) {
       pin_flag <- TRUE # fixed nonzero residual variance
+    }
+
+    # psi structure (restrictions are handled by the fit chain below)
+    psi_rows_pt <- which(op == "~~" & pt_block == b &
+      lavpartable$lhs %in% lv_names & lavpartable$rhs %in% lv_names)
+    psi_id <- matrix(0L, nfac, nfac)
+    psi_pin <- matrix(0, nfac, nfac)
+    if (length(psi_rows_pt) > 0L) {
+      ii <- match(lavpartable$lhs[psi_rows_pt], lv_names)
+      jj <- match(lavpartable$rhs[psi_rows_pt], lv_names)
+      for (r in seq_along(psi_rows_pt)) {
+        fr <- free[psi_rows_pt[r]]
+        if (fr > 0L) {
+          psi_id[ii[r], jj[r]] <- psi_id[jj[r], ii[r]] <- fr
+        } else {
+          val <- lavpartable$ustart[psi_rows_pt[r]]
+          if (is.na(val)) {
+            val <- 0
+          }
+          psi_pin[ii[r], jj[r]] <- psi_pin[jj[r], ii[r]] <- val
+        }
+      }
+    }
+    if (any(psi_pin != 0)) {
+      # nonzero psi pins beyond the (absorbable) variance targets
+      offd <- psi_pin
+      diag(offd) <- 0
+      if (any(offd != 0)) {
+        pin_flag <- TRUE # fixed nonzero factor covariance
+      }
+      dg <- diag(psi_pin)
+      if (any(dg != 0 & scale_type != "variance")) {
+        pin_flag <- TRUE # fixed variance on a marker-scaled factor
+      }
     }
 
     # residual covariances -> purge chain
@@ -342,6 +429,9 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       for (f in seq_len(nfac)) {
         fac_of[which(m_b[, f] == 1L)] <- f
       }
+      if (length(cross_idx) > 0L) {
+        fac_of[cross_idx] <- NA_integer_
+      }
       pairs <- data.frame(
         i = match(lavpartable$lhs[cov_idx], ov_names),
         j = match(lavpartable$rhs[cov_idx], ov_names),
@@ -353,13 +443,11 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         return_anchors = TRUE
       )
       if (length(attr(s_use, "failed")) > 0L) {
-        return(NULL) # unpurgeable pair (masked-spearman path)
+        return(NULL) # unpurgeable pair
       }
       anchors <- attr(s_use, "anchors")
       attr(s_use, "failed") <- NULL
       attr(s_use, "anchors") <- NULL
-      # the purge chain: replaced cells are means of tetrad ratios of
-      # the RAW matrix; everything else is the identity
       vpos <- function(i, j) {
         if (i < j) {
           tmp <- i
@@ -393,20 +481,33 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
 
     # Spearman theta chain (on the purged matrix)
-    th_chain <- lav_cfa_mgm_jac_theta(s_mat = s_use, m_b = m_b)
+    th_chain <- lav_cfa_mgm_jac_theta(
+      s_mat = s_use, m_b = m_b, cross_idx = cross_idx
+    )
+    if (is.null(th_chain)) {
+      return(NULL)
+    }
 
     bi_list[[b]] <- list(
       ov_names = ov_names, lv_names = lv_names, nvar = nvar, nfac = nfac,
       pstar = pstar, m_b = m_b, marker_idx = marker_idx,
+      scale_type = scale_type, marker_value = marker_value,
+      scale_target = scale_target, cross_idx = cross_idx,
       s_use = s_use, p_chain = p_chain,
       theta0 = th_chain$theta0, dtheta = th_chain$dtheta,
       lam_pt_idx = lam_pt_idx, lam_ov = lam_ov, lam_fac = lam_fac,
-      psi_rows_pt = psi_rows_pt, th_pt_idx = th_pt_idx,
+      psi_rows_pt = psi_rows_pt, psi_id = psi_id, psi_pin = psi_pin,
+      th_pt_idx = th_pt_idx,
       nobs = lavsamplestats@nobs[[b]]
     )
   }
-  # ties among the factor (co)variances trigger the restricted PSI fit
-  if (any(duplicated(psi_ids_all))) {
+  pooled <- (has_ties || quadprog) && !any_cross
+  # not covered (yet): cross-loadings combined with ties, psi.mapping in
+  # the pooled branch or over an unzeroed lambda
+  if (any_cross && has_ties) {
+    return(NULL)
+  }
+  if (psi_mapping && (pooled || !zae)) {
     return(NULL)
   }
 
@@ -422,9 +523,11 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
     mgm_varcov <- "RLS"
   }
   stage2 <- mgm_varcov != "NONE"
-  # not covered: pinned nonzero ~~ cells make the stage-2 system affine
-  # (the offset chain is not in lav_sem_js_deriv_varcov)
-  if (stage2 && pin_flag) {
+  # not covered: pinned nonzero ~~ cells (incl. std.lv variance pins)
+  # make the stage-2 system affine (offset chain not in the JS deriv)
+  if (stage2 && (pin_flag ||
+      any(vapply(bi_list, function(bi) any(diag(bi$psi_pin) != 0),
+                 logical(1L))))) {
     return(NULL)
   }
   # not covered: tied residual variances without a second stage
@@ -432,12 +535,254 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
   if (!stage2 && any(duplicated(th_ids_all))) {
     return(NULL)
   }
+  if (pin_flag && !stage2) {
+    # fixed nonzero theta diagonals without stage 2 are fine (they do
+    # not enter the stage-1 chain); fixed nonzero rescov pairs are
+    # purge-subtracted with zero derivative -- also fine
+    pin_flag <- FALSE
+  }
 
   # --------------------------------------------------------------------
-  # stage 1
+  # stage 1: fills, per block, the full value/derivative structures
+  #   lam  (nvar x nfac), dlam ((f-1)*nvar+p rows x m_total)
+  #   psi  (nfac x nfac), dpsi (lower-tri rows x m_total)
+  #   theta, dth (nvar x m_total)
+  # in the provisional marker = 1 metric
   # --------------------------------------------------------------------
-  if (!pooled) {
-    # classic per-block chain: per-block pd correction, T/U solve
+  pidx <- function(f, g, nfac) {
+    if (f < g) {
+      tmp <- f
+      f <- g
+      g <- tmp
+    }
+    (g - 1L) * nfac - ((g - 1L) * g) %/% 2L + f
+  }
+
+  if (any_cross) {
+    # ---- cross-loadings: rotation-to-pattern (no pd correction) -------
+    for (b in seq_len(nblocks)) {
+      bi <- bi_list[[b]]
+      nvar <- bi$nvar
+      nfac <- bi$nfac
+      pstar <- bi$pstar
+      cc <- co$cov_vech[[b]]
+      xt <- bi$m_b
+      theta0 <- bi$theta0
+      dtheta <- bi$dtheta
+      s_mat <- bi$s_use
+      cross_idx <- bi$cross_idx
+      clean <- setdiff(seq_len(nvar), cross_idx)
+
+      # W = S - diag(theta), with the (rare) diagonal floor of the
+      # !force_pd path: diag(W) >= 0.001 * diag(S)
+      w_mat <- s_mat - diag(theta0, nvar)
+      floor_idx <- which(diag(w_mat) < 0.001 * diag(s_mat))
+      if (length(floor_idx) > 0L) {
+        diag(w_mat)[floor_idx] <- 0.001 * diag(s_mat)[floor_idx]
+      }
+      t_mat <- crossprod(xt, w_mat %*% xt)
+      t_inv <- try(solve(t_mat), silent = TRUE)
+      if (inherits(t_inv, "try-error")) {
+        return(NULL)
+      }
+      u_mat <- w_mat %*% xt %*% t_inv
+      dsq <- sqrt(diag(t_mat)) # D^-1 of the worker
+      mm <- t(t(u_mat) * dsq) # the unconstrained solve t(solve(phi, ys_cor))
+
+      # rotation: per factor, the bordered KKT solve on the clean zero
+      # rows of mm
+      hmat <- matrix(0, nfac, nfac)
+      kkt_inv <- vector("list", nfac)
+      zrows_l <- vector("list", nfac)
+      for (f in seq_len(nfac)) {
+        zrows <- intersect(which(xt[, f] == 0L), clean)
+        if (length(zrows) < nfac - 1L) {
+          return(NULL) # the estimation stops on this
+        }
+        zf <- mm[zrows, , drop = FALSE]
+        mrow <- mm[bi$marker_idx[f], ]
+        kkt <- rbind(cbind(crossprod(zf), mrow), c(mrow, 0))
+        kkt_i <- try(solve(kkt), silent = TRUE)
+        if (inherits(kkt_i, "try-error")) {
+          return(NULL)
+        }
+        sol <- kkt_i %*% c(numeric(nfac), 1)
+        hmat[, f] <- sol[seq_len(nfac)]
+        kkt_inv[[f]] <- kkt_i
+        zrows_l[[f]] <- zrows
+      }
+      lam <- (mm %*% hmat) * bi$m_b
+
+      # PSI: Bartlett mapping over the clean rows
+      lam_c <- lam[clean, , drop = FALSE]
+      th_c <- theta0[clean]
+      ti_c <- 1 / th_c
+      ti_guard <- abs(th_c) < 0.01
+      ti_c[ti_guard] <- 1
+      b_map <- t(lam_c * ti_c) # L'K (nfac x nclean)
+      a_map <- b_map %*% lam_c
+      a_inv <- try(solve(a_map), silent = TRUE)
+      if (inherits(a_inv, "try-error")) {
+        return(NULL)
+      }
+      m_map <- a_inv %*% b_map # nfac x nclean
+      w_c <- w_mat[clean, clean, drop = FALSE]
+      wm <- w_c %*% t(m_map) # nclean x nfac
+      psi <- m_map %*% wm
+
+      # cross rows: masked-composite solves
+      x_masked <- xt
+      if (length(cross_idx) > 0L) {
+        x_masked[cross_idx, ] <- 0
+      }
+      am_x <- crossprod(x_masked, lam) # X_m' Lambda (nfac x nfac)
+      bmat <- psi %*% t(am_x)
+      cross_info <- vector("list", length(cross_idx))
+      for (e in seq_along(cross_idx)) {
+        i <- cross_idx[e]
+        fidx <- which(xt[i, ] == 1L)
+        ci <- drop(s_mat[i, , drop = FALSE] %*% x_masked)
+        b_i <- bmat[fidx, , drop = FALSE]
+        g_i <- tcrossprod(b_i)
+        g_inv <- try(solve(g_i), silent = TRUE)
+        if (inherits(g_inv, "try-error")) {
+          return(NULL)
+        }
+        lam_i <- drop(g_inv %*% (b_i %*% ci))
+        lam[i, ] <- 0
+        lam[i, fidx] <- lam_i
+        theta0[i] <- s_mat[i, i] -
+          drop(lam[i, , drop = FALSE] %*% psi %*% lam[i, ])
+        cross_info[[e]] <- list(i = i, fidx = fidx, ci = ci,
+                                b_i = b_i, g_inv = g_inv, lam_i = lam_i)
+      }
+
+      # derivative pass over the local vech directions
+      dlam <- matrix(0, nrow = nvar * nfac, ncol = m_total)
+      npsic <- nfac * (nfac + 1L) / 2L
+      dpsi <- matrix(0, nrow = npsic, ncol = m_total)
+      dth <- matrix(0, nrow = nvar, ncol = m_total)
+      dth[, cc] <- dtheta
+      ii_of <- unlist(lapply(seq_len(nvar), function(j) seq(j, nvar)))
+      jj_of <- unlist(lapply(seq_len(nvar), function(j) {
+        rep(j, nvar - j + 1L)
+      }))
+      pat_cells <- which(bi$m_b == 1L)
+      for (k in seq_len(pstar)) {
+        i <- ii_of[k]
+        j <- jj_of[k]
+        dthk <- dtheta[, k]
+        # dW columns action: dW = dS_k - dTheta_k, with the floored
+        # diagonal cells replaced by 0.001 dS_pp
+        dwx <- matrix(0, nvar, nfac)
+        dwx[i, ] <- xt[j, ]
+        if (i != j) {
+          dwx[j, ] <- dwx[j, ] + xt[i, ]
+        }
+        nz <- which(dthk != 0)
+        nz <- setdiff(nz, floor_idx) # floored diag cells: no theta term
+        if (length(nz) > 0L) {
+          dwx[nz, ] <- dwx[nz, ] - dthk[nz] * xt[nz, , drop = FALSE]
+        }
+        if (i == j && i %in% floor_idx) {
+          # floored diagonal: W_pp = 0.001 s_pp
+          dwx[i, ] <- dwx[i, ] - xt[i, ] + 0.001 * xt[i, ]
+        }
+        dt_mat <- crossprod(xt, dwx)
+        du_mat <- (dwx - u_mat %*% dt_mat) %*% t_inv
+        dmm <- t(t(du_mat) * dsq) +
+          t(t(u_mat) * (0.5 * diag(dt_mat) / dsq))
+        # rotation chain
+        dh <- matrix(0, nfac, nfac)
+        for (f in seq_len(nfac)) {
+          zrows <- zrows_l[[f]]
+          zf <- mm[zrows, , drop = FALSE]
+          dzf <- dmm[zrows, , drop = FALSE]
+          dmrow <- dmm[bi$marker_idx[f], ]
+          dkkt <- rbind(
+            cbind(crossprod(dzf, zf) + crossprod(zf, dzf), dmrow),
+            c(dmrow, 0)
+          )
+          solf <- kkt_inv[[f]] %*% c(numeric(nfac), 1)
+          dsol <- -kkt_inv[[f]] %*% (dkkt %*% solf)
+          dh[, f] <- dsol[seq_len(nfac)]
+        }
+        dlam_k <- (dmm %*% hmat + mm %*% dh) * bi$m_b
+        # mapping chain over the clean rows
+        dlam_ck <- dlam_k[clean, , drop = FALSE]
+        dth_ck <- dthk[clean]
+        dti_c <- -dth_ck * ti_c * ti_c
+        dti_c[ti_guard] <- 0
+        db_map <- t(dlam_ck * ti_c) + t(lam_c * dti_c)
+        da_map <- db_map %*% lam_c + b_map %*% dlam_ck
+        dm_map <- a_inv %*% (db_map - da_map %*% m_map)
+        # M dW_c M'
+        ci_pos <- match(i, clean)
+        cj_pos <- match(j, clean)
+        if (!is.na(ci_pos) && !is.na(cj_pos)) {
+          if (i != j) {
+            mdwm <- tcrossprod(m_map[, ci_pos], m_map[, cj_pos])
+            mdwm <- mdwm + t(mdwm)
+          } else {
+            mdwm <- tcrossprod(m_map[, ci_pos])
+          }
+        } else {
+          mdwm <- matrix(0, nfac, nfac)
+        }
+        nz_c <- which(dth_ck != 0)
+        # floored cells: no theta term; diag dS scaled by 0.001
+        if (length(floor_idx) > 0L) {
+          fl_c <- match(intersect(floor_idx, clean), clean)
+          nz_c <- setdiff(nz_c, fl_c)
+          if (!is.na(ci_pos) && i == j && (i %in% floor_idx)) {
+            mdwm <- mdwm * 0.001
+          }
+        }
+        if (length(nz_c) > 0L) {
+          mdwm <- mdwm - (m_map[, nz_c, drop = FALSE] %*%
+            (dth_ck[nz_c] * t(m_map[, nz_c, drop = FALSE])))
+        }
+        dpsi_k <- dm_map %*% wm + mdwm + t(dm_map %*% wm)
+        # cross rows
+        dam_x <- crossprod(x_masked, dlam_k)
+        dbmat <- dpsi_k %*% t(am_x) + psi %*% t(dam_x)
+        for (e in seq_along(cross_idx)) {
+          cinf <- cross_info[[e]]
+          ic <- cinf$i
+          fidx <- cinf$fidx
+          dci <- numeric(nfac)
+          if (ic == i) {
+            dci <- dci + x_masked[j, ]
+          }
+          if (ic == j && i != j) {
+            dci <- dci + x_masked[i, ]
+          }
+          db_i <- dbmat[fidx, , drop = FALSE]
+          dg_i <- tcrossprod(db_i, cinf$b_i)
+          dg_i <- dg_i + t(dg_i)
+          dlam_i <- drop(cinf$g_inv %*%
+            (db_i %*% cinf$ci + cinf$b_i %*% dci - dg_i %*% cinf$lam_i))
+          dlam_k[ic, ] <- 0
+          dlam_k[ic, fidx] <- dlam_i
+          # theta identity: theta_i = s_ii - lam_i psi lam_i'
+          dth_i <- (i == j && i == ic) * 1 -
+            (2 * sum((psi %*% lam[ic, ]) * dlam_k[ic, ]) +
+             drop(lam[ic, , drop = FALSE] %*% dpsi_k %*% lam[ic, ]))
+          dth[ic, cc[k]] <- dth_i
+        }
+        # store
+        dlam[pat_cells, cc[k]] <- dlam_k[pat_cells]
+        for (f in seq_len(nfac)) {
+          for (g in seq_len(f)) {
+            dpsi[pidx(f, g, nfac), cc[k]] <- dpsi_k[f, g]
+          }
+        }
+      }
+      bi_list[[b]]$st <- list(lam = lam, dlam = dlam, psi = psi,
+                              dpsi = dpsi, theta = theta0, dth = dth)
+    }
+  } else if (!pooled) {
+    # ---- classic per-block chain --------------------------------------
     for (b in seq_len(nblocks)) {
       bi <- bi_list[[b]]
       nvar <- bi$nvar
@@ -479,42 +824,33 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         ti <- 1 / theta0
         ti_guard <- abs(theta0) < 0.01
         ti[ti_guard] <- 1
-        b_map <- t(lam_full * ti) # L'K (nfac x nvar)
+        b_map <- t(lam_full * ti)
         a_map <- b_map %*% lam_full
         a_inv <- try(solve(a_map), silent = TRUE)
         if (inherits(a_inv, "try-error")) {
           return(NULL)
         }
         m_map <- a_inv %*% b_map
-        wm <- w_mat %*% t(m_map) # W M' (nvar x nfac)
-        mtm <- m_map %*% (theta0 * t(m_map)) # M Theta M'
+        wm <- w_mat %*% t(m_map)
+        mtm <- m_map %*% (theta0 * t(m_map))
       }
 
-      th_ov <- match(lavpartable$lhs[bi$th_pt_idx], bi$ov_names)
-      psi_f <- match(lavpartable$lhs[bi$psi_rows_pt], bi$lv_names)
-      psi_g <- match(lavpartable$rhs[bi$psi_rows_pt], bi$lv_names)
-      lam_free <- free[bi$lam_pt_idx]
-      psi_free <- free[bi$psi_rows_pt]
-      lam_ov <- bi$lam_ov
-      lam_fac <- bi$lam_fac
-      nlam <- length(lam_free)
-      lam_val <- u_mat[cbind(lam_ov, lam_fac)] / u_vec[lam_fac]
-
-      # theta rows (overwritten by stage 2 when it runs)
-      if (length(bi$th_pt_idx) > 0L) {
-        dx[free[bi$th_pt_idx], cc] <- dtheta[th_ov, , drop = FALSE]
-        x_pred[free[bi$th_pt_idx]] <- theta0[th_ov]
-      }
-      x_pred[lam_free] <- lam_val
-      if (psi_mapping) {
-        psi_map_full <- m_map %*% wm
-        x_pred[psi_free] <- psi_map_full[cbind(psi_f, psi_g)]
+      lam <- t(t(u_mat) / u_vec) * bi$m_b
+      psi <- if (psi_mapping) {
+        m_map %*% wm
       } else {
-        x_pred[psi_free] <- t_mat[cbind(psi_f, psi_g)] *
-          u_vec[psi_f] * u_vec[psi_g]
+        t(t_mat * u_vec) * u_vec # T_fg u_f u_g
       }
 
-      # one pass over the local vech directions
+      dlam <- matrix(0, nrow = nvar * nfac, ncol = m_total)
+      npsic <- nfac * (nfac + 1L) / 2L
+      dpsi <- matrix(0, nrow = npsic, ncol = m_total)
+      dth <- matrix(0, nrow = nvar, ncol = m_total)
+      dth[, cc] <- dtheta
+      pat_cells <- which(bi$m_b == 1L)
+      pat_ov <- ((pat_cells - 1L) %% nvar) + 1L
+      pat_fac <- ((pat_cells - 1L) %/% nvar) + 1L
+      lam_cell_val <- lam[pat_cells]
       ii_of <- unlist(lapply(seq_len(nvar), function(j) seq(j, nvar)))
       jj_of <- unlist(lapply(seq_len(nvar), function(j) {
         rep(j, nvar - j + 1L)
@@ -539,18 +875,16 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         dt_mat <- crossprod(xt, dwx)
         du_mat <- (dwx - u_mat %*% dt_mat) %*% t_inv
         du_vec <- du_mat[cbind(bi$marker_idx, seq_len(nfac))]
-        if (nlam > 0L) {
-          dx[lam_free, cc[k]] <-
-            (du_mat[cbind(lam_ov, lam_fac)] -
-             lam_val * du_vec[lam_fac]) / u_vec[lam_fac]
-        }
+        dlam[pat_cells, cc[k]] <-
+          (du_mat[pat_cells] - lam_cell_val * du_vec[pat_fac]) /
+          u_vec[pat_fac]
         if (psi_mapping) {
-          dlam <- (du_mat - t(t(u_mat) * (du_vec / u_vec))) *
+          dlamk <- (du_mat - t(t(u_mat) * (du_vec / u_vec))) *
             bi$m_b / rep(u_vec, each = nvar)
           dti <- -dthk * ti * ti
           dti[ti_guard] <- 0
-          db_map <- t(dlam * ti) + t(lam_full * dti)
-          da_map <- db_map %*% lam_full + b_map %*% dlam
+          db_map <- t(dlamk * ti) + t(lam_full * dti)
+          da_map <- db_map %*% lam_full + b_map %*% dlamk
           dm_map <- a_inv %*% (db_map - da_map %*% m_map)
           if (i != j) {
             mdwm <- tcrossprod(m_map[, i], m_map[, j])
@@ -566,25 +900,30 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
               (m_map[, nz, drop = FALSE] %*%
                (dthk[nz] * t(m_map[, nz, drop = FALSE])))
           }
-          dpsi_mat <- dm_map %*% wm + mdwm + t(dm_map %*% wm)
-          dx[psi_free, cc[k]] <- dpsi_mat[cbind(psi_f, psi_g)]
+          dpsi_k <- dm_map %*% wm + mdwm + t(dm_map %*% wm)
+          for (f in seq_len(nfac)) {
+            for (g in seq_len(f)) {
+              dpsi[pidx(f, g, nfac), cc[k]] <- dpsi_k[f, g]
+            }
+          }
         } else {
-          du_f <- du_vec[psi_f]
-          du_g <- du_vec[psi_g]
-          dx[psi_free, cc[k]] <-
-            dt_mat[cbind(psi_f, psi_g)] * u_vec[psi_f] * u_vec[psi_g] +
-            t_mat[cbind(psi_f, psi_g)] *
-              (du_f * u_vec[psi_g] + u_vec[psi_f] * du_g)
+          for (f in seq_len(nfac)) {
+            for (g in seq_len(f)) {
+              dpsi[pidx(f, g, nfac), cc[k]] <-
+                dt_mat[f, g] * u_vec[f] * u_vec[g] +
+                t_mat[f, g] *
+                  (du_vec[f] * u_vec[g] + u_vec[f] * du_vec[g])
+            }
+          }
         }
       }
+      bi_list[[b]]$st <- list(lam = lam, dlam = dlam, psi = psi,
+                              dpsi = dpsi, theta = theta0, dth = dth)
     }
   } else {
     # ---- pooled branch (loading ties / quadprog) -----------------------
-    # pd correction: JOINT shrink over the blocks (nblocks > 1), or the
-    # per-block root (single block); the joint-shrink derivative has
-    # cross-block support
-    shrink <- rep(1, nblocks) # effective multiplier of Theta, per block
-    dshrink <- NULL # 1 x m_total (shared over the blocks), or NULL
+    shrink <- rep(1, nblocks)
+    dshrink <- NULL
     if (nblocks > 1L) {
       roots <- numeric(nblocks)
       root_l <- vector("list", nblocks)
@@ -598,8 +937,8 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         roots[b] <- root_l[[b]]$rho
       }
       bstar <- which.min(roots)
-      # the argmin block must be well separated
-      if (sort(roots)[2L] - roots[bstar] < 1e-8 * max(1, abs(roots[bstar]))) {
+      if (sort(roots)[2L] - roots[bstar] <
+          1e-8 * max(1, abs(roots[bstar]))) {
         return(NULL)
       }
       nobs_min <- min(vapply(bi_list, "[[", numeric(1L), "nobs"))
@@ -629,8 +968,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       }
     }
 
-    # per block: T, WX, and full-width derivative rows for the needed
-    # primitives (pattern cells of WX, and the T cells)
     cells <- NULL
     for (b in seq_len(nblocks)) {
       bi <- bi_list[[b]]
@@ -641,14 +978,12 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       w_mat <- bi$s_use - shrink[b] * diag(bi$theta0, nvar)
       wx <- w_mat %*% xt
       t_mat <- crossprod(xt, wx)
-      # the historic cov2cor(force_pd(phi)) step must be an identity
       dvec <- 1 / sqrt(diag(t_mat))
       phi <- t(t_mat * dvec) * dvec
       evp <- eigen(phi, symmetric = TRUE, only.values = TRUE)$values
       if (min(evp) / max(evp) < 2e-4) {
         return(NULL) # force_pd about to clip
       }
-      # dtheta placed at the global columns
       dth_g <- matrix(0, nrow = nvar, ncol = m_total)
       dth_g[, cc] <- bi$dtheta
       vpos <- function(i, j) {
@@ -659,7 +994,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         }
         (j - 1L) * nvar - ((j - 1L) * j) %/% 2L + i
       }
-      # dT rows (nfac x nfac, symmetric)
       dt_rows <- vector("list", nfac * nfac)
       for (f in seq_len(nfac)) {
         f_set <- which(xt[, f] == 1L)
@@ -681,7 +1015,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
           dt_rows[[(g - 1L) * nfac + f]] <- row
         }
       }
-      # d(WX) rows for the pattern cells (markers included)
       pat <- which(xt == 1L)
       pat_ov <- ((pat - 1L) %% nvar) + 1L
       pat_fac <- ((pat - 1L) %/% nvar) + 1L
@@ -694,14 +1027,12 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         for (j in f_set) {
           row[cc[vpos(p, j)]] <- row[cc[vpos(p, j)]] + 1
         }
-        # p loads on f, so the diagonal cell (p, p) is always in the sum
         row <- row - shrink[b] * dth_g[p, ]
         if (!is.null(dshrink)) {
           row <- row - bi$theta0[p] * dshrink
         }
         dwx_rows[e, ] <- row
       }
-      # normalized structure coefficients lstar = (WX)_pf / sqrt(T_ff)
       lstar_val <- numeric(length(pat))
       dlstar <- matrix(0, nrow = length(pat), ncol = m_total)
       for (e in seq_along(pat)) {
@@ -722,13 +1053,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       bi_list[[b]]$dlstar <- dlstar
       bi_list[[b]]$cell_of <- cell_of
 
-      # theta rows
-      if (length(bi$th_pt_idx) > 0L) {
-        th_ov <- match(lavpartable$lhs[bi$th_pt_idx], bi$ov_names)
-        dx[free[bi$th_pt_idx], cc] <- bi$dtheta[th_ov, , drop = FALSE]
-        x_pred[free[bi$th_pt_idx]] <- bi$theta0[th_ov]
-      }
-
       if (length(bi$lam_pt_idx) > 0L) {
         cells <- rbind(cells, data.frame(
           block = b, ov = bi$lam_ov, fac = bi$lam_fac,
@@ -737,8 +1061,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
         ))
       }
     }
-
-    # tie classes and connected components (as in the internal function)
     if (is.null(cells)) {
       cells <- data.frame(
         block = integer(0L), ov = integer(0L), fac = integer(0L),
@@ -763,7 +1085,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       comps
     }
 
-    # (pooled) normalized marker loadings, value + derivative row
     mh_val <- vector("list", nblocks)
     mh_row <- vector("list", nblocks)
     for (b in seq_len(nblocks)) {
@@ -778,8 +1099,7 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       names(mh_val[[b]]) <- bi$lv_names
       names(mh_row[[b]]) <- bi$lv_names
     }
-    all_fn <- unique(cells$facname)
-    for (fn in all_fn) {
+    for (fn in unique(cells$facname)) {
       comps <- fac_components(fn)
       for (ccomp in comps) {
         bset <- ccomp[vapply(ccomp, function(b) {
@@ -799,7 +1119,7 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       }
     }
 
-    # cell values (tied classes averaged) and the loading rows
+    # cell values (tied classes averaged) -> the assembled lambda
     val <- numeric(nrow(cells))
     vrow <- matrix(0, nrow = nrow(cells), ncol = m_total)
     for (r in seq_len(nrow(cells))) {
@@ -813,44 +1133,367 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       avg <- colMeans(vrow[class_idx, , drop = FALSE])
       vrow[class_idx, ] <- rep(avg, each = length(class_idx))
     }
-    for (r in seq_len(nrow(cells))) {
-      mh <- mh_val[[cells$block[r]]][[cells$facname[r]]]
-      dmh <- mh_row[[cells$block[r]]][[cells$facname[r]]]
-      lam_val_r <- val[r] / mh
-      dx[cells$free[r], ] <- (vrow[r, ] - lam_val_r * dmh) / mh
-      x_pred[cells$free[r]] <- lam_val_r
-    }
-
-    # psi rows: psi_fg = T_fg (WX)_{mf, f} (WX)_{mg, g} / (T_ff T_gg)
-    # (= phi_fg mhat_own_f mhat_own_g, with the OWN -- unpooled --
-    # normalized marker loadings)
+    # assemble the stage-1 structures per block
     for (b in seq_len(nblocks)) {
       bi <- bi_list[[b]]
+      nvar <- bi$nvar
       nfac <- bi$nfac
-      psi_f <- match(lavpartable$lhs[bi$psi_rows_pt], bi$lv_names)
-      psi_g <- match(lavpartable$rhs[bi$psi_rows_pt], bi$lv_names)
+      lam <- matrix(0, nvar, nfac)
+      lam[(seq_len(nfac) - 1L) * nvar + bi$marker_idx] <- 1
+      dlam <- matrix(0, nrow = nvar * nfac, ncol = m_total)
+      rows_b <- which(cells$block == b)
+      for (r in rows_b) {
+        mh <- mh_val[[b]][[cells$facname[r]]]
+        dmh <- mh_row[[b]][[cells$facname[r]]]
+        lv <- val[r] / mh
+        cell <- (cells$fac[r] - 1L) * nvar + cells$ov[r]
+        lam[cell] <- lv
+        dlam[cell, ] <- (vrow[r, ] - lv * dmh) / mh
+      }
+      # psi: T_fg (WX)_{mf, f} (WX)_{mg, g} / (T_ff T_gg) -- own mhat
+      psi <- matrix(0, nfac, nfac)
+      npsic <- nfac * (nfac + 1L) / 2L
+      dpsi <- matrix(0, nrow = npsic, ncol = m_total)
+      for (f in seq_len(nfac)) {
+        for (g in seq_len(f)) {
+          e_f <- bi$cell_of[bi$marker_idx[f], f]
+          e_g <- bi$cell_of[bi$marker_idx[g], g]
+          wxf <- bi$wx[bi$marker_idx[f], f]
+          wxg <- bi$wx[bi$marker_idx[g], g]
+          tff <- bi$t_mat[f, f]
+          tgg <- bi$t_mat[g, g]
+          tfg <- bi$t_mat[f, g]
+          dwxf <- bi$dlstar[e_f, ] * sqrt(tff) +
+            0.5 * (wxf / tff) * bi$dt_rows[[(f - 1L) * nfac + f]]
+          dwxg <- bi$dlstar[e_g, ] * sqrt(tgg) +
+            0.5 * (wxg / tgg) * bi$dt_rows[[(g - 1L) * nfac + g]]
+          aa <- wxf * wxg / (tff * tgg)
+          psi[f, g] <- psi[g, f] <- tfg * aa
+          dpsi[pidx(f, g, nfac), ] <-
+            bi$dt_rows[[(f - 1L) * nfac + g]] * aa +
+            tfg * ((dwxf * wxg + wxf * dwxg) / (tff * tgg) -
+                   aa * (bi$dt_rows[[(f - 1L) * nfac + f]] / tff +
+                         bi$dt_rows[[(g - 1L) * nfac + g]] / tgg))
+        }
+      }
+      dth <- matrix(0, nrow = nvar, ncol = m_total)
+      dth[, co$cov_vech[[b]]] <- bi$dtheta
+      bi_list[[b]]$st <- list(lam = lam, dlam = dlam, psi = psi,
+                              dpsi = dpsi, theta = bi$theta0, dth = dth)
+    }
+  }
+
+  # --------------------------------------------------------------------
+  # metric rescale (std.lv, fixed loading c != 1, tied factors):
+  # lambda[, f] * s_f, psi / (s_f s_g); s from the anchor blocks
+  # --------------------------------------------------------------------
+  need_rescale <- any(vapply(bi_list, function(bi) {
+    any(bi$scale_type != "marker") || any(bi$marker_value != 1)
+  }, logical(1L)))
+  psi_pin_loose <- vector("list", nblocks)
+  for (b in seq_len(nblocks)) {
+    psi_pin_loose[[b]] <- integer(0L)
+  }
+  if (need_rescale) {
+    # component structure over the loading ties (empty tie set for the
+    # classic/cross branches gives singleton components)
+    cells_rs <- NULL
+    for (b in seq_len(nblocks)) {
+      bi <- bi_list[[b]]
+      if (length(bi$lam_pt_idx) > 0L) {
+        cells_rs <- rbind(cells_rs, data.frame(
+          block = b, facname = lavpartable$lhs[bi$lam_pt_idx],
+          free = free[bi$lam_pt_idx]
+        ))
+      }
+    }
+    tie_rs <- split(seq_len(nrow(cells_rs)), cells_rs$free)
+    tie_rs <- tie_rs[vapply(tie_rs, length, 1L) > 1L]
+    comp_rs <- function(fn) {
+      comps <- as.list(seq_len(nblocks))
+      for (class_idx in tie_rs) {
+        if (cells_rs$facname[class_idx[1L]] != fn) {
+          next
+        }
+        bset <- unique(cells_rs$block[class_idx])
+        hit <- which(vapply(comps, function(x) any(x %in% bset), TRUE))
+        if (length(hit) > 1L) {
+          comps[[hit[1L]]] <- sort(unique(unlist(comps[hit])))
+          comps[hit[-1L]] <- NULL
+        }
+      }
+      comps
+    }
+    all_fn <- unique(unlist(lapply(bi_list, "[[", "lv_names")))
+    for (fn in all_fn) {
+      comps <- comp_rs(fn)
+      for (ccomp in comps) {
+        bset <- ccomp[vapply(ccomp, function(b) {
+          fn %in% bi_list[[b]]$lv_names
+        }, logical(1L))]
+        if (length(bset) == 0L) {
+          next
+        }
+        f_of <- vapply(bset, function(b) {
+          match(fn, bi_list[[b]]$lv_names)
+        }, integer(1L))
+        types <- vapply(seq_along(bset), function(k) {
+          bi_list[[bset[k]]]$scale_type[f_of[k]]
+        }, character(1L))
+        var_k <- which(types == "variance")
+        ds_row <- NULL # NULL = constant s
+        if (any(types == "marker")) {
+          s <- mean(vapply(which(types == "marker"), function(k) {
+            bi_list[[bset[k]]]$marker_value[f_of[k]]
+          }, numeric(1L)))
+          loose_k <- var_k
+        } else {
+          if (length(var_k) == 0L) {
+            return(NULL) # unanchored: the estimation stops on this
+          }
+          ratios <- vapply(var_k, function(k) {
+            b <- bset[k]
+            f <- f_of[k]
+            bi_list[[b]]$st$psi[f, f] / bi_list[[b]]$scale_target[f]
+          }, numeric(1L))
+          if (any(ratios <= 0)) {
+            return(NULL)
+          }
+          s <- sqrt(mean(ratios))
+          ds_row <- numeric(m_total)
+          for (k in var_k) {
+            b <- bset[k]
+            f <- f_of[k]
+            ds_row <- ds_row +
+              bi_list[[b]]$st$dpsi[
+                pidx(f, f, bi_list[[b]]$nfac), ] /
+              bi_list[[b]]$scale_target[f]
+          }
+          ds_row <- ds_row / (length(var_k) * 2 * s)
+          loose_k <- if (length(var_k) > 1L) var_k else integer(0L)
+        }
+        for (k in loose_k) {
+          psi_pin_loose[[bset[k]]] <-
+            c(psi_pin_loose[[bset[k]]], f_of[k])
+        }
+        if (s == 1 && is.null(ds_row)) {
+          next
+        }
+        # apply to every block in the component
+        for (k in seq_along(bset)) {
+          b <- bset[k]
+          f <- f_of[k]
+          bi <- bi_list[[b]]
+          nvar <- bi$nvar
+          nfac <- bi$nfac
+          st <- bi$st
+          col_cells <- (f - 1L) * nvar + seq_len(nvar)
+          old_col <- st$lam[, f]
+          st$lam[, f] <- old_col * s
+          if (is.null(ds_row)) {
+            st$dlam[col_cells, ] <- st$dlam[col_cells, , drop = FALSE] * s
+          } else {
+            st$dlam[col_cells, ] <-
+              st$dlam[col_cells, , drop = FALSE] * s +
+              outer(old_col, ds_row)
+          }
+          for (g in seq_len(nfac)) {
+            pp <- pidx(f, g, nfac)
+            sfg <- if (g == f) s * s else s
+            old_val <- st$psi[f, g]
+            new_val <- old_val / sfg
+            st$psi[f, g] <- st$psi[g, f] <- new_val
+            if (is.null(ds_row)) {
+              st$dpsi[pp, ] <- st$dpsi[pp, ] / sfg
+            } else {
+              mult <- if (g == f) 2 else 1
+              st$dpsi[pp, ] <- st$dpsi[pp, ] / sfg -
+                (new_val * mult / s) * ds_row
+            }
+          }
+          bi_list[[b]]$st <- st
+        }
+      }
+    }
+  }
+
+  # --------------------------------------------------------------------
+  # restricted PSI fit: implicit function theorem at the ML optimum
+  # --------------------------------------------------------------------
+  psi_ids_vec <- unlist(lapply(bi_list, function(bi) {
+    bi$psi_id[upper.tri(bi$psi_id, diag = TRUE) & bi$psi_id > 0L]
+  }))
+  psi_restricted <- any(duplicated(psi_ids_vec)) ||
+    any(vapply(seq_len(nblocks), function(b) {
+      length(psi_pin_loose[[b]]) > 0L
+    }, logical(1L))) ||
+    any(vapply(bi_list, function(bi) {
+      bi$nfac > 1L && any(bi$psi_id[upper.tri(bi$psi_id)] == 0L)
+    }, logical(1L)))
+  if (psi_restricted) {
+    ids <- sort(unique(psi_ids_vec))
+    id_list <- lapply(bi_list, function(bi) {
+      matrix(match(bi$psi_id, ids, nomatch = 0L),
+             bi$nfac, bi$nfac)
+    })
+    pin_list <- lapply(bi_list, "[[", "psi_pin")
+    for (b in seq_len(nblocks)) {
+      for (f in psi_pin_loose[[b]]) {
+        id_list[[b]][f, f] <- 0L
+        pin_list[[b]][f, f] <- bi_list[[b]]$scale_target[f]
+      }
+    }
+    nid <- length(ids)
+    w_fit <- vapply(bi_list, "[[", numeric(1L), "nobs")
+    w_fit <- w_fit / sum(w_fit)
+    if (nid > 0L) {
+      # replicate the fit (also feeds the safety net through x_pred)
+      x0fit <- vapply(seq_len(nid), function(k) {
+        vals <- numeric(0L)
+        for (b in seq_len(nblocks)) {
+          hit <- which(id_list[[b]] == k)
+          if (length(hit) > 0L) {
+            vals <- c(vals, bi_list[[b]]$st$psi[hit])
+          }
+        }
+        mean(vals)
+      }, numeric(1L))
+      xfit <- lav_cfa_mgm_psi_fit(
+        veta = lapply(bi_list, function(bi) bi$st$psi),
+        id = id_list, pin = pin_list, w = w_fit, x0 = x0fit
+      )
+      # IFT: H dx = -(dg/dV) dV, with
+      # g_k = sum_b w_b tr[(Psi^-1 - Psi^-1 V Psi^-1) E_k]
+      psi_hat <- vector("list", nblocks)
+      psi_hat_inv <- vector("list", nblocks)
+      for (b in seq_len(nblocks)) {
+        ph <- pin_list[[b]]
+        idx <- which(id_list[[b]] > 0L)
+        ph[idx] <- xfit[id_list[[b]][idx]]
+        ch <- try(chol(ph), silent = TRUE)
+        if (inherits(ch, "try-error")) {
+          return(NULL)
+        }
+        psi_hat[[b]] <- ph
+        psi_hat_inv[[b]] <- chol2inv(ch)
+      }
+      h_mat <- lav_cfa_mgm_psi_fit_hessian(
+        x = xfit, veta = lapply(bi_list, function(bi) bi$st$psi),
+        id = id_list, pin = pin_list, w = w_fit
+      )
+      dg <- matrix(0, nrow = nid, ncol = m_total)
+      for (b in seq_len(nblocks)) {
+        nfac <- bi_list[[b]]$nfac
+        pinv <- psi_hat_inv[[b]]
+        for (k in seq_len(nid)) {
+          ek <- matrix(0, nfac, nfac)
+          ek[id_list[[b]] == k] <- 1
+          if (all(ek == 0)) {
+            next
+          }
+          a_k <- pinv %*% ek %*% pinv
+          # dg_k over the moments: -w_b tr[A_k dV_b]
+          for (f in seq_len(nfac)) {
+            for (g in seq_len(f)) {
+              mult <- if (f == g) 1 else 2
+              dg[k, ] <- dg[k, ] - w_fit[b] * mult * a_k[f, g] *
+                bi_list[[b]]$st$dpsi[pidx(f, g, nfac), ]
+            }
+          }
+        }
+      }
+      dxfit <- try(-solve(h_mat, dg), silent = TRUE)
+      if (inherits(dxfit, "try-error")) {
+        return(NULL)
+      }
+      # write the fitted psi (values + rows) back into the blocks
+      for (b in seq_len(nblocks)) {
+        nfac <- bi_list[[b]]$nfac
+        st <- bi_list[[b]]$st
+        st$psi <- psi_hat[[b]]
+        for (f in seq_len(nfac)) {
+          for (g in seq_len(f)) {
+            k <- id_list[[b]][f, g]
+            st$dpsi[pidx(f, g, nfac), ] <- if (k > 0L) {
+              dxfit[k, ]
+            } else {
+              0
+            }
+          }
+        }
+        bi_list[[b]]$st <- st
+      }
+      # keep track of the fitted values for the safety net
+      x_pred[ids] <- xfit
+    } else {
+      # PSI completely fixed
+      for (b in seq_len(nblocks)) {
+        st <- bi_list[[b]]$st
+        st$psi <- pin_list[[b]]
+        st$dpsi[] <- 0
+        bi_list[[b]]$st <- st
+      }
+    }
+    # refresh the cross-loading thetas (they depend on PSI)
+    for (b in seq_len(nblocks)) {
+      bi <- bi_list[[b]]
+      if (length(bi$cross_idx) == 0L) {
+        next
+      }
+      st <- bi$st
+      nfac <- bi$nfac
+      cc <- co$cov_vech[[b]]
+      vpos_b <- function(i, j) {
+        (j - 1L) * bi$nvar - ((j - 1L) * j) %/% 2L + i
+      }
+      for (i in bi$cross_idx) {
+        lam_i <- st$lam[i, ]
+        pl <- drop(st$psi %*% lam_i)
+        st$theta[i] <- bi$s_use[i, i] - sum(lam_i * pl)
+        row <- numeric(m_total)
+        row[cc[vpos_b(i, i)]] <- 1
+        for (f in seq_len(nfac)) {
+          row <- row - 2 * pl[f] * st$dlam[(f - 1L) * bi$nvar + i, ]
+          for (g in seq_len(f)) {
+            mult <- if (f == g) 1 else 2
+            row <- row - mult * lam_i[f] * lam_i[g] *
+              st$dpsi[pidx(f, g, nfac), ]
+          }
+        }
+        st$dth[i, ] <- row
+      }
+      bi_list[[b]]$st <- st
+    }
+  }
+
+  # --------------------------------------------------------------------
+  # write the stage-1 rows into dx (+ predicted values)
+  # --------------------------------------------------------------------
+  for (b in seq_len(nblocks)) {
+    bi <- bi_list[[b]]
+    st <- bi$st
+    nvar <- bi$nvar
+    nfac <- bi$nfac
+    for (r in seq_along(bi$lam_pt_idx)) {
+      cell <- (bi$lam_fac[r] - 1L) * nvar + bi$lam_ov[r]
+      dx[free[bi$lam_pt_idx[r]], ] <- st$dlam[cell, ]
+      x_pred[free[bi$lam_pt_idx[r]]] <- st$lam[cell]
+    }
+    if (length(bi$th_pt_idx) > 0L) {
+      th_ov <- match(lavpartable$lhs[bi$th_pt_idx], bi$ov_names)
+      dx[free[bi$th_pt_idx], ] <- st$dth[th_ov, , drop = FALSE]
+      x_pred[free[bi$th_pt_idx]] <- st$theta[th_ov]
+    }
+    if (length(bi$psi_rows_pt) > 0L) {
+      pf <- match(lavpartable$lhs[bi$psi_rows_pt], bi$lv_names)
+      pg <- match(lavpartable$rhs[bi$psi_rows_pt], bi$lv_names)
       for (r in seq_along(bi$psi_rows_pt)) {
-        f <- psi_f[r]
-        g <- psi_g[r]
-        e_f <- bi$cell_of[bi$marker_idx[f], f]
-        e_g <- bi$cell_of[bi$marker_idx[g], g]
-        wxf <- bi$wx[bi$marker_idx[f], f]
-        wxg <- bi$wx[bi$marker_idx[g], g]
-        tff <- bi$t_mat[f, f]
-        tgg <- bi$t_mat[g, g]
-        tfg <- bi$t_mat[f, g]
-        dwxf <- bi$dlstar[e_f, ] * sqrt(tff) +
-          0.5 * (wxf / tff) * bi$dt_rows[[(f - 1L) * nfac + f]]
-        dwxg <- bi$dlstar[e_g, ] * sqrt(tgg) +
-          0.5 * (wxg / tgg) * bi$dt_rows[[(g - 1L) * nfac + g]]
-        aa <- wxf * wxg / (tff * tgg)
-        psi_val <- tfg * aa
-        drow <- bi$dt_rows[[(f - 1L) * nfac + g]] * aa +
-          tfg * ((dwxf * wxg + wxf * dwxg) / (tff * tgg) -
-                 aa * (bi$dt_rows[[(f - 1L) * nfac + f]] / tff +
-                       bi$dt_rows[[(g - 1L) * nfac + g]] / tgg))
-        dx[free[bi$psi_rows_pt[r]], ] <- drow
-        x_pred[free[bi$psi_rows_pt[r]]] <- psi_val
+        if (free[bi$psi_rows_pt[r]] == 0L) {
+          next
+        }
+        pp <- pidx(pf[r], pg[r], nfac)
+        dx[free[bi$psi_rows_pt[r]], ] <- st$dpsi[pp, ]
+        x_pred[free[bi$psi_rows_pt[r]]] <- st$psi[pf[r], pg[r]]
       }
     }
   }
@@ -880,8 +1523,6 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
       if (length(fu_b) == 0L) {
         next
       }
-      # this block's own solution (shared undirected parameters are
-      # overwritten by later blocks in the point estimation)
       theta2_b <- as.numeric(lav_sem_miiv_varcov_block(
         b = b, fu = fu_b, delta_b = delta_list0[[b]],
         implied = implied0, lavmodel = lavmodel, x = x0,
