@@ -48,7 +48,16 @@ lav_step05_samp <- function(slot_sample_stats = NULL,
       cat("lavsamplestats ...")
     }
     # check if we have sample_mean and meanstructure = TRUE
-    if (lavoptions$meanstructure && is.null(sample_mean)) {
+    # exception: a FULL correlation structure implies standardized
+    # (centered) variables, so zero means are the exact metric convention,
+    # not an assumption -- no warning needed (typically triggered by
+    # conditional.x = TRUE, which forces meanstructure = TRUE); for a
+    # partial structure the warning stays: the non-listed variables keep
+    # their original (nonzero) means, which only sample_mean= can supply
+    correlation_full <- isTRUE(lavoptions$correlation) &&
+      length(lavoptions$.correlation.ov) == 0L
+    if (lavoptions$meanstructure && is.null(sample_mean) &&
+        !correlation_full) {
       lav_msg_warn(
         gettext("sample_mean= argument is missing, but model contains
                 mean/intercept parameters."))
