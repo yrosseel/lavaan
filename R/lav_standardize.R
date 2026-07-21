@@ -675,6 +675,24 @@ lav_standardize_all <- function(lavobject = NULL,
       partable$block == g)
     out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
+    # D-augmented ML correlation mode (FREE ~*~ scales): the intercepts
+    # live in the ORIGINAL metric (the implied mean is not rescaled by
+    # the ~*~ scales), while VY is in the unit-diagonal P metric -- so
+    # the "~1" rows are divided by the ~*~ scales as well. (Using the
+    # est values keeps the delta-method standard errors consistent.)
+    if (!lavmodel@categorical && length(idx) > 0L &&
+        lav_model_delta_free(lavmodel)) {
+      scl_idx <- which(partable$op == "~*~" & partable$block == g &
+        partable$lhs == partable$rhs)
+      if (length(scl_idx) > 0L) {
+        m2 <- match(partable$lhs[idx], partable$lhs[scl_idx])
+        ok2 <- which(!is.na(m2))
+        if (length(ok2) > 0L) {
+          out[idx[ok2]] <- out[idx[ok2]] / est[scl_idx][m2[ok2]]
+        }
+      }
+    }
+
     # 4b. "~1" lv -> handled in std.lv
 
     # 4c. "|" thresholds

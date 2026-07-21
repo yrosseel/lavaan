@@ -260,9 +260,6 @@ lav_step02_options <- function(slot_options = NULL,
     }
     if (!is.null(group) && is.null(dotdotdot$meanstructure)) {
       opt$meanstructure <- TRUE
-      # marker: only auto-enabled (multiple groups); lav_options_set()
-      # may quietly undo this in the D-augmented ML correlation mode
-      opt$.meanstructure.auto <- TRUE
     }
 
     # composites marker: the D-augmented ML correlation mode has no

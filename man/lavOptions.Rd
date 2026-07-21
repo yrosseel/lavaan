@@ -98,11 +98,13 @@ Model features:
      statistic are identical whether the input is raw data, a
      covariance matrix, or a correlation matrix. The other ML-family
      estimators (\code{"MLM"}, \code{"MLR"}, \ldots) work the same way
-     (raw data needed). The ML route requires single-level, complete
-     data, \code{conditional.x = FALSE}, no composites and no
-     meanstructure; in all other settings, a defaulted estimator
-     quietly falls back to GLS. Estimator WLS (= ADF weights in the
-     correlation metric) covers the non-normal case.
+     (raw data needed). A meanstructure is supported: the (saturated)
+     intercepts live in the original metric and do not affect the
+     correlation structure. The ML route requires single-level,
+     complete data, \code{conditional.x = FALSE} and no composites; in
+     all other settings, a defaulted estimator quietly falls back to
+     GLS. Estimator WLS (= ADF weights in the correlation metric)
+     covers the non-normal case.
      Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
      latter affects the way the standard errors are computed), and (since

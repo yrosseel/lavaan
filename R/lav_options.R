@@ -1653,13 +1653,11 @@ lav_options_set <- function(opt = NULL) {
     # do not depend on the scaling of the input). Since 0.7-1 this is
     # also the DEFAULT route: when the estimator is left unspecified,
     # we only fall back to GLS (quietly) for settings the
-    # D-augmentation does not support (yet): composites, or an
-    # explicitly requested meanstructure.
+    # D-augmentation does not support (yet): composites.
     correlation_ml_ok <- !opt$conditional.x && opt$missing == "listwise"
     if (estimator_default) {
       correlation_ml_ok <- correlation_ml_ok &&
-        !isTRUE(opt$.flat.composites) &&
-        !(opt$meanstructure && !isTRUE(opt$.meanstructure.auto))
+        !isTRUE(opt$.flat.composites)
     }
     if (lav_options_estimatorgroup(opt$estimator) == "ML" &&
         correlation_ml_ok) {
@@ -1709,22 +1707,11 @@ lav_options_set <- function(opt = NULL) {
         "correlation structures only work for representation = \"LISREL\"."
       ))
     }
-    # D-augmented ML: no meanstructure support (yet). When the
-    # meanstructure was only auto-enabled (multiple groups; see the
-    # .meanstructure.auto marker in the step02 wrapper), quietly switch
-    # it off again: the means are saturated and carry no information
-    # about the correlation structure. An explicit request is an error.
-    if (opt$.correlation.ml && isTRUE(opt$meanstructure)) {
-      if (isTRUE(opt$.meanstructure.auto)) {
-        opt$meanstructure <- FALSE
-      } else {
-        lav_msg_stop(gettext(
-          "meanstructure = TRUE is not supported (yet) for correlation
-          structures with an ML-family estimator; use estimator =
-          \"GLS\"."
-        ))
-      }
-    }
+    # D-augmented ML + meanstructure (supported since 0.7-2): the means
+    # live in the ORIGINAL (raw) metric -- the implied mean nu +
+    # Lambda (I-B)^-1 alpha is NOT rescaled by the free ~*~ scales, so
+    # the (saturated) intercepts simply absorb the sample means and the
+    # correlation structure is unaffected.
   }
 
   # sample.cov.robust
