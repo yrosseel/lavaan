@@ -100,11 +100,16 @@ Model features:
      estimators (\code{"MLM"}, \code{"MLR"}, \ldots) work the same way
      (raw data needed). A meanstructure is supported: the (saturated)
      intercepts live in the original metric and do not affect the
-     correlation structure. The ML route requires single-level,
-     complete data, \code{conditional.x = FALSE} and no composites; in
-     all other settings, a defaulted estimator quietly falls back to
-     GLS. Estimator WLS (= ADF weights in the correlation metric)
-     covers the non-normal case.
+     correlation structure. \code{missing = "ml"} (FIML) is supported
+     as well: the pattern-based likelihood simply consumes the
+     augmented moments, so correlation structures can be fit to
+     incomplete data by full-information maximum likelihood (use
+     \code{estimator = "MLR"} for sandwich standard errors under
+     MAR). The ML route requires single-level data,
+     \code{conditional.x = FALSE} and no composites; in all other
+     settings, a defaulted estimator quietly falls back to GLS.
+     Estimator WLS (= ADF weights in the correlation metric) covers
+     the non-normal case.
      Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
      latter affects the way the standard errors are computed), and (since

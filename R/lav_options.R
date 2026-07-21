@@ -1654,7 +1654,11 @@ lav_options_set <- function(opt = NULL) {
     # also the DEFAULT route: when the estimator is left unspecified,
     # we only fall back to GLS (quietly) for settings the
     # D-augmentation does not support (yet): composites.
-    correlation_ml_ok <- !opt$conditional.x && opt$missing == "listwise"
+    # missing = "ml" (FIML) is supported on the ML route (since 0.7-2):
+    # the casewise/pattern likelihood simply consumes the D-augmented
+    # implied moments Sigma = Delta P(theta) Delta and Mu
+    correlation_ml_ok <- !opt$conditional.x &&
+      any(opt$missing == c("listwise", "ml"))
     if (estimator_default) {
       correlation_ml_ok <- correlation_ml_ok &&
         !isTRUE(opt$.flat.composites)
@@ -1692,9 +1696,10 @@ lav_options_set <- function(opt = NULL) {
         opt$estimator <- "gls"
       }
     }
-    if (opt$missing == "ml") {
+    if (any(opt$missing == c("ml", "ml.x")) && !opt$.correlation.ml) {
       lav_msg_stop(gettext(
-        "correlation structures only work for complete data (for now)."
+        "correlation structures with missing = \"ml\" require an
+        ML-family estimator (and missing = \"ml.x\" is not supported)."
       ))
     }
     if (opt$.multilevel) {
