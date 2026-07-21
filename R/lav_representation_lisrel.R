@@ -4199,6 +4199,21 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       sigma_chain <- sigma_chain * delta_weight
     }
 
+    # D-augmented ML mode (FREE ~*~ scales, full vech layout): the
+    # unit-diagonal completion makes diag(Sigma*) constant, so the
+    # composite chain must not reintroduce diagonal-row entries for the
+    # non-delta columns (the num_idx variables keep a free variance)
+    if (!categorical && correlation && n_del > 0L) {
+      diag_pos_c <- lav_mat_diagh_idx(nvar)
+      if (length(num_idx) > 0L) {
+        diag_pos_c <- diag_pos_c[-num_idx]
+      }
+      nondelta_cols <- setdiff(seq_len(ncol(sigma_chain)), x_delta_idx)
+      if (length(diag_pos_c) > 0L && length(nondelta_cols) > 0L) {
+        sigma_chain[diag_pos_c, nondelta_cols] <- 0
+      }
+    }
+
     # categorical / correlation layouts subset and reorder the sigma rows;
     # bring the (full-vech) chain term into the same layout
     if (!is.null(sigma_row_map)) {

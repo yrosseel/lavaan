@@ -184,6 +184,21 @@ lav_pt_ndat <- function(partable) {
                          partable$lhs %in% ov_cind &
                          partable$rhs %in% ov_cind &
                          partable$free == 0L)
+      # correlation structures: the indicator VARIANCE moments are
+      # already accounted for -- a FIXED ~*~ row subtracts them via the
+      # correlation correction below, a FREE ~*~ row (D-augmented ML)
+      # fits them -- so only the fixed indicator COVARIANCES remove a
+      # sample statistic here
+      if (correlation && !categorical && length(covar_idx) > 0L) {
+        scaled_ov <- partable$lhs[partable$op == "~*~" &
+                                  partable$block == b]
+        drop_idx <- which(partable$lhs[covar_idx] ==
+                          partable$rhs[covar_idx] &
+                          partable$lhs[covar_idx] %in% scaled_ov)
+        if (length(drop_idx) > 0L) {
+          covar_idx <- covar_idx[-drop_idx]
+        }
+      }
       ndat[b] <- ndat[b] - length(covar_idx)
     }
 

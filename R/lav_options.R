@@ -1653,7 +1653,7 @@ lav_options_set <- function(opt = NULL) {
     # do not depend on the scaling of the input). Since 0.7-1 this is
     # also the DEFAULT route: when the estimator is left unspecified,
     # we only fall back to GLS (quietly) for settings the
-    # D-augmentation does not support (yet): composites.
+    # D-augmentation does not support.
     # missing = "ml" (FIML) is supported on the ML route (since 0.7-2):
     # the casewise/pattern likelihood simply consumes the D-augmented
     # implied moments Sigma = Delta P(theta) Delta and Mu.
@@ -1664,10 +1664,6 @@ lav_options_set <- function(opt = NULL) {
     correlation_ml_ok <-
       (!opt$conditional.x && any(opt$missing == c("listwise", "ml"))) ||
       (opt$conditional.x && opt$missing == "listwise")
-    if (estimator_default) {
-      correlation_ml_ok <- correlation_ml_ok &&
-        !isTRUE(opt$.flat.composites)
-    }
     if (lav_options_estimatorgroup(opt$estimator) == "ML" &&
         correlation_ml_ok) {
       opt$.correlation.ml <- TRUE

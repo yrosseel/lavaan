@@ -100,6 +100,25 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
   # parameters): the completion then targets diag(Sigma*) = 1
   correlation_ml <- correlation && lav_model_delta_free(lavmodel)
 
+  # composites first: the derived composite quantities (variances,
+  # intercepts) feed the correlation completion below
+  if (lavmodel@composites) {
+    # for package stdmod only! (vignette stdmod_lavaan uses old fit object)
+    # if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
+    nmat <- lavmodel@nmat
+    if (lavmodel@representation == "LISREL") {
+      for (g in 1:lavmodel@nblocks) {
+        # which mm belong to group g?
+        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+
+        tmp[mm_in_group] <-
+          lav_lisrel_comp_set_intresvar(mlist = tmp[mm_in_group])
+      }
+    } else {
+      cat("FIXME: deal with Composites if representation = RAM")
+    }
+  }
+
   # categorical? set categorical theta elements (if any)
   if (lavmodel@categorical || correlation) {
     nmat <- lavmodel@nmat
@@ -137,23 +156,6 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
       }
     } else {
       cat("FIXME: deal with theta elements in the categorical case (RAM)")
-    }
-  }
-
-  if (lavmodel@composites) {
-    # for package stdmod only! (vignette stdmod_lavaan uses old fit object)
-    # if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
-    nmat <- lavmodel@nmat
-    if (lavmodel@representation == "LISREL") {
-      for (g in 1:lavmodel@nblocks) {
-        # which mm belong to group g?
-        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
-
-        tmp[mm_in_group] <-
-          lav_lisrel_comp_set_intresvar(mlist = tmp[mm_in_group])
-      }
-    } else {
-      cat("FIXME: deal with Composites if representation = RAM")
     }
   }
 
@@ -219,6 +221,23 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
   #        }
   #    }
 
+  # composites first: the derived composite quantities feed the
+  # correlation completion below
+  if (lavmodel@composites) {
+    nmat <- lavmodel@nmat
+    if (lavmodel@representation == "LISREL") {
+      for (g in 1:lavmodel@nblocks) {
+        # which mm belong to group g?
+        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+
+        glist[mm_in_group] <-
+          lav_lisrel_comp_set_intresvar(mlist = glist[mm_in_group])
+      }
+    } else {
+      cat("FIXME: deal with Composites when representation = RAM")
+    }
+  }
+
   # in 0.6-13: we always set theta/delta
   if ((lavmodel@categorical || correlation) && set_delta) {
     nmat <- lavmodel@nmat
@@ -247,21 +266,6 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
       } # blocks
     } else {
       cat("FIXME: deal with theta elements in the categorical case (RAM)")
-    }
-  }
-
-  if (lavmodel@composites) {
-    nmat <- lavmodel@nmat
-    if (lavmodel@representation == "LISREL") {
-      for (g in 1:lavmodel@nblocks) {
-        # which mm belong to group g?
-        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
-
-        glist[mm_in_group] <-
-          lav_lisrel_comp_set_intresvar(mlist = glist[mm_in_group])
-      }
-    } else {
-      cat("FIXME: deal with Composites when representation = RAM")
     }
   }
 

@@ -111,12 +111,15 @@ Model features:
      scales are free \code{~*~} parameters, and the unit-variance
      constraint applies to the marginal variances; the result is
      identical (same conditional likelihood) to the joint
-     \code{fixed.x = TRUE} analysis. The ML route requires
-     single-level data and no composites (and \code{missing = "ml"}
-     requires \code{conditional.x = FALSE}); in all other settings, a
-     defaulted estimator quietly falls back to GLS. Estimator WLS (=
-     ADF weights in the correlation metric) covers the non-normal
-     case.
+     \code{fixed.x = TRUE} analysis. Composite models (the \code{<~}
+     operator) are supported as well (since 0.7-2, on both the ML and
+     the GLS route): the composite-indicator covariances are fixed in
+     the correlation metric, and the indicator variances are absorbed
+     by the \code{~*~} scales. The ML route requires single-level data
+     (and \code{missing = "ml"} requires \code{conditional.x =
+     FALSE}); in all other settings, a defaulted estimator quietly
+     falls back to GLS. Estimator WLS (= ADF weights in the
+     correlation metric) covers the non-normal case.
      Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
      latter affects the way the standard errors are computed), and (since
