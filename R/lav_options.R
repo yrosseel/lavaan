@@ -256,8 +256,8 @@ lav_options_set <- function(opt = NULL) {
 
   # first of all: set estimator ####
   # (remember whether the user chose the estimator explicitly; the
-  #  correlation block below silently switches a *defaulted* ML to GLS,
-  #  but warns when the user asked for ML)
+  #  correlation block below quietly falls back to GLS when a *defaulted*
+  #  ML cannot handle the setting, but warns when the user asked for ML)
   estimator_default <- (opt$estimator == "default")
   if (opt$estimator == "default") {
     if (opt$.categorical) {
@@ -1642,7 +1642,7 @@ lav_options_set <- function(opt = NULL) {
   # correlation
   opt$.correlation.ml <- FALSE
   if (opt$correlation) {
-    # an EXPLICIT ML-family estimator (single level, complete data,
+    # an ML-family estimator (single level, complete data,
     # conditional.x = FALSE) uses the D-augmentation: the covariance
     # model Sigma = Delta P(theta) Delta with FREE scale parameters
     # Delta (the ~*~ rows) and unit-diagonal P, fit by ordinary
@@ -1650,11 +1650,19 @@ lav_options_set <- function(opt = NULL) {
     # likelihood (also when sample.cov is a correlation matrix: the
     # augmented model is exactly scale-equivariant, so the
     # correlation-metric estimates, standard errors and test statistic
-    # do not depend on the scaling of the input). When the estimator is
-    # left at its default, GLS remains the default (as before).
+    # do not depend on the scaling of the input). Since 0.7-1 this is
+    # also the DEFAULT route: when the estimator is left unspecified,
+    # we only fall back to GLS (quietly) for settings the
+    # D-augmentation does not support (yet): composites, or an
+    # explicitly requested meanstructure.
+    correlation_ml_ok <- !opt$conditional.x && opt$missing == "listwise"
+    if (estimator_default) {
+      correlation_ml_ok <- correlation_ml_ok &&
+        !isTRUE(opt$.flat.composites) &&
+        !(opt$meanstructure && !isTRUE(opt$.meanstructure.auto))
+    }
     if (lav_options_estimatorgroup(opt$estimator) == "ML" &&
-        !estimator_default && !opt$conditional.x &&
-        opt$missing == "listwise") {
+        correlation_ml_ok) {
       opt$.correlation.ml <- TRUE
       # NO std.ov: the analysis runs in the original covariance metric,
       # and the free Delta parameters absorb the scales

@@ -238,9 +238,16 @@ lav_pt_ndat <- function(partable) {
     # scale parameters in the full moment space: nothing is removed (the
     # extra parameters are counted in npar instead; the df are the same).
     if (correlation && !categorical) {
-      n_cor <- sum(partable$op == "~*~" & partable$block == b &
-                   partable$free == 0L)
-      ndat[b] <- ndat[b] - n_cor
+      cor_delta <- partable$op == "~*~" & partable$block == b &
+                   partable$free == 0L
+      if (!conditional_x && fixed_x) {
+        # the fixed.x correction above already removed the full x-block
+        # (including the x variances): do not subtract the scaling rows
+        # of the x variables a second time
+        ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
+        cor_delta <- cor_delta & !(partable$lhs %in% ov_names_x)
+      }
+      ndat[b] <- ndat[b] - sum(cor_delta)
     }
 
     # correction for conditional.x not categorical

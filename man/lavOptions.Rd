@@ -88,18 +88,21 @@ Model features:
      of a (co)variance matrix). This implies that the residual observed
      variances are no longer free parameters. Instead, they are set to
      values that ensure the model-implied variances are unity. This also
-     affects the standard errors. The default estimator is GLS; WLS (=
-     ADF weights in the correlation metric) covers the non-normal case.
-     Since 0.7-2, an explicit ML-family estimator (\code{"ML"},
-     \code{"MLM"}, \code{"MLR"}, \ldots; single level, complete data,
-     \code{conditional.x = FALSE}) is also supported: the model is then
-     fit as the covariance structure \eqn{\Sigma = \Delta P(\theta)
-     \Delta} with free scale parameters \eqn{\Delta} (the \code{~*~}
-     rows in the output) and unit-diagonal \eqn{P(\theta)}, by ordinary
-     maximum likelihood in the full moment space. Because this augmented
-     model is exactly scale-equivariant, the correlation-metric
-     estimates, standard errors and test statistic are identical whether
-     the input is raw data, a covariance matrix, or a correlation matrix.
+     affects the standard errors. Since 0.7-2, the default estimator is
+     ML (before: GLS): the model is fit as the covariance structure
+     \eqn{\Sigma = \Delta P(\theta) \Delta} with free scale parameters
+     \eqn{\Delta} (the \code{~*~} rows in the output) and unit-diagonal
+     \eqn{P(\theta)}, by ordinary maximum likelihood in the full moment
+     space. Because this augmented model is exactly scale-equivariant,
+     the correlation-metric estimates, standard errors and test
+     statistic are identical whether the input is raw data, a
+     covariance matrix, or a correlation matrix. The other ML-family
+     estimators (\code{"MLM"}, \code{"MLR"}, \ldots) work the same way
+     (raw data needed). The ML route requires single-level, complete
+     data, \code{conditional.x = FALSE}, no composites and no
+     meanstructure; in all other settings, a defaulted estimator
+     quietly falls back to GLS. Estimator WLS (= ADF weights in the
+     correlation metric) covers the non-normal case.
      Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
      latter affects the way the standard errors are computed), and (since

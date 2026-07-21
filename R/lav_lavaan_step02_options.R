@@ -265,6 +265,11 @@ lav_step02_options <- function(slot_options = NULL,
       opt$.meanstructure.auto <- TRUE
     }
 
+    # composites marker: the D-augmented ML correlation mode has no
+    # composite support (yet); lav_options_set() keeps the (defaulted)
+    # estimator at GLS in that case
+    opt$.flat.composites <- any(flat_model$op == "<~")
+
     # conditional.x
     if ((is.list(ov_names_x) &&
       sum(sapply(ov_names_x, FUN = length)) == 0L) ||

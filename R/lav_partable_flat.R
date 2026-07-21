@@ -833,9 +833,16 @@ lav_pt_flat <- function(flat = NULL,
       user == 0L)
     if (correlation_delta_free) {
       # D-augmented ML: the scaling parameters are FREE scale (sd)
-      # parameters -- Sigma = Delta P(theta) Delta with unit-diagonal P
+      # parameters -- Sigma = Delta P(theta) Delta with unit-diagonal P.
+      # Exception: under fixed.x = TRUE the x-block moments are fixed at
+      # their sample values and carry no information; the exo scales are
+      # then FIXED sds (filled in later, like the other fixed-x values)
       ustart[delta_idx] <- as.numeric(NA)
       free[delta_idx] <- 1L
+      if (fixed_x) {
+        delta_x_idx <- delta_idx[lhs[delta_idx] %in% ov_names_x]
+        free[delta_x_idx] <- 0L
+      }
     } else {
       ustart[delta_idx] <- 1.0
       free[delta_idx] <- 0L

@@ -205,9 +205,11 @@ lav_start <- function(start_method = "default",
       ov_names_g <- lav_pt_vnames(lavpartable, "ov",
                                   group = group_values[g])
       ov_names_g <- unique(unlist(ov_names_g))
+      # include the FIXED (ustart = NA) scaling rows: under fixed.x =
+      # TRUE the exogenous x scales are fixed at their sample sds
       free_delta_idx <- which(lavpartable$group == group_values[g] &
         lavpartable$op == "~*~" &
-        lavpartable$free > 0L &
+        (lavpartable$free > 0L | is.na(lavpartable$ustart)) &
         lavpartable$lhs %in% ov_names_g)
       if (length(free_delta_idx) > 0L) {
         sample_sd_idx <- match(lavpartable$lhs[free_delta_idx],
