@@ -3175,6 +3175,9 @@ lav_inspect_delta_rownames <- function(
       names_var <- diag(tmp)[num_idx[[g]]]
     } else if (correlation) {
       names_cor <- lav_mat_vechru(tmp, diagonal = FALSE)
+      # partial correlation structure: the non-standardized variables
+      # keep a variance row (before the off-diagonal elements)
+      names_var <- diag(tmp)[num_idx[[g]]]
     } else {
       names_cov <- lav_mat_vechru(tmp, diagonal = TRUE)
     }
@@ -3189,6 +3192,22 @@ lav_inspect_delta_rownames <- function(
     if (conditional_x && lavmodel@nexo[g] > 0L) {
       names_pi <- apply(expand.grid(ov_names, ov_names_x), 1L,
         paste, collapse = "~")
+      # continuous single-level: the statistics are in
+      # vecr(cbind(res.int, res.slopes)) order (all coefficients of y1,
+      # then all coefficients of y2, ...), so the intercept labels are
+      # interleaved with the slope labels
+      if (!categorical && !lavmodel@multilevel) {
+        if (lavmodel@meanstructure) {
+          names_pi <- unlist(lapply(ov_names, function(v) {
+            c(paste0(v, "~1"), paste(v, ov_names_x, sep = "~"))
+          }))
+          names_mu <- character(0L)
+        } else {
+          names_pi <- unlist(lapply(ov_names, function(v) {
+            paste(v, ov_names_x, sep = "~")
+          }))
+        }
+      }
     }
 
     # th

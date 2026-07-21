@@ -420,8 +420,15 @@ lav_object_gamma <- function(lavobject = NULL,
       }
       if (recipe$correlation) {
         # (partial) correlation ADF Gamma via the delta method, as at fit
-        # time (no cluster/weights support in the leaf function)
-        cor_idx_g <- lav_gamma_recipe_cor_idx(recipe, lavdata@ov.names[[g]])
+        # time (no cluster/weights support in the leaf function); under
+        # conditional.x the data (and cor_idx) are in the JOINT [y, x]
+        # metric
+        cor_names <- if (conditional_x) {
+          c(lavdata@ov.names[[g]], lavdata@ov.names.x[[g]])
+        } else {
+          lavdata@ov.names[[g]]
+        }
+        cor_idx_g <- lav_gamma_recipe_cor_idx(recipe, cor_names)
         out[[g]] <- lav_samp_partial_cor_gamma(
           m_y = y, cor_idx = cor_idx_g,
           meanstructure = meanstructure,
@@ -448,7 +455,12 @@ lav_object_gamma <- function(lavobject = NULL,
       }
     } else {
       if (recipe$correlation) {
-        cor_idx_g <- lav_gamma_recipe_cor_idx(recipe, lavdata@ov.names[[g]])
+        cor_names <- if (conditional_x) {
+          c(lavdata@ov.names[[g]], lavdata@ov.names.x[[g]])
+        } else {
+          lavdata@ov.names[[g]]
+        }
+        cor_idx_g <- lav_gamma_recipe_cor_idx(recipe, cor_names)
         out[[g]] <- lav_samp_partial_cor_gamma_nt(
           m_cov = cov_1, cor_idx = cor_idx_g,
           meanstructure = meanstructure,
@@ -1097,19 +1109,23 @@ lav_partial_cor_jacobian <- function(m_s, cor_idx = NULL,
   j_mat
 }
 
-# conditional.x + correlation structure: the standardized CONDITIONAL moment
-# vector
+# conditional.x + (partial) correlation structure: the standardized
+# CONDITIONAL moment vector
 #   [ vecr(cbind(res.int, res.slopes))  (if meanstructure)
 #     or vecr(res.slopes)               (slopes only),
+#     diag(res.cov)[num]                (partial: non-standardized y),
 #     vech(res.cov, diagonal = FALSE) ]
 # as a smooth function of the JOINT raw moments [ mean (if meanstructure),
-# vech(S) ]: first scale all variables to unit variance, then partition into
-# (y, x) and compute the residual moments. This is the moment layout of
+# vech(S) ]: first scale the cor_idx variables to unit variance, then
+# partition into (y, x) and compute the residual moments. cor_idx (JOINT
+# indices) lists the standardized variables (NULL = all); y variables not
+# in cor_idx keep a residual-variance row. This is the moment layout of
 # lav_samp_wls_obs() for the continuous conditional.x + correlation case.
 # Every operation is complex-step safe (no crossprod/tcrossprod: those
 # conjugate complex input as of R 4.3).
 lav_cor_cond_stats <- function(stats, p = NULL,
                                x_idx = integer(0L),
+                               cor_idx = NULL,
                                meanstructure = FALSE) {
   if (meanstructure) {
     m_m <- stats[seq_len(p)]
@@ -1119,8 +1135,15 @@ lav_cor_cond_stats <- function(stats, p = NULL,
   }
   m_s <- lav_mat_vech_rev(s_vech)
 
-  # standardize all variables (full correlation structure)
+  # standardize the cor_idx variables (all, if cor_idx is NULL)
+  is_cor <- logical(p)
+  if (is.null(cor_idx)) {
+    is_cor[] <- TRUE
+  } else {
+    is_cor[cor_idx] <- TRUE
+  }
   d <- sqrt(diag(m_s))
+  d[!is_cor] <- 1
   m_r <- m_s / outer(d, d)
 
   # partition into (y, x) and compute the residual moments
@@ -1137,7 +1160,15 @@ lav_cor_cond_stats <- function(stats, p = NULL,
     out1 <- lav_mat_vecr(pi_1)
   }
 
-  c(out1, lav_mat_vech(res_cov, diagonal = FALSE))
+  # partial: the non-standardized y variables keep a residual-variance row
+  num_idx_y <- which(!is_cor[-x_idx])
+  if (length(num_idx_y) > 0L) {
+    out2 <- diag(res_cov)[num_idx_y]
+  } else {
+    out2 <- NULL
+  }
+
+  c(out1, out2, lav_mat_vech(res_cov, diagonal = FALSE))
 }
 
 # Jacobian of the conditional correlation moment vector with respect to the
@@ -1145,6 +1176,7 @@ lav_cor_cond_stats <- function(stats, p = NULL,
 # (m_mean, m_cov); complex-step differentiation of the map above
 lav_cor_cond_jacobian <- function(m_cov, m_mean = NULL,
                                   x_idx = integer(0L),
+                                  cor_idx = NULL,
                                   meanstructure = FALSE) {
   p <- nrow(m_cov)
   if (meanstructure) {
@@ -1157,7 +1189,7 @@ lav_cor_cond_jacobian <- function(m_cov, m_mean = NULL,
   }
   lav_func_jacobian_complex(
     func = function(x) {
-      lav_cor_cond_stats(x, p = p, x_idx = x_idx,
+      lav_cor_cond_stats(x, p = p, x_idx = x_idx, cor_idx = cor_idx,
                          meanstructure = meanstructure)
     },
     x = x0, fallback_simple = FALSE
@@ -1182,10 +1214,10 @@ lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
   if (conditional_x) {
     # conditional.x implies fixed.x: the x-moment rows of the joint Gamma
     # are zeroed, so only the sampling variability of the y-moments (given
-    # x) propagates through the Jacobian
+    # x) propagates through the Jacobian; cor_idx must be JOINT indices
     j_mat <- lav_cor_cond_jacobian(
       m_cov = m_s, m_mean = colMeans(m_y),
-      x_idx = x_idx, meanstructure = meanstructure
+      x_idx = x_idx, cor_idx = cor_idx, meanstructure = meanstructure
     )
     gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure,
                                  x_idx = x_idx, fixed_x = TRUE)
@@ -1211,9 +1243,10 @@ lav_samp_partial_cor_gamma_nt <- function(m_cov, cor_idx = NULL,
                                           conditional_x = FALSE,
                                           m_mean = NULL) {
   if (conditional_x) {
+    # cor_idx must be JOINT indices
     j_mat <- lav_cor_cond_jacobian(
       m_cov = m_cov, m_mean = m_mean,
-      x_idx = x_idx, meanstructure = meanstructure
+      x_idx = x_idx, cor_idx = cor_idx, meanstructure = meanstructure
     )
     gamma_full <- lav_samp_gamma_nt(m_cov = m_cov,
                                     meanstructure = meanstructure,

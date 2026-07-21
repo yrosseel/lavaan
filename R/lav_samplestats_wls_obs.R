@@ -55,6 +55,18 @@ lav_samp_wls_obs <- function(mean_g, cov_g, var_g,
       diag_1 <- FALSE
     }
     if (conditional_x) {
+      if (correlation && length(num_idx) > 0L) {
+        # partial correlation structure: the non-standardized y variables
+        # keep a residual-variance row (before the off-diagonal elements,
+        # mirroring the categorical layout above); num_idx indexes the
+        # y (res.cov) block
+        v_res <- c(
+          diag(res_cov_g)[num_idx],
+          lav_mat_vech(res_cov_g, diagonal = FALSE)
+        )
+      } else {
+        v_res <- lav_mat_vech(res_cov_g, diagonal = diag_1)
+      }
       if (meanstructure) {
         if (slopestructure) {
           # order = vec(Beta), where first row are intercepts
@@ -65,22 +77,22 @@ lav_samp_wls_obs <- function(mean_g, cov_g, var_g,
               res_int_g,
               res_slopes_g
             )),
-            lav_mat_vech(res_cov_g, diagonal = diag_1)
+            v_res
           )
         } else {
           wls_obs <- c(
             res_int_g,
-            lav_mat_vech(res_cov_g, diagonal = diag_1)
+            v_res
           )
         }
       } else {
         if (slopestructure) {
           wls_obs <- c(
             lav_mat_vecr(res_slopes_g),
-            lav_mat_vech(res_cov_g, diagonal = diag_1)
+            v_res
           )
         } else {
-          wls_obs <- lav_mat_vech(res_cov_g, diagonal = diag_1)
+          wls_obs <- v_res
         }
       }
     } else {

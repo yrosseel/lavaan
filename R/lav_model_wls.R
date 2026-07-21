@@ -56,6 +56,19 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
       }
 
       if (lavmodel@conditional.x && lavmodel@nexo[g] > 0L) {
+        if (correlation && length(num_idx[[g]]) > 0L) {
+          # partial correlation structure: the non-standardized y
+          # variables keep a residual-variance row (before the
+          # off-diagonal elements), mirroring lav_samp_wls_obs()
+          v_est <- c(
+            diag(lavimplied$res.cov[[g]])[num_idx[[g]]],
+            lav_mat_vech(lavimplied$res.cov[[g]], diagonal = FALSE)
+          )
+        } else {
+          v_est <- lav_mat_vech(lavimplied$res.cov[[g]],
+            diagonal = diag_1
+          )
+        }
         # order = vec(Beta), where first row are intercepts
         # cbind(res.int, res.slopes) is t(Beta)
         # so we need vecr
@@ -67,16 +80,12 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
                 lavimplied$res.slopes[[g]]
               )
             ),
-            lav_mat_vech(lavimplied$res.cov[[g]],
-              diagonal = diag_1
-            )
+            v_est
           )
         } else {
           wls_est <- c(
             lav_mat_vecr(lavimplied$res.slopes[[g]]),
-            lav_mat_vech(lavimplied$res.cov[[g]],
-              diagonal = diag_1
-            )
+            v_est
           )
         }
       } else {

@@ -75,7 +75,9 @@ lav_lavdata <- function(data = NULL, # data.frame
     correlation_ov <- character(0L)
   }
   if (length(correlation_ov) > 0L && !is.null(ov_names)) {
-    all_ov <- unique(unlist(ov_names))
+    # include the exogenous x variables (not part of ov_names when
+    # conditional.x = TRUE)
+    all_ov <- unique(unlist(c(ov_names, ov_names_x)))
     bad <- correlation_ov[!(correlation_ov %in% all_ov)]
     if (length(bad) > 0L) {
       lav_msg_warn(gettextf(
@@ -1203,7 +1205,17 @@ lav_data_full <- function(data = NULL, # data.frame
         # three copies are made!!!!!
       }
       if (length(exo_idx) > 0L) {
-        exo[[g]] <- scale(exo[[g]])[, , drop = FALSE]
+        if (length(correlation_ov) > 0L) {
+          # partial correlation structure: only standardize the listed
+          # exogenous variables, leave the others in their original metric
+          ex_std <- which(ov_names_x[[g]] %in% correlation_ov)
+          if (length(ex_std) > 0L) {
+            exo[[g]][, ex_std] <-
+              scale(exo[[g]][, ex_std, drop = FALSE])[, , drop = FALSE]
+          }
+        } else {
+          exo[[g]] <- scale(exo[[g]])[, , drop = FALSE]
+        }
       }
     }
 

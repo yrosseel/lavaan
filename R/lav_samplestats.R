@@ -932,9 +932,15 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       # correlation structure?
       if (correlation) {
         # which variables are scaled to unit variance? (all, or a subset
-        # for a 'partial' correlation structure)
+        # for a 'partial' correlation structure); under conditional.x the
+        # joint matrix is [y, x], so use the joint name vector
+        cor_names <- if (conditional_x) {
+          c(ov_names[[g]], ov_names_x[[g]])
+        } else {
+          ov_names[[g]]
+        }
         if (length(correlation_ov) > 0L) {
-          cor_idx <- which(ov_names[[g]] %in% correlation_ov)
+          cor_idx <- which(cor_names %in% correlation_ov)
         } else {
           cor_idx <- seq_len(ncol(cov[[g]]))
         }
@@ -1037,9 +1043,14 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         mean_x[[g]] <- colMeans(exo[[g]])
       }
       # correlation structure: keep cov.x consistent with the standardized
-      # joint matrix (exact unit diagonal)
+      # joint matrix (exact unit diagonal for the standardized x variables)
       if (correlation && conditional_x && !categorical) {
-        cov_x[[g]] <- cov2cor(cov_x[[g]])
+        cx_idx <- if (length(correlation_ov) > 0L) {
+          which(ov_names_x[[g]] %in% correlation_ov)
+        } else {
+          seq_len(ncol(cov_x[[g]]))
+        }
+        cov_x[[g]] <- lav_cov2cor_partial(cov_x[[g]], cx_idx)
       }
     }
 
@@ -1089,8 +1100,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           # fixed.x); cor_idx lists the unit-variance variables (all, unless
           # a subset was requested via correlation = c(...)); under
           # conditional.x, y is the joint (y, x) data and the Gamma lives in
-          # the standardized conditional metric
-          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
+          # the standardized conditional metric (JOINT cor_idx)
+          cor_names <- if (conditional_x) {
+            c(ov_names[[g]], ov_names_x[[g]])
+          } else {
+            ov_names[[g]]
+          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, cor_names)
           nacov[[g]] <- lav_samp_partial_cor_gamma(
             m_y = y, cor_idx = cor_idx_g,
             meanstructure = meanstructure,
@@ -1169,8 +1185,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           }
       if (correlation) {
             # (partial) correlation ADF Gamma via the delta method (handles
-            # fixed.x and conditional.x)
-            cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
+            # fixed.x and conditional.x; JOINT cor_idx under conditional.x)
+            cor_names <- if (conditional_x) {
+              c(ov_names[[g]], ov_names_x[[g]])
+            } else {
+              ov_names[[g]]
+            }
+            cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, cor_names)
             nacov[[g]] <- lav_samp_partial_cor_gamma(
               m_y = y, cor_idx = cor_idx_g,
               meanstructure = meanstructure,
@@ -1272,7 +1293,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (estimator == "DLS" && dls_gamma_nt == "sample" && dls_a < 1.0) {
         # compute GammaNT here
         if (correlation) {
-          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
+          cor_names <- if (conditional_x) {
+            c(ov_names[[g]], ov_names_x[[g]])
+          } else {
+            ov_names[[g]]
+          }
+          cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, cor_names)
           gamma_nt <- lav_samp_partial_cor_gamma_nt(
             m_cov         = cov[[g]],
             cor_idx       = cor_idx_g,
@@ -1314,8 +1340,14 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           m_cov         = cov[[g]],
           m_mean        = mean[[g]],
           m_icov        = icov[[g]],
-          cor_idx       = lav_gamma_recipe_cor_idx(gamma_recipe,
-                                                   ov_names[[g]]),
+          cor_idx       = lav_gamma_recipe_cor_idx(
+            gamma_recipe,
+            if (conditional_x) {
+              c(ov_names[[g]], ov_names_x[[g]])
+            } else {
+              ov_names[[g]]
+            }
+          ),
           correlation   = correlation,
           x_idx         = x_idx[[g]],
           fixed_x       = fixed_x,
@@ -1897,13 +1929,16 @@ lav_samp_from_moments <- function(sample_cov = NULL,
     }
 
     # extract only the part we need (using ov.names)
+    joint_names_g <- NULL
     if (conditional_x && conditional_x_joint) {
-      # joint sample.cov: reorder as [y, x] (x last), matching the joint
-      # layout of lav_samp_from_data() under conditional.x
-      idx <- match(c(
+      # joint sample.cov: reorder as [y, x] (x last, in ov.names.x order),
+      # matching the joint layout of lav_samp_from_data() under
+      # conditional.x
+      joint_names_g <- c(
         ov_names[[g]][-x_idx[[g]]],
-        ov_names[[g]][x_idx[[g]]]
-      ), cov_names)
+        ov_names_x[[g]]
+      )
+      idx <- match(joint_names_g, cov_names)
       x_idx[[g]] <- length(ov_names[[g]]) - nexo + seq_len(nexo)
     } else if (conditional_x) {
       idx <- match(ov_names[[g]][-x_idx[[g]]], cov_names)
@@ -2033,10 +2068,15 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
         # correlation structure: standardize the JOINT matrix first (the
         # residual moments then live in the correlation metric; note that
-        # the diagonal of res.cov is 1 - R^2, NOT 1)
+        # the diagonal of res.cov is 1 - R^2, NOT 1); for a partial
+        # correlation structure only the listed variables are standardized
         if (correlation) {
-          cov[[g]] <- lav_cov2cor_partial(cov[[g]],
-                                          seq_len(ncol(cov[[g]])))
+          if (length(correlation_ov) > 0L) {
+            cor_idx <- which(joint_names_g %in% correlation_ov)
+          } else {
+            cor_idx <- seq_len(ncol(cov[[g]]))
+          }
+          cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
           var[[g]] <- diag(cov[[g]])
         }
 
@@ -2185,7 +2225,13 @@ lav_samp_from_moments <- function(sample_cov = NULL,
       categorical = categorical, conditional_x = conditional_x,
       meanstructure = meanstructure, correlation = correlation,
       num_idx = if (correlation && length(correlation_ov) > 0L) {
-        which(!(ov_names[[g]] %in% correlation_ov))
+        if (conditional_x) {
+          # y (res.cov) block indices
+          y_names_g <- ov_names[[g]][!ov_names[[g]] %in% ov_names_x[[g]]]
+          which(!(y_names_g %in% correlation_ov))
+        } else {
+          which(!(ov_names[[g]] %in% correlation_ov))
+        }
       } else {
         integer(0L)
       },
@@ -2207,14 +2253,20 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         #    if(mimic == "Mplus") { # is this a bug in Mplus?
         #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
         #    }
+        cor_names <- if (conditional_x && !is.null(joint_names_g)) {
+          # joint [y, x] metric
+          joint_names_g
+        } else {
+          ov_names[[g]]
+        }
         wls_v[[g]] <- lav_samp_wls_v_nt_g(
           m_cov         = cov[[g]],
           m_mean        = mean[[g]],
           m_icov        = icov[[g]],
           cor_idx       = if (length(correlation_ov) > 0L) {
-            which(ov_names[[g]] %in% correlation_ov)
+            which(cor_names %in% correlation_ov)
           } else {
-            seq_along(ov_names[[g]])
+            seq_along(cor_names)
           },
           correlation   = correlation,
           x_idx         = x_idx[[g]],

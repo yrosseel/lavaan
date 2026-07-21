@@ -95,17 +95,19 @@ Model features:
      latter affects the way the standard errors are computed), and (since
      0.7-2) also \code{conditional.x = TRUE}: the exogenous covariates are
      then standardized along with the outcomes, the input
-     \code{sample.cov} (if used) must be the joint correlation matrix
-     including the x-variables, and the unit-variance constraint applies
-     to the marginal (not the residual) variances of the outcomes.
+     \code{sample.cov} (if used) must be the joint (correlation or
+     covariance) matrix including the x-variables (it is standardized
+     internally), and the unit-variance constraint applies to the
+     marginal (not the residual) variances of the outcomes.
      Alternatively, \code{correlation} may be a character vector of
      (observed) variable names (for example
      \code{correlation = c("x1", "x2", "x3")}). In that case only the
      listed variables are standardized to unit variance (their residual
      variances are fixed accordingly), while all remaining observed
      variables keep their original metric (a 'partial' correlation
-     structure; not available (yet) in combination with
-     \code{conditional.x = TRUE}). If the model contains observed product (interaction)
+     structure). This also works with \code{conditional.x = TRUE}: the
+     listed exogenous variables are standardized along with the listed
+     outcomes, and non-listed outcomes keep a free (residual) variance. If the model contains observed product (interaction)
      terms (for example \code{x1:y1}) and \code{correlation = TRUE},
      the product terms are automatically excluded from the correlation
      set: the product of standardized variables does not have unit
