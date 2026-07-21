@@ -180,22 +180,60 @@ lav_model_est <- function(lavmodel = NULL,
         cov_x = lavsamplestats@cov.x
       )
     } else {
-      # needs good estimates for lv variances!
-      # if there is a single 'marker' indicator, we could use
-      # its observed variance as an upper bound
-
-      # for the moment, set them to 1.0 (instead of 0.05)
-
-      # TODO: USE Bentler's 1982 approach to get an estimate of
-      # VETA; use those diagonal elements...
-      # but only if we have 'marker' indicators for each LV
+      # needs good estimates for lv variances! under the marker
+      # (fixed-1 loading) convention, a latent variable inherits the
+      # SCALE of its marker indicator, so the marker's observed
+      # variance is the right order of magnitude (an upper bound);
+      # higher-order factors follow their marker chain; lv's without a
+      # marker fall back to 1.0 (the old guess -- which used to be
+      # applied to ALL lv's, making the scaling factors useless
+      # whenever the marker variables were far from unit variance)
       lv_var <- vector("list", lavmodel@ngroups)
+      group_values <- lav_pt_group_values(lavpartable)
       for (g in seq_len(lavmodel@ngroups)) {
         mm_in_group <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
         mlist <- lavmodel@GLIST[mm_in_group]
         mm_lambda <- mlist$lambda
         n_lv <- ncol(mm_lambda)
         lv_var[[g]] <- rep(1.0, n_lv)
+        lv_names_g <- lav_pt_vnames(lavpartable, "lv",
+                                    group = group_values[g])
+        lv_names_g <- unique(unlist(lv_names_g))
+        ov_names_g <- lav_pt_vnames(lavpartable, "ov",
+                                    group = group_values[g])
+        ov_names_g <- unique(unlist(ov_names_g))
+        if (length(lv_names_g) > 0L && n_lv > 0L) {
+          s2 <- setNames(rep(NA_real_, length(lv_names_g)), lv_names_g)
+          # a few passes to resolve higher-order marker chains
+          for (rep_i in 1:4) {
+            for (l in lv_names_g) {
+              if (!is.na(s2[[l]])) next
+              m_idx <- which(lavpartable$op == "=~" &
+                lavpartable$lhs == l &
+                lavpartable$group == group_values[g] &
+                lavpartable$free == 0L &
+                !is.na(lavpartable$ustart) &
+                lavpartable$ustart != 0)
+              if (length(m_idx) == 0L) next
+              mk <- lavpartable$rhs[m_idx[1]]
+              if (mk %in% ov_names_g) {
+                pos <- match(mk, ov_names_g)
+                if (!is.na(pos) && pos <= length(ov_var[[g]])) {
+                  s2[[l]] <- ov_var[[g]][pos]
+                }
+              } else if (mk %in% lv_names_g && !is.na(s2[[mk]])) {
+                s2[[l]] <- s2[[mk]]
+              }
+            }
+            if (!anyNA(s2)) break
+          }
+          s2[is.na(s2)] <- 1.0
+          pos <- match(lv_names_g, colnames(mm_lambda))
+          ok_pos <- which(!is.na(pos))
+          if (length(ok_pos) > 0L) {
+            lv_var[[g]][pos[ok_pos]] <- s2[ok_pos]
+          }
+        }
       }
 
       parscale <- lav_standardize_all(
@@ -211,12 +249,12 @@ lav_model_est <- function(lavmodel = NULL,
       )
     }
 
-    # in addition, take sqrt for variance parameters
-    var_idx <- which(lavpartable$op == "~~" &
-      lavpartable$lhs == lavpartable$rhs)
-    if (length(var_idx) > 0L) {
-      parscale[var_idx] <- sqrt(abs(parscale[var_idx]))
-    }
+    # note: up to 0.7-1, the variance rows took the square root of
+    # their standardization factor -- an empirical damping for the
+    # (then) crude lv-variance guess of 1.0; with the marker-based lv
+    # scales above, the full factor is the correct one (the z-metric
+    # variance then has the same order of magnitude as a standardized
+    # variance), so the sqrt tweak is gone
 
     if (lavmodel@ceq.simple.only) {
       parscale <- parscale[lavpartable$free > 0 &
@@ -238,6 +276,28 @@ lav_model_est <- function(lavmodel = NULL,
     cat("parscale = ", parscale, "\n")
   }
   z_unpack <- x_unpack * parscale
+
+  # scale-aware repair of degenerate variance starts (only when
+  # parameter scaling is active): some starting values are absolute
+  # raw-metric constants (e.g., the 0.05 default for latent variances);
+  # transported into the z metric they can collapse to ~0, which puts
+  # the start on the boundary of the positive-definite region and can
+  # derail the optimizer. give those a sane z-metric start (0.05, the
+  # standardized-world default).
+  if (lavoptions$optim.parscale != "none" &&
+      length(z_unpack) == length(parscale)) {
+    if (lavmodel@ceq.simple.only) {
+      keep <- lavpartable$free > 0L & !duplicated(lavpartable$free)
+    } else {
+      keep <- lavpartable$free > 0L
+    }
+    is_var <- (lavpartable$op == "~~" &
+      lavpartable$lhs == lavpartable$rhs)[keep]
+    small_idx <- which(is_var & abs(z_unpack) < 0.01)
+    if (length(small_idx) > 0L) {
+      z_unpack[small_idx] <- 0.05
+    }
+  }
 
   # 2. pack (apply equality constraints)
   if (lavmodel@eq.constraints && ncol(lavmodel@eq.constraints.K) > 0L) {
@@ -303,6 +363,22 @@ lav_model_est <- function(lavmodel = NULL,
       upper <- +Inf
     } else {
       upper <- lavpartable$upper[lavpartable$free > 0L]
+    }
+  }
+
+  # parameter scaling: the optimizer iterates in the z = x * parscale
+  # metric, so the box constraints must be transformed as well (up to
+  # 0.7-1 they were applied to the z values as if they were raw
+  # values, silently distorting any bounds when optim.parscale was
+  # active)
+  if (lavoptions$optim.parscale != "none" &&
+      length(parscale) > 0L && all(is.finite(parscale)) &&
+      all(parscale > 0)) {
+    if (length(lower) %in% c(1L, length(parscale))) {
+      lower <- lower * parscale
+    }
+    if (length(upper) %in% c(1L, length(parscale))) {
+      upper <- upper * parscale
     }
   }
 
@@ -554,11 +630,9 @@ lav_model_est <- function(lavmodel = NULL,
   # current strategy: if startx > 1.0, we rescale by using
   # 1/startx
   scale_1 <- rep(1.0, length(start_x))
-  if (lavoptions$optim.parscale == "none") {
-    idx <- which(abs(start_x) > 1.0)
-    if (length(idx) > 0L) {
-      scale_1[idx] <- abs(1.0 / start_x[idx])
-    }
+  idx <- which(abs(start_x) > 1.0)
+  if (length(idx) > 0L) {
+    scale_1[idx] <- abs(1.0 / start_x[idx])
   }
   if (debug) {
     cat("SCALE = ", scale_1, "\n")
@@ -1084,10 +1158,14 @@ lav_model_est <- function(lavmodel = NULL,
     # check.gradient
     if (!is.null(gradient) &&
       optimizer %in% c("NLMINB", "BFGS", "L.BFGS.B")) {
-      # compute unscaled gradient
+      # gradient in the z (optimizer) metric: when parameter scaling is
+      # active, this is the right metric for an absolute tolerance --
+      # the z parameters live on a standardized-world scale, while the
+      # RAW gradient components of (say) a variance of order 1e-6 are
+      # amplified by the inverse scale and could never pass a fixed
+      # cutoff, even at a machine-precision optimum
       dx <- gradient(x)
 
-      # NOTE: unscaled gradient!!!
       if (converged && lavoptions$check.gradient &&
         any(abs(dx) > lavoptions$optim.dx.tol)) {
         # ok, identify the non-zero elements
