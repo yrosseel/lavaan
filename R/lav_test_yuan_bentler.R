@@ -322,14 +322,16 @@ lav_test_yb_mplus_trace <- function(lavsamplestats = NULL,
     b1 <- b1_group[[g]]
 
     # mask independent 'fixed-x' variables
+    # (lav_mat_sym_inverse handles badly scaled input via its gated
+    # diagonal preconditioning; identical to solve() otherwise)
     zero_idx <- which(diag(a1_1) == 0)
     if (length(zero_idx) > 0L) {
       a1_inv_1 <- matrix(0, nrow(a1_1), ncol(a1_1))
       a1 <- a1_1[-zero_idx, -zero_idx]
-      a1_inv <- solve(a1)
+      a1_inv <- lav_mat_sym_inverse(a1, sinv_method = "solve")
       a1_inv_1[-zero_idx, -zero_idx] <- a1_inv
     } else {
-      a1_inv_1 <- solve(a1_1)
+      a1_inv_1 <- lav_mat_sym_inverse(a1_1, sinv_method = "solve")
     }
     h1_ndat[g] <- ncol(a1_1) - length(zero_idx)
 

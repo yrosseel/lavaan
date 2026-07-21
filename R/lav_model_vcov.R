@@ -657,6 +657,13 @@ lav_model_vcov <- function(lavmodel = NULL,
                            lavimplied = NULL,
                            lavh1 = NULL,
                            use_ginv = FALSE) {
+  # internal rescaling (badly scaled variables): the vcov was computed
+  # by the inner fit in the well-scaled metric and mapped back to the
+  # original metric by the exact monomial congruence; use it as-is
+  if (!is.null(lavoptions$.rescale.vcov)) {
+    return(lavoptions$.rescale.vcov)
+  }
+
   likelihood <- lavoptions$likelihood
 #  information <- lavoptions$information[1] # first one is for vcov
   se <- lavoptions$se

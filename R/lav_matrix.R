@@ -1076,6 +1076,22 @@ lav_mat_sym_inverse <- function(s, logdet = FALSE,
 
   p <- NCOL(s)
 
+  # Jacobi (diagonal) preconditioning for badly scaled input (new in
+  # 0.7-2): when the diagonal spans many orders of magnitude, invert
+  # the diagonally standardized matrix and map the result back (the
+  # log-determinant shifts by 2*sum(log(d))). Only activated for
+  # extreme spreads, so well-scaled input takes the exact same path
+  # as before.
+  pre_d <- NULL
+  if (p > 2L) {
+    d_pre <- sqrt(abs(diag(s)))
+    d_pre[!is.finite(d_pre) | d_pre < .Machine$double.eps] <- 1
+    if ((max(d_pre) / min(d_pre)) > 1e6) {
+      pre_d <- d_pre
+      s <- s / tcrossprod(d_pre)
+    }
+  }
+
   if (p == 0L) {
     s_inv <- matrix(0, 0, 0)
     if (logdet) {
@@ -1153,6 +1169,14 @@ lav_mat_sym_inverse <- function(s, logdet = FALSE,
     }
   } else {
     lav_msg_stop(gettext("method must be either `eigen', `solve' or `chol'"))
+  }
+
+  if (!is.null(pre_d)) {
+    ld <- attr(s_inv, "logdet")
+    s_inv <- s_inv / tcrossprod(pre_d)
+    if (logdet && !is.null(ld)) {
+      attr(s_inv, "logdet") <- ld + 2 * sum(log(pre_d))
+    }
   }
 
   if (length(zero_idx) > 0L) {

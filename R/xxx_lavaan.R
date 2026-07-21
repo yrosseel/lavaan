@@ -632,6 +632,15 @@ lavaan <- function(
     lavoptions <- temp$lavoptions
   }
 
+  # internal rescaling + missing data: the saturated (h1) results come
+  # from the inner (well-scaled) fit, mapped back to the original
+  # metric (the raw-metric saturated EM is unreliable for badly scaled
+  # data)
+  if (!is.null(lavoptions$.rescale.h1)) {
+    lavh1 <- lavoptions$.rescale.h1
+    lavoptions$.rescale.h1 <- NULL
+  }
+
   # store eqs if present in x
   laveqs <- list()
   if (!is.null(attr(x, "eqs"))) {
@@ -692,6 +701,11 @@ lavaan <- function(
     lavloglik      = lavloglik
   )
   timing <- lav_add_timing(timing, "test")
+
+  # internal rescaling: the transient vcov/test hand-off slots must not
+  # leak into the fitted object (or into the baseline/h1 refits below)
+  lavoptions$.rescale.vcov <- NULL
+  lavoptions$.rescale.test <- NULL
 
   # ----------- lavfit ----------
   lavfit <- lav_step14_fit(

@@ -212,6 +212,30 @@ Data options:
       ensure the model-implied (co)variance matrix has unit variances, and
       the standard errors still assume that the input was unstandardized. See
       also the \code{correlation} option.}
+    \item{\code{rescale.data}:}{Internal rescaling of badly scaled
+      variables (new in 0.7-2). When the observed standard deviations
+      are very heterogeneous or extreme (roughly: a max/min sd ratio
+      beyond 1000, or sds outside [0.001, 1000]), the optimizer often
+      fails or needs thousands of iterations, and the classical advice
+      is to rescale the offending variables before the analysis. With
+      \code{rescale.data = "auto"} (the default), lavaan automates this
+      advice exactly: each model variable is internally divided by a
+      power of two close to its standard deviation (lossless in
+      floating point), the model is fitted in the well-scaled metric,
+      and the solution -- estimates, standard errors, tests -- is
+      mapped back to the original metric through the exact
+      reparameterization; fixed parameter values and starting values
+      are transformed along, so the fitted model (and all output) is
+      exactly the user's model in the original units. \code{TRUE}
+      forces the rescaling; \code{FALSE} (or \code{"none"}) disables
+      it. The rescaling is skipped (with a warning if forced) for
+      settings it does not support: summary-statistics input,
+      multilevel or categorical data, composites, EFA blocks, product
+      terms, estimator ULS, inequality constraints, and equality
+      constraints that tie parameters with different scaling factors
+      (e.g., equal loadings across indicators with very different
+      variances -- such constraints would not survive a change of
+      units).}
     \item{\code{missing}:}{The default setting is \code{"listwise"}: all
          cases with missing values
       are removed listwise from the data before the analysis starts. This is

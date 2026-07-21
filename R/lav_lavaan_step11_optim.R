@@ -93,8 +93,48 @@ lav_step11_estoptim <- function(lavdata = NULL,
       }
     }
 
-    # non-iterative methods (fabin, miiv, ...)
-    if (lavoptions$optim.method == "noniter") {
+    # internal variable rescaling for badly scaled data (new in 0.7-2):
+    # fit the model in a well-scaled metric (a recursive call on
+    # rescaled data, with the fixed values transformed along) and map
+    # the solution back to the original metric exactly; on any failure
+    # fall through to the ordinary optimization below
+    rescale_prep <- lav_rescale_prep(
+      lavoptions = lavoptions, lavdata = lavdata,
+      lavmodel = lavmodel, lavpartable = lavpartable
+    )
+    if (!is.null(rescale_prep)) {
+      x <- lav_rescale_estimate(
+        lavdata = lavdata, lavmodel = lavmodel, lavcache = lavcache,
+        lavsamplestats = lavsamplestats, lavoptions = lavoptions,
+        lavpartable = lavpartable, prep = rescale_prep
+      )
+      if (!is.null(x)) {
+        lavoptions$.rescale.cj <- attr(x, "rescale.cj")
+        attr(x, "rescale.cj") <- NULL
+        if (!is.null(attr(x, "rescale.vcov"))) {
+          lavoptions$.rescale.vcov <- attr(x, "rescale.vcov")
+          attr(x, "rescale.vcov") <- NULL
+        }
+        if (!is.null(attr(x, "rescale.test"))) {
+          lavoptions$.rescale.test <- attr(x, "rescale.test")
+          attr(x, "rescale.test") <- NULL
+        }
+        if (!is.null(attr(x, "rescale.h1"))) {
+          lavoptions$.rescale.h1 <- attr(x, "rescale.h1")
+          attr(x, "rescale.h1") <- NULL
+        }
+        lav_msg_note(gettext(
+          "some model variables are badly scaled; the model was fitted
+          in an internally rescaled metric, and the solution was mapped
+          back to the original metric (see the rescale.data option)."))
+      }
+    }
+
+    if (!is.null(x)) {
+      # solution obtained via the internally rescaled fit
+
+      # non-iterative methods (fabin, miiv, ...)
+    } else if (lavoptions$optim.method == "noniter") {
       x <- try(
         lav_optim_noniter(
           lavmodel = lavmodel,

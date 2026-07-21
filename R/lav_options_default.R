@@ -304,6 +304,13 @@ lav_options_default <- function() {
 
   # full data
   elm("std.ov", FALSE, bl = TRUE)
+  # internal rescaling of badly scaled variables (new in 0.7-2):
+  # "auto" (default) rescales internally -- and maps the solution back
+  # to the original metric exactly -- when the observed standard
+  # deviations are very heterogeneous or extreme; TRUE forces it,
+  # FALSE/"none" disables it
+  elm("rescale.data", "auto", chr = c(auto = "auto", none = "none"),
+      bl = TRUE)
   elm("missing", "default", chr = c(
     default = "default", ml = "ml", direct = "ml",
     ml.x = "ml.x", direct.x = "ml.x", fiml.x = "ml.x", fiml = "ml",

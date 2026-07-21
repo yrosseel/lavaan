@@ -1376,8 +1376,15 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           if (estimator == "WLS" || estimator == "DLS") {
             if (!fixed_x) {
               if (estimator != "DLS") {
-                # Gamma should be po before we invert
-                ev <- eigen(nacov[[g]], # symmetric=FALSE,
+                # Gamma should be po before we invert; run the check on
+                # the diagonally standardized matrix: the eigenvalue
+                # signs are invariant under the congruence, while badly
+                # scaled variables blow up the raw spectrum (by the
+                # fourth power of the sds) until the check trips on
+                # numerical noise
+                d_g <- sqrt(abs(diag(nacov[[g]])))
+                d_g[!is.finite(d_g) | d_g < .Machine$double.eps] <- 1
+                ev <- eigen(nacov[[g]] / tcrossprod(d_g),
                   only.values = TRUE
                 )$values
                 if (is.complex(ev)) {

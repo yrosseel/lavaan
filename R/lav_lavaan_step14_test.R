@@ -19,6 +19,13 @@ lav_step14_test <- function(lavoptions = NULL,
   #   lavtest <- list(list(test = "none", stat = NA,
   #                        stat.group = rep(NA, lavdata@ngroups),
   #                        df = NA, refdistr = "unknown", pvalue = NA))
+  # internal rescaling (badly scaled variables): the test statistics
+  # were computed by the inner fit in the well-scaled metric; they are
+  # invariant under the rescaling, so use them as-is
+  if (!is.null(lavoptions$.rescale.test)) {
+    return(lavoptions$.rescale.test)
+  }
+
   lavtest <- NULL
   if (!(length(lavoptions$test) == 1L && lavoptions$test == "none") &&
     attr(x, "converged")) {

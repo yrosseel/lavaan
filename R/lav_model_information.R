@@ -709,6 +709,27 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
   }
   is_augmented <- !is.null(h) && nrow(h) > 0L
 
+  # Jacobi (diagonal) preconditioning (new in 0.7-2): badly scaled
+  # variables induce a purely DIAGONAL ill-conditioning of the
+  # information matrix (the condition number grows with the fourth
+  # power of the sd ratios), which can break solve() although the
+  # underlying problem is perfectly well posed. Conjugate the whole
+  # computation by P = diag(1/sqrt(diag(I))): I_p = P I P has unit
+  # diagonal, the constraint jacobian transforms as h_p = h P (the
+  # restricted inverse transforms covariantly), and the result maps
+  # back as V = P V_p P. Only activated for extreme diagonal spreads,
+  # so well-scaled problems take the exact same path as before.
+  d_pre <- sqrt(abs(diag(information)))
+  d_pre[!is.finite(d_pre) | d_pre < .Machine$double.eps] <- 1
+  precondition <- (max(d_pre) / min(d_pre)) > 1e6
+  if (precondition) {
+    info_p <- information / tcrossprod(d_pre)
+    h_p <- NULL
+    if (is_augmented) {
+      h_p <- t(t(h) / d_pre)
+    }
+  }
+
   # build the full bordered (KKT) matrix; only needed when the caller
   # asks for the un-inverted augmented matrix, or as the Moore-Penrose
   # fallback of the inverted path below
@@ -743,9 +764,18 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
     # for a constrained model, the relevant identification check is the
     # information restricted to the constrained tangent space (a bordered
     # matrix itself is a saddle matrix and always indefinite)
+    # (under preconditioning, check the conjugated matrix: the
+    # eigenvalue SIGNS are invariant under the congruence)
     if (is_augmented) {
-      z <- lav_mat_ortho_complement(t(h))
-      m_check <- crossprod(z, information %*% z)
+      if (precondition) {
+        z <- lav_mat_ortho_complement(t(h_p))
+        m_check <- crossprod(z, info_p %*% z)
+      } else {
+        z <- lav_mat_ortho_complement(t(h))
+        m_check <- crossprod(z, information %*% z)
+      }
+    } else if (precondition) {
+      m_check <- info_p
     } else {
       m_check <- information
     }
@@ -769,18 +799,22 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
 
   # inverted
   if (!is_augmented) {
+    info_1 <- if (precondition) info_p else information
     if (use_ginv) {
       # note: default tol in MASS::ginv is sqrt(.Machine$double.eps)
       #       which seems a bit too conservative
       #       from 0.5-20, we changed this to .Machine$double.eps^(3/4)
       out <- try(
-        MASS::ginv(information,
+        MASS::ginv(info_1,
           tol = .Machine$double.eps^(3 / 4)
         ),
         silent = TRUE
       )
     } else {
-      out <- try(solve(information), silent = TRUE)
+      out <- try(solve(info_1), silent = TRUE)
+    }
+    if (precondition && !inherits(out, "try-error")) {
+      out <- out / tcrossprod(d_pre)
     }
     return(out)
   }
@@ -788,9 +822,16 @@ lav_model_info_augment_invert <- function(lavmodel = NULL,
   # constrained inverse: null-space route
   out <- try(
     {
-      z <- lav_mat_ortho_complement(t(h))
-      ziz <- crossprod(z, information %*% z)
-      v <- z %*% solve(ziz, t(z))
+      if (precondition) {
+        z <- lav_mat_ortho_complement(t(h_p))
+        ziz <- crossprod(z, info_p %*% z)
+        v <- z %*% solve(ziz, t(z))
+        v <- v / tcrossprod(d_pre)
+      } else {
+        z <- lav_mat_ortho_complement(t(h))
+        ziz <- crossprod(z, information %*% z)
+        v <- z %*% solve(ziz, t(z))
+      }
       # enforce exact symmetry
       (v + t(v)) / 2
     },
