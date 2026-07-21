@@ -26,7 +26,9 @@ lav_samp_wls_v_nt_g <- function(m_cov = NULL, m_mean = NULL, m_icov = NULL,
       cor_idx       = cor_idx,
       meanstructure = meanstructure,
       fixed_x       = fixed_x,
-      x_idx         = x_idx
+      x_idx         = x_idx,
+      conditional_x = conditional_x,
+      m_mean        = m_mean
     )
     lav_mat_sym_inverse(gamma_nt)
   } else {

@@ -425,7 +425,8 @@ lav_object_gamma <- function(lavobject = NULL,
         out[[g]] <- lav_samp_partial_cor_gamma(
           m_y = y, cor_idx = cor_idx_g,
           meanstructure = meanstructure,
-          fixed_x = fixed_x, x_idx = x_idx
+          fixed_x = fixed_x, x_idx = x_idx,
+          conditional_x = conditional_x
         )
       } else {
         out[[g]] <- lav_samp_gamma(
@@ -451,7 +452,9 @@ lav_object_gamma <- function(lavobject = NULL,
         out[[g]] <- lav_samp_partial_cor_gamma_nt(
           m_cov = cov_1, cor_idx = cor_idx_g,
           meanstructure = meanstructure,
-          fixed_x = fixed_x, x_idx = x_idx
+          fixed_x = fixed_x, x_idx = x_idx,
+          conditional_x = conditional_x,
+          m_mean = mean_1
         )
       } else {
         out[[g]] <- lav_samp_gamma_nt(
@@ -1094,37 +1097,134 @@ lav_partial_cor_jacobian <- function(m_s, cor_idx = NULL,
   j_mat
 }
 
+# conditional.x + correlation structure: the standardized CONDITIONAL moment
+# vector
+#   [ vecr(cbind(res.int, res.slopes))  (if meanstructure)
+#     or vecr(res.slopes)               (slopes only),
+#     vech(res.cov, diagonal = FALSE) ]
+# as a smooth function of the JOINT raw moments [ mean (if meanstructure),
+# vech(S) ]: first scale all variables to unit variance, then partition into
+# (y, x) and compute the residual moments. This is the moment layout of
+# lav_samp_wls_obs() for the continuous conditional.x + correlation case.
+# Every operation is complex-step safe (no crossprod/tcrossprod: those
+# conjugate complex input as of R 4.3).
+lav_cor_cond_stats <- function(stats, p = NULL,
+                               x_idx = integer(0L),
+                               meanstructure = FALSE) {
+  if (meanstructure) {
+    m_m <- stats[seq_len(p)]
+    s_vech <- stats[-seq_len(p)]
+  } else {
+    s_vech <- stats
+  }
+  m_s <- lav_mat_vech_rev(s_vech)
+
+  # standardize all variables (full correlation structure)
+  d <- sqrt(diag(m_s))
+  m_r <- m_s / outer(d, d)
+
+  # partition into (y, x) and compute the residual moments
+  r_yx <- m_r[-x_idx, x_idx, drop = FALSE]
+  r_xx <- m_r[x_idx, x_idx, drop = FALSE]
+  pi_1 <- r_yx %*% solve(r_xx)
+  res_cov <- m_r[-x_idx, -x_idx, drop = FALSE] - pi_1 %*% t(r_yx)
+
+  if (meanstructure) {
+    m_m <- m_m / d
+    res_int <- m_m[-x_idx] - as.vector(pi_1 %*% m_m[x_idx])
+    out1 <- lav_mat_vecr(cbind(res_int, pi_1))
+  } else {
+    out1 <- lav_mat_vecr(pi_1)
+  }
+
+  c(out1, lav_mat_vech(res_cov, diagonal = FALSE))
+}
+
+# Jacobian of the conditional correlation moment vector with respect to the
+# joint raw moments [ mean (if meanstructure), vech(S) ], evaluated at
+# (m_mean, m_cov); complex-step differentiation of the map above
+lav_cor_cond_jacobian <- function(m_cov, m_mean = NULL,
+                                  x_idx = integer(0L),
+                                  meanstructure = FALSE) {
+  p <- nrow(m_cov)
+  if (meanstructure) {
+    if (is.null(m_mean)) {
+      m_mean <- numeric(p)
+    }
+    x0 <- c(m_mean, lav_mat_vech(m_cov))
+  } else {
+    x0 <- lav_mat_vech(m_cov)
+  }
+  lav_func_jacobian_complex(
+    func = function(x) {
+      lav_cor_cond_stats(x, p = p, x_idx = x_idx,
+                         meanstructure = meanstructure)
+    },
+    x = x0, fallback_simple = FALSE
+  )
+}
+
 # ADF (sandwich) Gamma for a (partial) correlation structure, via the delta
 # method: Gamma_cor = J %*% Gamma_full %*% t(J), where Gamma_full is the raw
 # ADF Gamma (lav_samp_gamma, which also handles fixed.x via x_idx) and J is
-# the Jacobian above.
+# the Jacobian above. If conditional_x = TRUE, m_y must be the joint (y, x)
+# data and the result is the Gamma of the standardized conditional moments
+# (x treated as fixed, as everywhere in the conditional.x machinery).
 lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
                                        meanstructure = FALSE,
                                        fixed_x = FALSE,
-                                       x_idx = integer(0L)) {
+                                       x_idx = integer(0L),
+                                       conditional_x = FALSE) {
   m_y <- unname(as.matrix(m_y))
   n <- nrow(m_y)
   m_s <- cov(m_y) * (n - 1) / n
 
-  j_mat <- lav_partial_cor_jacobian(m_s, cor_idx = cor_idx,
-                                    meanstructure = meanstructure)
-  gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure,
-                               x_idx = x_idx, fixed_x = fixed_x)
+  if (conditional_x) {
+    # conditional.x implies fixed.x: the x-moment rows of the joint Gamma
+    # are zeroed, so only the sampling variability of the y-moments (given
+    # x) propagates through the Jacobian
+    j_mat <- lav_cor_cond_jacobian(
+      m_cov = m_s, m_mean = colMeans(m_y),
+      x_idx = x_idx, meanstructure = meanstructure
+    )
+    gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure,
+                                 x_idx = x_idx, fixed_x = TRUE)
+  } else {
+    j_mat <- lav_partial_cor_jacobian(m_s, cor_idx = cor_idx,
+                                      meanstructure = meanstructure)
+    gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure,
+                                 x_idx = x_idx, fixed_x = fixed_x)
+  }
 
   j_mat %*% gamma_full %*% t(j_mat)
 }
 
 # Normal-theory Gamma for a (partial) correlation structure, via the delta
 # method: Gamma_cor = J %*% Gamma_full_NT %*% t(J), where Gamma_full_NT is the
-# raw NT Gamma (lav_samp_gamma_nt, which also handles fixed.x).
+# raw NT Gamma (lav_samp_gamma_nt, which also handles fixed.x). If
+# conditional_x = TRUE, m_cov/m_mean are the JOINT (y, x) moments and the
+# result is the NT Gamma of the standardized conditional moments.
 lav_samp_partial_cor_gamma_nt <- function(m_cov, cor_idx = NULL,
                                           meanstructure = FALSE,
                                           fixed_x = FALSE,
-                                          x_idx = integer(0L)) {
-  j_mat <- lav_partial_cor_jacobian(m_cov, cor_idx = cor_idx,
-                                    meanstructure = meanstructure)
-  gamma_full <- lav_samp_gamma_nt(m_cov = m_cov, meanstructure = meanstructure,
-                                  x_idx = x_idx, fixed_x = fixed_x)
+                                          x_idx = integer(0L),
+                                          conditional_x = FALSE,
+                                          m_mean = NULL) {
+  if (conditional_x) {
+    j_mat <- lav_cor_cond_jacobian(
+      m_cov = m_cov, m_mean = m_mean,
+      x_idx = x_idx, meanstructure = meanstructure
+    )
+    gamma_full <- lav_samp_gamma_nt(m_cov = m_cov,
+                                    meanstructure = meanstructure,
+                                    x_idx = x_idx, fixed_x = TRUE)
+  } else {
+    j_mat <- lav_partial_cor_jacobian(m_cov, cor_idx = cor_idx,
+                                      meanstructure = meanstructure)
+    gamma_full <- lav_samp_gamma_nt(m_cov = m_cov,
+                                    meanstructure = meanstructure,
+                                    x_idx = x_idx, fixed_x = fixed_x)
+  }
 
   j_mat %*% gamma_full %*% t(j_mat)
 }

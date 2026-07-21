@@ -1655,9 +1655,11 @@ lav_options_set <- function(opt = NULL) {
         "correlation structures only work for single-level data."
       ))
     }
-    if (opt$conditional.x) {
+    if (opt$conditional.x && length(opt$.correlation.ov) > 0L) {
       lav_msg_stop(gettext(
-        "correlation structures only work for conditional.x = FALSE (for now)."
+        "partial correlation structures (correlation = c(...)) are not
+        supported (yet) when conditional.x = TRUE; use the full correlation
+        structure (correlation = TRUE), or conditional.x = FALSE."
       ))
     }
     if (opt$representation == "RAM") {

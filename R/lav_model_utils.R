@@ -104,7 +104,8 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
                 mlist = tmp[mm_in_group],
                 num_idx = lavmodel@num.idx[[g]],
                 ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-                ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]]
+                ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                marginal = correlation && lavmodel@conditional.x
               )
           } else if (lavmodel@parameterization == "theta") {
             tmp[mm_in_group] <-
@@ -213,7 +214,8 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
               mlist = glist[mm_in_group],
               num_idx = lavmodel@num.idx[[g]],
               ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-              ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]]
+              ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+              marginal = correlation && lavmodel@conditional.x
             )
         } else if (lavmodel@parameterization == "theta") {
           glist[mm_in_group] <-

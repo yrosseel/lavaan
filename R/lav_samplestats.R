@@ -619,14 +619,6 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     # continuous -- single-level
     else {
       if (conditional_x) {
-        # FIXME!
-        # no correlation structures yet
-        if (correlation) {
-          lav_msg_stop(gettext(
-            "conditional.x = TRUE is not supported (yet) for
-            correlation structures."))
-        }
-
         # missing values in the exogenous x variables cannot be handled
         # when we condition on x
         if (missing == "ml.x") {
@@ -949,10 +941,18 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
         var[[g]] <- diag(cov[[g]])
         if (conditional_x) {
-          res_cov[[g]] <- lav_cov2cor_partial(res_cov[[g]], cor_idx)
-          res_var[[g]] <- diag(res_cov[[g]])
-          cov_x[[g]] <- cov2cor(cov_x[[g]])
-          # FIXME: slopes? more?
+          # re-partition the standardized JOINT matrix: the residual
+          # moments in the correlation metric (note that the diagonal of
+          # res.cov is 1 - R^2, NOT 1; the unit-variance constraint lives
+          # on the marginal (joint) metric)
+          a_1 <- cov[[g]][-x_idx[[g]], -x_idx[[g]], drop = FALSE]
+          m_b <- cov[[g]][-x_idx[[g]], x_idx[[g]], drop = FALSE]
+          c_1 <- cov[[g]][x_idx[[g]], x_idx[[g]], drop = FALSE]
+          res_slopes[[g]] <- m_b %*% solve(c_1)
+          res_cov[[g]] <- a_1 - res_slopes[[g]] %*% t(m_b)
+          res_var[[g]] <- diag(cov[[g]])
+          res_int[[g]] <- (mean[[g]][-x_idx[[g]]] -
+            drop(res_slopes[[g]] %*% mean[[g]][x_idx[[g]]]))
         }
       }
 
@@ -1036,6 +1036,11 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         }
         mean_x[[g]] <- colMeans(exo[[g]])
       }
+      # correlation structure: keep cov.x consistent with the standardized
+      # joint matrix (exact unit diagonal)
+      if (correlation && conditional_x && !categorical) {
+        cov_x[[g]] <- cov2cor(cov_x[[g]])
+      }
     }
 
     # nacov (=GAMMA)
@@ -1082,12 +1087,15 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         if (correlation) {
           # (partial) correlation ADF Gamma via the delta method (handles
           # fixed.x); cor_idx lists the unit-variance variables (all, unless
-          # a subset was requested via correlation = c(...))
+          # a subset was requested via correlation = c(...)); under
+          # conditional.x, y is the joint (y, x) data and the Gamma lives in
+          # the standardized conditional metric
           cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
           nacov[[g]] <- lav_samp_partial_cor_gamma(
             m_y = y, cor_idx = cor_idx_g,
             meanstructure = meanstructure,
-            fixed_x = fixed_x, x_idx = x_idx[[g]]
+            fixed_x = fixed_x, x_idx = x_idx[[g]],
+            conditional_x = conditional_x
           )
     } else {
           nacov[[g]] <-
@@ -1161,12 +1169,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           }
       if (correlation) {
             # (partial) correlation ADF Gamma via the delta method (handles
-            # fixed.x)
+            # fixed.x and conditional.x)
             cor_idx_g <- lav_gamma_recipe_cor_idx(gamma_recipe, ov_names[[g]])
             nacov[[g]] <- lav_samp_partial_cor_gamma(
               m_y = y, cor_idx = cor_idx_g,
               meanstructure = meanstructure,
-              fixed_x = fixed_x, x_idx = x_idx[[g]]
+              fixed_x = fixed_x, x_idx = x_idx[[g]],
+              conditional_x = conditional_x
             )
       } else {
             # the NT flavor may only replace the ADF Gamma for the
@@ -1269,7 +1278,9 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             cor_idx       = cor_idx_g,
             meanstructure = meanstructure,
             fixed_x       = fixed_x,
-            x_idx         = x_idx[[g]]
+            x_idx         = x_idx[[g]],
+            conditional_x = conditional_x,
+            m_mean        = mean[[g]]
           )
         } else {
           gamma_nt <- lav_samp_gamma_nt(
@@ -1656,6 +1667,18 @@ lav_samp_from_moments <- function(sample_cov = NULL,
     fixed_x <- FALSE
   }
 
+  # new in 0.7-2: conditional.x = TRUE with a plain (joint) sample.cov and
+  # no precomputed residual statistics: partition the joint moments into
+  # the residual (y | x) statistics below, exactly as lav_samp_from_data()
+  # does for full data
+  conditional_x_joint <- FALSE
+  if (!conditional_x && isTRUE(lavoptions$conditional.x) &&
+      length(unlist(ov_names_x)) > 0L) {
+    conditional_x <- TRUE
+    conditional_x_joint <- TRUE
+    fixed_x <- TRUE
+  }
+
   # matrix -> list
   if (!is.list(sample_cov)) {
     sample_cov <- list(sample_cov)
@@ -1874,7 +1897,15 @@ lav_samp_from_moments <- function(sample_cov = NULL,
     }
 
     # extract only the part we need (using ov.names)
-    if (conditional_x) {
+    if (conditional_x && conditional_x_joint) {
+      # joint sample.cov: reorder as [y, x] (x last), matching the joint
+      # layout of lav_samp_from_data() under conditional.x
+      idx <- match(c(
+        ov_names[[g]][-x_idx[[g]]],
+        ov_names[[g]][x_idx[[g]]]
+      ), cov_names)
+      x_idx[[g]] <- length(ov_names[[g]]) - nexo + seq_len(nexo)
+    } else if (conditional_x) {
       idx <- match(ov_names[[g]][-x_idx[[g]]], cov_names)
     } else {
       idx <- match(ov_names[[g]], cov_names)
@@ -1983,8 +2014,66 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
       # single level
     } else {
-      # single-level + continuous + conditional.x = TRUE
-      if (conditional_x) {
+      # single-level + continuous + conditional.x = TRUE with a JOINT
+      # sample.cov: partition into the residual (y | x) statistics, as
+      # lav_samp_from_data() does for full data (tmp_cov is already in
+      # [y, x] order, with x_idx pointing at the trailing x block)
+      if (conditional_x && conditional_x_joint) {
+        cov[[g]] <- tmp_cov
+        mean[[g]] <- tmp_mean
+
+        # rescale cov by (N-1)/N?
+        if (rescale) {
+          cov[[g]] <- ((nobs[[g]] - 1) / nobs[[g]]) * cov[[g]]
+        }
+        if (ridge) {
+          diag(cov[[g]]) <- diag(cov[[g]]) + ridge_eps
+        }
+        var[[g]] <- diag(cov[[g]])
+
+        # correlation structure: standardize the JOINT matrix first (the
+        # residual moments then live in the correlation metric; note that
+        # the diagonal of res.cov is 1 - R^2, NOT 1)
+        if (correlation) {
+          cov[[g]] <- lav_cov2cor_partial(cov[[g]],
+                                          seq_len(ncol(cov[[g]])))
+          var[[g]] <- diag(cov[[g]])
+        }
+
+        # partition
+        a_1 <- cov[[g]][-x_idx[[g]], -x_idx[[g]], drop = FALSE]
+        m_b <- cov[[g]][-x_idx[[g]], x_idx[[g]], drop = FALSE]
+        c_1 <- cov[[g]][x_idx[[g]], x_idx[[g]], drop = FALSE]
+        res_slopes[[g]] <- m_b %*% solve(c_1)
+        res_cov[[g]] <- a_1 - res_slopes[[g]] %*% t(m_b)
+        res_var[[g]] <- diag(cov[[g]])
+        res_int[[g]] <- (mean[[g]][-x_idx[[g]]] -
+          drop(res_slopes[[g]] %*% mean[[g]][x_idx[[g]]]))
+        cov_x[[g]] <- c_1
+        mean_x[[g]] <- mean[[g]][x_idx[[g]]]
+
+        # icov and cov.log.det (joint and residual)
+        out <- lav_samp_icov(
+          cov_1 = cov[[g]],
+          ridge = 1e-05,
+          x_idx = x_idx[[g]],
+          ngroups = ngroups, g = g
+        )
+        icov[[g]] <- out$icov
+        cov_log_det[[g]] <- out$cov.log.det
+
+        out <- lav_samp_icov(
+          cov_1 = res_cov[[g]],
+          ridge = 1e-05,
+          x_idx = x_idx[[g]],
+          ngroups = ngroups, g = g
+        )
+        res_icov[[g]] <- out$icov
+        res_cov_log_det[[g]] <- out$cov.log.det
+
+        # single-level + continuous + conditional.x = TRUE with
+        # precomputed residual statistics (res.slopes/cov.x attributes)
+      } else if (conditional_x) {
         res_cov[[g]] <- tmp_cov
         if (ridge) {
           diag(res_cov[[g]]) <- diag(res_cov[[g]]) + ridge_eps
@@ -2063,8 +2152,9 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
       }
 
-      # correlation structure?
-      if (correlation) {
+      # correlation structure? (the conditional.x + joint sample.cov case
+      # standardizes the joint matrix before partitioning, see above)
+      if (correlation && !conditional_x) {
         # which variables are scaled to unit variance? (all, or a subset
         # for a 'partial' correlation structure)
         if (length(correlation_ov) > 0L) {
@@ -2074,12 +2164,13 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
         cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
         var[[g]] <- diag(cov[[g]])
-        if (conditional_x) {
-          res_cov[[g]] <- lav_cov2cor_partial(res_cov[[g]], cor_idx)
-          res_var[[g]] <- diag(res_cov[[g]])
-          cov_x[[g]] <- cov2cor(cov_x[[g]])
-          # FIXME: slopes? more?
-        }
+      } else if (correlation && conditional_x && !conditional_x_joint) {
+        # precomputed residual statistics: we cannot recover the joint
+        # correlation metric from the residual moments alone
+        lav_msg_stop(gettext(
+          "correlation = TRUE with conditional.x = TRUE requires the joint
+          sample.cov (a correlation matrix including the exogenous
+          x-variables), not precomputed residual statistics."))
       }
     }
 

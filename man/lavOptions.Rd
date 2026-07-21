@@ -92,15 +92,20 @@ Model features:
      WLS, which produce correct standard errors and a correct test statistic
      under normal and non-normal conditions respectively. Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
-     latter affects the way the standard errors are computed). For now, this
-     option always assumes \code{conditional.x = FALSE}.
+     latter affects the way the standard errors are computed), and (since
+     0.7-2) also \code{conditional.x = TRUE}: the exogenous covariates are
+     then standardized along with the outcomes, the input
+     \code{sample.cov} (if used) must be the joint correlation matrix
+     including the x-variables, and the unit-variance constraint applies
+     to the marginal (not the residual) variances of the outcomes.
      Alternatively, \code{correlation} may be a character vector of
      (observed) variable names (for example
      \code{correlation = c("x1", "x2", "x3")}). In that case only the
      listed variables are standardized to unit variance (their residual
      variances are fixed accordingly), while all remaining observed
      variables keep their original metric (a 'partial' correlation
-     structure). If the model contains observed product (interaction)
+     structure; not available (yet) in combination with
+     \code{conditional.x = TRUE}). If the model contains observed product (interaction)
      terms (for example \code{x1:y1}) and \code{correlation = TRUE},
      the product terms are automatically excluded from the correlation
      set: the product of standardized variables does not have unit

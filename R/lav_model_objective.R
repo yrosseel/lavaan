@@ -49,10 +49,16 @@ lav_model_objective <- function(lavmodel = NULL,
   # analytic gradient), not the closed-form Bentler-Savalei expression.
   partial_cor <- correlation && any(lengths(num_idx) > 0L)
 
+  # correlation structure + fixed exogenous x (joint formulation): the
+  # closed-form Bentler-Savalei expression does not account for the fixed-x
+  # zero rows/cols of the weight matrix (the analytic gradient does), so
+  # use the canonical GLS quadratic form here as well
+  cor_fixed_x <- correlation && lavmodel@fixed.x && any(lavmodel@nexo > 0L)
+
   # do we need WLS.est?
   if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS") ||
       (estimator == "GLS" &&
-        (partial_cor || conditional_x || group_w_free))) {
+        (partial_cor || cor_fixed_x || conditional_x || group_w_free))) {
     lavimplied <- lav_model_implied(lavmodel, glist = glist)
     # check for COV with negative diagonal elements?
     # (note: all blocks, not groups -- multilevel has 2 blocks per group)
@@ -248,10 +254,13 @@ lav_model_objective <- function(lavmodel = NULL,
 
       ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
-      if (partial_cor || conditional_x || group_w_free) {
+      if (partial_cor || cor_fixed_x || conditional_x || group_w_free) {
         # canonical GLS quadratic form; needed when the trace shortcut
         # below does not apply:
         # - partial_cor: partial moment space
+        # - cor_fixed_x: correlation structure with fixed exogenous x
+        #   (the Bentler-Savalei closed form ignores the fixed-x zero
+        #   rows/cols of the weight matrix)
         # - conditional.x: residual moment space (WLS.obs/WLS.V are in
         #   the [res.int|res.slopes, vech(res.cov)] metric, while
         #   sigma_hat/data_cov would mix residual and joint moments)

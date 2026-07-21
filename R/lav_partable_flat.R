@@ -328,12 +328,17 @@ lav_pt_flat <- function(flat = NULL,
   }
 
   # same for correlation structures, but now for ALL variables (or a
-  # subset, if 'correlation' is a character vector of variable names)
+  # subset, if 'correlation' is a character vector of variable names);
+  # under conditional.x the exogenous x variables are not part of the
+  # (y-side) model matrices, so they get no scaling parameter
   if (!categorical && (isTRUE(correlation) || is.character(correlation))) {
     cor_ov <- if (is.character(correlation)) {
       ov_names[ov_names %in% correlation]
     } else {
       ov_names
+    }
+    if (conditional_x) {
+      cor_ov <- cor_ov[!cor_ov %in% ov_names_x]
     }
     lhs <- c(lhs, cor_ov)
     rhs <- c(rhs, cor_ov)

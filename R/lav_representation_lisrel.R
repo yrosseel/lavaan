@@ -1571,7 +1571,28 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
                                           ov_y_dummy_lv_idx = NULL,
                                           ov_only = TRUE,
                                           tol = .Machine$double.eps,
-                                          debug = FALSE) {
+                                          debug = FALSE,
+                                          marginal = FALSE) {
+  # continuous correlation structure + conditional.x: the unit-variance
+  # constraint applies to the MARGINAL (joint) variances, so the exogenous
+  # contribution GAMMA cov.x GAMMA' must be included when completing the
+  # residual variances: fold it into PSI, run the usual completion, and
+  # take it out again (the completion only modifies diagonal elements)
+  if (marginal && !is.null(mlist$gamma) && !is.null(mlist$cov.x) &&
+      ncol(mlist$gamma) > 0L) {
+    add <- mlist$gamma %*% mlist$cov.x %*% t(mlist$gamma)
+    mlist$psi <- mlist$psi + add
+    mlist <- lav_lisrel_residual_variances(
+      mlist = mlist, num_idx = num_idx,
+      ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
+      ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
+      ov_only = ov_only, tol = tol, debug = debug,
+      marginal = FALSE
+    )
+    mlist$psi <- mlist$psi - add
+    return(mlist)
+  }
+
   mm_beta <- mlist$beta
   mm_psi <- mlist$psi
   if (is.null(mlist$delta)) {
@@ -1597,7 +1618,14 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
   }
 
   # phase 1: set (residual) variances in psi
-  if (!is.null(mm_beta) && length(ov_y_dummy_ov_idx) > 0L) {
+  if (is.null(mm_beta) && length(ov_y_dummy_ov_idx) > 0L) {
+    # no BETA matrix, but dummy-y variances in PSI (e.g. conditional.x
+    # path models, where the slopes live in GAMMA): with no regressions
+    # among the (dummy) lv's, the dummy-y variance simply equals its
+    # target value
+    y_idx <- ov_y_dummy_lv_idx
+    mm_psi[cbind(y_idx, y_idx)] <- target_psi[y_idx]
+  } else if (!is.null(mm_beta) && length(ov_y_dummy_ov_idx) > 0L) {
     abs_beta <- abs(mlist$beta)
     x_idx <- which(apply(abs_beta, 1L, sum) == 0)
     if (ov_only) {
