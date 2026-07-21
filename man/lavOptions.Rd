@@ -105,11 +105,18 @@ Model features:
      augmented moments, so correlation structures can be fit to
      incomplete data by full-information maximum likelihood (use
      \code{estimator = "MLR"} for sandwich standard errors under
-     MAR). The ML route requires single-level data,
-     \code{conditional.x = FALSE} and no composites; in all other
-     settings, a defaulted estimator quietly falls back to GLS.
-     Estimator WLS (= ADF weights in the correlation metric) covers
-     the non-normal case.
+     MAR). \code{conditional.x = TRUE} is supported on the ML route as
+     well: the exogenous x are standardized internally (a fixed
+     transformation -- the analysis conditions on x), the y-side
+     scales are free \code{~*~} parameters, and the unit-variance
+     constraint applies to the marginal variances; the result is
+     identical (same conditional likelihood) to the joint
+     \code{fixed.x = TRUE} analysis. The ML route requires
+     single-level data and no composites (and \code{missing = "ml"}
+     requires \code{conditional.x = FALSE}); in all other settings, a
+     defaulted estimator quietly falls back to GLS. Estimator WLS (=
+     ADF weights in the correlation metric) covers the non-normal
+     case.
      Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
      latter affects the way the standard errors are computed), and (since

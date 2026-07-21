@@ -2068,6 +2068,27 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         cov[[g]] <- tmp_cov
         mean[[g]] <- tmp_mean
 
+        # D-augmented ML mode: standardize (and center) only the x
+        # block of the joint matrix -- the moment-level analogue of the
+        # data-level scale() of the exogenous x (BEFORE the (n-1)/n
+        # rescale, so raw-data and moment input match exactly); y stays
+        # in its original metric (the free ~*~ scales absorb the sds).
+        # For a partial structure only the LISTED x are standardized.
+        if (isTRUE(lavoptions$.correlation.ml)) {
+          x_std_idx <- x_idx[[g]]
+          if (length(correlation_ov) > 0L) {
+            x_std_idx <- x_std_idx[joint_names_g[x_std_idx] %in%
+                                   correlation_ov]
+          }
+          if (length(x_std_idx) > 0L) {
+            s_x <- sqrt(diag(cov[[g]])[x_std_idx])
+            cov[[g]][x_std_idx, ] <- cov[[g]][x_std_idx, ] / s_x
+            cov[[g]][, x_std_idx] <-
+              t(t(cov[[g]][, x_std_idx, drop = FALSE]) / s_x)
+            mean[[g]][x_std_idx] <- 0
+          }
+        }
+
         # rescale cov by (N-1)/N?
         if (rescale) {
           cov[[g]] <- ((nobs[[g]] - 1) / nobs[[g]]) * cov[[g]]

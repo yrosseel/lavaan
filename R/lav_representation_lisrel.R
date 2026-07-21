@@ -3581,6 +3581,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
   }
 
   # correlation structure
+  jac_sigma_gamma <- NULL
   if (!categorical && correlation) {
     if (n_del > 0L) {
       # D-augmented ML mode (FREE ~*~ scaling parameters): keep the FULL
@@ -3591,12 +3592,67 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       # The num_idx variables keep a genuinely free variance (partial
       # correlation structure), so their diagonal rows stay.
       diag_pos <- lav_mat_diagh_idx(nvar)
+      diag_var <- seq_len(nvar)
       if (length(num_idx) > 0L) {
         diag_pos <- diag_pos[-num_idx]
+        diag_var <- diag_var[-num_idx]
       }
       n_nondelta <- ncol(jac_sigma) - n_del
       if (n_nondelta > 0L && length(diag_pos) > 0L) {
         jac_sigma[diag_pos, seq_len(n_nondelta)] <- 0
+      }
+      # conditional.x: the completion targets unit MARGINAL variances,
+      #   Sigma_res[j,j] = delta_j^2 * (1 - (Pz Rxx Pz')_jj),
+      # with Pz = Lambda (I-B)^-1 Gamma the (unscaled) slopes and Rxx
+      # the (fixed) x covariance -- so the diagonal rows are NOT
+      # constant: they pick up a chain term through the slopes for the
+      # lambda, beta and gamma columns (psi/theta stay zero; the delta
+      # columns keep their standard entries since (1 - ...) does not
+      # depend on delta)
+      if (conditional_x && !is.null(mlist$gamma) &&
+          ncol(mlist$gamma) > 0L && length(diag_pos) > 0L) {
+        pz <- m %*% mlist$gamma                      # nvar x nexo
+        rxx <- mlist$cov.x
+        q_mat <- 2 * (pz %*% rxx)                    # nvar x nexo
+        gamma_ib_s <- if (beta_flag) {
+          a_1 %*% mlist$gamma
+        } else {
+          mlist$gamma
+        }                                            # nfac x nexo
+        qg <- q_mat %*% t(gamma_ib_s)                # nvar x nfac
+        d2 <- delta[diag_var]^2
+        # lambda[i,l] columns: -delta_j^2 * I(j==i) * QG[j, l]
+        if (n_lam > 0L) {
+          rc <- vec2rc(m_lambda_idx, nvar)
+          for (c2 in seq_len(n_lam)) {
+            j_hit <- which(diag_var == rc[c2, 1L])
+            if (length(j_hit) > 0L) {
+              jac_sigma[diag_pos[j_hit], c2] <-
+                -d2[j_hit] * qg[diag_var[j_hit], rc[c2, 2L]]
+            }
+          }
+        }
+        # beta[i,l] columns: -delta_j^2 * M[j,i] * QG[j, l]
+        if (n_bet > 0L) {
+          rc <- vec2rc(m_beta_idx, nfac)
+          col0 <- n_lam + n_wmat
+          for (c2 in seq_len(n_bet)) {
+            jac_sigma[diag_pos, col0 + c2] <-
+              -d2 * m[diag_var, rc[c2, 1L]] * qg[diag_var, rc[c2, 2L]]
+          }
+        }
+        # gamma[i,k] columns: -delta_j^2 * M[j,i] * q[j,k]; gamma is not
+        # part of the jac_sigma column blocks, so store separately (the
+        # final assembly inserts these at the gamma positions)
+        if (length(m_gamma_idx) > 0L) {
+          n_gam_s <- length(m_gamma_idx)
+          jac_sigma_gamma <- matrix(0, pstar, n_gam_s)
+          rc <- vec2rc(m_gamma_idx, nfac)
+          for (c2 in seq_len(n_gam_s)) {
+            jac_sigma_gamma[diag_pos, c2] <-
+              -d2 * m[diag_var, rc[c2, 1L]] * q_mat[diag_var, rc[c2, 2L]]
+          }
+        }
       }
       # sigma_row_map stays NULL: full layout
     } else if (length(num_idx) > 0L) {
@@ -3713,6 +3769,32 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
         for (c2 in seq_len(n_gam)) {
           jac_beta[mu_slots + k_v[c2], col + c2 - 1L] <- m[, i_v[c2]]
         }
+      }
+
+      # D-augmented ML correlation mode (continuous conditional.x with
+      # FREE ~*~ scales): the implied slopes are Pi = Delta * Pz with
+      # Pz = Lambda (I-B)^-1 Gamma -- so (a) the pi rows of all columns
+      # so far pick up the factor delta_r, and (b) delta columns are
+      # appended: dpi[r,k]/ddelta_r = Pz[r,k] (the mu rows are NOT
+      # rescaled: the intercepts live in the original metric)
+      if (!categorical && correlation && delta_flag && n_del > 0L) {
+        if (nexo_g > 0L) {
+          pi_rows <- rep(mu_slots, times = nexo_g) +
+            rep(seq_len(nexo_g), each = nvar)
+          pi_var <- rep(seq_len(nvar), times = nexo_g)
+          jac_beta[pi_rows, ] <- jac_beta[pi_rows, , drop = FALSE] *
+            delta[pi_var]
+        }
+        jac_beta_delta <- matrix(0, n_beta_rows, n_del)
+        if (nexo_g > 0L) {
+          pz_b <- m %*% mlist$gamma # nvar x nexo (unscaled)
+          for (c2 in seq_len(n_del)) {
+            jd <- m_delta_idx[c2]
+            jac_beta_delta[mu_slots[jd] + seq_len(nexo_g), c2] <-
+              pz_b[jd, ]
+          }
+        }
+        jac_beta <- cbind(jac_beta, jac_beta_delta)
       }
     } else if (meanstructure) {
       # precompute: IB.inv * alpha
@@ -3950,10 +4032,22 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
   }
   out[, el_idx_sigma] <- jac_sigma
 
+  # D-augmented ML + conditional.x: the marginal-completion chain gives
+  # the res.cov diagonal rows entries at the GAMMA columns (not part of
+  # the jac_sigma column blocks)
+  if (!is.null(jac_sigma_gamma) && length(x_gamma_idx) > 0L) {
+    out[, x_gamma_idx] <- jac_sigma_gamma
+  }
+
   # meanstructure / conditional.x
   if (!categorical && conditional_x && !is.null(jac_beta)) {
     el_idx_beta <- c(x_nu_idx, x_lambda_idx, x_beta_idx, x_alpha_idx,
                      x_gamma_idx)
+    if (correlation && delta_flag && n_del > 0L &&
+        ncol(jac_beta) == length(el_idx_beta) + n_del) {
+      # the delta columns appended in the D-augmented mode
+      el_idx_beta <- c(el_idx_beta, x_delta_idx)
+    }
     outm <- matrix(0, nrow = nrow(jac_beta), ncol = nx_free)
     outm[, el_idx_beta] <- jac_beta
     out <- rbind(outm, out)

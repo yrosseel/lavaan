@@ -198,9 +198,54 @@ lav_start <- function(start_method = "default",
   # standardize the (local copies of the) sample moments first, and let
   # the regular machinery below run on those
   if (!categorical &&
-      any(lavpartable$op == "~*~" & lavpartable$free > 0L) &&
-      length(lavsamplestats@cov) > 0L &&
-      !is.null(lavsamplestats@cov[[1]])) {
+      any(lavpartable$op == "~*~" & lavpartable$free > 0L)) {
+    if (conditional_x &&
+        length(lavsamplestats@res.cov) > 0L &&
+        !is.null(lavsamplestats@res.cov[[1]])) {
+      # conditional.x variant: the scales are the MARGINAL y sds
+      # (res.cov + slopes cov.x slopes'); standardize the local copies
+      # of the residual moments accordingly (res.int stays raw: the
+      # intercepts live in the original metric)
+      for (g in seq_len(ngroups)) {
+        ov_names_g <- lav_pt_vnames(lavpartable, "ov.nox",
+                                    group = group_values[g])
+        ov_names_g <- unique(unlist(ov_names_g))
+        res_cov <- lavsamplestats@res.cov[[g]]
+        res_slopes <- lavsamplestats@res.slopes[[g]]
+        cov_x <- lavsamplestats@cov.x[[g]]
+        marg <- res_cov
+        if (!is.null(res_slopes) && length(cov_x) > 0L) {
+          marg <- marg + res_slopes %*% cov_x %*% t(res_slopes)
+        }
+        s_y <- sqrt(diag(marg))
+        free_delta_idx <- which(lavpartable$group == group_values[g] &
+          lavpartable$op == "~*~" &
+          (lavpartable$free > 0L | is.na(lavpartable$ustart)) &
+          lavpartable$lhs %in% ov_names_g)
+        if (length(free_delta_idx) > 0L) {
+          sample_sd_idx <- match(lavpartable$lhs[free_delta_idx],
+                                 ov_names_g)
+          start[free_delta_idx] <- s_y[sample_sd_idx]
+        }
+        # standardize the local copies used for the remaining starts
+        lavsamplestats@res.cov[[g]] <- res_cov / tcrossprod(s_y)
+        if (!is.null(res_slopes)) {
+          lavsamplestats@res.slopes[[g]] <- res_slopes / s_y
+        }
+        if (length(lavh1) > 0L &&
+            length(lavh1$implied[["res.cov"]]) >= g &&
+            !is.null(lavh1$implied[["res.cov"]][[g]])) {
+          lavh1$implied[["res.cov"]][[g]] <-
+            lavh1$implied[["res.cov"]][[g]] / tcrossprod(s_y)
+          if (!is.null(lavh1$implied[["res.slopes"]][[g]])) {
+            lavh1$implied[["res.slopes"]][[g]] <-
+              lavh1$implied[["res.slopes"]][[g]] / s_y
+          }
+        }
+      }
+    } else if (!conditional_x &&
+               length(lavsamplestats@cov) > 0L &&
+               !is.null(lavsamplestats@cov[[1]])) {
     for (g in seq_len(ngroups)) {
       ov_names_g <- lav_pt_vnames(lavpartable, "ov",
                                   group = group_values[g])
@@ -226,6 +271,7 @@ lav_start <- function(start_method = "default",
         lavh1$implied[["cov"]][[g]] <-
           cov2cor(lavh1$implied[["cov"]][[g]])
       }
+    }
     }
   }
 

@@ -1656,9 +1656,14 @@ lav_options_set <- function(opt = NULL) {
     # D-augmentation does not support (yet): composites.
     # missing = "ml" (FIML) is supported on the ML route (since 0.7-2):
     # the casewise/pattern likelihood simply consumes the D-augmented
-    # implied moments Sigma = Delta P(theta) Delta and Mu
-    correlation_ml_ok <- !opt$conditional.x &&
-      any(opt$missing == c("listwise", "ml"))
+    # implied moments Sigma = Delta P(theta) Delta and Mu.
+    # conditional.x = TRUE (since 0.7-2): the exogenous x are
+    # standardized at the DATA level (a fixed transformation -- we
+    # condition on x), the y-side scales are free ~*~ parameters, and
+    # the completion targets unit MARGINAL variances in the P metric
+    correlation_ml_ok <-
+      (!opt$conditional.x && any(opt$missing == c("listwise", "ml"))) ||
+      (opt$conditional.x && opt$missing == "listwise")
     if (estimator_default) {
       correlation_ml_ok <- correlation_ml_ok &&
         !isTRUE(opt$.flat.composites)
@@ -1681,8 +1686,8 @@ lav_options_set <- function(opt = NULL) {
         if (!estimator_default) {
           lav_msg_warn(gettextf(
             "estimator %s is not supported for correlation structures in
-            this setting (conditional.x, or missing data); switching to
-            estimator GLS.", opt$estimator.orig))
+            this setting; switching to estimator GLS.",
+            opt$estimator.orig))
         }
         if (opt$se == "robust.huber.white") {
           opt$se <- "robust.sem"
