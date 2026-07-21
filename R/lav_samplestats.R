@@ -69,6 +69,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   # mimic <- lavoptions$mimic
   meanstructure <- lavoptions$meanstructure
   correlation <- lavoptions$correlation
+  # D-augmented ML mode (correlation structure with an ML-family
+  # estimator): the analysis runs in the FULL covariance moment space
+  # (Sigma = Delta P(theta) Delta with free scales), so at the
+  # samplestats level this is an ordinary covariance analysis
+  if (isTRUE(lavoptions$.correlation.ml)) {
+    correlation <- FALSE
+  }
   # partial correlation structure: only these observed variables are scaled
   # to unit variance (empty -> all of them, the usual correlation structure)
   correlation_ov <- lavoptions$.correlation.ov
@@ -1631,6 +1638,10 @@ lav_samp_from_moments <- function(sample_cov = NULL,
   # mimic <- lavoptions$mimic
   meanstructure <- lavoptions$meanstructure
   correlation <- lavoptions$correlation
+  # D-augmented ML mode: ordinary covariance analysis at this level
+  if (isTRUE(lavoptions$.correlation.ml)) {
+    correlation <- FALSE
+  }
   correlation_ov <- lavoptions$.correlation.ov
   if (is.null(correlation_ov)) {
     correlation_ov <- character(0L)

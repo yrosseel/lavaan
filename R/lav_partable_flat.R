@@ -10,6 +10,7 @@ lav_pt_flat <- function(flat = NULL,
                               orthogonal_efa = FALSE,
                               std_lv = FALSE,
                               correlation = FALSE,
+                              correlation_delta_free = FALSE,
                               composites = TRUE,
                               composites_cov_free = FALSE,
                               conditional_x = FALSE,
@@ -830,8 +831,15 @@ lav_pt_flat <- function(flat = NULL,
 
     delta_idx <- which(op == "~*~" &
       user == 0L)
-    ustart[delta_idx] <- 1.0
-    free[delta_idx] <- 0L
+    if (correlation_delta_free) {
+      # D-augmented ML: the scaling parameters are FREE scale (sd)
+      # parameters -- Sigma = Delta P(theta) Delta with unit-diagonal P
+      ustart[delta_idx] <- as.numeric(NA)
+      free[delta_idx] <- 1L
+    } else {
+      ustart[delta_idx] <- 1.0
+      free[delta_idx] <- 0L
+    }
   }
 
   # group proportions (group 1L)

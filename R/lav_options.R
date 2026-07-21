@@ -1640,29 +1640,51 @@ lav_options_set <- function(opt = NULL) {
   }
 
   # correlation
+  opt$.correlation.ml <- FALSE
   if (opt$correlation) {
-    # standardize
-    opt$std.ov <- TRUE
-    # if ML (or any ML-family variant, e.g. MLR/MLM/MLF), switch to GLS:
-    # silently when the estimator was left at its default; with a warning
-    # when the user explicitly asked for it. The ML-only se/test/
-    # information flavours (already resolved by the per-estimator
-    # dispatch above) are remapped to their GLS analogues.
-    if (lav_options_estimatorgroup(opt$estimator) == "ML") {
-      if (!estimator_default) {
-        lav_msg_warn(gettextf(
-          "estimator %s is not supported for correlation structures;
-          switching to estimator GLS.", opt$estimator.orig))
+    # an EXPLICIT ML-family estimator (single level, complete data,
+    # conditional.x = FALSE) uses the D-augmentation: the covariance
+    # model Sigma = Delta P(theta) Delta with FREE scale parameters
+    # Delta (the ~*~ rows) and unit-diagonal P, fit by ordinary
+    # covariance-metric ML in the FULL moment space. This is a genuine
+    # likelihood (also when sample.cov is a correlation matrix: the
+    # augmented model is exactly scale-equivariant, so the
+    # correlation-metric estimates, standard errors and test statistic
+    # do not depend on the scaling of the input). When the estimator is
+    # left at its default, GLS remains the default (as before).
+    if (lav_options_estimatorgroup(opt$estimator) == "ML" &&
+        !estimator_default && !opt$conditional.x &&
+        opt$missing == "listwise") {
+      opt$.correlation.ml <- TRUE
+      # NO std.ov: the analysis runs in the original covariance metric,
+      # and the free Delta parameters absorb the scales
+    } else {
+      # standardize
+      opt$std.ov <- TRUE
+      # if ML (or any ML-family variant, e.g. MLR/MLM/MLF), switch to
+      # GLS: silently when the estimator was left at its default; with a
+      # warning for the (still unsupported) explicit-ML combinations.
+      # The ML-only se/test/information flavours (already resolved by
+      # the per-estimator dispatch above) are remapped to their GLS
+      # analogues.
+      if (lav_options_estimatorgroup(opt$estimator) == "ML") {
+        if (!estimator_default) {
+          lav_msg_warn(gettextf(
+            "estimator %s is not supported for correlation structures in
+            this setting (conditional.x, or missing data); switching to
+            estimator GLS.", opt$estimator.orig))
+        }
+        if (opt$se == "robust.huber.white") {
+          opt$se <- "robust.sem"
+        }
+        yb_idx <- which(opt$test %in% c("yuan.bentler",
+                                        "yuan.bentler.mplus"))
+        if (length(yb_idx) > 0L) {
+          opt$test[yb_idx] <- "satorra.bentler"
+        }
+        opt$information[opt$information == "first.order"] <- "expected"
+        opt$estimator <- "gls"
       }
-      if (opt$se == "robust.huber.white") {
-        opt$se <- "robust.sem"
-      }
-      yb_idx <- which(opt$test %in% c("yuan.bentler", "yuan.bentler.mplus"))
-      if (length(yb_idx) > 0L) {
-        opt$test[yb_idx] <- "satorra.bentler"
-      }
-      opt$information[opt$information == "first.order"] <- "expected"
-      opt$estimator <- "gls"
     }
     if (opt$missing == "ml") {
       lav_msg_stop(gettext(
@@ -1678,6 +1700,22 @@ lav_options_set <- function(opt = NULL) {
       lav_msg_stop(gettext(
         "correlation structures only work for representation = \"LISREL\"."
       ))
+    }
+    # D-augmented ML: no meanstructure support (yet). When the
+    # meanstructure was only auto-enabled (multiple groups; see the
+    # .meanstructure.auto marker in the step02 wrapper), quietly switch
+    # it off again: the means are saturated and carry no information
+    # about the correlation structure. An explicit request is an error.
+    if (opt$.correlation.ml && isTRUE(opt$meanstructure)) {
+      if (isTRUE(opt$.meanstructure.auto)) {
+        opt$meanstructure <- FALSE
+      } else {
+        lav_msg_stop(gettext(
+          "meanstructure = TRUE is not supported (yet) for correlation
+          structures with an ML-family estimator; use estimator =
+          \"GLS\"."
+        ))
+      }
     }
   }
 

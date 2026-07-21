@@ -203,6 +203,12 @@ lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
                                drop_list = TRUE) {
   ngroups <- lavmodel@ngroups
 
+  # D-augmented ML mode (free ~*~ scales): full covariance moment space
+  correlation <- lavmodel@correlation
+  if (correlation && lav_model_delta_free(lavmodel)) {
+    correlation <- FALSE
+  }
+
   wls_obs <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
 
@@ -236,7 +242,7 @@ lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
       categorical = lavmodel@categorical,
       conditional_x = lavmodel@conditional.x,
       meanstructure = lavmodel@meanstructure,
-      correlation = lavmodel@correlation,
+      correlation = correlation,
       slopestructure = lavmodel@conditional.x,
       group_w_free = lavmodel@group.w.free
     )

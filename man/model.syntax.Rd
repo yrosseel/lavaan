@@ -14,7 +14,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     int_lv_free = FALSE, marker_int_zero = FALSE,
     orthogonal = FALSE, orthogonal_y = FALSE,
     orthogonal_x = FALSE, orthogonal_efa = FALSE, std_lv = FALSE,
-    correlation = FALSE, composites = TRUE, composites_cov_free = FALSE,
+    correlation = FALSE, correlation_delta_free = FALSE,
+    composites = TRUE, composites_cov_free = FALSE,
     effect_coding = "", conditional_x = FALSE,
     fixed_x = FALSE, parameterization = "delta", constraints = NULL,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
@@ -30,7 +31,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     int_lv_free = FALSE, marker_int_zero = FALSE,
     orthogonal = FALSE, orthogonal_y = FALSE,
     orthogonal_x = FALSE, orthogonal_efa = FALSE, std_lv = FALSE,
-    correlation = FALSE, composites = TRUE, composites_cov_free = FALSE,
+    correlation = FALSE, correlation_delta_free = FALSE,
+    composites = TRUE, composites_cov_free = FALSE,
     effect_coding = "", conditional_x = FALSE,
     fixed_x = FALSE, parameterization = "delta", constraints = NULL,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
@@ -84,6 +86,13 @@ the model for both observed and latent variables.}
 \item{correlation}{If \code{TRUE}, a correlation structure is fitted. For
     continuous data, this implies that the (residual) variances are no
     longer parameters of the model.}
+\item{correlation_delta_free}{Logical. Only used if
+    \code{correlation = TRUE} (or a character vector). If \code{TRUE},
+    the scaling (\code{~*~}) parameters are free scale (standard
+    deviation) parameters, and the model is the D-augmented covariance
+    structure \code{Sigma = Delta P(theta) Delta} with unit-diagonal
+    \code{P} (used internally when an ML-family estimator is combined
+    with a correlation structure).}
 \item{composites}{Logical. If \code{TRUE}, use the new (0.6-20) approach
      to handle composites.}
 \item{composites_cov_free}{Logical. Only relevant if the model contains

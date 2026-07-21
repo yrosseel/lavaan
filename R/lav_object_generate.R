@@ -50,6 +50,16 @@ lav_object_baseline <- function(object = NULL,
     lavoptions$conditional.x <- FALSE
   }
 
+  # D-augmented ML mode (correlation + ML-family estimator): the baseline
+  # model is a plain covariance-metric independence model (free variances,
+  # no ~*~ rows; the samplestats live in the full moment space), so drop
+  # the correlation machinery for this fit
+  if (isTRUE(lavoptions$.correlation.ml)) {
+    lavoptions$correlation <- FALSE
+    lavoptions$.correlation.ml <- FALSE
+    lavoptions$.correlation.ov <- character(0L)
+  }
+
   # construct parameter table for independence model
   if (!is.null(lavoptions$baseline.type) &&
     lavoptions$baseline.type == "nested") {

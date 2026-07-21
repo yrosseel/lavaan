@@ -4,6 +4,20 @@
 # - YR 14 Jan 2014: rename object -> lavmodel, all functions as lav_model_*
 # - YR 20 Nov 2021: add lav_model_dmmdpar
 
+# are (any of) the ~*~ scaling parameters (the 'delta' matrices) free?
+# TRUE marks the D-augmented ML mode for correlation structures
+# (Sigma = Delta P(theta) Delta with unit-diagonal P); with the reduced
+# (GLS/WLS) correlation machinery the delta matrices are always fixed
+lav_model_delta_free <- function(lavmodel = NULL) {
+  delta_mm <- which(names(lavmodel@GLIST) == "delta")
+  if (length(delta_mm) == 0L) {
+    return(FALSE)
+  }
+  any(vapply(delta_mm, function(m) {
+    length(lavmodel@m.free.idx[[m]]) > 0L
+  }, logical(1L)))
+}
+
 lav_model_get_parameters <- function(lavmodel = NULL, glist = NULL,   # nolint start
                                      type = "free", extra = TRUE, ...) {   # nolint end
   # type == "free": only non-redundant free parameters (x)
@@ -82,6 +96,10 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 
   correlation <- lavmodel@correlation
 
+  # D-augmented ML mode? (correlation structure with FREE ~*~ scaling
+  # parameters): the completion then targets diag(Sigma*) = 1
+  correlation_ml <- correlation && lav_model_delta_free(lavmodel)
+
   # categorical? set categorical theta elements (if any)
   if (lavmodel@categorical || correlation) {
     nmat <- lavmodel@nmat
@@ -105,7 +123,8 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
                 num_idx = lavmodel@num.idx[[g]],
                 ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                 ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                marginal = correlation && lavmodel@conditional.x
+                marginal = correlation && lavmodel@conditional.x,
+                unit_target = correlation_ml
               )
           } else if (lavmodel@parameterization == "theta") {
             tmp[mm_in_group] <-
@@ -215,7 +234,8 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
               num_idx = lavmodel@num.idx[[g]],
               ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
               ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-              marginal = correlation && lavmodel@conditional.x
+              marginal = correlation && lavmodel@conditional.x,
+              unit_target = correlation && lav_model_delta_free(lavmodel)
             )
         } else if (lavmodel@parameterization == "theta") {
           glist[mm_in_group] <-

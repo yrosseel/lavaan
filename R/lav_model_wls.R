@@ -13,6 +13,10 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
   nblocks <- lavmodel@nblocks
   meanstructure <- lavmodel@meanstructure
   correlation <- lavmodel@correlation
+  # D-augmented ML mode (free ~*~ scales): full covariance moment space
+  if (correlation && lav_model_delta_free(lavmodel)) {
+    correlation <- FALSE
+  }
   categorical <- lavmodel@categorical
   group_w_free <- lavmodel@group.w.free
   num_idx <- lavmodel@num.idx

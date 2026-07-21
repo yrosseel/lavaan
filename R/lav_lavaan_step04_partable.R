@@ -95,6 +95,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
         } else {
           lavoptions$correlation
         },
+        correlation_delta_free = isTRUE(lavoptions$.correlation.ml),
         composites = lavoptions$composites,
         composites_cov_free = identical(lavoptions$composites.cov, "free"),
         effect_coding = lavoptions$effect.coding,

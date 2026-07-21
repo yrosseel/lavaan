@@ -166,6 +166,11 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
   if (!is.null(lavoptions$correlation)) {
     correlation <- lavoptions$correlation
   }
+  # D-augmented ML mode: the h1/independence models live in the FULL
+  # covariance moment space (ordinary free variances)
+  if (isTRUE(lavoptions$.correlation.ml)) {
+    correlation <- FALSE
+  }
 
   # what with fixed.x?
   # - does not really matter; fit will be saturated anyway

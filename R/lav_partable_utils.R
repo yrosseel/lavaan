@@ -231,11 +231,15 @@ lav_pt_ndat <- function(partable) {
     }
 
     # correction for correlation not categorical: every variable that is
-    # standardized to unit variance (i.e. has a '~*~' scaling row) removes
-    # one sample statistic. For a 'partial' correlation structure this is a
-    # subset of the variables, so count the '~*~' rows rather than 'nvar'.
+    # standardized to unit variance (i.e. has a FIXED '~*~' scaling row)
+    # removes one sample statistic. For a 'partial' correlation structure
+    # this is a subset of the variables, so count the '~*~' rows rather
+    # than 'nvar'. FREE '~*~' rows (the D-augmented ML mode) are ordinary
+    # scale parameters in the full moment space: nothing is removed (the
+    # extra parameters are counted in npar instead; the df are the same).
     if (correlation && !categorical) {
-      n_cor <- sum(partable$op == "~*~" & partable$block == b)
+      n_cor <- sum(partable$op == "~*~" & partable$block == b &
+                   partable$free == 0L)
       ndat[b] <- ndat[b] - n_cor
     }
 

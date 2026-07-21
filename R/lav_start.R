@@ -192,6 +192,41 @@ lav_start <- function(start_method = "default",
   # group values
   group_values <- lav_pt_group_values(lavpartable)
 
+  # D-augmented ML mode for correlation structures (FREE ~*~ scaling
+  # parameters): the scales start at the sample standard deviations, and
+  # all other starting values live in the CORRELATION metric -- so
+  # standardize the (local copies of the) sample moments first, and let
+  # the regular machinery below run on those
+  if (!categorical &&
+      any(lavpartable$op == "~*~" & lavpartable$free > 0L) &&
+      length(lavsamplestats@cov) > 0L &&
+      !is.null(lavsamplestats@cov[[1]])) {
+    for (g in seq_len(ngroups)) {
+      ov_names_g <- lav_pt_vnames(lavpartable, "ov",
+                                  group = group_values[g])
+      ov_names_g <- unique(unlist(ov_names_g))
+      free_delta_idx <- which(lavpartable$group == group_values[g] &
+        lavpartable$op == "~*~" &
+        lavpartable$free > 0L &
+        lavpartable$lhs %in% ov_names_g)
+      if (length(free_delta_idx) > 0L) {
+        sample_sd_idx <- match(lavpartable$lhs[free_delta_idx],
+                               ov_names_g)
+        start[free_delta_idx] <-
+          sqrt(diag(lavsamplestats@cov[[g]]))[sample_sd_idx]
+      }
+      # standardize the sample moments used for the remaining starts
+      lavsamplestats@cov[[g]] <- cov2cor(lavsamplestats@cov[[g]])
+      lavsamplestats@var[[g]] <- diag(lavsamplestats@cov[[g]])
+      if (length(lavh1) > 0L &&
+          length(lavh1$implied[["cov"]]) >= g &&
+          !is.null(lavh1$implied[["cov"]][[g]])) {
+        lavh1$implied[["cov"]][[g]] <-
+          cov2cor(lavh1$implied[["cov"]][[g]])
+      }
+    }
+  }
+
   for (g in 1:ngroups) {
 
     # info from user model for this group

@@ -1572,7 +1572,8 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
                                           ov_only = TRUE,
                                           tol = .Machine$double.eps,
                                           debug = FALSE,
-                                          marginal = FALSE) {
+                                          marginal = FALSE,
+                                          unit_target = FALSE) {
   # continuous correlation structure + conditional.x: the unit-variance
   # constraint applies to the MARGINAL (joint) variances, so the exogenous
   # contribution GAMMA cov.x GAMMA' must be included when completing the
@@ -1587,7 +1588,7 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
       ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
       ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
       ov_only = ov_only, tol = tol, debug = debug,
-      marginal = FALSE
+      marginal = FALSE, unit_target = unit_target
     )
     mlist$psi <- mlist$psi - add
     return(mlist)
@@ -1610,8 +1611,15 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
     }
   }
 
-  # if delta, the target may not be unity, but DELTA^(-2)
-  target_all <- 1 / (delta * delta) # often the unit vector
+  # if delta, the target may not be unity, but DELTA^(-2); in the
+  # D-augmented ML mode (unit_target = TRUE) the target IS unity:
+  # Sigma* = P is the correlation matrix and the FREE delta parameters
+  # carry the scales (Sigma_obs = Delta P Delta)
+  if (unit_target) {
+    target_all <- rep(1, length(delta))
+  } else {
+    target_all <- 1 / (delta * delta) # often the unit vector
+  }
   target_psi <- rep(1, nrow(mm_psi))
   if (length(ov_y_dummy_ov_idx) > 0L) {
     target_psi[ov_y_dummy_lv_idx] <- target_all[ov_y_dummy_ov_idx]
@@ -3574,7 +3582,24 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
   # correlation structure
   if (!categorical && correlation) {
-    if (length(num_idx) > 0L) {
+    if (n_del > 0L) {
+      # D-augmented ML mode (FREE ~*~ scaling parameters): keep the FULL
+      # vech layout. The unit-diagonal completion makes diag(Sigma*)
+      # constant, so the completion chain rule reduces to ZEROING the
+      # diagonal rows of all non-delta columns (the delta columns keep
+      # their standard entries: dSigma_obs[k,k]/ddelta_k = 2 delta_k).
+      # The num_idx variables keep a genuinely free variance (partial
+      # correlation structure), so their diagonal rows stay.
+      diag_pos <- lav_mat_diagh_idx(nvar)
+      if (length(num_idx) > 0L) {
+        diag_pos <- diag_pos[-num_idx]
+      }
+      n_nondelta <- ncol(jac_sigma) - n_del
+      if (n_nondelta > 0L && length(diag_pos) > 0L) {
+        jac_sigma[diag_pos, seq_len(n_nondelta)] <- 0
+      }
+      # sigma_row_map stays NULL: full layout
+    } else if (length(num_idx) > 0L) {
       # partial correlation structure: keep the (free) variances of the
       # non-correlation variables (num_idx), drop only the correlation
       # variables' diagonal -- mirror the categorical layout (variances of

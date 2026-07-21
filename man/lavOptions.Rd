@@ -88,9 +88,19 @@ Model features:
      of a (co)variance matrix). This implies that the residual observed
      variances are no longer free parameters. Instead, they are set to
      values that ensure the model-implied variances are unity. This also
-     affects the standard errors. The only available estimators are GLS and
-     WLS, which produce correct standard errors and a correct test statistic
-     under normal and non-normal conditions respectively. Both
+     affects the standard errors. The default estimator is GLS; WLS (=
+     ADF weights in the correlation metric) covers the non-normal case.
+     Since 0.7-2, an explicit ML-family estimator (\code{"ML"},
+     \code{"MLM"}, \code{"MLR"}, \ldots; single level, complete data,
+     \code{conditional.x = FALSE}) is also supported: the model is then
+     fit as the covariance structure \eqn{\Sigma = \Delta P(\theta)
+     \Delta} with free scale parameters \eqn{\Delta} (the \code{~*~}
+     rows in the output) and unit-diagonal \eqn{P(\theta)}, by ordinary
+     maximum likelihood in the full moment space. Because this augmented
+     model is exactly scale-equivariant, the correlation-metric
+     estimates, standard errors and test statistic are identical whether
+     the input is raw data, a covariance matrix, or a correlation matrix.
+     Both
      \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
      latter affects the way the standard errors are computed), and (since
      0.7-2) also \code{conditional.x = TRUE}: the exogenous covariates are

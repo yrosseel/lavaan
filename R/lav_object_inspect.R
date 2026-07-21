@@ -3125,6 +3125,10 @@ lav_inspect_delta_rownames <- function(
 
   categorical    <- lavmodel@categorical
   correlation    <- lavmodel@correlation
+  # D-augmented ML mode (free ~*~ scales): full vech layout
+  if (correlation && lav_model_delta_free(lavmodel)) {
+    correlation <- FALSE
+  }
   conditional_x  <- lavmodel@conditional.x
   group_w_free   <- lavmodel@group.w.free
   nvar           <- lavmodel@nvar

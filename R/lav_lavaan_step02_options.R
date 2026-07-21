@@ -260,6 +260,9 @@ lav_step02_options <- function(slot_options = NULL,
     }
     if (!is.null(group) && is.null(dotdotdot$meanstructure)) {
       opt$meanstructure <- TRUE
+      # marker: only auto-enabled (multiple groups); lav_options_set()
+      # may quietly undo this in the D-augmented ML correlation mode
+      opt$.meanstructure.auto <- TRUE
     }
 
     # conditional.x
@@ -317,6 +320,16 @@ lav_step02_options <- function(slot_options = NULL,
         "parameterization = \"theta\" is not supported (yet) for models
          with composites (the \"<~\" operator); please use the (default)
          \"delta\" parameterization."))
+    }
+
+    # D-augmented ML mode (correlation + ML-family estimator): no
+    # composites support (the composite completion and the unit-diagonal
+    # completion both reparameterize the same matrices)
+    if (isTRUE(lavoptions$.correlation.ml) && any(flat_model$op == "<~")) {
+      lav_msg_stop(gettext(
+        "estimator = \"ML\" with correlation structures is not supported
+        (yet) for models with composites (the \"<~\" operator); use
+        estimator = \"GLS\"."))
     }
 
     # correlation = TRUE with observed product (interaction) terms: the

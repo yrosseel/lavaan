@@ -21,6 +21,11 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
   se <- lavoptions$se
   test <- lavoptions$test
   correlation <- isTRUE(lavoptions$correlation) # absent in old objects
+  # D-augmented ML mode: full covariance moment space, so the plain
+  # (covariance-metric) Gamma flavors apply
+  if (isTRUE(lavoptions$.correlation.ml)) {
+    correlation <- FALSE
+  }
 
   # data properties
   categorical <- any(lavdata@ov$type == "ordered")

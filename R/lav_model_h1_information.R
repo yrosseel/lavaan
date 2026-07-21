@@ -339,19 +339,24 @@ lav_model_h1_info_ed <- function(what = "expected",
             )
           }
         } else {
+          # note: the correlation= argument selects the reduced
+          # (correlation-metric) information (catML); the D-augmented ML
+          # mode (free ~*~ scales) lives in the FULL moment space
+          cor_reduced <- lavmodel@correlation &&
+            !lav_model_delta_free(lavmodel)
           if (structured) {
             a1[[g]] <- lav_mvn_info_expected(
               sigma_1       = lavimplied$cov[[g]],
               x_idx         = lavsamplestats@x.idx[[g]],
               meanstructure = lavmodel@meanstructure,
-              correlation   = lavmodel@correlation
+              correlation   = cor_reduced
             )
           } else {
             a1[[g]] <- lav_mvn_h1_info_expected(
               sample_cov_inv = lavsamplestats@icov[[g]],
               x_idx          = lavsamplestats@x.idx[[g]],
               meanstructure  = lavmodel@meanstructure,
-              correlation    = lavmodel@correlation
+              correlation    = cor_reduced
             )
           }
         }
