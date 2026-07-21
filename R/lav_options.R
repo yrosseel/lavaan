@@ -255,6 +255,10 @@ lav_options_set <- function(opt = NULL) {
   }
 
   # first of all: set estimator ####
+  # (remember whether the user chose the estimator explicitly; the
+  #  correlation block below silently switches a *defaulted* ML to GLS,
+  #  but warns when the user asked for ML)
+  estimator_default <- (opt$estimator == "default")
   if (opt$estimator == "default") {
     if (opt$.categorical) {
       opt$estimator <- "wlsmv"
@@ -1639,10 +1643,25 @@ lav_options_set <- function(opt = NULL) {
   if (opt$correlation) {
     # standardize
     opt$std.ov <- TRUE
-    # if ML, switch to GLS
-    if (opt$estimator == "ml") {
-      # lav_msg_warn(gettext(
-      #        "GLS should be used for correlation structures instead of ML."))
+    # if ML (or any ML-family variant, e.g. MLR/MLM/MLF), switch to GLS:
+    # silently when the estimator was left at its default; with a warning
+    # when the user explicitly asked for it. The ML-only se/test/
+    # information flavours (already resolved by the per-estimator
+    # dispatch above) are remapped to their GLS analogues.
+    if (lav_options_estimatorgroup(opt$estimator) == "ML") {
+      if (!estimator_default) {
+        lav_msg_warn(gettextf(
+          "estimator %s is not supported for correlation structures;
+          switching to estimator GLS.", opt$estimator.orig))
+      }
+      if (opt$se == "robust.huber.white") {
+        opt$se <- "robust.sem"
+      }
+      yb_idx <- which(opt$test %in% c("yuan.bentler", "yuan.bentler.mplus"))
+      if (length(yb_idx) > 0L) {
+        opt$test[yb_idx] <- "satorra.bentler"
+      }
+      opt$information[opt$information == "first.order"] <- "expected"
       opt$estimator <- "gls"
     }
     if (opt$missing == "ml") {
