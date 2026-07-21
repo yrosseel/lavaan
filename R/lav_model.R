@@ -360,14 +360,22 @@ lav_model <- function(lavpartable = NULL,
         if (length(ov_dummy_names)) {
           # in this case, lv.names will be extended with the dummys
           tmp_lv_names <- mm_dim_names$psi[[1]]
-          row_tmp_idx <- match(ov_dummy_names, ov_names)
+          # under conditional.x the lambda rows are indexed by ov.names.nox
+          # (the joint 'ov' ordering may place a dummy that only appears in
+          # ~~ rows after the x variables, beyond nrow(lambda))
+          ov_names_row <- if (lavoptions$conditional.x) {
+            ov_names_nox
+          } else {
+            ov_names
+          }
+          row_tmp_idx <- match(ov_dummy_names, ov_names_row)
           col_tmp_idx <- match(ov_dummy_names, tmp_lv_names)
           # Fix lambda values to 1.0
           tmp[cbind(row_tmp_idx, col_tmp_idx)] <- 1.0
 
-          ov_x_dummy_ov_idx[[g]] <- match(ov_dummy_names_x, ov_names)
+          ov_x_dummy_ov_idx[[g]] <- match(ov_dummy_names_x, ov_names_row)
           ov_x_dummy_lv_idx[[g]] <- match(ov_dummy_names_x, tmp_lv_names)
-          ov_y_dummy_ov_idx[[g]] <- match(ov_dummy_names_nox, ov_names)
+          ov_y_dummy_ov_idx[[g]] <- match(ov_dummy_names_nox, ov_names_row)
           ov_y_dummy_lv_idx[[g]] <- match(ov_dummy_names_nox, tmp_lv_names)
         }
       }
