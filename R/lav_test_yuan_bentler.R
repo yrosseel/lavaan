@@ -72,6 +72,11 @@ lav_test_yb <- function(lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavdata = lavdata,
         lavimplied = lavimplied,
+        # pass the (already computed) h1 slot so lav_model_info() does
+        # not needlessly re-estimate the unrestricted (H1) model -- which,
+        # for two-level + missing data, means a fresh EM run (relevant for
+        # the se = "none" auxiliary fits of fit.by.level, baseline, etc.)
+        lavh1 = if (length(lavh1) > 0L) lavh1 else NULL,
         lavoptions = lavoptions,
         extra = FALSE,
         augmented = TRUE,
