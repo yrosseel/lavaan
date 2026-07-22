@@ -942,10 +942,19 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
                              mstep_rel_tol = 1e-10,
                              mstep_verbose = FALSE, # = em.args$verbose
                              acceleration = "none",
-                             fused = TRUE) { # = em.args$fused
+                             fused = TRUE, # = em.args$fused
+                             # optim.fix.saturated: positions (in the packed
+                             # parameter vector) and h1 values of the free
+                             # parameters of a saturated block (within or
+                             # between); these are held fixed at their h1
+                             # values throughout the EM, exactly as the
+                             # NLMINB path does (see lav_model_est())
+                             sat_x_idx = integer(0L),
+                             sat_x_value = numeric(0L)) {
   if (is.null(fused)) {
     fused <- TRUE
   }
+  fix_sat <- length(sat_x_idx) > 0L
   # single group only for now
   stopifnot(lavdata@ngroups == 1L)
 
@@ -976,6 +985,14 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
 
   # initial values
   x_current <- lav_model_get_parameters(lavmodel)
+
+  # pin the saturated block(s) at their h1 values from the very start, and
+  # force the implied moments to be recomputed from the pinned parameters
+  if (fix_sat) {
+    x_current[sat_x_idx] <- sat_x_value
+    lavmodel <- lav_model_set_parameters(lavmodel, x = x_current)
+    lavimplied <- NULL
+  }
 
   # implied
   if (is.null(lavimplied)) {
@@ -1137,6 +1154,12 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     rownames(implied$Sigma.B) <- ov_names_l[[2]]
     local_fit <- em_mstep(implied, x_start = x)
     x_new <- local_fit@optim$x
+    # keep the saturated block(s) pinned at their h1 values (the M-step
+    # factorizes across levels, so discarding its saturated-block update
+    # is equivalent to fitting only the non-saturated block)
+    if (fix_sat) {
+      x_new[sat_x_idx] <- sat_x_value
+    }
     if (logl && missing_flag) {
       attr(x_new, "logl") <- attr(theta_new, "logl")
     }
@@ -1298,8 +1321,17 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
 
       # M-step
       local_fit <- em_mstep(implied, x_start = x_current)
+      x_mstep <- local_fit@optim$x
 
-      implied2 <- local_fit@implied
+      # keep the saturated block(s) pinned at their h1 values; recompute
+      # the implied moments from the pinned parameters (optim.fix.saturated)
+      if (fix_sat) {
+        x_mstep[sat_x_idx] <- sat_x_value
+        implied2 <- lav_model_implied(
+          lav_model_set_parameters(lavmodel, x = x_mstep))
+      } else {
+        implied2 <- local_fit@implied
+      }
       # translate to internal matrices -- once; reused by the loglik below
       # and as the state for the next E-step
       out <- lav_mvn_cl_implied22l(
@@ -1317,7 +1349,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       fx_delta <- fx - fx_old
 
       # derivatives
-      lavmodel <- lav_model_set_parameters(lavmodel, x = local_fit@optim$x)
+      lavmodel <- lav_model_set_parameters(lavmodel, x = x_mstep)
       dx <- lav_model_grad(lavmodel,
         lavdata = lavdata,
         lavsamplestats = lavsamplestats
@@ -1346,7 +1378,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
         break
       } else {
         fx_old <- fx
-        x_current <- local_fit@optim$x
+        x_current <- x_mstep
         if (verbose_x) {
           print(round(x_current, 3))
         }
@@ -1370,9 +1402,15 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       sigma_yz <- out$sigma.yz
     } # EM iterations
 
-    x <- local_fit@optim$x
+    x <- x_mstep
     em_converged <- i < max_iter
     em_iterations <- i
+  }
+
+  # final safeguard: the returned solution has the saturated block(s)
+  # exactly at their h1 values (all EM branches funnel through here)
+  if (fix_sat) {
+    x[sat_x_idx] <- sat_x_value
   }
 
   # add attributes

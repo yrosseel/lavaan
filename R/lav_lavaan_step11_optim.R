@@ -161,6 +161,23 @@ lav_step11_estoptim <- function(lavdata = NULL,
         em_dx_tol <- 1e-04
       }
 
+      # optim.fix.saturated: if a whole block (within or between) is
+      # saturated, its h1 estimates are already available; hold those
+      # parameters fixed at their h1 values throughout the EM (and the
+      # nlminb hand-off), exactly as the NLMINB optimizer does. This is
+      # exact here because the (two-group) M-step factorizes across levels.
+      # Not for the random-slope EM (rv_flag).
+      fix_sat_ok <- (is.null(lavoptions$optim.fix.saturated) ||
+                     isTRUE(lavoptions$optim.fix.saturated)) && !rv_flag
+      h1_sat <- list(x.idx = integer(0L), value = numeric(0L))
+      if (fix_sat_ok) {
+        h1_sat <- lav_model_est_h1_saturated(
+          lavmodel = lavmodel, lavpartable = lavpartable,
+          lavdata = lavdata, lavh1 = lavh1
+        )
+      }
+      fix_sat <- length(h1_sat$x.idx) > 0L
+
       # run the EM iterations, starting from the current parameter
       # values of lavmodel_start
       run_em <- function(lavmodel_start, fx_tol) {
@@ -196,7 +213,9 @@ lav_step11_estoptim <- function(lavdata = NULL,
               max_iter = lavoptions$em.args$max_iter,
               mstep_verbose = isTRUE(lavoptions$em.args$verbose),
               acceleration = lavoptions$em.args$acceleration,
-              fused = lavoptions$em.args$fused
+              fused = lavoptions$em.args$fused,
+              sat_x_idx = h1_sat$x.idx,
+              sat_x_value = h1_sat$value
             ),
             silent = TRUE
           )
@@ -239,10 +258,11 @@ lav_step11_estoptim <- function(lavdata = NULL,
           ), silent = TRUE)
           lavoptions2 <- lavoptions
           lavoptions2$optim.method <- "nlminb"
-          # do NOT pin saturated blocks at their h1 values: the EM
-          # values are (at least as) good, and pinning would overwrite
-          # the warm start
-          lavoptions2$optim.fix.saturated <- FALSE
+          # keep the same saturated-block policy as the EM phase: if the
+          # EM pinned those blocks at their h1 values, nlminb should too
+          # (do not re-estimate them); otherwise leave them free. Either
+          # way the EM solution is the warm start.
+          lavoptions2$optim.fix.saturated <- fix_sat
           x2 <- try(
             lav_model_est(
               lavmodel = lavmodel_em, # warm start at the EM solution
