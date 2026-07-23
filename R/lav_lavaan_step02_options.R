@@ -246,6 +246,15 @@ lav_step02_options <- function(slot_options = NULL,
       }
       if (opt$se != "none" && is.null(dotdotdot$test)) {
         opt$test <- "yuan.bentler.mplus"
+        # new in 0.7-3: also add Browne's residual test by default; with
+        # sampling weights the ADF-based version is needed (all NT
+        # statistics, including the standard test, are inflated)
+        if (toupper(estimator) != "PML" &&
+            !opt$.clustered && !opt$.multilevel &&
+            opt$missing %in% c("default", "listwise") &&
+            !isTRUE(opt$conditional.x)) {
+          opt$test <- c("yuan.bentler.mplus", "browne.residual.adf")
+        }
       }
     }
 

@@ -1166,7 +1166,12 @@ lav_options_set <- function(opt = NULL) {
         "scaled.shifted",
         "scaled.shifted.corrected"
       ))) {
-        if (length(opt$test) > 1L) {
+        # the browne.residual.* tests do not use observed.information;
+        # ignore them when deciding between h1 and hessian (otherwise
+        # the browne test that is added by default since 0.7-3 would
+        # silently alter the scaled test statistics)
+        ntest_eff <- sum(!grepl("^browne", opt$test))
+        if (ntest_eff > 1L) {
           opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
           if (any(opt$test == "yuan.bentler.mplus")) {
             lav_msg_warn(gettext(
@@ -1174,8 +1179,11 @@ lav_options_set <- function(opt = NULL) {
             ))
           }
         } else {
+          # the first non-browne test (a browne.residual.* test may
+          # have been sorted to the front)
+          test_eff <- opt$test[!grepl("^browne", opt$test)]
           if (opt$estimator == "PML" ||
-            opt$test[1] == "yuan.bentler.mplus") {
+            test_eff[1] == "yuan.bentler.mplus") {
             opt$observed.information[2] <- "hessian"
           } else {
             opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!

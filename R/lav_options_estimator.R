@@ -40,6 +40,25 @@ lav_options_est_ml <- function(opt) {
     if (opt$estimator %in% c("ml", "mlf")) {
       if (opt$test[1] == "default") {
         opt$test <- "standard"
+        # new in 0.7-3: add Browne's residual test as an additional
+        # default test statistic (its type I error rates are much closer
+        # to the nominal level than those of the standard LRT), but only
+        # in settings where it is available:
+        # - not for multilevel data (not supported)
+        # - not when missing = "pairwise" (no suitable Gamma)
+        # - with sampling weights, all NT statistics (including the
+        #   standard test) are inflated; use the ADF-based version
+        #   instead (as does estimator = "GLS"), which needs complete
+        #   data and joint (non-conditional.x) moments
+        if (!isTRUE(opt$.multilevel) && opt$missing != "pairwise") {
+          if (isTRUE(opt$.sampling.weights)) {
+            if (opt$missing == "listwise" && !isTRUE(opt$conditional.x)) {
+              opt$test <- c("standard", "browne.residual.adf")
+            }
+          } else {
+            opt$test <- c("standard", "browne.residual.nt.model")
+          }
+        }
       } # else {
       #    opt$test <- union("standard", opt$test)
       # }

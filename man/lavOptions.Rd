@@ -561,9 +561,18 @@ Estimation options:
       If \code{"none"}, no standard errors are computed.}
    \item{\code{test}:}{Character vector. See the documentation of
       the \code{\link{lavTest}} function for a full list. Multiple names
-      of test statistics can be provided. If \code{"default"}, the value 
-      depends on the values of other arguments. See also the 
-      \code{\link{lavTest}} function to extract (alternative) 
+      of test statistics can be provided. If \code{"default"}, the value
+      depends on the values of other arguments. For \code{estimator =
+      "ML"} (since 0.7-3), the default is \code{c("standard",
+      "browne.residual.nt.model")}: in addition to the standard LRT
+      chi-square statistic, Browne's residual-based (NT, model-based)
+      test statistic (also known as the reweighted least-squares (RLS)
+      statistic) is computed, as its type I error rates are much closer
+      to the nominal level. With sampling weights, the ADF version
+      (\code{"browne.residual.adf"}) is used instead; for multilevel
+      data (and a few other settings where no suitable Gamma matrix is
+      available), only the standard statistic is computed. See also the
+      \code{\link{lavTest}} function to extract (alternative)
       test statistics from a fitted lavaan object. FMG test names such as
       \code{"peba4"}, \code{"pols3"}, \code{"pall"}, and \code{"all"} can be
       requested here for supported ML-family models. The convenience value
