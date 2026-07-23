@@ -100,9 +100,15 @@ lav_test_browne <- function(lavobject = NULL,
   lineq_flag <- !is.null(eq_basis)
 
   # can we use the fast version?
+  # note: not with fixed.x: the kronecker shortcut cannot express the
+  # fixed-x NT Gamma (Gamma(Sigma) - Gamma(Sigma - Sigma.res)); zeroing
+  # the x rows/cols of Sigma.inv would (wrongly) also annihilate the
+  # y-x cross-block residual contributions, forcing the statistic to
+  # zero whenever the y-block is saturated
+  fixed_x_flag <- length(unlist(lavsamplestats@x.idx)) > 0L
   fast_flag <- FALSE
   if (!adf && !lineq_flag && !lavmodel@conditional.x &&
-      !lavmodel@group.w.free) {
+      !lavmodel@group.w.free && !fixed_x_flag) {
     fast_flag <- TRUE
     if (model_based) {
       implied <- lavimplied
@@ -194,14 +200,39 @@ lav_test_browne <- function(lavobject = NULL,
         stat_group[g] <- lav_test_browne_nt_fast(
           res = res, delta = delta_g,
           sample_cov = implied$cov[[g]], sample_nobs = ng,
-          meanstructure = lavmodel@meanstructure,
-          x_idx = lavsamplestats@x.idx[[g]]
+          meanstructure = lavmodel@meanstructure
         )
       } else {
         # naive formula base computation (slow!)
+        gamma_g <- gamma_1[[g]]
+        if (!lavmodel@conditional.x &&
+            length(lavsamplestats@x.idx[[g]]) > 0L) {
+          # fixed.x: remove the x-only moments; their residuals, delta
+          # rows and Gamma rows/cols are all (structurally) zero, but
+          # keeping them leaves exact-zero eigenvalues in the projected
+          # information (NaN/noise in the pseudo-inverse)
+          nvar_g <- length(lavdata@ov.names[[g]])
+          is_x <- seq_len(nvar_g) %in% lavsamplestats@x.idx[[g]]
+          drop_flag <- lav_mat_vech(outer(is_x, is_x, "&"))
+          if (lavmodel@meanstructure) {
+            drop_flag <- c(is_x, drop_flag)
+          }
+          if (lavmodel@group.w.free) {
+            drop_flag <- c(FALSE, drop_flag)
+          }
+          # only if the moment vector has the expected layout (e.g.,
+          # not for correlation structures)
+          if (length(drop_flag) == length(res)) {
+            drop_idx <- which(drop_flag)
+            if (length(drop_idx) > 0L) {
+              res <- res[-drop_idx]
+              delta_g <- delta_g[-drop_idx, , drop = FALSE]
+              gamma_g <- gamma_g[-drop_idx, -drop_idx, drop = FALSE]
+            }
+          }
+        }
         delta_c <- lav_mat_ortho_complement(delta_g)
-        t_dgd <- crossprod(delta_c, gamma_1[[g]]) %*% delta_c
-        # if fixed.x = TRUE, gamma_1[[g]] may contain zero col/rows
+        t_dgd <- crossprod(delta_c, gamma_g) %*% delta_c
         t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
         t_res_delta_c <- crossprod(res, delta_c)
         stat_group[g] <-
@@ -289,11 +320,10 @@ lav_test_browne <- function(lavobject = NULL,
 }
 
 
-# faster version for the NT setting with no constraints
+# faster version for the NT setting with no constraints (and no fixed.x)
 lav_test_browne_nt_fast <- function(res = NULL, delta = NULL,
                                     sample_cov = NULL, sample_nobs = NULL,
-                                    meanstructure = FALSE,
-                                    x_idx = integer(0L)) {
+                                    meanstructure = FALSE) {
   nvar <- nrow(sample_cov)
   pstar <- nvar * (nvar + 1L) / 2L
   q <- ncol(delta)
@@ -302,12 +332,6 @@ lav_test_browne_nt_fast <- function(res = NULL, delta = NULL,
 
   # only once
   s_inv <- solve(sample_cov)
-
-  # handle fixed.x = TRUE
-  if (length(x_idx) > 0L) {
-    s_inv[x_idx, ] <- 0.0
-    s_inv[, x_idx] <- 0.0
-  }
 
   # vech
   diag_idx <- lav_mat_diagh_idx(nvar)
