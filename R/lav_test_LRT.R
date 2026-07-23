@@ -733,9 +733,26 @@ lav_test_lrt_single_model <- function(object, method = "default",
   } else if (test %in% tn) {
     test_1 <- test
   } else {
-    ## Nothing explicitly (or validly) requested.
-    ## But there is > 1 test, so take the second element (old default)
-    test_1 <- 2L
+    ## Nothing explicitly (or validly) requested, but there is > 1 test:
+    ## take the first scaled test if any (the old default was position
+    ## [[2]], but a non-scaled additional test, e.g. browne.residual.*,
+    ## should never override the standard test); without a scaled test,
+    ## honor the standard.test option (which may be a browne.residual.*
+    ## test, e.g. for the (D)WLS/ULS-continuous and MGM estimators)
+    scaled_idx <- which(vapply(
+      object@test,
+      function(x) !is.null(x$scaling.factor),
+      logical(1L)
+    ))
+    standard_test <- object@Options$standard.test
+    if (length(scaled_idx) > 0L) {
+      test_1 <- tn[scaled_idx[1]]
+    } else if (!is.null(standard_test) && standard_test != "standard" &&
+               standard_test %in% tn) {
+      test_1 <- standard_test
+    } else {
+      test_1 <- 1L
+    }
   }
 
   ## anova table
