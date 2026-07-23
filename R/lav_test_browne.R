@@ -239,12 +239,37 @@ lav_test_browne <- function(lavobject = NULL,
             }
           }
         }
-        delta_c <- lav_mat_ortho_complement(delta_g)
-        t_dgd <- crossprod(delta_c, gamma_g) %*% delta_c
-        t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
-        t_res_delta_c <- crossprod(res, delta_c)
-        stat_group[g] <-
-          ng * drop(t_res_delta_c %*% t_dgd_inv %*% t(t_res_delta_c))
+        # Gamma-inverse form (see top of file): stat = res' Gi res -
+        # b' A^{-1} b with b = Delta' Gi res, A = Delta' Gi Delta; a
+        # single Cholesky of Gamma replaces the (much more expensive)
+        # inversion in the orthogonal-complement space
+        stat_g <- as.numeric(NA)
+        gamma_chol <- tryCatch(chol(gamma_g), error = function(e) NULL)
+        if (!is.null(gamma_chol)) {
+          gi_res <- backsolve(gamma_chol,
+                              forwardsolve(t(gamma_chol), res))
+          gi_delta <- backsolve(gamma_chol,
+                                forwardsolve(t(gamma_chol), delta_g))
+          a <- crossprod(delta_g, gi_delta)
+          b <- crossprod(delta_g, gi_res)
+          ab <- tryCatch(solve(a, b),
+                         error = function(e) MASS::ginv(a) %*% b)
+          stat_g <- drop(crossprod(res, gi_res) - crossprod(b, ab))
+          if (is.finite(stat_g) && stat_g < 0 && stat_g > -1e-8) {
+            stat_g <- 0
+          }
+        }
+        if (!is.finite(stat_g) || stat_g < 0) {
+          # fallback: orthogonal-complement form (handles a singular
+          # Gamma)
+          delta_c <- lav_mat_ortho_complement(delta_g)
+          t_dgd <- crossprod(delta_c, gamma_g) %*% delta_c
+          t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
+          t_res_delta_c <- crossprod(res, delta_c)
+          stat_g <- drop(t_res_delta_c %*% t_dgd_inv %*%
+                           t(t_res_delta_c))
+        }
+        stat_group[g] <- ng * stat_g
       }
     }
     stat <- sum(stat_group)
@@ -315,13 +340,20 @@ lav_test_browne <- function(lavobject = NULL,
       label <- "Browne's residual-based (NT) test"
     }
   }
+  # same convention as the standard test: no p-value if df == 0
+  if (df_1 == 0L) {
+    pvalue <- as.numeric(NA)
+  } else {
+    pvalue <- 1 - pchisq(stat, df_1)
+  }
+
   out <- list(
     test = name,
     stat = stat,
     stat.group = stat_group,
     df = df_1,
     refdistr = "chisq",
-    pvalue = 1 - pchisq(stat, df_1),
+    pvalue = pvalue,
     label = label
   )
   out

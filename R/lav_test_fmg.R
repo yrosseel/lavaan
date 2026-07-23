@@ -408,7 +408,7 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
     stat.group = stat_group,
     df = DF,
     refdistr = "chisq",
-    pvalue = 1 - stats::pchisq(STAT, DF),
+    pvalue = if (DF == 0L) as.numeric(NA) else 1 - stats::pchisq(STAT, DF),
     label = "Browne's residual (NT model-based) test"
   )
 }
