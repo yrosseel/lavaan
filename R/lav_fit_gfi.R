@@ -474,7 +474,10 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
     x2_rls <- x2 # fallback
     if (any(rls_names %in% fit_measures) &&
       !categorical_flag && !fiml_flag) {
-      rls <- try(lavTest(lavobject, test = "browne.residual.nt.model"),
+      # suppressWarnings: if the browne test is not available (e.g.,
+      # multilevel), we silently fall back to the LR statistic
+      rls <- try(suppressWarnings(
+        lavTest(lavobject, test = "browne.residual.nt.model")),
         silent = TRUE
       )
       if (!inherits(rls, "try-error") &&

@@ -604,19 +604,32 @@ lav_model_test <- function(lavobject = NULL,
         model_based <- TRUE
       }
 
-      out <- lav_test_browne(
-        lavobject = NULL,
-        lavdata = lavdata,
-        lavsamplestats = lavsamplestats,
-        lavmodel = lavmodel,
-        lavpartable = lavpartable,
-        lavoptions = lavoptions,
-        lavh1 = lavh1,
-        lavimplied = lavimplied,
-        adf = adf,
-        model_based = model_based
+      # a failing (additional) test statistic should not abort the whole
+      # fit (e.g., the browne tests are not available (yet) when nonlinear
+      # equality constraints are involved, which the options layer cannot
+      # know); warn and drop the test instead
+      out <- tryCatch(
+        lav_test_browne(
+          lavobject = NULL,
+          lavdata = lavdata,
+          lavsamplestats = lavsamplestats,
+          lavmodel = lavmodel,
+          lavpartable = lavpartable,
+          lavoptions = lavoptions,
+          lavh1 = lavh1,
+          lavimplied = lavimplied,
+          adf = adf,
+          model_based = model_based
+        ),
+        error = function(e) e
       )
-      test_1[[this_test]] <- out
+      if (inherits(out, "error")) {
+        lav_msg_warn(gettextf(
+          "test = %1$s could not be computed and is ignored: %2$s",
+          dQuote(this_test), conditionMessage(out)))
+      } else {
+        test_1[[this_test]] <- out
+      }
     } else if (this_test %in% c(
       "satorra.bentler",
       "mean.var.adjusted",
