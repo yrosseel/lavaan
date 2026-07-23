@@ -58,21 +58,24 @@ lav_test_browne <- function(lavobject = NULL,
   }
 
   if (lavmodel@categorical) {
+    if (model_based) {
+      lav_msg_stop(gettext("the model-based version of Browne's residual
+        test is not available in the categorical setting."))
+    }
     if (!adf) {
       lav_msg_warn(gettext("normal theory version of Browne's residual test
         not available in the categorical setting; switching to ADF."))
       adf <- TRUE
     }
-    if (model_based) {
-      lav_msg_stop(gettext("model-based version of Browne's residual test not
-        available in the categorical setting; switching to sample-based."))
-      model_based <- FALSE
-    }
+  }
+  if (lavdata@missing == "pairwise") {
+    lav_msg_stop(gettext("Browne's residual test is not available when
+      missing = \"pairwise\"."))
   }
   if (lavdata@missing != "listwise" && !model_based) {
-    lav_msg_stop(gettext("sample-based version of Browne's test is not
-      available when data is missing; switching to model-based."))
-    model_based <- TRUE
+    lav_msg_stop(gettext("the sample-based version of Browne's residual test
+      is not available when data is incomplete; please use the model-based
+      version instead (e.g., test = \"browne.residual.nt.model\")."))
   }
   if (lavdata@nlevels > 1L) {
     lav_msg_stop(gettext("Browne's test is not available when data is
@@ -105,10 +108,15 @@ lav_test_browne <- function(lavobject = NULL,
   # the x rows/cols of Sigma.inv would (wrongly) also annihilate the
   # y-x cross-block residual contributions, forcing the statistic to
   # zero whenever the y-block is saturated
+  # note: not with incomplete data either: the kronecker shortcut is the
+  # complete-data NT Gamma; under missing = "ml" the correct Gamma is the
+  # inverted missing-data information (as computed by lav_object_gamma),
+  # and ignoring the information loss badly inflates the statistic
   fixed_x_flag <- length(unlist(lavsamplestats@x.idx)) > 0L
   fast_flag <- FALSE
   if (!adf && !lineq_flag && !lavmodel@conditional.x &&
-      !lavmodel@group.w.free && !fixed_x_flag) {
+      !lavmodel@group.w.free && !fixed_x_flag &&
+      lavdata@missing == "listwise") {
     fast_flag <- TRUE
     if (model_based) {
       implied <- lavimplied
