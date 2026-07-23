@@ -560,6 +560,13 @@ lav_options_est_mml <- function(opt) {
     opt$information[2] <- "observed"
   }
   # test
+  if (!all(opt$test %in% c("default", "none", "standard"))) {
+    lav_msg_warn(gettextf(
+      "test statistic(s) %s not available with estimator = \"MML\";
+       no test statistic will be computed.",
+      lav_msg_view(opt$test[!opt$test %in%
+                            c("default", "none", "standard")], "none")))
+  }
   opt$test <- "none"
   # link
   if (opt$link == "default") {
