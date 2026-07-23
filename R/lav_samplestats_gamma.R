@@ -731,14 +731,25 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
          clustered data."))
     }
     out <- stats::cov.wt(m_y, wt = wt, method = "ML")
+    mu_1 <- out$center
+    cov_1 <- out$cov
+    if (!is.null(m_sigma)) {
+      # model-based: evaluate the h1 sandwich at the implied moments
+      # (instead of at the weighted sample moments)
+      cov_1 <- m_sigma
+      if (!is.null(m_mu)) {
+        mu_1 <- as.numeric(m_mu)
+      }
+    }
     i_mat <- lav_mvn_h1_info_expected(
-      y = m_y, wt = wt, sample_cov = out$cov, x_idx = x_idx,
+      y = m_y, wt = wt, sample_cov = cov_1, x_idx = x_idx,
       meanstructure = meanstructure
     )
     # unit (unweighted) casewise scores of the saturated model, evaluated
-    # at the weighted sample moments
+    # at the weighted sample moments (or the implied moments, if
+    # model-based)
     sc <- lav_mvn_sc_mu_sigma(
-      y = m_y, mu = out$center, sigma_1 = out$cov, x_idx = x_idx
+      y = m_y, mu = mu_1, sigma_1 = cov_1, x_idx = x_idx
     )
     if (!meanstructure) {
       sc <- sc[, -seq_len(p), drop = FALSE]
