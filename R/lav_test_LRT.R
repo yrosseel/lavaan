@@ -32,7 +32,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   test <- tolower(test[1])
   method_orig <- method[1]
   method <- tolower(gsub("[-_\\.]", "", method[1]))
-  if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt")) {
+  if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt",
+                  "browne.residual.adf.model", "browne.residual.nt.model")) {
     if (type == "browne") {
       type <- "browne.residual.adf"
     }
@@ -322,7 +323,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       "some models (but not all) have scaled test statistics"))
   }
 
-  if (type %in% c("browne.residual.adf", "browne.residual.nt")) {
+  if (type %in% c("browne.residual.adf", "browne.residual.nt",
+                  "browne.residual.adf.model", "browne.residual.nt.model")) {
     scaled <- FALSE
     method <- "standard"
   }
@@ -407,19 +409,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   if (type == "chisq") {
     df_1 <- sapply(mods, function(x) slot(x, "test")[[1]]$df)
     stat_1 <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
-  } else if (type == "browne.residual.nt") {
+  } else if (type %in% c("browne.residual.nt", "browne.residual.adf",
+                         "browne.residual.nt.model",
+                         "browne.residual.adf.model")) {
     testlist <- lapply(
       mods,
-      function(x) lavTest(x, test = "browne.residual.nt",
-                          drop_list_single = FALSE)
-    )
-    df_1 <- sapply(testlist, function(x) x[[type]]$df)
-    stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
-  } else if (type == "browne.residual.adf") {
-    testlist <- lapply(
-      mods,
-      function(x) lavTest(x, test = "browne.residual.adf",
-                          drop_list_single = FALSE)
+      function(x) lavTest(x, test = type, drop_list_single = FALSE)
     )
     df_1 <- sapply(testlist, function(x) x[[type]]$df)
     stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
@@ -693,9 +688,15 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   } else if (type == "browne.residual.adf") {
     attr(val, "heading") <-
       "\nChi-Squared Difference Test based on Browne's residual (ADF) Test\n"
+  } else if (type == "browne.residual.adf.model") {
+    attr(val, "heading") <- paste0("\nChi-Squared Difference Test based on ",
+      "Browne's residual (ADF, model-based) Test\n")
   } else if (type == "browne.residual.nt") {
     attr(val, "heading") <-
       "\nChi-Squared Difference Test based on Browne's residual (NT) Test\n"
+  } else if (type == "browne.residual.nt.model") {
+    attr(val, "heading") <- paste0("\nChi-Squared Difference Test based on ",
+      "Browne's residual (NT, model-based) Test\n")
   } else if (type == "cf") {
     colnames(val)[c(3, 4)] <- c("Cf", "Cf diff")
     attr(val, "heading") <- "\nCf Difference Test\n"
