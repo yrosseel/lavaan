@@ -9,7 +9,7 @@
 This function computes a variety of fit measures to assess the global
 fit of a latent variable model.}
 \usage{
-fitMeasures(object, fit_measures = "all",
+\S4method{fitMeasures}{lavaan}(object, fit_measures = "all",
             baseline_model = NULL, h1_model = NULL,
             fm_args = list(standard.test     = "default",
                            scaled.test       = "default",
@@ -19,7 +19,7 @@ fitMeasures(object, fit_measures = "all",
                            robust            = TRUE,
                            cat.nonpd         = "na"),
             output = "vector", level = NULL, ...)
-fitmeasures(object, fit_measures = "all",
+\S4method{fitmeasures}{lavaan}(object, fit_measures = "all",
             baseline_model = NULL, h1_model = NULL,
             fm_args = list(standard.test     = "default",
                            scaled.test       = "default",

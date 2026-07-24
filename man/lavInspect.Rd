@@ -2,6 +2,9 @@
 \alias{lavInspect}
 \alias{inspect}
 \alias{lavTech}
+\alias{lavInspect.lavaan}
+\alias{inspect.lavaan}
+\alias{lavTech.lavaan}
 \title{Inspect or extract information from a fitted lavaan object}
 \description{
 The \code{lavInspect()} and \code{lavTech()} functions can be used to
@@ -10,15 +13,15 @@ fitted lavaan object. Note: the (older) \code{inspect()} function is
 now simply a shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
-lavInspect(object, what = "free", add_labels = TRUE, add_class = TRUE,
+\method{lavInspect}{lavaan}(object, what = "free", add_labels = TRUE, add_class = TRUE,
            list_by_group = TRUE,
            drop_list_single_group = TRUE, ...)
 
-lavTech(object, what = "free", add_labels = FALSE, add_class = FALSE,
+\method{lavTech}{lavaan}(object, what = "free", add_labels = FALSE, add_class = FALSE,
         list_by_group = FALSE,
         drop_list_single_group = FALSE, ...)
 
-inspect(object, what = "free", ...)
+\method{inspect}{lavaan}(object, what = "free", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}

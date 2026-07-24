@@ -2,92 +2,41 @@
 # TDJ: add "..." to make the generic actually generic, for lavaan.mi objects
 
 # S3 generic for S3 dispatch
-fitMeasures <- function(object, fit_measures = "all",           # nolint
-                        baseline_model = NULL, h1_model = NULL,
-                        fm_args = list(
-                          standard.test = "default",
-                          scaled.test = "default",
-                          rmsea.ci.level = 0.90,
-                          rmsea.close.h0 = 0.05,
-                          rmsea.notclose.h0 = 0.08,
-                          robust = TRUE,
-                          cat.nonpd = "na"
-                        ),
-                        output = "vector", level = NULL, ...) {
+#
+# NOTE: the generic only lists 'object' and '...'; the full argument list
+# (fit_measures, baseline_model, h1_model, fm_args, output, level) lives on
+# the methods, where the defaults are defined once. This keeps the generic
+# minimal and avoids having to keep the generic and method signatures in sync.
+fitMeasures <- function(object, ...) {                          # nolint
   UseMethod("fitMeasures", object)
 }
-fitmeasures <- function(object, fit_measures = "all",
-                        baseline_model = NULL, h1_model = NULL,
-                        fm_args = list(
-                          standard.test = "default",
-                          scaled.test = "default",
-                          rmsea.ci.level = 0.90,
-                          rmsea.close.h0 = 0.05,
-                          rmsea.notclose.h0 = 0.08,
-                          robust = TRUE,
-                          cat.nonpd = "na"
-                        ),
-                        output = "vector", level = NULL, ...) {
+fitmeasures <- function(object, ...) {
   UseMethod("fitmeasures", object)
 }
 
 
 # S4 generic for S4 dispatch
-setGeneric(
-  "fitMeasures",
-  function(object, fit_measures = "all",
-           baseline_model = NULL, h1_model = NULL,
-           fm_args = list(
-             standard.test = "default",
-             scaled.test = "default",
-             rmsea.ci.level = 0.90,
-             rmsea.close.h0 = 0.05,
-             rmsea.notclose.h0 = 0.08,
-             robust = TRUE,
-             cat.nonpd = "na"
-           ),
-           output = "vector", level = NULL, ...) {
-    standardGeneric("fitMeasures")
-  }
-)
-setGeneric(
-  "fitmeasures",
-  function(object, fit_measures = "all",
-           baseline_model = NULL, h1_model = NULL,
-           fm_args = list(
-             standard.test = "default",
-             scaled.test = "default",
-             rmsea.ci.level = 0.90,
-             rmsea.close.h0 = 0.05,
-             rmsea.notclose.h0 = 0.08,
-             robust = TRUE,
-             cat.nonpd = "na"
-           ),
-           output = "vector", level = NULL, ...) {
-    standardGeneric("fitmeasures")
-  }
-)
+setGeneric("fitMeasures", function(object, ...) {
+  standardGeneric("fitMeasures")
+})
+setGeneric("fitmeasures", function(object, ...) {
+  standardGeneric("fitmeasures")
+})
 
 
 # S3 generics
-lavInspect <- function(object, what = "free",
-                       add_labels = TRUE,
-                       add_class = TRUE,
-                       list_by_group = TRUE,
-                       drop_list_single_group = TRUE,
-                       ...) {
+#
+# As for fitMeasures() above, the generics only list 'object' and '...'; the
+# full argument list (what, add_labels, add_class, list_by_group,
+# drop_list_single_group) with its defaults lives on the methods.
+lavInspect <- function(object, ...) {
   UseMethod("lavInspect", object)
 }
 
-inspect <- function(object, what = "free", ...) {
+inspect <- function(object, ...) {
     UseMethod("inspect", object)
 }
 
-lavTech <- function(object, what = "free",
-                    add_labels = FALSE,
-                    add_class = FALSE,
-                    list_by_group = FALSE,
-                    drop_list_single_group = FALSE,
-                    ...) {
+lavTech <- function(object, ...) {
   UseMethod("lavTech", object)
 }
