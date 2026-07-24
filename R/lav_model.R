@@ -141,7 +141,7 @@ lav_model <- function(lavpartable = NULL,
   # FIXME: check for non-existing parameters
   bad_idx <-
     which((tmp_rep$mat == "" | is.na(tmp_rep$row) | is.na(tmp_rep$col)) &
-          !lavpartable$op %in% c("==", "<", ">", ":=", "|~"))
+          !lavpartable$op %in% c("==", "<", ">", ":=", ":~", "|~"))
 
   if (length(bad_idx) > 0L) {
     this_formula <- paste(lavpartable$lhs[bad_idx[1]],
@@ -159,6 +159,34 @@ lav_model <- function(lavpartable = NULL,
         gettextf("parameter is not defined: %s", this_formula)
       )
     }
+  }
+
+  # data-defined (":~") parameters: build dv.function + metadata
+  dv_function <- lav_pt_con_dv(lavpartable)
+  dv_names_all <- character(0L)
+  dv_cell_idx <- list()
+  dv_pt_idx <- which(lavpartable$op == ":~")
+  if (length(dv_pt_idx) > 0L) {
+    dv_names_all <- unique(unlist(lapply(
+      lavpartable$rhs[dv_pt_idx],
+      function(s) {
+        lav_dv_expr_datavars(
+          lav_pt_con_parse(s, gettext("parameter definition(s)"))[[1L]])
+      })))
+    # metadata: the moderated ('host') cells in GLIST, per definition
+    dv_cell_idx <- lapply(dv_pt_idx, function(ii) {
+      lab <- lavpartable$lhs[ii]
+      host <- which(!lavpartable$op %in%
+                      c("==", "<", ">", ":=", ":~", "dp") &
+                    lavpartable$label == lab)
+      list(label = lab,
+           pt.idx = host,
+           block = lavpartable$block[host],
+           mat = tmp_rep$mat[host],
+           row = tmp_rep$row[host],
+           col = tmp_rep$col[host])
+    })
+    names(dv_cell_idx) <- lavpartable$lhs[dv_pt_idx]
   }
 
   # prepare nG-sized slots
@@ -275,7 +303,13 @@ lav_model <- function(lavpartable = NULL,
       dim_names[[offset]] <- mm_dim_names[[mm]]
 
       # select elements for this matrix
-      idx <- which(lavpartable$block == g & tmp_rep$mat == mm_names[mm])
+      # (note: the "dp" rows -- component parameters of ":~" definitions --
+      #  are 'global' (block = 0), but their vector lives in block 1)
+      if (mm_names[mm] == "dp") {
+        idx <- which(tmp_rep$mat == "dp")
+      } else {
+        idx <- which(lavpartable$block == g & tmp_rep$mat == mm_names[mm])
+      }
 
       # create empty `pattern' matrix
       # FIXME: one day, we may want to use sparse matrices...
@@ -555,6 +589,9 @@ lav_model <- function(lavpartable = NULL,
     eq.constraints.K = tmp_con$ceq.JAC.NULL,
     eq.constraints.k0 = tmp_con$ceq.rhs.NULL,
     def.function = tmp_con$def.function,
+    dv.function = dv_function,
+    dv.names = dv_names_all,
+    dv.idx = dv_cell_idx,
     ceq.function = tmp_con$ceq.function,
     ceq.JAC = tmp_con$ceq.JAC,
     ceq.rhs = tmp_con$ceq.rhs,

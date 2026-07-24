@@ -35,6 +35,12 @@ lav_ram <- function(partable = NULL,
   # categorical <- any(partable$op == "|")
   # group_w_free <- any(partable$lhs == "group" & partable$op == "%")
 
+  # new in 0.7-3: component parameters of data-defined (":~") parameters;
+  # these free scalars are collected in a single "dp" vector attached to
+  # the first block
+  dp_names <- partable$lhs[partable$op == "dp"]
+  ndp <- length(dp_names)
+
   # number of blocks
   nblocks <- lav_pt_nblocks(partable)
 
@@ -116,6 +122,16 @@ lav_ram <- function(partable = NULL,
     tmp_row[idx] <- 0L
     tmp_col[idx] <- 0L
 
+    # 9. component parameters ("dp" rows) of data-defined (":~")
+    # parameters; these rows are 'global' (block = 0), but their (vector)
+    # matrix is attached to the first block
+    if (g == 1L && ndp > 0L) {
+      idx <- which(target$op == "dp")
+      tmp_mat[idx] <- "dp"
+      tmp_row[idx] <- match(target$lhs[idx], dp_names)
+      tmp_col[idx] <- 1L
+    }
+
     if (extra) {
       # mRows
       mm_rows <- list(
@@ -123,7 +139,8 @@ lav_ram <- function(partable = NULL,
         A = nboth,
         S = nboth,
         m = nboth,
-        gw = 1L
+        gw = 1L,
+        dp = ndp
       )
 
       # mCols
@@ -132,7 +149,8 @@ lav_ram <- function(partable = NULL,
         A = nboth,
         S = nboth,
         m = 1L,
-        gw = 1L
+        gw = 1L,
+        dp = 1L
       )
 
       # dimNames for LISREL model matrices
@@ -141,7 +159,8 @@ lav_ram <- function(partable = NULL,
         A = list(both_names, both_names),
         S = list(both_names, both_names),
         m = list(both_names, "intercept"),
-        gw = list("group", "weight")
+        gw = list("group", "weight"),
+        dp = list(dp_names, "dp")
       )
       # isSymmetric
       mm_symmetric <- list(
@@ -149,7 +168,8 @@ lav_ram <- function(partable = NULL,
         A = FALSE,
         S = TRUE,
         m = FALSE,
-        gw = FALSE
+        gw = FALSE,
+        dp = FALSE
       )
 
       # which mm's do we need? (always include ov.idx, A and S)
@@ -160,6 +180,9 @@ lav_ram <- function(partable = NULL,
       }
       if ("gw" %in% tmp_mat[idx_1]) {
         mm_names <- c(mm_names, "gw")
+      }
+      if (g == 1L && ndp > 0L) {
+        mm_names <- c(mm_names, "dp")
       }
 
       rep_mm_names[[g]] <- mm_names

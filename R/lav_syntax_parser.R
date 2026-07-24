@@ -164,7 +164,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
     )
   }
   # -------------------------------------------------------------------------- #
-  lavops <- gregexpr("=~|<~|~\\*~|~~|~|\\|~|==|<|>|:=|:|\\||%", modelsrcw)[[1]]
+  lavops <- gregexpr("=~|<~|~\\*~|~~|~|\\|~|==|<|>|:=|:~|:|\\||%", modelsrcw)[[1]]
   if (lavops[1L] > -1L) {
     lavop_lengths <- attr(lavops, "match.length")
     for (i in seq_along(lavops)) {
@@ -692,8 +692,8 @@ assign("equal", function(...) {
     cat("formula to analyse:\n")
   }
   #  operators <- c("=~", "<~", "~*~", "~~", "~", "|~", "==", "<", ">", ":=",
-  #                 ":", "|", "%")
-  constraint_operators <- c("==", "<", ">", ":=")
+  #                 ":~", ":", "|", "%")
+  constraint_operators <- c("==", "<", ">", ":=", ":~")
   for (s in seq_along(formulalist)) {
     formul1 <- formulalist[[s]]
     if (lav_debug()) {
@@ -716,6 +716,17 @@ assign("equal", function(...) {
     }
     op <- formul1$elem_text[opi]
     if (any(op == constraint_operators)) { # ----- constraints -------
+      # the left-hand side of ":~" must be a single parameter label
+      if (op == ":~" &&
+          (opi != 2L || formul1$elem_type[1L] != types$identifier)) {
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[1L])
+        lav_msg_stop(
+          gettext(
+            "left-hand side of the ':~' operator must be a single parameter
+            label."),
+          tl[1L], footer = tl[2L]
+        )
+      }
       lhs <- paste(formul1$elem_text[seq.int(1L, opi - 1L)], collapse = "")
       rhs <- paste(formul1$elem_text[seq.int(opi + 1L, nelem)], collapse = "")
       constraints <- c(

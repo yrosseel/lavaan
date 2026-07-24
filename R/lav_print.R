@@ -166,6 +166,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   )
   asections <- c(
     "Defined Parameters",
+    "Data-Defined Parameters",
     "Constraints"
   )
 
@@ -811,6 +812,27 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       m[row_idx, 1] <- lav_print_format_names(x$lhs[row_idx], "")
       m_1 <- m[row_idx, , drop = FALSE]
       colnames(m_1) <- colnames(m)
+    } else if (s == "Data-Defined Parameters") {
+      # data-defined (":~") parameters: show the definitions, followed by
+      # a table with their (free) component parameters; the "lhs :~" part
+      # is aligned with the parameter-name column of the table below, and
+      # the rhs expression starts under the "Estimate" column
+      dv_row_idx <- which(x$op == ":~")
+      if (length(dv_row_idx) == 0L) next
+      cat("\n", s, ":\n\n", sep = "")
+      for (i in dv_row_idx) {
+        cat(sprintf("%4s%-14s :~ %s\n", "", x$lhs[i], x$rhs[i]))
+      }
+      cat("\n")
+      row_idx <- which(x$op == "dp")
+      if (length(row_idx) > 0L) {
+        m[row_idx, 1] <- lav_print_format_names(x$lhs[row_idx], "")
+        m_1 <- m[row_idx, , drop = FALSE]
+        colnames(m_1) <- colnames(m)
+        rownames(m_1) <- rep("", NROW(m_1))
+        print(m_1, quote = FALSE)
+      }
+      next
     } else if (s == "Constraints") {
       row_idx <- which(x$op %in% c("==", "<", ">"))
       if (length(row_idx) == 0) next

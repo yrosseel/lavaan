@@ -273,6 +273,41 @@ lavaan <- function(
     }
   }
 
+  # ------------ definition variables (":~" definitions) -----------------
+  # collect the data() variable names used in ":~" definitions; like
+  # external instruments, they must be read from the data (routed through
+  # the extra-observed-variable channel, lavData@aux), but they must NOT
+  # enter the model-implied summary statistics
+  dv_data_names <- character(0L)
+  dv_rhs <- character(0L)
+  tmp_con_flat <- attr(flat_model, "constraints")
+  if (!is.null(tmp_con_flat) && length(tmp_con_flat) > 0L) {
+    con_ops <- sapply(tmp_con_flat, "[[", "op")
+    dv_rhs <- unlist(lapply(tmp_con_flat[con_ops == ":~"], "[[", "rhs"))
+  } else if (!is.null(flat_model$op)) {
+    # flat_model is a full parameter table
+    dv_rhs <- flat_model$rhs[flat_model$op == ":~"]
+  }
+  if (length(dv_rhs) > 0L && !is.null(data)) {
+    # remember all data column names, so lav_pt_dv() can warn about bare
+    # tokens in ":~" expressions that match a data column (forgotten
+    # data() wrapper)
+    attr(flat_model, "dv.data.cols") <- colnames(data)
+    dv_data_names <- unique(unlist(lapply(dv_rhs, function(s) {
+      lav_dv_expr_datavars(
+        lav_pt_con_parse(s, gettext("parameter definition(s)"))[[1L]])
+    })))
+    missing_idx <- which(!dv_data_names %in% colnames(data))
+    if (length(missing_idx) > 0L) {
+      lav_msg_stop(gettextf(
+        "definition variable(s) in ':~' expressions not found
+        in the data: %s.",
+        lav_msg_view(dv_data_names[missing_idx], "none")))
+    }
+    # variables that are already part of the model are available anyway
+    dv_data_names <- setdiff(dv_data_names, unlist(ov_names))
+  }
+
   # ------------ lavoptions --------------------
   lavoptions <- lav_step02_options(
     slot_options      = slot_options,
@@ -324,6 +359,10 @@ lavaan <- function(
       ordered    = ordered,
       lavoptions = lavoptions
     )
+  }
+  # add the ":~" definition variables to the extra-observed-variable channel
+  if (length(dv_data_names) > 0L) {
+    ov_names_aux <- unique(c(ov_names_aux, dv_data_names))
   }
 
   # ------------ lavdata ------------------------
@@ -515,6 +554,11 @@ lavaan <- function(
       lavsamplestats  = lavsamplestats,
       lavh1           = lavh1
     )
+    # starting values for data-defined (":~") parameters and their
+    # component ("dp") parameters (representative values; needs lavdata)
+    if (any(lavpartable$op == ":~")) {
+      lavpartable <- lav_start_dv(lavpartable, lavdata = lavdata)
+    }
     timing <- lav_add_timing(timing, "start")
 
     # ------------ model -------------------------

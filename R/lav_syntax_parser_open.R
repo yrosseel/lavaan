@@ -357,7 +357,7 @@ lav_parse_formula_numbers <- function(list_before_numbering, types) {
     frm_hasefa <- TRUE
   }
   if (any(elem_text[i] ==
-      c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%", ":~"))) {
+      c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
     if (frm_incremented) {
       frm_number <- frm_number - 1L
       elem_formula_number[i] <- frm_number
@@ -410,10 +410,10 @@ lav_parse_formula_numbers <- function(list_before_numbering, types) {
 lav_parse_formulas_open <- function(modellist, modelsrc, types) {
   config <- lav_parse_options()
   group_operator <- ":"
-  define_operator <- ":="
+  define_operators <- c(":=", ":~")
   conditional_operators <- c("==", "<", ">")
   non_relational <- config$operators$op %in%
-                      c(group_operator, define_operator, conditional_operators)
+                      c(group_operator, define_operators, conditional_operators)
   relational_operators <- config$operators$op[!non_relational]
   welke <- modellist$elem_type != types$newline
   formula_numbers <- unique(modellist$elem_formula_number[welke])
@@ -709,7 +709,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
   modlist <- tmplist$modlist
   block <- tmplist$block
   block_op <- tmplist$block_op
-  constraint_operators <- c("==", "<", ">", ":=")
+  constraint_operators <- c("==", "<", ">", ":=", ":~")
   if (lav_debug()) {
     cat(vapply(seq_along(formule$elem_type), function(j) {
       if (formule$elem_type[j] == types$stringliteral) {
@@ -738,6 +738,17 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
                  if (opi <= 1L) gettext("left-hand side")
                  else gettext("right-hand side"),
                  op),
+        tl[1L], footer = tl[2L]
+      )
+    }
+    # the left-hand side of ":~" must be a single parameter label
+    if (op == ":~" &&
+        (opi != 2L || formule$elem_type[1L] != types$identifier)) {
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[1L])
+      lav_msg_stop(
+        gettext(
+          "left-hand side of the ':~' operator must be a single parameter
+          label."),
         tl[1L], footer = tl[2L]
       )
     }
@@ -827,7 +838,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
   rhs <- formule$elem_text[nelem]
   already <- which(flat$lhs == lhs & flat$op == op & flat$block == block &
             (flat$rhs == rhs | (flat$rhs == "" &
-              (op == "~" | op == "|~" | op == ":~") &
+              (op == "~" | op == "|~") &
               formule$elem_type[nelem] == types$numliteral)))
   if (length(already) == 1L) {
     idx <- already
@@ -839,7 +850,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
     flat$rhs[idx] <- rhs
     flat$block[idx] <- block
     if (formule$elem_type[nelem] == types$numliteral) {
-      if (op == "~" || op == "|~"| op == ":~") flat$rhs[idx] <- ""
+      if (op == "~" || op == "|~") flat$rhs[idx] <- ""
     }
   }
   # modifiers always come before an asterix or a question mark
@@ -911,7 +922,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
     }
   }
   # check for variable regressed on itself
-  if (formule$elem_text[opi] %in% c("~", ":~") &&
+  if (formule$elem_text[opi] == "~" &&
       formule$elem_text[opi - 1L] == formule$elem_text[nelem]) {
     if (!grepl("^0\\.?0*$", flat$fixed[idx])) {
       tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[opi])
@@ -959,11 +970,11 @@ lav_parse_check_relational <- function(formule, modelsrc, types, opi,
   }
   if (formule$elem_type[nelem] != types$identifier &&
       (formule$elem_type[nelem] != types$numliteral ||
-        all(op != c("~", "|~", "=~", ":~")))) {
+        all(op != c("~", "|~", "=~")))) {
     tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[nelem])
     lav_msg_stop(
       gettext("Last element of rhs part expected to be an identifier or,
-              for operator ~, |~, =~ or :~, a numeric literal!"),
+              for operator ~, |~ or =~, a numeric literal!"),
       tl[1L],
       footer = tl[2L]
     )

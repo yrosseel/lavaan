@@ -30,6 +30,12 @@ lav_lisrel <- function(lavpartable = NULL,
   composites <- any(lavpartable$op == "<~") && allow_composites
   # group_w_free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
 
+  # new in 0.7-3: component parameters of data-defined (":~") parameters;
+  # these free scalars are collected in a single "dp" vector attached to
+  # the first block
+  dp_names <- lavpartable$lhs[lavpartable$op == "dp"]
+  ndp <- length(dp_names)
+
   # gamma? only if conditional.x
   if (any(lavpartable$op %in% c("~", "<~") & lavpartable$exo == 1L) &&
     !composites) {
@@ -362,6 +368,16 @@ lav_lisrel <- function(lavpartable = NULL,
     tmp_row[idx] <- 0L
     tmp_col[idx] <- 0L
 
+    # new in 0.7-3: component parameters ("dp" rows) of data-defined
+    # (":~") parameters; note: these rows are 'global' (block = 0), but
+    # their (vector) matrix is attached to the first block
+    if (g == 1L && ndp > 0L) {
+      idx <- which(target$op == "dp")
+      tmp_mat[idx] <- "dp"
+      tmp_row[idx] <- match(target$lhs[idx], dp_names)
+      tmp_col[idx] <- 1L
+    }
+
     if (extra) {
       # mRows
       mm_rows <- list(
@@ -377,6 +393,7 @@ lav_lisrel <- function(lavpartable = NULL,
         cov.x = nexo,
         mean.x = nexo,
         gw = 1L,
+        dp = ndp,
         psi = nfac
       )
 
@@ -394,6 +411,7 @@ lav_lisrel <- function(lavpartable = NULL,
         cov.x = nexo,
         mean.x = 1L,
         gw = 1L,
+        dp = 1L,
         psi = nfac
       )
 
@@ -411,6 +429,7 @@ lav_lisrel <- function(lavpartable = NULL,
         cov.x = list(ov_names_x, ov_names_x),
         mean.x = list(ov_names_x, "intercepts"),
         gw = list("group", "weight"),
+        dp = list(dp_names, "dp"),
         psi = list(lv_names, lv_names)
       )
 
@@ -428,6 +447,7 @@ lav_lisrel <- function(lavpartable = NULL,
         cov.x = TRUE,
         mean.x = FALSE,
         gw = FALSE,
+        dp = FALSE,
         psi = TRUE
       )
 
@@ -457,6 +477,9 @@ lav_lisrel <- function(lavpartable = NULL,
       }
       if ("gw" %in% tmp_mat[idx_1]) {
         mm_names <- c(mm_names, "gw")
+      }
+      if (g == 1L && ndp > 0L) {
+        mm_names <- c(mm_names, "dp")
       }
       if ("cov.x" %in% tmp_mat[idx_1]) {
         mm_names <- c(mm_names, "cov.x")

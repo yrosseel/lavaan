@@ -133,6 +133,9 @@ setClass("lavModel", # MATRIX representation of the sem model
     eq.constraints.K   = "matrix",
     eq.constraints.k0  = "numeric",
     def.function       = "function",
+    dv.function        = "function", # data-defined (":~") parameters
+    dv.names           = "character", # definition variable names
+    dv.idx             = "list", # metadata: moderated GLIST cells
     ceq.function       = "function",
     ceq.jacobian       = "function",
     ceq.JAC            = "matrix",

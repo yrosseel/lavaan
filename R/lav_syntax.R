@@ -74,7 +74,7 @@ lav_parse_model_string_orig <- function(model_syntax = "",
 
   # start.idx <- grep("[~=<>:|%]", model.simple)
   operators <- c(
-    "=~", "<~", "~*~", "~~", "~", "==", "<", ">", ":=",
+    "=~", "<~", "~*~", "~~", "~", "==", "<", ">", ":=", ":~",
     ":", "\\|", "%"
   )
   lhs_modifiers <- c("efa")
@@ -190,6 +190,9 @@ lav_parse_model_string_orig <- function(model_syntax = "",
       # "~~" operator?
     } else if (grepl("~~", line_simple, fixed = TRUE)) {
       op <- "~~"
+      # ":~" operator? (must be checked before "~")
+    } else if (grepl(":~", line_simple, fixed = TRUE)) {
+      op <- ":~"
       # "~" operator?
     } else if (grepl("~", line_simple, fixed = TRUE)) {
       op <- "~"
@@ -242,11 +245,19 @@ lav_parse_model_string_orig <- function(model_syntax = "",
       rhs <- substr(rhs, 2, nchar(rhs))
     }
 
-    # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
-    if (op == "==" || op == "<" || op == ">" || op == ":=") {
+    # 2b. if operator is "==" or "<" or ">" or ":=" or ":~", put it in CON
+    if (op == "==" || op == "<" || op == ">" || op == ":=" || op == ":~") {
       # remove quotes, if any
       lhs <- gsub("\\\"", "", lhs)
       rhs <- gsub("\\\"", "", rhs)
+      # the left-hand side of ":~" must be a single parameter label
+      if (op == ":~" &&
+          (length(lhs) != 1L || nchar(lhs) == 0L ||
+           make.names(lhs) != lhs)) {
+        lav_msg_stop(gettextf(
+          "left-hand side of the ':~' operator must be a single parameter
+          label; found %s.", dQuote(lhs)))
+      }
       con_idx <- con_idx + 1L
       con[[con_idx]] <- list(op = op, lhs = lhs, rhs = rhs, user = 1L)
       next

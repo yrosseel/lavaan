@@ -53,6 +53,15 @@ lav_step11_estoptim <- function(lavdata = NULL,
   x <- NULL
   if (lavoptions$do.fit && lavoptions$estimator != "none" &&
     lavmodel@nx.free > 0L) {
+    # models with data-defined (":~") parameters need a casewise
+    # likelihood; lavaan cannot (yet) estimate them
+    if (any(lavpartable$op == ":~")) {
+      lav_msg_stop(gettext(
+        "models with data-defined (:~) parameters require a casewise
+        likelihood, and can not (yet) be estimated by lavaan itself;
+        use do.fit = FALSE to obtain the model specification (parameter
+        table, starting values, dv.function) for an external backend."))
+    }
     if (lav_verbose()) {
       cat("lavoptim           ... start:\n")
     }

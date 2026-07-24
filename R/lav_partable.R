@@ -107,8 +107,10 @@ lav_model_pt  <- function(
       x
     })
     # any explicit (in)equality constraints? (ignoring := definitions)
+    # (":~" data-defined parameters also disable the simple-equality
+    #  shortcut, as they change the free-parameter set)
     tmp_con_nondef_flag <- (sum(sapply(tmp_con, "[[", "op")
-                            %in% c("==", "<", ">")) > 0L)
+                            %in% c("==", "<", ">", ":~")) > 0L)
     # any explicit equality constraints?
     if (tmp_con_nondef_flag) {
       ceq_simple <- FALSE
@@ -1015,6 +1017,12 @@ lav_model_pt  <- function(
     # put lhs of := elements in label column
     tmp_list$label[def_idx] <- def_lhs
   }
+
+  # handle data-defined parameters (:~), if any:
+  # assign labels, flag + fix the host rows ($dv column), and append
+  # free scalar rows (op = "dp") for the new component parameters
+  tmp_list <- lav_pt_dv(tmp_list, var_table = var_table,
+                        data_names = attr(flat, "dv.data.cols"))
 
 
   # handle effect_coding related equality constraints

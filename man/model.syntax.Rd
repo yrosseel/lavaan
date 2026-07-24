@@ -642,6 +642,46 @@ model <- ' # direct effect
 }
 }
 
+\section{Data-defined (moderated) parameters}{
+The \code{":~"} operator redefines an existing (labeled) free parameter as
+a per-observation function of new component parameters and one or more
+observed variables (often called \sQuote{definition variables}). Every
+observed variable in the right-hand side expression must be wrapped in
+\code{data()}. For example, to let a factor loading vary linearly with a
+moderator \code{z}:
+\preformatted{
+model <- ' f =~ y1 + L2*y2 + y3
+           L2 :~ L2_0 + L2_1 * data(z) '
+}
+Here, the loading \code{L2} is no longer a single free parameter: it is
+replaced (for each observation) by the value of the expression, and two
+new (free) component parameters (\code{L2_0} and \code{L2_1}) are added
+to the parameter table. The right-hand side may be any valid R
+expression, and may also refer to other (free) parameter labels, or to
+other \code{":~"} definitions. For example, a factor covariance that is
+moderated on the Fisher-z scale (bounding the corresponding correlation),
+referring to the (labeled) factor variances:
+\preformatted{
+model <- ' f1 ~~ psi_21*f2
+           f1 ~~ psi_11*f1
+           f2 ~~ psi_22*f2
+           psi_21 :~ tanh(zr_0 + zr_1 * data(z)) * sqrt(psi_11*psi_22) '
+}
+While the \code{":="} operator defines a new parameter as a function of
+other parameters only, a \code{":~"} definition involves the data, and
+therefore changes the model itself: estimation requires a casewise
+likelihood. lavaan itself can not (yet) estimate such models; calling
+\code{lavaan()} (or \code{sem()}, \code{cfa()}, ...) with
+\code{do.fit = FALSE} returns an (unfitted) object holding the complete
+model specification (parameter table, starting values, and the
+\code{dv.function} in the \code{@Model} slot) that external packages can
+use to estimate the model with a suitable backend.
+
+Note the difference with random slopes (the \code{rv()} modifier): a
+random slope varies across clusters as a latent variable, while a
+data-defined parameter varies deterministically with observed variables.
+}
+
 \references{
 Rockwood, N. J. (2020). Maximum likelihood estimation of multilevel
 structural equation models with random slopes for latent covariates.
