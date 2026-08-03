@@ -96,8 +96,10 @@ lav_data_simulate_old(..., ordered_center = FALSE)
 \item{ov_var}{The user-specified variances of the observed variables.}
 \item{group_label}{The group labels that should be used if multiple
     groups are created.}
-\item{skewness}{Numeric vector. The skewness values for the observed variables. Defaults to zero.}
-\item{kurtosis}{Numeric vector. The kurtosis values for the observed variables. Defaults to zero.}
+\item{skewness}{Numeric vector. The skewness values for the observed
+    variables. The default (\code{NULL}) is equivalent to zero skewness.}
+\item{kurtosis}{Numeric vector. The (excess) kurtosis values for the observed
+    variables. The default (\code{NULL}) is equivalent to zero kurtosis.}
 \item{cluster_idx}{Optional. Only used (and only available via
     \code{lavSimulateData()} and \code{simulateData()}) for multilevel models.
     An integer vector (or a list of integer vectors, one per group) giving the
@@ -108,7 +110,9 @@ lav_data_simulate_old(..., ordered_center = FALSE)
     blocks) routes the request to the multilevel data-generation engine.}
 \item{seed}{Set random seed.}
 \item{empirical}{Logical. If \code{TRUE}, the implied moments (Mu and Sigma)
-    specify the empirical not population mean and covariance matrix.}
+    specify the empirical not population mean and covariance matrix. Not
+    supported when nonzero \code{skewness} or \code{kurtosis} values are
+    provided.}
 \item{mass}{Logical. If \code{TRUE}, use the mvrnorm() function from the
     MASS package (the default before 0.7-1) instead of the internal
     lav_mvrnorm() function.}

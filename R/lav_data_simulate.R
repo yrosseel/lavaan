@@ -79,7 +79,7 @@ lav_data_simulate <- function(model = NULL,
         "arguments 'ov_var', 'skewness', 'kurtosis', 'standardized' and 'mass'
         are not supported for multilevel data and will be ignored"))
     }
-    return_value <- do.call(lav_data_simulate_ml, c(
+    return_value <- do.call("lav_data_simulate_ml", c(
       list(model = model, cmd_pop = model_type,
       # forward the model modifiers to the population-model fit; the ML worker
       # forwards these straight to cmd_pop (sem/cfa/lavaan), which expect the
@@ -98,7 +98,7 @@ lav_data_simulate <- function(model = NULL,
   }
 
   # ------- single-level worker -------
-  do.call(lav_data_simulate_sl, c(
+  do.call("lav_data_simulate_sl", c(
     list(model = model, model_type = model_type,
     meanstructure = meanstructure, int_ov_free = int_ov_free,
     int_lv_free = int_lv_free, marker_int_zero = marker_int_zero,
@@ -524,6 +524,16 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     current_debug <- lav_debug()
     if (lav_debug(debug))
       on.exit(lav_debug(current_debug), TRUE)
+  }
+  # all-zero skewness/kurtosis is just the normal case, so drop to NULL and
+  # take the normal route below (which supports empirical = TRUE)
+  if (length(skewness) > 0L && isTRUE(all(skewness == 0))) skewness <- NULL
+  if (length(kurtosis) > 0L && isTRUE(all(kurtosis == 0))) kurtosis <- NULL
+  # Vale-Maurelli cannot reproduce the target moments exactly
+  if (empirical && (!is.null(skewness) || !is.null(kurtosis))) {
+    lav_msg_stop(gettext(
+      "empirical = TRUE is not supported when nonzero skewness or kurtosis
+      values are provided"))
   }
   if (!is.null(seed)) set.seed(seed)
   # if(!exists(".Random.seed", envir = .GlobalEnv))
