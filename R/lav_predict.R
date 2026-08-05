@@ -1378,10 +1378,25 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           lambda_star = lambda_star_p, fixes = ho_fixes_g
         )
 
-        # transform? compute the transformation matrix for this pattern,
-        # using the observed part of Sigma and Lambda (same expressions as
-        # in lav_predict_tmat_green/det_internal). a single complete data
-        # tmat cannot undo the extra shrinkage of incomplete patterns
+        # transform? compute the transformation matrix for this pattern.
+        # transform = TRUE means the factor scores get covariance matrix
+        # VETA. under missing = "ml" the scores are computed from the
+        # observed indicators only, so their covariance differs per
+        # pattern, and a single complete data tmat cannot fix all
+        # patterns at once.
+        #
+        # the covariance matrix of the scores depends on the pattern only
+        # through m22 = t(lambda) %*% sigma_22_inv %*% lambda, computed
+        # from the observed indicators of this pattern. regression scores
+        # have covariance matrix veta %*% m22 %*% veta and Bartlett
+        # scores have covariance matrix solve(m22).
+        #
+        # we therefore use the same expressions as
+        # lav_predict_tmat_green_internal() and
+        # lav_predict_tmat_det_internal(), with
+        # t(lambda) %*% solve(sigma) %*% lambda replaced by the m22 of
+        # this pattern. the veta factors do not depend on the pattern and
+        # are precomputed above the loop.
         if (transform) {
           m22 <- t(lambda) %*% sigma_22_inv %*% lambda
           if (bartlett) {
