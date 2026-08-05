@@ -1368,6 +1368,12 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           lambda_star = lambda_star_p, fixes = ho_fixes_g
         )
 
+        # transform? (must be applied per pattern, as fsc is
+        # pattern-specific here)
+        if (transform) {
+          fsc <- tmat[[b]] %*% fsc
+        }
+
         # if FSC contains rows that are all-zero, replace by NA
         #
         # this happens eg if all the indicators of a single factor
