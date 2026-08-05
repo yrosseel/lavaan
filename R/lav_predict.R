@@ -1378,6 +1378,13 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           lambda_star = lambda_star_p, fixes = ho_fixes_g
         )
 
+        # detect all-zero rows of FSC before the transform below, because
+        # the transform mixes the rows of fsc and destroys them.
+        zero_idx <- integer(0L)
+        if (bartlett) {
+          zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
+        }
+
         # transform? compute the transformation matrix for this pattern.
         # transform = TRUE means the factor scores get covariance matrix
         # VETA. under missing = "ml" the scores are computed from the
@@ -1423,7 +1430,6 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         #  only for Bartlett)
         if (bartlett) {
           fsc_nona <- fsc # keep a NA-free copy for the SEs below
-          zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
           if (length(zero_idx) > 0L) {
             fsc[zero_idx, ] <- NA
           }
