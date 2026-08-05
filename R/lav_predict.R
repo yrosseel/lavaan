@@ -1343,6 +1343,16 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         acov_g <- vector("list", length = mp$npatterns)
       }
 
+      # transform: precompute the parts that do not depend on the pattern
+      if (transform) {
+        veta_sqrt <- lav_mat_sym_sqrt(veta_g)
+        if (bartlett) {
+          veta_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(veta_g))
+        } else {
+          veta32 <- veta_g %*% veta_sqrt
+        }
+      }
+
       # compute FSC per pattern
       for (p in seq_len(mp$npatterns)) {
         var_idx <- mp$pat[p, ] # observed
@@ -1368,10 +1378,21 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           lambda_star = lambda_star_p, fixes = ho_fixes_g
         )
 
-        # transform? (must be applied per pattern, as fsc is
-        # pattern-specific here)
+        # transform? compute the transformation matrix for this pattern,
+        # using the observed part of Sigma and Lambda (same expressions as
+        # in lav_predict_tmat_green/det_internal). a single complete data
+        # tmat cannot undo the extra shrinkage of incomplete patterns
         if (transform) {
-          fsc <- tmat[[b]] %*% fsc
+          m22 <- t(lambda) %*% sigma_22_inv %*% lambda
+          if (bartlett) {
+            tmp <- veta_sqrt %*% m22 %*% veta_sqrt
+            fsc <- veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*%
+              veta_inv_sqrt %*% fsc
+          } else {
+            tmp <- veta32 %*% m22 %*% veta32
+            fsc <- veta_sqrt %*% lav_mat_sym_sqrt(lav_predict_solve(tmp)) %*%
+              veta_sqrt %*% fsc
+          }
         }
 
         # if FSC contains rows that are all-zero, replace by NA
