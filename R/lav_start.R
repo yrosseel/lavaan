@@ -204,8 +204,8 @@ lav_start <- function(start_method = "default",
         !is.null(lavsamplestats@res.cov[[1]])) {
       # conditional.x variant: the scales are the MARGINAL y sds
       # (res.cov + slopes cov.x slopes'); standardize the local copies
-      # of the residual moments accordingly (res.int stays raw: the
-      # intercepts live in the original metric)
+      # of the residual moments accordingly (including res.int: the
+      # mean parameters live in the standardized metric)
       for (g in seq_len(ngroups)) {
         ov_names_g <- lav_pt_vnames(lavpartable, "ov.nox",
                                     group = group_values[g])
@@ -232,6 +232,11 @@ lav_start <- function(start_method = "default",
         if (!is.null(res_slopes)) {
           lavsamplestats@res.slopes[[g]] <- res_slopes / s_y
         }
+        if (length(lavsamplestats@res.int) >= g &&
+            length(lavsamplestats@res.int[[g]]) > 0L) {
+          lavsamplestats@res.int[[g]] <-
+            lavsamplestats@res.int[[g]] / s_y
+        }
         if (length(lavh1) > 0L &&
             length(lavh1$implied[["res.cov"]]) >= g &&
             !is.null(lavh1$implied[["res.cov"]][[g]])) {
@@ -240,6 +245,11 @@ lav_start <- function(start_method = "default",
           if (!is.null(lavh1$implied[["res.slopes"]][[g]])) {
             lavh1$implied[["res.slopes"]][[g]] <-
               lavh1$implied[["res.slopes"]][[g]] / s_y
+          }
+          if (length(lavh1$implied[["res.int"]]) >= g &&
+              !is.null(lavh1$implied[["res.int"]][[g]])) {
+            lavh1$implied[["res.int"]][[g]] <-
+              lavh1$implied[["res.int"]][[g]] / s_y
           }
         }
       }
@@ -252,6 +262,7 @@ lav_start <- function(start_method = "default",
       ov_names_g <- unique(unlist(ov_names_g))
       # include the FIXED (ustart = NA) scaling rows: under fixed.x =
       # TRUE the exogenous x scales are fixed at their sample sds
+      s_y <- sqrt(diag(lavsamplestats@cov[[g]]))
       free_delta_idx <- which(lavpartable$group == group_values[g] &
         lavpartable$op == "~*~" &
         (lavpartable$free > 0L | is.na(lavpartable$ustart)) &
@@ -259,17 +270,34 @@ lav_start <- function(start_method = "default",
       if (length(free_delta_idx) > 0L) {
         sample_sd_idx <- match(lavpartable$lhs[free_delta_idx],
                                ov_names_g)
-        start[free_delta_idx] <-
-          sqrt(diag(lavsamplestats@cov[[g]]))[sample_sd_idx]
+        start[free_delta_idx] <- s_y[sample_sd_idx]
       }
       # standardize the sample moments used for the remaining starts
+      # (including the means: the mean parameters live in the
+      # standardized metric, Mu = Delta mu*)
       lavsamplestats@cov[[g]] <- cov2cor(lavsamplestats@cov[[g]])
       lavsamplestats@var[[g]] <- diag(lavsamplestats@cov[[g]])
+      if (length(lavsamplestats@mean) >= g &&
+          length(lavsamplestats@mean[[g]]) > 0L) {
+        lavsamplestats@mean[[g]] <- lavsamplestats@mean[[g]] / s_y
+      }
+      if (length(lavsamplestats@missing.h1) >= g &&
+          !is.null(lavsamplestats@missing.h1[[g]]$mu)) {
+        lavsamplestats@missing.h1[[g]]$mu <-
+          lavsamplestats@missing.h1[[g]]$mu / s_y
+        lavsamplestats@missing.h1[[g]]$sigma <-
+          cov2cor(lavsamplestats@missing.h1[[g]]$sigma)
+      }
       if (length(lavh1) > 0L &&
           length(lavh1$implied[["cov"]]) >= g &&
           !is.null(lavh1$implied[["cov"]][[g]])) {
         lavh1$implied[["cov"]][[g]] <-
           cov2cor(lavh1$implied[["cov"]][[g]])
+        if (length(lavh1$implied[["mean"]]) >= g &&
+            !is.null(lavh1$implied[["mean"]][[g]])) {
+          lavh1$implied[["mean"]][[g]] <-
+            lavh1$implied[["mean"]][[g]] / s_y
+        }
       }
     }
     }

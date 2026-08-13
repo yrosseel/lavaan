@@ -155,6 +155,14 @@ lav_model_mu <- function(lavmodel = NULL, glist = NULL) {
   meanstructure <- lavmodel@meanstructure
   mm_idx <- lav_model_group_mm_indices(nmat)
 
+  # D-augmented ML mode for correlation structures (FREE ~*~ scaling
+  # parameters): the mean parameters (nu, alpha) live in the
+  # STANDARDIZED metric, and the implied mean is rescaled to the
+  # observed metric: Mu = Delta (nu + Lambda (I-B)^-1 alpha) --
+  # mirroring the covariance side Sigma = Delta P Delta
+  dpd_flag <- lavmodel@correlation && !lavmodel@categorical &&
+    lav_model_delta_free(lavmodel)
+
   # return a list
   mu_hat <- vector("list", length = nblocks)
 
@@ -167,6 +175,9 @@ lav_model_mu <- function(lavmodel = NULL, glist = NULL) {
       mu_hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
       mu_hat[[g]] <- lav_lisrel_mu(mlist = mlist)
+      if (dpd_flag && !is.null(mlist$delta)) {
+        mu_hat[[g]] <- mlist$delta[, 1L] * mu_hat[[g]]
+      }
     } else if (representation == "RAM") {
       mu_hat[[g]] <- lav_ram_muhat(mlist = mlist)
     } else {
@@ -219,6 +230,12 @@ lav_model_cond2joint_mu <- function(lavmodel = NULL, glist = NULL) {
     } else if (representation == "LISREL") {
       mlist <- glist[mm_in_group]
       res_int <- lav_lisrel_mu(mlist = mlist)
+      # D-augmented ML correlation mode: intercepts live in the
+      # standardized metric; rescale (see lav_model_mu)
+      if (lavmodel@correlation && !lavmodel@categorical &&
+          lav_model_delta_free(lavmodel) && !is.null(mlist$delta)) {
+        res_int <- mlist$delta[, 1L] * res_int
+      }
       res_slopes <- lav_lisrel_pi(mlist = mlist)
       m_x <- mlist$mean.x
 

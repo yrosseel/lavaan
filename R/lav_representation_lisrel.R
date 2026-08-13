@@ -3796,23 +3796,31 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
       # D-augmented ML correlation mode (continuous conditional.x with
       # FREE ~*~ scales): the implied slopes are Pi = Delta * Pz with
-      # Pz = Lambda (I-B)^-1 Gamma -- so (a) the pi rows of all columns
-      # so far pick up the factor delta_r, and (b) delta columns are
-      # appended: dpi[r,k]/ddelta_r = Pz[r,k] (the mu rows are NOT
-      # rescaled: the intercepts live in the original metric)
+      # Pz = Lambda (I-B)^-1 Gamma, and the implied intercepts are
+      # res.int = Delta * mu* with mu* = nu + Lambda (I-B)^-1 alpha
+      # (ALL mean-side parameters live in the standardized metric) --
+      # so (a) both the mu and pi rows of all columns so far pick up
+      # the factor delta_r, and (b) delta columns are appended:
+      # dpi[r,k]/ddelta_r = Pz[r,k] and dmu[r]/ddelta_r = mu*_r
       if (!categorical && correlation && delta_flag && n_del > 0L) {
-        if (nexo_g > 0L) {
-          pi_rows <- rep(mu_slots, times = nexo_g) +
-            rep(seq_len(nexo_g), each = nvar)
-          pi_var <- rep(seq_len(nvar), times = nexo_g)
-          jac_beta[pi_rows, ] <- jac_beta[pi_rows, , drop = FALSE] *
-            delta[pi_var]
-        }
+        beta_rows_var <- rep(seq_len(nvar), each = nexo_g + 1L)
+        jac_beta <- jac_beta * delta[beta_rows_var]
         jac_beta_delta <- matrix(0, n_beta_rows, n_del)
-        if (nexo_g > 0L) {
-          pz_b <- m %*% mlist$gamma # nvar x nexo (unscaled)
-          for (c2 in seq_len(n_del)) {
-            jd <- m_delta_idx[c2]
+        nu_vec_b <- if (!is.null(mlist$nu)) {
+          as.numeric(mlist$nu)
+        } else {
+          rep(0, nvar)
+        }
+        mu_star <- nu_vec_b + as.numeric(mlist$lambda %*% a)
+        pz_b <- if (nexo_g > 0L) {
+          m %*% mlist$gamma # nvar x nexo (unscaled)
+        } else {
+          matrix(0, nvar, 0L)
+        }
+        for (c2 in seq_len(n_del)) {
+          jd <- m_delta_idx[c2]
+          jac_beta_delta[mu_slots[jd], c2] <- mu_star[jd]
+          if (nexo_g > 0L) {
             jac_beta_delta[mu_slots[jd] + seq_len(nexo_g), c2] <-
               pz_b[jd, ]
           }
@@ -3865,6 +3873,19 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       # alpha[k]:  dmu = M[,k]
       if (n_alp > 0L) {
         jac_mean[, col:(col + n_alp - 1L)] <- m[, m_alpha_idx, drop = FALSE]
+      }
+
+      # D-augmented ML correlation mode (FREE ~*~ scales): the mean
+      # parameters live in the STANDARDIZED metric and the implied mean
+      # is Mu = Delta mu* with mu* = nu + Lambda (I-B)^-1 alpha. All
+      # columns so far pick up the row factor delta_r, and delta columns
+      # are appended: dmu_r / ddelta_r = mu*_r.
+      if (correlation && delta_flag && n_del > 0L) {
+        mu_star <- as.numeric(mlist$nu) + as.numeric(m %*% mlist$alpha)
+        jac_mean <- jac_mean * delta
+        jm_delta <- matrix(0, nvar, n_del)
+        jm_delta[cbind(m_delta_idx, seq_len(n_del))] <- mu_star[m_delta_idx]
+        jac_mean <- cbind(jac_mean, jm_delta)
       }
     } # meanstructure
 
@@ -4077,6 +4098,11 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
   } else if (!categorical && meanstructure) {
     # right order
     el_idx <- c(x_nu_idx, x_lambda_idx, x_beta_idx, x_alpha_idx)
+    if (correlation && delta_flag && n_del > 0L &&
+        ncol(jac_mean) == length(el_idx) + n_del) {
+      # the delta columns appended in the D-augmented mode
+      el_idx <- c(el_idx, x_delta_idx)
+    }
     outm <- matrix(0, nrow = nrow(jac_mean), ncol = nx_free)
     outm[, el_idx] <- jac_mean
     out <- rbind(outm, out)

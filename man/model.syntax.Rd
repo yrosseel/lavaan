@@ -295,7 +295,16 @@ There can be seven types of formula-like expressions in the model syntax:
       The variable name on the left hand side must be the same as the variable
       name on the right hand side. Scale factors are used in the Delta
       parameterization, in a multiple group analysis when factor indicators
-      are categorical.
+      are categorical. Note that the interpretation of a scale factor
+      depends on the setting: for a categorical variable (under
+      \code{parameterization = "theta"}), it equals the reciprocal
+      (\code{1/sd}) of the standard deviation of the latent response
+      variable (scaling its covariance matrix down to a correlation
+      matrix); for a continuous variable under \code{correlation = TRUE}
+      with an ML-family estimator, it equals the marginal (model-implied)
+      standard deviation itself (scaling the unit-diagonal correlation
+      structure up to a covariance matrix). The two settings never occur
+      within the same model.
 
     \item Composites: The \code{"<~"} operator can be used to define
       a composite (on the right hand side of the operator).

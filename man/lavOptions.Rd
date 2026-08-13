@@ -98,8 +98,14 @@ Model features:
      statistic are identical whether the input is raw data, a
      covariance matrix, or a correlation matrix. The other ML-family
      estimators (\code{"MLM"}, \code{"MLR"}, \ldots) work the same way
-     (raw data needed). A meanstructure is supported: the (saturated)
-     intercepts live in the original metric and do not affect the
+     (raw data needed). A meanstructure is supported: the mean
+     parameters (intercepts, latent means) live in the standardized
+     metric, mirroring the covariance side -- the implied mean is
+     \eqn{\mu = \Delta (\nu + \Lambda (I - B)^{-1} \alpha)}, so a
+     saturated intercept equals the standardized sample mean
+     (mean/sd), and the model-implied means (see
+     \code{lavInspect(fit, "implied")}) reproduce the raw sample
+     means. The (saturated) mean structure does not affect the
      correlation structure. \code{missing = "ml"} (FIML) is supported
      as well: the pattern-based likelihood simply consumes the
      augmented moments, so correlation structures can be fit to
