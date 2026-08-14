@@ -1350,6 +1350,16 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         acov_g <- vector("list", length = mp$npatterns)
       }
 
+      # transform: precompute the parts that do not depend on the pattern
+      if (transform) {
+        veta_sqrt <- lav_mat_sym_sqrt(veta_g)
+        if (bartlett) {
+          veta_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(veta_g))
+        } else {
+          veta32 <- veta_g %*% veta_sqrt
+        }
+      }
+
       # compute FSC per pattern
       for (p in seq_len(mp$npatterns)) {
         var_idx <- mp$pat[p, ] # observed
@@ -1375,6 +1385,45 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           lambda_star = lambda_star_p, fixes = ho_fixes_g
         )
 
+        # detect all-zero rows of FSC before the transform below, because
+        # the transform mixes the rows of fsc and destroys them.
+        zero_idx <- integer(0L)
+        if (bartlett) {
+          zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
+        }
+
+        # transform? compute the transformation matrix for this pattern.
+        # transform = TRUE means the factor scores get covariance matrix
+        # VETA. under missing = "ml" the scores are computed from the
+        # observed indicators only, so their covariance differs per
+        # pattern, and a single complete data tmat cannot fix all
+        # patterns at once.
+        #
+        # the covariance matrix of the scores depends on the pattern only
+        # through m22 = t(lambda) %*% sigma_22_inv %*% lambda, computed
+        # from the observed indicators of this pattern. regression scores
+        # have covariance matrix veta %*% m22 %*% veta and Bartlett
+        # scores have covariance matrix solve(m22).
+        #
+        # we therefore use the same expressions as
+        # lav_predict_tmat_green_internal() and
+        # lav_predict_tmat_det_internal(), with
+        # t(lambda) %*% solve(sigma) %*% lambda replaced by the m22 of
+        # this pattern. the veta factors do not depend on the pattern and
+        # are precomputed above the loop.
+        if (transform) {
+          m22 <- t(lambda) %*% sigma_22_inv %*% lambda
+          if (bartlett) {
+            tmp <- veta_sqrt %*% m22 %*% veta_sqrt
+            fsc <- veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*%
+              veta_inv_sqrt %*% fsc
+          } else {
+            tmp <- veta32 %*% m22 %*% veta32
+            fsc <- veta_sqrt %*% lav_mat_sym_sqrt(lav_predict_solve(tmp)) %*%
+              veta_sqrt %*% fsc
+          }
+        }
+
         # if FSC contains rows that are all-zero, replace by NA
         #
         # this happens eg if all the indicators of a single factor
@@ -1388,7 +1437,6 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         #  only for Bartlett)
         if (bartlett) {
           fsc_nona <- fsc # keep a NA-free copy for the SEs below
-          zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
           if (length(zero_idx) > 0L) {
             fsc[zero_idx, ] <- NA
           }
