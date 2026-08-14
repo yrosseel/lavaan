@@ -1716,7 +1716,6 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     exo = exo, nobs = lapply(data_obs, NROW),
     remove_dummy_lv = TRUE
   ) ## FIXME?
-  th_1 <- lav_model_th(lavmodel = lavmodel, delta = FALSE)
   mm_theta <- lav_model_theta(lavmodel = lavmodel)
 
   # check for zero entries in THETA (new in 0.6-4)
@@ -1737,16 +1736,40 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     lavmodel@GLIST[mm_idx]
   })
 
+  # RAW thresholds per group, interleaved with zeros for the numeric
+  # variables. The conditional density evaluation below uses the full
+  # linear predictor E(y*|eta_i, x_i) = NU + LAMBDA eta_i
+  # (lav_lisrel_eyetax), with eta_i the FULL latent score (including any
+  # latent means and exogenous effects). The thresholds must therefore be
+  # the raw tau parameters: the model-implied thresholds of
+  # lav_model_th() already absorb (NU + LAMBDA (I-B)^-1 ALPHA), and using
+  # them together with the full linear predictor would remove the mean
+  # structure twice (visible with multigroup latent means/intercepts, or
+  # exogenous covariates; for a single group without covariates both
+  # versions coincide).
+  th_1 <- lapply(seq_len(lavdata@ngroups), function(gg) {
+    th_idx_gg <- lavmodel@th.idx[[gg]]
+    tau_gg <- fy_mlist_g[[gg]]$tau
+    th_gg <- numeric(length(th_idx_gg))
+    if (!is.null(tau_gg)) {
+      th_gg[th_idx_gg > 0L] <- tau_gg[, 1L]
+    }
+    th_gg
+  })
+
   # local objective function: x = lv values. The per-case dummy ov.y values are
   # passed in (rather than read via a case index 'i') so the objective does not
   # depend on the enclosing loop variable -- this lets us evaluate cases via
   # lapply()/mclapply() instead of a for() loop.
   f_eta_i <- function(x, y_i, x_i, mu_i, dummy_y) {
+    # the full latent score 'x' is passed to the conditional density
+    # (evaluated against the RAW thresholds; see th_1 above); only the
+    # prior term below uses the deviation from the conditional mean mu_i
     # add 'dummy' values (if any) for ov.y
     if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
-      x2 <- c(x - mu_i, dummy_y)
+      x2 <- c(x, dummy_y)
     } else {
-      x2 <- x - mu_i
+      x2 <- x
     }
 
     # conditional density of y, given eta.i(=x)
