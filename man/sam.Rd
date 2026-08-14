@@ -169,6 +169,17 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     computed as a structural-space sandwich here, and coincides with
     \code{se = "local"}.
 
+    When latent interactions are combined with \code{missing = "ml"} (local
+    \code{sam.method}), the factor scores that feed the second-order
+    (interaction) moments are computed per missing-data pattern, using
+    pattern-specific mapping matrices and measurement-error covariances.
+    The first-order moments are based on the EM (h1) statistics and remain
+    consistent under MAR; the second-order (interaction) layer is
+    moment-based, and is consistent under MCAR. Cases for which some factor
+    has no observed indicators cannot be scored: they are excluded from the
+    interaction moments (with a warning), although they still contribute to
+    the first-order moments.
+
     Not (yet) available in combination with \code{conditional.x = TRUE}:
     multiple groups (for the local standard errors and the corrected test
     statistic), multilevel models, latent interactions, and the Yuan-Chan
