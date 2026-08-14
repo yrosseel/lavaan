@@ -160,7 +160,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
     "Intercepts",
     "Thresholds",
     "Variances",
-    "Scales y*",
+    "Scaling Parameters",
     "Group Weight",
     "R-Square"
   )
@@ -701,7 +701,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           prefix[x$rhs[row_idx] %in% y_names] <- "  ."
           m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
                                  x$label[row_idx], prefix = prefix)
-        } else if (s == "Scales y*") {
+        } else if (s == "Scaling Parameters") {
           row_idx <- which(x$op == "~*~" & x$block == b)
           if (length(row_idx) == 0L) next
           m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
