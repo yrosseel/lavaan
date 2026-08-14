@@ -433,10 +433,61 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       } else {
         yb <- y[[b]]
       }
-      # center
-      yb_c <- t(t(yb) - drop(mm_nu[[b]]))
-      fs_b <- yb_c %*% t(mb)
-      colnames(fs_b) <- lv_names1
+      # missing data (missing = "ml"): compute the factor scores per missing
+      # pattern, with pattern-specific mapping matrices M_p and error
+      # covariances B_p = M_p Theta_p M_p' (see lav_sam_fs_missing()); the
+      # second-order machinery in lav_sam_veta2() then aggregates over the
+      # patterns (B.bar / Q / D). NOTE the scope of this construction: the
+      # first-order moments (VETA/EETA) are based on the EM (h1) statistics
+      # and remain MAR-consistent, but the second-order (interaction) layer
+      # is moment-based (casewise score products) and is consistent under
+      # MCAR; a fully MAR-consistent treatment would require a
+      # full-information (LMS-type) likelihood, outside the scope of SAM.
+      mi_flag <- anyNA(yb)
+      pattern_list <- NULL
+      if (mi_flag) {
+        if (length(dummy_ov_idx) > 0L) {
+          lav_msg_stop(gettext(
+            "SAM with lv interactions and missing = \"ml\" does not support
+             observed (single-indicator) variables in the structural part
+             (yet); please use missing = \"listwise\""))
+        }
+        if (fit@Model@conditional.x) {
+          lav_msg_stop(gettext(
+            "SAM with lv interactions and missing = \"ml\" does not support
+             conditional.x = TRUE (yet); please use missing = \"listwise\""))
+        }
+        out_mi <- lav_sam_fs_missing(
+          y = yb, mm_lambda = this_lambda,
+          mm_theta = mm_theta[[b]], mm_nu = mm_nu[[b]],
+          s = cov_1, method = local_m_method
+        )
+        n_all <- nrow(yb)
+        ok_idx <- which(out_mi$ok)
+        if (length(ok_idx) == 0L) {
+          lav_msg_stop(gettext(
+            "SAM with lv interactions and missing = \"ml\": no cases with
+             enough observed indicators to compute factor scores"))
+        }
+        if (length(ok_idx) < n_all) {
+          lav_msg_warn(gettextf(
+            "SAM with lv interactions and missing = \"ml\": %1$s case(s) do
+             not have enough observed indicators to compute factor scores;
+             they are excluded from the second-order (interaction) part.",
+            n_all - length(ok_idx)))
+        }
+        fs_b <- out_mi$fs[ok_idx, , drop = FALSE]
+        colnames(fs_b) <- lv_names1
+        pattern_list <- list(
+          bp = out_mi$bp, wp = out_mi$wp,
+          pat_of_case = out_mi$pat_of_case[ok_idx]
+        )
+      } else {
+        # center
+        yb_c <- t(t(yb) - drop(mm_nu[[b]]))
+        fs_b <- yb_c %*% t(mb)
+        colnames(fs_b) <- lv_names1
+      }
       # FIXME: what about observed covariates?
 
       # if std.lv = TRUE, express the factor scores, EETA and the mapping
@@ -450,6 +501,13 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         fs_b <- t(t(fs_b) / d_std)
         eeta1 <- eeta1 / d_std
         mb_v2 <- mb / d_std
+        if (mi_flag) {
+          # the pattern-specific error covariances live in the same metric
+          # as the factor scores
+          pattern_list$bp <- lapply(pattern_list$bp, function(bb) {
+            t(bb / d_std) / d_std
+          })
+        }
       }
 
       # EETA2
@@ -471,6 +529,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
           lambda1 = lambda1[[b]],
+          pattern_list = pattern_list,
           return_fs = return_fs,
           return_cov_iveta2 = return_cov_iveta2,
           extra = TRUE
@@ -486,6 +545,13 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         }
         if (return_cov_iveta2) {
           cov_iveta2[[b]] <- attr(tmp, "cov.iveta2")
+          if (mi_flag && nrow(fs_b) < n_all) {
+            # the casewise contributions cover the scoreable cases only;
+            # Var(stat) = Gamma.eff / n.eff, while step 2 consumes the NACOV
+            # on the full-N scale (Var = Gamma / N) -> Gamma = (N/n.eff) *
+            # Gamma.eff
+            cov_iveta2[[b]] <- cov_iveta2[[b]] * (n_all / nrow(fs_b))
+          }
         }
       } else {
         lav_msg_fixme("not ready yet!")
@@ -2086,6 +2152,35 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   y <- fit@Data@X[[g]]
   n <- nrow(y)
 
+  # missing data (missing = "ml"): the factor scores are computed per missing
+  # pattern (mirroring lav_sam_step1_local() / lav_sam_veta2()). Scoreability
+  # of a case is data-dependent only, so determine the scoreable subset once
+  # (at the step-1 estimates), keep those rows (the same subset used by the
+  # casewise machinery), and precompute the pattern structure for reuse
+  # inside lbar(). The final Gamma contribution is scaled by the FULL number
+  # of used observations (n_full), matching the scale on which step 2
+  # consumes the NACOV.
+  n_full <- n
+  mi_flag <- anyNA(y)
+  mp_pre <- NULL
+  if (mi_flag) {
+    lavmodel_0 <- lav_model_set_parameters(lavmodel,
+      x = step1$PT$est[step1$PT$free > 0 & !duplicated(step1$PT$free)])
+    int_idx <- lavpta$vidx$lv.interaction[[1]]
+    lambda_0 <- lavmodel_0@GLIST$lambda
+    if (length(int_idx) > 0L) {
+      lambda_0 <- lambda_0[, -int_idx, drop = FALSE]
+    }
+    out_mi0 <- lav_sam_fs_missing(
+      y = y, mm_lambda = lambda_0, mm_theta = lavmodel_0@GLIST$theta,
+      mm_nu = lavmodel_0@GLIST$nu, s = step1$COV[[1]],
+      method = step1$local.options$M.method
+    )
+    y <- y[out_mi0$ok, , drop = FALSE]
+    n <- nrow(y)
+    mp_pre <- lav_data_mi_patterns(y)
+  }
+
   # NAMES + lv.keep
   lv_names <- c("..int..", step1$LV.NAMES[[1]])
   tmp <- lav_sam_lvnames2(lv_names)
@@ -2208,10 +2303,31 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
       d_std[dummy_lv_idx] <- 1
       this_m <- this_m / d_std
     }
-    b_aug <- lav_mat_bdiag(0, this_m %*% this_theta %*% t(this_m))
+    if (mi_flag) {
+      # per-pattern factor scores and error covariances B_p; b_aug becomes
+      # the pattern-weighted average B.bar (augmented with the intercept
+      # row/column), exactly as in lav_sam_veta2()
+      out_mi <- lav_sam_fs_missing(
+        y = y, mm_lambda = this_lambda, mm_theta = this_theta,
+        mm_nu = this_nu, s = step1$COV[[1]],
+        method = step1$local.options$M.method, mp = mp_pre
+      )
+      fs_scores <- out_mi$fs
+      bp_l <- out_mi$bp
+      wp <- out_mi$wp
+      if (std_lv_flag) {
+        fs_scores <- t(t(fs_scores) / d_std)
+        bp_l <- lapply(bp_l, function(bb) t(bb / d_std) / d_std)
+      }
+      fs <- cbind(1, fs_scores)
+      bp_aug <- lapply(bp_l, function(bb) lav_mat_bdiag(0, bb))
+      b_aug <- Reduce(`+`, Map(function(bb, w) w * bb, bp_aug, wp))
+    } else {
+      b_aug <- lav_mat_bdiag(0, this_m %*% this_theta %*% t(this_m))
 
-    # (Bartlett) factor scores, augmented with an intercept
-    fs <- cbind(1, t(t(y) - this_nu) %*% t(this_m))
+      # (Bartlett) factor scores, augmented with an intercept
+      fs <- cbind(1, t(t(y) - this_nu) %*% t(this_m))
+    }
 
     # C2 = (1/N) \sum_i f_i t(f_i)
     c2 <- crossprod(fs) / n
@@ -2228,9 +2344,23 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
     tmpbar <- (e_mat[i1k, i1k] * b_aug[i2k, i2k] +
                b_aug[i1k, i1k] * e_mat[i2k, i2k] +
                e_mat[i1k, i2k] * b_aug[i2k, i1k] +
-               e_mat[i2k, i1k] * b_aug[i1k, i2k] +
-               b_aug[i1k, i1k] * b_aug[i2k, i2k] +
-               b_aug[i2k, i1k] * b_aug[i1k, i2k])
+               e_mat[i2k, i1k] * b_aug[i1k, i2k])
+    if (mi_flag) {
+      # pattern-heterogeneous quadratic part: sum_p w_p over the per-pattern
+      # products (the (I+K)Q term), plus the between-pattern D term; with a
+      # single pattern this reduces exactly to the complete-data branch
+      q12 <- Reduce(`+`, Map(function(bb, w) {
+        w * (bb[i1k, i1k] * bb[i2k, i2k] + bb[i2k, i1k] * bb[i1k, i2k])
+      }, bp_aug, wp))
+      vbk <- vapply(bp_aug, function(bb) bb[cbind(i1k, i2k)],
+                    numeric(length(i1k)))
+      vbkbar <- b_aug[cbind(i1k, i2k)]
+      dmat <- vbk %*% (wp * t(vbk)) - tcrossprod(vbkbar)
+      tmpbar <- tmpbar + q12 + dmat
+    } else {
+      tmpbar <- tmpbar + (b_aug[i1k, i1k] * b_aug[i2k, i2k] +
+                          b_aug[i2k, i1k] * b_aug[i1k, i2k])
+    }
 
     out_vec <- c(out1, lav_mat_vech(var_fs2k - lambda2_eff * tmpbar))
     if (!.return_all) {
@@ -2255,6 +2385,11 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # variables, no empty Lambda columns, invertible Theta for ML); otherwise we
   # fall back to numDeriv. See lav_sam_gamma_add_jac().
   cveta <- NULL
+  # the analytic jacobian assumes a single (complete-data) mapping matrix;
+  # with missing patterns we fall back to numDeriv on lbar()
+  if (mi_flag) {
+    use_analytic <- FALSE
+  }
   if (use_analytic) {
     cveta <- tryCatch(
       lav_sam_gamma_add_jac(
@@ -2271,7 +2406,10 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
     cveta <- numDeriv::jacobian(func = lbar, x = x_step1)
   }
 
-  gamma_addition <- n * (cveta %*% step1$Sigma.11 %*% t(cveta))
+  # Sigma.11 is the (full-N based) vcov of the step-1 estimates, and step 2
+  # consumes the NACOV on the full-N scale, so we scale by n_full (equal to
+  # n unless unscoreable cases were removed above)
+  gamma_addition <- n_full * (cveta %*% step1$Sigma.11 %*% t(cveta))
   gamma_addition
 }
 

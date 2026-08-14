@@ -389,6 +389,90 @@ lav_sam_eeta <- function(m = NULL, ybar = NULL, mm_nu = NULL) {
   m %*% (ybar - mm_nu)
 }
 
+# Per-missing-pattern Bartlett factor scores and their measurement-error
+# covariances, for the lv-interaction (casewise) machinery under
+# missing = "ml"/"ml.x".
+#
+# For each missing pattern p (observed variables o), the pattern-specific
+# mapping matrix M_p is built from the observed sub-matrices (Lambda_o,
+# Theta_o), so that M_p Lambda_o = I and hence E(f_i | eta_i) = eta_i for
+# every scoreable pattern; the measurement-error covariance of the scores,
+# Var(f_i | eta_i) = M_p Theta_o M_p' =: B_p, now varies over the patterns.
+# The second-order (VETA2/Gamma) machinery aggregates over the patterns; see
+# lav_sam_veta2() for the exact aggregation (B.bar / Q / D).
+#
+# A pattern is 'scoreable' if every factor keeps at least one observed
+# indicator (no all-zero columns in Lambda_o), Lambda_o has full column rank,
+# and the mapping matrix could be constructed with no all-zero rows. Cases in
+# unscoreable patterns get ok = FALSE and are excluded from the casewise
+# machinery -- their information still enters the first-order moments through
+# the EM (h1) statistics.
+#
+# y: raw data (rows = cases, columns = ov in model order), with NAs
+# mm_lambda/mm_theta/mm_nu: measurement matrices WITHOUT the lv-interaction
+#   columns (and in the unstandardized metric; any std.lv rescaling is
+#   applied by the caller, to scores and B_p alike)
+# s: covariance matrix of the ov (EM/h1 based; only used for method = "GLS")
+# mp: optional precomputed missing-pattern structure (lav_data_mi_patterns(y))
+#
+# Returns list(fs = n x nfac score matrix (NA rows where ok = FALSE),
+#              ok = logical(n), pat_of_case = integer(n) index into bp,
+#              bp = list of B_p over the scoreable patterns,
+#              wp = pattern proportions n_p / sum(n_p) over scoreable cases)
+lav_sam_fs_missing <- function(y = NULL, mm_lambda = NULL, mm_theta = NULL,
+                               mm_nu = NULL, s = NULL, method = "ML",
+                               mp = NULL) {
+  n <- nrow(y)
+  nfac <- ncol(mm_lambda)
+  if (is.null(mp)) {
+    mp <- lav_data_mi_patterns(y)
+  }
+  fs <- matrix(as.numeric(NA), nrow = n, ncol = nfac)
+  ok <- rep(FALSE, n)
+  pat_of_case <- rep(NA_integer_, n)
+  bp <- list()
+  wp_n <- integer(0L)
+  nu <- drop(mm_nu)
+  for (p in seq_len(mp$npatterns)) {
+    obs <- mp$pat[p, ]
+    lam_o <- mm_lambda[obs, , drop = FALSE]
+    # each factor needs at least one observed indicator, and the observed
+    # sub-LAMBDA must keep full column rank
+    if (any(apply(lam_o, 2L, function(x) all(x == 0))) ||
+        qr(lam_o)$rank < nfac) {
+      next
+    }
+    th_o <- mm_theta[obs, obs, drop = FALSE]
+    s_o <- NULL
+    if (!is.null(s)) {
+      s_o <- s[obs, obs, drop = FALSE]
+    }
+    m_p <- tryCatch(
+      lav_sam_mapping_mat(
+        mm_lambda = lam_o, mm_theta = th_o,
+        s = s_o, method = method
+      ),
+      error = function(e) NULL
+    )
+    if (is.null(m_p) || anyNA(m_p) ||
+        any(apply(m_p, 1L, function(x) all(x == 0)))) {
+      next
+    }
+    case_idx <- mp$case.idx[[p]]
+    yc_o <- t(t(y[case_idx, obs, drop = FALSE]) - nu[obs])
+    this_id <- length(bp) + 1L
+    bp[[this_id]] <- m_p %*% th_o %*% t(m_p)
+    wp_n <- c(wp_n, length(case_idx))
+    fs[case_idx, ] <- yc_o %*% t(m_p)
+    ok[case_idx] <- TRUE
+    pat_of_case[case_idx] <- this_id
+  }
+  list(
+    fs = fs, ok = ok, pat_of_case = pat_of_case,
+    bp = bp, wp = wp_n / sum(wp_n)
+  )
+}
+
 # compute veta including quadratic/interaction terms
 lav_sam_veta2 <- function(fs = NULL, m = NULL,
                           veta = NULL, eeta = NULL, mm_theta = NULL,
@@ -398,6 +482,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
                           alpha_correction = 0L,
                           lambda_correction = TRUE,
                           lambda1 = 1,
+                          pattern_list = NULL,
                           fs_outlier_idx = integer(0L),
                           return_fs = FALSE,
                           return_cov_iveta2 = TRUE,
@@ -417,8 +502,34 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     lv_names <- paste("eta", seq_len(ncol(fs)), sep = "")
   }
 
-  # MTM
-  mtm <- m %*% mm_theta %*% t(m)
+  # missing data (missing = "ml"): the factor scores in fs were computed per
+  # missing pattern (see lav_sam_fs_missing()), and their measurement-error
+  # covariance B_p = M_p Theta_p M_p' varies over the patterns. pattern_list
+  # holds bp (the B_p, in the same metric as fs), wp (pattern proportions)
+  # and pat_of_case (the pattern of every row of fs). Under MCAR (pattern
+  # independent of eta), three things change relative to the complete-data
+  # case:
+  #   (1) every var.error term LINEAR in the error covariance aggregates
+  #       with B.bar = sum_p w_p B_p;
+  #   (2) the quadratic term Var(e* %x% e*) = (I+K)(B %x% B) aggregates as
+  #       (I+K) Q with Q = sum_p w_p (B_p %x% B_p)  (NOT B.bar %x% B.bar);
+  #   (3) E_p(f* %x% f*) shifts by vec(B_p) across the patterns, so the raw
+  #       Var(fs2) picks up a between-pattern term
+  #       D = sum_p w_p vec(B_p) vec(B_p)' - vec(B.bar) vec(B.bar)'
+  #       that must be part of var.error as well.
+  # With a single pattern (B_p = B.bar, Q = B %x% B, D = 0) all of this
+  # reduces exactly to the complete-data expressions below.
+  mi_flag <- !is.null(pattern_list)
+
+  # MTM (B.bar over the patterns when mi_flag)
+  if (mi_flag) {
+    bp_aug <- lapply(pattern_list$bp, function(b) lav_mat_bdiag(0, b))
+    wp <- pattern_list$wp
+    pat_of_case <- pattern_list$pat_of_case
+    mtm <- Reduce(`+`, Map(function(b, w) w * b, bp_aug, wp))
+  } else {
+    mtm <- m %*% mm_theta %*% t(m)
+  }
 
   # note: MTM no longer needs to be regularized (force-pd) here:
   # lav_mat_sym_diff_smallest_root() handles a singular var.error matrix
@@ -429,7 +540,9 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   # augment to include intercept
   fs <- cbind(1, fs)
   n <- nrow(fs)
-  mtm <- lav_mat_bdiag(0, mtm)
+  if (!mi_flag) {
+    mtm <- lav_mat_bdiag(0, mtm)
+  }
   veta <- lav_mat_bdiag(0, veta)
   eeta <- c(1, eeta)
   lv_names <- c("..int..", lv_names)
@@ -449,7 +562,20 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   vetak_mtm <- veta %x% mtm
 
   # normal version (for now):
-  gamma_me22 <- ik %*% (mtm %x% mtm)
+  if (mi_flag) {
+    # quadratic error moment: (I+K) Q with Q = sum_p w_p (B_p %x% B_p)
+    qfull <- Reduce(`+`, Map(function(b, w) w * (b %x% b), bp_aug, wp))
+    gamma_me22 <- ik %*% qfull
+    # between-pattern term D: vec(B_p)[a] in the (idx1, idx2) enumeration of
+    # (eta* %x% eta*) is B_p[idx1[a], idx2[a]]
+    vb <- vapply(bp_aug, function(b) b[cbind(idx1, idx2)],
+                 numeric(length(idx1)))
+    vbbar <- mtm[cbind(idx1, idx2)]
+    dfull <- vb %*% (wp * t(vb)) - tcrossprod(vbbar)
+  } else {
+    gamma_me22 <- ik %*% (mtm %x% mtm)
+    dfull <- 0
+  }
 
   # ingredients (normal ME case)
   var_fs2 <- varn(fs2, n)
@@ -461,7 +587,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   cov_mek_eta_etak_me <- t(cov_etak_me_mek_eta)
 
   var_error <- (var_etak_me + var_mek_eta + cov_etak_me_mek_eta
-    + cov_mek_eta_etak_me + var_me2)
+    + cov_mek_eta_etak_me + var_me2 + dfull)
 
   # select only what we need
   colnames(var_fs2) <- rownames(var_fs2) <- names_1
@@ -550,8 +676,16 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     i2k <- idx2[keep_idx]
 
     # casewise contributions to E(eta* %x% eta*)[keep]
-    part1 <- t(t(fs2[, keep_idx, drop = FALSE]) -
-               lambda1 * lav_mat_vec(mtm)[keep_idx])
+    if (mi_flag) {
+      # pattern-specific error-mean shift: vec(B_p) replaces vec(B.bar), so
+      # that the between-pattern shift of E_p(f* %x% f*) does not inflate
+      # the covariance of the contributions
+      part1 <- fs2[, keep_idx, drop = FALSE] -
+        lambda1 * t(vb)[pat_of_case, keep_idx, drop = FALSE]
+    } else {
+      part1 <- t(t(fs2[, keep_idx, drop = FALSE]) -
+                 lambda1 * lav_mat_vec(mtm)[keep_idx])
+    }
 
     # casewise contributions to vech(Var(eta* %x% eta*)[keep, keep])
     # vech row (pa) and column (pb) indices over the kept elements
@@ -573,14 +707,34 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     b_21 <- mtm[cbind(s1, r2)]
 
     fs2kc <- t(t(fs2[, keep_idx, drop = FALSE]) - fs2_mean[keep_idx])
+    if (mi_flag) {
+      # pattern-heterogeneous quadratic terms. The F-cross terms (with B.bar)
+      # average to the E-terms PLUS 2*lambda1*(bb1 + bb2); the -2*lambda1
+      # constant cancels this, and the per-pattern products average to the
+      # (I+K)Q quadratic part (q12) and the between-pattern D part (dvec),
+      # so the average over the observations equals the aggregated var.error
+      # above. With a single pattern this reduces exactly to the
+      # (1 - 2*lambda1) * (bb1 + bb2) constant of the complete-data branch.
+      q12_p <- vapply(bp_aug, function(b)
+        b[cbind(r1, r2)] * b[cbind(s1, s2)] +
+        b[cbind(s1, r2)] * b[cbind(r1, s2)], numeric(length(r1)))
+      dvec_p <- vapply(bp_aug, function(b)
+        b[cbind(r1, s1)] * b[cbind(r2, s2)], numeric(length(r1)))
+      const_bb <- -2 * lambda1 * (b_11 * b_22 + b_21 * b_12) -
+        mtm[cbind(r1, s1)] * mtm[cbind(r2, s2)]
+      quad_case <- t(q12_p + dvec_p)[pat_of_case, , drop = FALSE] +
+        rep(const_bb, each = n)
+    } else {
+      quad_case <- rep((1 - 2 * lambda1) * (b_11 * b_22 + b_21 * b_12),
+                       each = n)
+    }
     part2 <- (fs2kc[, pa, drop = FALSE] * fs2kc[, pb, drop = FALSE] -
               lambda2_eff *
               (t(t(fs2[, col_11, drop = FALSE]) * b_22) +
                t(t(fs2[, col_22, drop = FALSE]) * b_11) +
                t(t(fs2[, col_12, drop = FALSE]) * b_21) +
                t(t(fs2[, col_21, drop = FALSE]) * b_12) +
-               rep((1 - 2 * lambda1) * (b_11 * b_22 + b_21 * b_12),
-                   each = n)))
+               quad_case))
 
     iveta2_1 <- cbind(part1, part2)
     cov_iveta2 <- cov(iveta2_1) * (n - 1) / n
