@@ -58,7 +58,11 @@ but not exactly equal to, the model-implied values. If, for some missing data
 patterns, all the indicators of a factor are missing, the transformation for
 these patterns is based on a pseudo-inverse, and the model-implied
 (co)variances involving these factors are only partially restored (a warning
-is issued).
+is issued). When \code{conditional.x = TRUE}, the transformation restores the
+conditional variance-covariance matrix of the factors given the exogenous
+covariates; the total (marginal) variance-covariance matrix of the
+transformed factor scores then matches the unconditional model-implied
+variance-covariance matrix of the factors.
 Note: standard errors (\code{se}) and \code{acov} are not available (yet) if
 \code{transform = TRUE}; if requested, they are ignored with a warning. The
 resulting factor scores are often called correlation-preserving factor

@@ -2374,12 +2374,24 @@ lav_predict_tmat_blocks <- function(lavobject = NULL,
     lavimplied <- lav_model_implied(lavmodel)
   }
   if (lavmodel@conditional.x) {
-    lavimplied <- lav_model_implied_cond2uncond(lavimplied)
+    # conditional.x: the factor-score coefficient matrix C is based on the
+    # conditional (given-x) quantities (e.g., C = V(ETA|x) Lambda' res.cov^-1
+    # for the regression method), and the transformation is applied to C
+    # only, while the per-case latent means E(ETA|x_i) are added
+    # untransformed. The transformation must therefore restore the
+    # *conditional* covariance V(ETA|x); the total (marginal) covariance of
+    # the transformed factor scores then matches the unconditional
+    # V(ETA) = V(ETA|x) + Var(E(ETA|x)).
+    sigma <- lavimplied$res.cov
+    veta <- lav_model_vetax(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  } else {
+    sigma <- lavimplied$cov
+    veta <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
   }
 
   list(
-    sigma = lavimplied$cov,
-    veta = lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE),
+    sigma = sigma,
+    veta = veta,
     lambda = lav_model_lambda(lavmodel, remove_dummy_lv = FALSE,
                               use_wmat = TRUE),
     nblocks = lavmodel@nblocks
