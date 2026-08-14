@@ -54,9 +54,15 @@ each missing data pattern, so that both the per-pattern and the pooled factor
 scores match the model-implied variance-covariance matrix. Because the
 transformation targets the model-implied (not the sample) variance-covariance
 matrix, the sample variances of the transformed factor scores are close to,
-but not exactly equal to, the model-implied values.
-Note: the standard errors (if requested) are not transformed (yet). The resulting
-factor scores are often called correlation-preserving factor scores.}
+but not exactly equal to, the model-implied values. If, for some missing data
+patterns, all the indicators of a factor are missing, the transformation for
+these patterns is based on a pseudo-inverse, and the model-implied
+(co)variances involving these factors are only partially restored (a warning
+is issued).
+Note: standard errors (\code{se}) and \code{acov} are not available (yet) if
+\code{transform = TRUE}; if requested, they are ignored with a warning. The
+resulting factor scores are often called correlation-preserving factor
+scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are

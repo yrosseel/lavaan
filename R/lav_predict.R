@@ -243,6 +243,14 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (type != "lv") {
       lav_msg_stop(gettext("standard errors only available if type = \"lv\""))
     }
+    # correlation-preserving transformation: no standard errors (yet)
+    if (transform) {
+      lav_msg_warn(gettext(
+        "standard errors (se) and acov are not available (yet) if
+        transform = TRUE; the se/acov arguments are ignored."))
+      se <- "none"
+      acov <- "none"
+    }
     # NOTE: for categorical data, the standard errors are computed in
     # lav_predict_eta_ebm_ml() from the curvature of the (EBM/ML) objective at
     # the optimum, and so differ from one response pattern to the next.
@@ -1358,6 +1366,16 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         } else {
           veta32 <- veta_g %*% veta_sqrt
         }
+
+        # keep track of the patterns where ALL the indicators of a factor
+        # are missing: for these patterns, the (pseudo-inverse based)
+        # transformation can only restore the model-implied (co)variances
+        # on the subspace of the remaining factors (a warning is issued
+        # below); factors without indicators in the complete data (e.g.,
+        # higher-order factors) do not count
+        obs_fac <- apply(lambda_g != 0, 2L, any)
+        empty_fac_idx <- integer(0L)
+        empty_fac_ncases <- 0L
       }
 
       # compute FSC per pattern
@@ -1412,6 +1430,13 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         # this pattern. the veta factors do not depend on the pattern and
         # are precomputed above the loop.
         if (transform) {
+          # all indicators of a factor missing in this pattern?
+          this_empty <- which(obs_fac & !apply(lambda != 0, 2L, any))
+          if (length(this_empty) > 0L) {
+            empty_fac_idx <- union(empty_fac_idx, this_empty)
+            empty_fac_ncases <- empty_fac_ncases + length(mp$case.idx[[p]])
+          }
+
           m22 <- t(lambda) %*% sigma_22_inv %*% lambda
           if (bartlett) {
             tmp <- veta_sqrt %*% m22 %*% veta_sqrt
@@ -1446,8 +1471,9 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc)) +
           eeta_case_g[mp$case.idx[[p]], , drop = FALSE]
 
-        # SE?
-        if (se == "standard") {
+        # SE? (not if transform: the SEs are not transformed (yet), and
+        # they are not returned either -- see the gate below)
+        if (se == "standard" && !transform) {
           if (is.null(lambda_star_p)) {
             tmp <- compute_fscov(lambda, sigma_22_inv, veta_g)
           } else {
@@ -1464,13 +1490,45 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
             nrow = length(mp$case.idx[[p]]),
             ncol = ncol(se_g), byrow = TRUE
           )
-        }
 
-        # acov?
-        if (acov == "standard") {
-          acov_g[[p]] <- tmp # for this pattern
+          # acov?
+          if (acov == "standard") {
+            acov_g[[p]] <- tmp # for this pattern
+          }
         }
       } # p
+
+      # transform: for some patterns, ALL the indicators of one or more
+      # factors were missing; for these patterns, the (pseudo-inverse
+      # based) transformation cannot fully restore the model-implied
+      # (co)variances -> warn
+      if (transform && empty_fac_ncases > 0L) {
+        lambda_mm_idx <- which(names(lavmodel@GLIST) == "lambda")
+        lv_names <- lavmodel@dimNames[[lambda_mm_idx[b]]][[2L]]
+        if (is.null(lv_names)) {
+          empty_fac_names <- as.character(empty_fac_idx)
+        } else {
+          empty_fac_names <- lv_names[empty_fac_idx]
+        }
+        if (lavdata@ngroups > 1L) {
+          lav_msg_warn(gettextf(
+            "transform = TRUE with missing = \"ml\" in group %1$s: for %2$s
+            case(s), all the indicators of the following factor(s) are
+            missing: %3$s. For these missing-data patterns, the
+            transformation is based on a pseudo-inverse, and the
+            model-implied (co)variances involving these factors are only
+            partially restored.",
+            g, empty_fac_ncases, lav_msg_view(empty_fac_names, "none")))
+        } else {
+          lav_msg_warn(gettextf(
+            "transform = TRUE with missing = \"ml\": for %1$s case(s), all
+            the indicators of the following factor(s) are missing: %2$s.
+            For these missing-data patterns, the transformation is based on
+            a pseudo-inverse, and the model-implied (co)variances involving
+            these factors are only partially restored.",
+            empty_fac_ncases, lav_msg_view(empty_fac_names, "none")))
+        }
+      }
     } else {
       # compute factor scores
       fs_g <- t(fsc %*% t(yc)) + eeta_case_g
