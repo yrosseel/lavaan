@@ -48,6 +48,13 @@ lower-order factors on the higher-order factors), as in \code{\link{sam}}.}
 group) so that their mean and variance-covariance matrix matches the
 model-implied mean and variance-covariance matrix. This may be useful if the
 individual factor scores will be used in a follow-up (regression) analysis.
+When \code{missing = "ml"}, the factor scores are computed from the observed
+indicators only, and the transformation matrix is computed separately for
+each missing data pattern, so that both the per-pattern and the pooled factor
+scores match the model-implied variance-covariance matrix. Because the
+transformation targets the model-implied (not the sample) variance-covariance
+matrix, the sample variances of the transformed factor scores are close to,
+but not exactly equal to, the model-implied values.
 Note: the standard errors (if requested) are not transformed (yet). The resulting
 factor scores are often called correlation-preserving factor scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
