@@ -155,7 +155,7 @@ lav_model_mu <- function(lavmodel = NULL, glist = NULL) {
   meanstructure <- lavmodel@meanstructure
   mm_idx <- lav_model_group_mm_indices(nmat)
 
-  # D-augmented ML mode for correlation structures (FREE ~*~ scaling
+  # Delta-augmented ML mode for correlation structures (FREE ~*~ scaling
   # parameters): the mean parameters (nu, alpha) live in the
   # STANDARDIZED metric, and the implied mean is rescaled to the
   # observed metric: Mu = Delta (nu + Lambda (I-B)^-1 alpha) --
@@ -230,7 +230,7 @@ lav_model_cond2joint_mu <- function(lavmodel = NULL, glist = NULL) {
     } else if (representation == "LISREL") {
       mlist <- glist[mm_in_group]
       res_int <- lav_lisrel_mu(mlist = mlist)
-      # D-augmented ML correlation mode: intercepts live in the
+      # Delta-augmented ML correlation mode: intercepts live in the
       # standardized metric; rescale (see lav_model_mu)
       if (lavmodel@correlation && !lavmodel@categorical &&
           lav_model_delta_free(lavmodel) && !is.null(mlist$delta)) {

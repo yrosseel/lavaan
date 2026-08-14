@@ -1635,7 +1635,7 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
   }
 
   # if delta, the target may not be unity, but DELTA^(-2); in the
-  # D-augmented ML mode (unit_target = TRUE) the target IS unity:
+  # Delta-augmented ML mode (unit_target = TRUE) the target IS unity:
   # Sigma* = P is the correlation matrix and the FREE delta parameters
   # carry the scales (Sigma_obs = Delta P Delta)
   if (unit_target) {
@@ -3607,7 +3607,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
   jac_sigma_gamma <- NULL
   if (!categorical && correlation) {
     if (n_del > 0L) {
-      # D-augmented ML mode (FREE ~*~ scaling parameters): keep the FULL
+      # Delta-augmented ML mode (FREE ~*~ scaling parameters): keep the FULL
       # vech layout. The unit-diagonal completion makes diag(Sigma*)
       # constant, so the completion chain rule reduces to ZEROING the
       # diagonal rows of all non-delta columns (the delta columns keep
@@ -3794,7 +3794,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
         }
       }
 
-      # D-augmented ML correlation mode (continuous conditional.x with
+      # Delta-augmented ML correlation mode (continuous conditional.x with
       # FREE ~*~ scales): the implied slopes are Pi = Delta * Pz with
       # Pz = Lambda (I-B)^-1 Gamma, and the implied intercepts are
       # res.int = Delta * mu* with mu* = nu + Lambda (I-B)^-1 alpha
@@ -3875,7 +3875,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
         jac_mean[, col:(col + n_alp - 1L)] <- m[, m_alpha_idx, drop = FALSE]
       }
 
-      # D-augmented ML correlation mode (FREE ~*~ scales): the mean
+      # Delta-augmented ML correlation mode (FREE ~*~ scales): the mean
       # parameters live in the STANDARDIZED metric and the implied mean
       # is Mu = Delta mu* with mu* = nu + Lambda (I-B)^-1 alpha. All
       # columns so far pick up the row factor delta_r, and delta columns
@@ -4076,7 +4076,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
   }
   out[, el_idx_sigma] <- jac_sigma
 
-  # D-augmented ML + conditional.x: the marginal-completion chain gives
+  # Delta-augmented ML + conditional.x: the marginal-completion chain gives
   # the res.cov diagonal rows entries at the GAMMA columns (not part of
   # the jac_sigma column blocks)
   if (!is.null(jac_sigma_gamma) && length(x_gamma_idx) > 0L) {
@@ -4089,7 +4089,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
                      x_gamma_idx)
     if (correlation && delta_flag && n_del > 0L &&
         ncol(jac_beta) == length(el_idx_beta) + n_del) {
-      # the delta columns appended in the D-augmented mode
+      # the delta columns appended in the Delta-augmented mode
       el_idx_beta <- c(el_idx_beta, x_delta_idx)
     }
     outm <- matrix(0, nrow = nrow(jac_beta), ncol = nx_free)
@@ -4100,7 +4100,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
     el_idx <- c(x_nu_idx, x_lambda_idx, x_beta_idx, x_alpha_idx)
     if (correlation && delta_flag && n_del > 0L &&
         ncol(jac_mean) == length(el_idx) + n_del) {
-      # the delta columns appended in the D-augmented mode
+      # the delta columns appended in the Delta-augmented mode
       el_idx <- c(el_idx, x_delta_idx)
     }
     outm <- matrix(0, nrow = nrow(jac_mean), ncol = nx_free)
@@ -4248,7 +4248,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       sigma_chain <- sigma_chain * delta_weight
     }
 
-    # D-augmented ML mode (FREE ~*~ scales, full vech layout): the
+    # Delta-augmented ML mode (FREE ~*~ scales, full vech layout): the
     # unit-diagonal completion makes diag(Sigma*) constant, so the
     # composite chain must not reintroduce diagonal-row entries for the
     # non-delta columns (the num_idx variables keep a free variance)

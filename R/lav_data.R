@@ -68,7 +68,7 @@ lav_lavdata <- function(data = NULL, # data.frame
   if (is.null(std_ov)) {
     std_ov <- FALSE
   }
-  # D-augmented ML correlation mode + conditional.x: standardize ONLY
+  # Delta-augmented ML correlation mode + conditional.x: standardize ONLY
   # the exogenous x variables (a fixed data transformation -- we
   # condition on x); the y-side scales are free ~*~ parameters
   std_ov_x_only <- isTRUE(lavoptions$.correlation.ml) &&
@@ -1209,7 +1209,7 @@ lav_data_full <- function(data = NULL, # data.frame
       if (length(correlation_ov) > 0L && length(num_idx) > 0L) {
         num_idx <- num_idx[ov$name[num_idx] %in% correlation_ov]
       }
-      # D-augmented ML + conditional.x: only the exogenous x variables
+      # Delta-augmented ML + conditional.x: only the exogenous x variables
       # are standardized at the data level
       if (std_ov_x_only) {
         num_idx <- integer(0L)

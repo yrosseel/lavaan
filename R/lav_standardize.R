@@ -675,7 +675,7 @@ lav_standardize_all <- function(lavobject = NULL,
       partable$block == g)
     out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
-    # D-augmented ML correlation mode (FREE ~*~ scales): the mean
+    # Delta-augmented ML correlation mode (FREE ~*~ scales): the mean
     # parameters already live in the STANDARDIZED metric (the implied
     # mean is Mu = Delta mu*), and VY is in the unit-diagonal P metric
     # -- so the generic division above (by VY = 1) is a no-op and the

@@ -203,7 +203,7 @@ lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
                                drop_list = TRUE) {
   ngroups <- lavmodel@ngroups
 
-  # D-augmented ML mode (free ~*~ scales): full covariance moment space
+  # Delta-augmented ML mode (free ~*~ scales): full covariance moment space
   correlation <- lavmodel@correlation
   if (correlation && lav_model_delta_free(lavmodel)) {
     correlation <- FALSE

@@ -89,7 +89,7 @@ the model for both observed and latent variables.}
 \item{correlation_delta_free}{Logical. Only used if
     \code{correlation = TRUE} (or a character vector). If \code{TRUE},
     the scaling (\code{~*~}) parameters are free scale (standard
-    deviation) parameters, and the model is the D-augmented covariance
+    deviation) parameters, and the model is the Delta-augmented covariance
     structure \code{Sigma = Delta P(theta) Delta} with unit-diagonal
     \code{P} (used internally when an ML-family estimator is combined
     with a correlation structure).}

@@ -1651,7 +1651,7 @@ lav_options_set <- function(opt = NULL) {
   opt$.correlation.ml <- FALSE
   if (opt$correlation) {
     # an ML-family estimator (single level, complete data,
-    # conditional.x = FALSE) uses the D-augmentation: the covariance
+    # conditional.x = FALSE) uses the Delta-augmentation: the covariance
     # model Sigma = Delta P(theta) Delta with FREE scale parameters
     # Delta (the ~*~ rows) and unit-diagonal P, fit by ordinary
     # covariance-metric ML in the FULL moment space. This is a genuine
@@ -1661,9 +1661,9 @@ lav_options_set <- function(opt = NULL) {
     # do not depend on the scaling of the input). Since 0.7-1 this is
     # also the DEFAULT route: when the estimator is left unspecified,
     # we only fall back to GLS (quietly) for settings the
-    # D-augmentation does not support.
+    # Delta-augmentation does not support.
     # missing = "ml" (FIML) is supported on the ML route (since 0.7-2):
-    # the casewise/pattern likelihood simply consumes the D-augmented
+    # the casewise/pattern likelihood simply consumes the Delta-augmented
     # implied moments Sigma = Delta P(theta) Delta and Mu.
     # conditional.x = TRUE (since 0.7-2): the exogenous x are
     # standardized at the DATA level (a fixed transformation -- we
@@ -1721,7 +1721,7 @@ lav_options_set <- function(opt = NULL) {
         "correlation structures only work for representation = \"LISREL\"."
       ))
     }
-    # D-augmented ML + meanstructure (supported since 0.7-2): the means
+    # Delta-augmented ML + meanstructure (supported since 0.7-2): the means
     # live in the ORIGINAL (raw) metric -- the implied mean nu +
     # Lambda (I-B)^-1 alpha is NOT rescaled by the free ~*~ scales, so
     # the (saturated) intercepts simply absorb the sample means and the

@@ -50,7 +50,7 @@ lav_object_baseline <- function(object = NULL,
     lavoptions$conditional.x <- FALSE
   }
 
-  # D-augmented ML mode (correlation + ML-family estimator): the baseline
+  # Delta-augmented ML mode (correlation + ML-family estimator): the baseline
   # model is a plain covariance-metric independence model (free variances,
   # no ~*~ rows; the samplestats live in the full moment space), so drop
   # the correlation machinery for this fit

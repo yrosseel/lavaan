@@ -166,7 +166,7 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
   if (!is.null(lavoptions$correlation)) {
     correlation <- lavoptions$correlation
   }
-  # D-augmented ML mode: the h1/independence models live in the FULL
+  # Delta-augmented ML mode: the h1/independence models live in the FULL
   # covariance moment space (ordinary free variances)
   if (isTRUE(lavoptions$.correlation.ml)) {
     correlation <- FALSE

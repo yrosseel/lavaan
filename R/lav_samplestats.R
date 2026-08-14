@@ -69,7 +69,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   # mimic <- lavoptions$mimic
   meanstructure <- lavoptions$meanstructure
   correlation <- lavoptions$correlation
-  # D-augmented ML mode (correlation structure with an ML-family
+  # Delta-augmented ML mode (correlation structure with an ML-family
   # estimator): the analysis runs in the FULL covariance moment space
   # (Sigma = Delta P(theta) Delta with free scales), so at the
   # samplestats level this is an ordinary covariance analysis
@@ -1645,7 +1645,7 @@ lav_samp_from_moments <- function(sample_cov = NULL,
   # mimic <- lavoptions$mimic
   meanstructure <- lavoptions$meanstructure
   correlation <- lavoptions$correlation
-  # D-augmented ML mode: ordinary covariance analysis at this level
+  # Delta-augmented ML mode: ordinary covariance analysis at this level
   if (isTRUE(lavoptions$.correlation.ml)) {
     correlation <- FALSE
   }
@@ -2075,7 +2075,7 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         cov[[g]] <- tmp_cov
         mean[[g]] <- tmp_mean
 
-        # D-augmented ML mode: standardize (and center) only the x
+        # Delta-augmented ML mode: standardize (and center) only the x
         # block of the joint matrix -- the moment-level analogue of the
         # data-level scale() of the exogenous x (BEFORE the (n-1)/n
         # rescale, so raw-data and moment input match exactly); y stays

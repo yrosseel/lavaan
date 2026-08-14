@@ -192,7 +192,7 @@ lav_start <- function(start_method = "default",
   # group values
   group_values <- lav_pt_group_values(lavpartable)
 
-  # D-augmented ML mode for correlation structures (FREE ~*~ scaling
+  # Delta-augmented ML mode for correlation structures (FREE ~*~ scaling
   # parameters): the scales start at the sample standard deviations, and
   # all other starting values live in the CORRELATION metric -- so
   # standardize the (local copies of the) sample moments first, and let

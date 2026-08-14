@@ -5,7 +5,7 @@
 # - YR 20 Nov 2021: add lav_model_dmmdpar
 
 # are (any of) the ~*~ scaling parameters (the 'delta' matrices) free?
-# TRUE marks the D-augmented ML mode for correlation structures
+# TRUE marks the Delta-augmented ML mode for correlation structures
 # (Sigma = Delta P(theta) Delta with unit-diagonal P); with the reduced
 # (GLS/WLS) correlation machinery the delta matrices are always fixed
 lav_model_delta_free <- function(lavmodel = NULL) {
@@ -139,7 +139,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 
   correlation <- lavmodel@correlation
 
-  # D-augmented ML mode? (correlation structure with FREE ~*~ scaling
+  # Delta-augmented ML mode? (correlation structure with FREE ~*~ scaling
   # parameters): the completion then targets diag(Sigma*) = 1
   correlation_ml <- correlation && lav_model_delta_free(lavmodel)
 

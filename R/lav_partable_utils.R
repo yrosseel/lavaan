@@ -186,7 +186,7 @@ lav_pt_ndat <- function(partable) {
                          partable$free == 0L)
       # correlation structures: the indicator VARIANCE moments are
       # already accounted for -- a FIXED ~*~ row subtracts them via the
-      # correlation correction below, a FREE ~*~ row (D-augmented ML)
+      # correlation correction below, a FREE ~*~ row (Delta-augmented ML)
       # fits them -- so only the fixed indicator COVARIANCES remove a
       # sample statistic here
       if (correlation && !categorical && length(covar_idx) > 0L) {
@@ -249,7 +249,7 @@ lav_pt_ndat <- function(partable) {
     # standardized to unit variance (i.e. has a FIXED '~*~' scaling row)
     # removes one sample statistic. For a 'partial' correlation structure
     # this is a subset of the variables, so count the '~*~' rows rather
-    # than 'nvar'. FREE '~*~' rows (the D-augmented ML mode) are ordinary
+    # than 'nvar'. FREE '~*~' rows (the Delta-augmented ML mode) are ordinary
     # scale parameters in the full moment space: nothing is removed (the
     # extra parameters are counted in npar instead; the df are the same).
     if (correlation && !categorical) {

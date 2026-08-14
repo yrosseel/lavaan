@@ -340,7 +340,7 @@ lav_model_h1_info_ed <- function(what = "expected",
           }
         } else {
           # note: the correlation= argument selects the reduced
-          # (correlation-metric) information (catML); the D-augmented ML
+          # (correlation-metric) information (catML); the Delta-augmented ML
           # mode (free ~*~ scales) lives in the FULL moment space
           cor_reduced <- lavmodel@correlation &&
             !lav_model_delta_free(lavmodel)

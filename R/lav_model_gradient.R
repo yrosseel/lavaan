@@ -210,7 +210,7 @@ lav_model_grad <- function(lavmodel = NULL,
   # composites?
   composites_flag <- lavmodel@composites
 
-  # D-augmented ML mode? (correlation structure with FREE ~*~ scaling
+  # Delta-augmented ML mode? (correlation structure with FREE ~*~ scaling
   # parameters, Sigma = Delta P(theta) Delta): use the Delta-based path
   # below (the analytical per-matrix path does not know the delta
   # gradient nor the unit-diagonal completion chain)
@@ -325,7 +325,7 @@ lav_model_grad <- function(lavmodel = NULL,
     }
   } else # ML
 
-  # 1a. ML approach for composites and for the D-augmented correlation
+  # 1a. ML approach for composites and for the Delta-augmented correlation
   # mode: use Delta directly. The existing per-matrix
   # lav_lisrel_df_dmlist() path does not handle composites (it ignores
   # wmat / WTW.inv), nor the free ~*~ scale parameters and their
@@ -334,12 +334,12 @@ lav_model_grad <- function(lavmodel = NULL,
   #     POST = c(-2 * Omega.mu, -D' vec(Omega))
   # This works for any model where lav_model_delta() can produce an
   # analytical Jacobian -- including composites since 0.6-23, and the
-  # D-augmented mode since 0.7-2 (the completion chain lives inside the
+  # Delta-augmented mode since 0.7-2 (the completion chain lives inside the
   # Jacobian: zeroed diagonal rows for the non-delta columns).
   if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
       lavdata@nlevels == 1L && (composites_flag || dpd_flag) &&
       !lavmodel@conditional.x) {
-    # note: in the D-augmented mode omega must NOT be diagonal-zeroed
+    # note: in the Delta-augmented mode omega must NOT be diagonal-zeroed
     # (the Jacobian already encodes the completion chain)
     correlation <- lavmodel@correlation && !dpd_flag
     if (meanstructure) {

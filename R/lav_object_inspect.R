@@ -3125,7 +3125,7 @@ lav_inspect_delta_rownames <- function(
 
   categorical    <- lavmodel@categorical
   correlation    <- lavmodel@correlation
-  # D-augmented ML mode (free ~*~ scales): full vech layout
+  # Delta-augmented ML mode (free ~*~ scales): full vech layout
   if (correlation && lav_model_delta_free(lavmodel)) {
     correlation <- FALSE
   }
