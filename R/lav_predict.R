@@ -904,7 +904,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
       lavmodel = lavmodel, lavdata = lavdata,
       lavsamplestats = lavsamplestats, se = se, acov = acov,
       level = level, data_obs = data_obs, exo = exo,
-      ml = (method == "ml"), optim_method = optim_method,
+      ml = (method == "ml"), transform = transform,
+      optim_method = optim_method,
       parallel = parallel, ncpus = ncpus, cl = cl
     )
   }
@@ -1638,7 +1639,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
                                    # optional new data
                                    data_obs = NULL, exo = NULL,
                                    se = "none", acov = "none", level = 1L,
-                                   ml = FALSE,
+                                   ml = FALSE, transform = FALSE,
                                    optim_method = "bfgs",
                                    parallel = "no", ncpus = NULL, cl = NULL) {
   optim_method <- tolower(optim_method)
@@ -1977,6 +1978,53 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
 
     # copy each representative's factor scores to all cases in its pattern
     fs[[g]] <- fs[[g]][case_map, , drop = FALSE]
+
+    # transform? (correlation-preserving factor scores)
+    #
+    # for discrete data, the factor scores are a nonlinear function of the
+    # response pattern, and no closed-form expression for their covariance
+    # matrix exists (it depends on the distribution of the response
+    # patterns); note that the continuous (linear) expressions based on
+    # Lambda' Sigma.inv Lambda overstate the score covariance, because
+    # discretization loses information. We therefore use the *empirical*
+    # covariance matrix of the factor scores, plugged into the same
+    # sandwich expressions as in the continuous case (Green for EBM,
+    # Krijnen/McDonald for ML); both solve T S T' = V(ETA|x) exactly, so
+    # the sample covariance matrix of the transformed scores matches the
+    # model-implied V(ETA|x) exactly. The transformation is applied to the
+    # deviations from the (per-case) latent means E(ETA|x_i), so that
+    # under conditional.x the total (marginal) covariance of the
+    # transformed scores matches the unconditional V(ETA). The dummy ov.y
+    # columns (if any) are left untouched.
+    if (transform && nfac > 0L) {
+      reg_idx <- seq_len(nfac)
+      dc <- fs[[g]][, reg_idx, drop = FALSE] - eetax[[g]]
+      ok_idx <- which(stats::complete.cases(dc))
+      if (length(ok_idx) <= nfac) {
+        lav_msg_warn(gettext(
+          "transform = TRUE: not enough complete factor scores to compute
+          their empirical covariance matrix; returning the original
+          (untransformed) factor scores."))
+      } else {
+        fs_cov <- cov(dc[ok_idx, , drop = FALSE])
+        veta_sqrt <- lav_mat_sym_sqrt(vetax[[g]])
+        if (ml) {
+          # Bartlett/ML: Krijnen/McDonald determinacy form, with the
+          # empirical inverse score covariance in the role of
+          # Lambda' Sigma.inv Lambda
+          veta_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(vetax[[g]]))
+          tmp <- veta_sqrt %*% lav_predict_solve(fs_cov) %*% veta_sqrt
+          tmat_g <- veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*% veta_inv_sqrt
+        } else {
+          # EBM/regression: Green form, with the empirical score
+          # covariance in the role of V(ETA) Lambda' Sigma.inv Lambda V(ETA)
+          tmp <- veta_sqrt %*% fs_cov %*% veta_sqrt
+          tmat_g <- veta_sqrt %*%
+            lav_mat_sym_sqrt(lav_predict_solve(tmp)) %*% veta_sqrt
+        }
+        fs[[g]][, reg_idx] <- dc %*% t(tmat_g) + eetax[[g]]
+      }
+    }
 
     # expand the (per-pattern) standard errors / sampling covariances to all
     # cases. The se/acov refer to the nfac regular factors; they are placed in

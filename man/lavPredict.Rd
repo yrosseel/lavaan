@@ -62,7 +62,13 @@ is issued). When \code{conditional.x = TRUE}, the transformation restores the
 conditional variance-covariance matrix of the factors given the exogenous
 covariates; the total (marginal) variance-covariance matrix of the
 transformed factor scores then matches the unconditional model-implied
-variance-covariance matrix of the factors.
+variance-covariance matrix of the factors. For categorical data, the factor
+scores are a nonlinear function of the response pattern, and no closed-form
+expression for their variance-covariance matrix exists; the transformation is
+therefore based on the empirical variance-covariance matrix of the factor
+scores, and as a result, the sample variance-covariance matrix of the
+transformed factor scores matches the model-implied variance-covariance
+matrix exactly.
 Note: standard errors (\code{se}) and \code{acov} are not available (yet) if
 \code{transform = TRUE}; if requested, they are ignored with a warning. The
 resulting factor scores are often called correlation-preserving factor
