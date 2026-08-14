@@ -49,7 +49,7 @@ lav_predict_mdist_cat <- function(lavobject = NULL, # for convenience
                                   ndraws = 2000L) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
   } else {

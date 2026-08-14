@@ -188,6 +188,13 @@ lav_predict_internal <- function(lavmodel = NULL,
                                parallel = "no", ncpus = NULL, cl = NULL,
                                drop_list_single_group = TRUE,
                                mdist_draws = 2000L) {
+  # Delta-augmented ML correlation mode: absorb the free ~*~ scales
+  # into the measurement part (LAMBDA/THETA/NU), so that the whole
+  # prediction machinery operates on raw-metric model matrices that
+  # match the raw-metric data and implied moments (idempotent no-op
+  # otherwise)
+  lavmodel <- lav_model_delta_absorb(lavmodel)
+
   # type
   type <- tolower(type)
   lavpta <- lav_pt_attributes(lavpartable)
@@ -954,7 +961,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
                                    method = "regression") {
   # full object?
   if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
@@ -1552,7 +1559,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
 
   # full object?
   if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
   } else {
@@ -1902,7 +1909,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              resid_flag = FALSE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
@@ -2005,7 +2012,7 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                            optim_method = "bfgs") {
   # full object?
   if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
@@ -2253,7 +2260,7 @@ lav_predict_fy_eta_i <- function(lavmodel = NULL, lavdata = NULL,
 lav_predict_tmat_blocks <- function(lavobject = NULL,
                                     lavmodel = NULL, lavimplied = NULL) {
   if (!is.null(lavobject)) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavimplied <- lavobject@implied
   }
 

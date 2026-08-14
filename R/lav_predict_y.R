@@ -20,7 +20,7 @@ lav_predict_y_prepare <- function(object,
                                   ynames = lav_object_vnames(object, "ov.y"),
                                   xnames = lav_object_vnames(object, "ov.x")) {
 
-  lavmodel <- object@Model
+  lavmodel <- lav_model_delta_absorb(object@Model)
   lavdata <- object@Data
   lavimplied <- object@implied
 
@@ -433,7 +433,7 @@ lav_predict_y_conditional_mean <- function(
 
   # full object?
   if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
+    lavmodel <- lav_model_delta_absorb(lavobject@Model)
     lavdata <- lavobject@Data
     # lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied

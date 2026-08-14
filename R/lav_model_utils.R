@@ -18,6 +18,49 @@ lav_model_delta_free <- function(lavmodel = NULL) {
   }, logical(1L)))
 }
 
+# Delta-augmented ML mode only: absorb the ~*~ scales into the
+# measurement part, yielding the observationally identical raw-metric
+# model: LAMBDA <- Delta LAMBDA, THETA <- Delta THETA Delta,
+# NU <- Delta NU, delta <- 1 (the latent side -- PSI, BETA, ALPHA,
+# GAMMA -- is untouched). The implied moments are unchanged; downstream
+# consumers that combine model matrices with raw-metric data or implied
+# moments (the factor-score/prediction machinery) then operate in a
+# single, consistent metric. Idempotent: after absorption all delta
+# values are 1.
+lav_model_delta_absorb <- function(lavmodel = NULL) {
+  if (!(lavmodel@correlation && !lavmodel@categorical &&
+        lav_model_delta_free(lavmodel))) {
+    return(lavmodel)
+  }
+  glist <- lavmodel@GLIST
+  mm_idx <- lav_model_group_mm_indices(lavmodel@nmat)
+  for (g in seq_len(lavmodel@nblocks)) {
+    mm_in_group <- mm_idx[[g]]
+    mnames <- names(glist)[mm_in_group]
+    delta_pos <- mm_in_group[match("delta", mnames)]
+    if (is.na(delta_pos)) next
+    # composites: the implied moments couple THETA and WMAT *before*
+    # the delta scaling, so the absorption is not equivalent -- skip
+    if (!is.na(match("wmat", mnames))) next
+    d <- glist[[delta_pos]][, 1L]
+    lambda_pos <- mm_in_group[match("lambda", mnames)]
+    if (!is.na(lambda_pos)) {
+      glist[[lambda_pos]] <- d * glist[[lambda_pos]]
+    }
+    theta_pos <- mm_in_group[match("theta", mnames)]
+    if (!is.na(theta_pos)) {
+      glist[[theta_pos]] <- glist[[theta_pos]] * tcrossprod(d)
+    }
+    nu_pos <- mm_in_group[match("nu", mnames)]
+    if (!is.na(nu_pos)) {
+      glist[[nu_pos]][, 1L] <- d * glist[[nu_pos]][, 1L]
+    }
+    glist[[delta_pos]][, ] <- 1
+  }
+  lavmodel@GLIST <- glist
+  lavmodel
+}
+
 lav_model_get_parameters <- function(lavmodel = NULL, glist = NULL,   # nolint start
                                      type = "free", extra = TRUE, ...) {   # nolint end
   # type == "free": only non-redundant free parameters (x)
