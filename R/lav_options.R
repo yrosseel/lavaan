@@ -1721,11 +1721,32 @@ lav_options_set <- function(opt = NULL) {
         "correlation structures only work for representation = \"LISREL\"."
       ))
     }
-    # Delta-augmented ML + meanstructure (supported since 0.7-2): the means
-    # live in the ORIGINAL (raw) metric -- the implied mean nu +
-    # Lambda (I-B)^-1 alpha is NOT rescaled by the free ~*~ scales, so
-    # the (saturated) intercepts simply absorb the sample means and the
-    # correlation structure is unaffected.
+    # estimators with their own moment/vcov machinery cannot handle
+    # correlation structures (yet); fail early with a clear message (most
+    # of these would otherwise fail late, or silently return starting
+    # values)
+    if (any(lav_options_estimatorgroup(opt$estimator) ==
+            c("IV", "JS", "JSA", "MGM", "DLS", "NTRLS",
+              "FML", "REML", "MML"))) {
+      lav_msg_stop(gettextf(
+        "estimator %s does not support correlation structures.",
+        opt$estimator.orig))
+    }
+    # the two-stage missing data machinery works with covariance-metric
+    # (EM) moments only; note that missing = "ml" with a least-squares
+    # estimator is silently rerouted to two.stage (see above), so it ends
+    # up here as well
+    if (any(opt$missing == c("two.stage", "robust.two.stage"))) {
+      lav_msg_stop(gettext(
+        "correlation structures do not support two-stage missing data
+        (missing = \"two.stage\" or \"robust.two.stage\"); use an
+        ML-family estimator with missing = \"ml\" instead."))
+    }
+    # Delta-augmented ML + meanstructure (since 0.7-2): ALL mean
+    # parameters (nu/alpha, the ~1 rows) live in the STANDARDIZED metric;
+    # the implied mean vector is Mu = Delta (nu + Lambda (I-B)^-1 alpha),
+    # so the implied means still reproduce the raw sample means, while
+    # the intercept estimates (and their SEs) match the std.all solution.
   }
 
   # sample.cov.robust

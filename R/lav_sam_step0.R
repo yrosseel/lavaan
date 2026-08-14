@@ -27,6 +27,14 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
        SAM approach (yet); consider using sem() instead."))
   }
 
+  # correlation structures are not supported by the SAM machinery (yet)
+  if (isTRUE(dotdotdot$correlation) ||
+      is.character(dotdotdot$correlation)) {
+    lav_msg_stop(gettext(
+      "correlation structures (correlation = TRUE) are not supported by
+       the SAM approach (yet); consider using sem() instead."))
+  }
+
   # remove do.fit option if present
   dotdotdot0$do.fit <- NULL
 

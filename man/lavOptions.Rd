@@ -150,7 +150,16 @@ Model features:
      variance, so their (co)variances remain free parameters. Note that
      product terms are typically highly non-normal, so the normal-theory
      (GLS) standard errors for their (co)variances may be too small;
-     consider \code{se = "robust.sem"}.}
+     consider \code{se = "robust.sem"}. Some combinations are not
+     supported (yet) and fail with an error: the two-stage missing data
+     approach (\code{missing = "two.stage"} or
+     \code{"robust.two.stage"}), the estimators with their own moment
+     machinery (\code{"IV"}, \code{"JS"}, \code{"MGM"}, \code{"DLS"},
+     \code{"NTRLS"}, \ldots), models that mix ordered and continuous
+     (endogenous) variables, and \code{sam()}. For models where all
+     endogenous variables are declared \code{ordered}, the fitted
+     moments are already correlations, and \code{correlation = TRUE} is
+     redundant (but harmless).}
     \item{\code{composites.cov}:}{Character string. Only used if the model
      contains composites. Controls whether the composite-indicator
      (co)variances (the elements of the \code{T} matrix) are fixed to their

@@ -384,7 +384,13 @@ lav_options_est_dwls <- function(opt) {
   if (!opt$test[1] == "none") {
     if (opt$estimator == "dwls") {
       if (opt$test[1] == "default" && !opt$.categorical) {
-        if (opt$se == "robust.sem") { # user-specified?
+        if (opt$correlation) {
+          # the browne.residual.* tests are not available for correlation
+          # structures on this route (the residual vector and the
+          # correlation-structure Gamma do not match); use the standard
+          # test instead
+          opt$test <- "standard"
+        } else if (opt$se == "robust.sem") { # user-specified?
           opt$test <- "browne.residual.adf" # new in 0.7-1
           opt$standard.test <- "browne.residual.adf"
           opt$scaled.test <- "browne.residual.adf"
@@ -457,7 +463,13 @@ lav_options_est_uls <- function(opt) {
   if (!opt$test[1] == "none") {
     if (opt$estimator == "uls") {
       if (opt$test[1] == "default" && !opt$.categorical) {
-        if (opt$se == "robust.sem") { # user-specified?
+        if (opt$correlation) {
+          # the browne.residual.* tests are not available for correlation
+          # structures on this route (the residual vector and the
+          # correlation-structure Gamma do not match); use the standard
+          # test instead
+          opt$test <- "standard"
+        } else if (opt$se == "robust.sem") { # user-specified?
           opt$test <- "browne.residual.adf" # new in 0.7-1
           opt$standard.test <- "browne.residual.adf"
           opt$scaled.test <- "browne.residual.adf"

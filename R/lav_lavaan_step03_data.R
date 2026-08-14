@@ -137,6 +137,18 @@ lav_step03_data <- function(slot_data = NULL,
         and number of groups in model."))
     }
   }
+  # correlation structures + categorical data: the all-ordered case runs
+  # through the usual (D)WLS/PML machinery (where the fitted moments are
+  # already correlations, so correlation = TRUE is redundant but harmless),
+  # but a continuous non-exogenous variable cannot be handled (the
+  # categorical machinery has no scale parameters for it)
+  if (isTRUE(lavoptions$correlation) &&
+      any(lavdata@ov$type == "ordered") &&
+      any(lavdata@ov$type == "numeric" & lavdata@ov$exo == 0L)) {
+    lav_msg_stop(gettext(
+      "correlation structures with mixed ordered and continuous
+      (endogenous) variables are not supported (yet)."))
+  }
   if (lav_verbose()) {
     print(lavdata)
   }
