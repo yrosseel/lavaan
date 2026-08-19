@@ -132,6 +132,19 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
         !isTRUE(lavpartable$ustart[lv_rows][1L] == 1)) {
       next
     }
+    # leave the scaling alone if any loading of this factor (in any block)
+    # carries a user label: freeing the old marker or fixing a new one may
+    # then interact with the (equality) constraints implied by the label
+    # (e.g., a labeled marker that is invariant across groups/time);
+    # auto-generated labels (from group.equal; they are plabels) are fine,
+    # as they are regenerated when the parameter table is rebuilt
+    all_rows <- which(lavpartable$op == "=~" & lavpartable$lhs == lv)
+    all_labels <- lavpartable$label[all_rows]
+    if (!is.null(all_labels) &&
+        any(nchar(all_labels) > 0L &
+            !all_labels %in% lavpartable$plabel)) {
+      next
+    }
     cur <- ind[1L]
 
     # collect corrected item-total correlations across all blocks that
@@ -193,6 +206,15 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
     fixed <- which(lavpartable$free[lv_rows] == 0L)
     if (length(fixed) != 1L || fixed != 1L ||
         !isTRUE(lavpartable$ustart[lv_rows][1L] == 1)) {
+      next
+    }
+    # leave the scaling alone if any weight of this composite (in any block)
+    # carries a user label (see the factor case above)
+    all_rows <- which(lavpartable$op == "<~" & lavpartable$lhs == lv)
+    all_labels <- lavpartable$label[all_rows]
+    if (!is.null(all_labels) &&
+        any(nchar(all_labels) > 0L &
+            !all_labels %in% lavpartable$plabel)) {
       next
     }
     cur <- ind[1L]
