@@ -431,6 +431,11 @@ lav_options_default <- function() {
       chr = c(default = "first.order", first.order = "first.order"))
   elm("h1.information.meat", "default", chr = c(
     "default", "structured", "unstructured"))
+  # information for the bread (E.inv) of the robust/sandwich vcov ONLY,
+  # keeping the meat (Delta, WLS.V, Gamma) based on information[1];
+  # "default" = information[1] (i.e., no change) (new in 0.7-2)
+  elm("information.bread", "default", chr = c(
+    "default", "expected", "observed"))
 
   # information for 'Omega' (yuan-benter test only)
   # ("first.order" is what omega.information becomes when information[2] is

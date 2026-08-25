@@ -550,11 +550,21 @@ Estimation options:
       second element is used for the (robust) test statistic.}
    \item{\code{observed.information}:}{If \code{"hessian"}, the observed
       information matrix is based on the hessian of the objective function.
-      If \code{"h1"}, an approximation is used that is based on 
+      If \code{"h1"}, an approximation is used that is based on
       the observed information matrix of the unrestricted (h1) model. If
       the argument is a vector with two elements, the first element
       is used for the computation of the standard errors, while the
       second element is used for the (robust) test statistic.}
+   \item{\code{information.bread}:}{Only used when the standard errors are
+      based on a sandwich-type (robust) covariance matrix
+      (\code{se = "robust.sem"} or \code{se = "robust.huber.white"}).
+      If set to \code{"expected"} or \code{"observed"}, this type of
+      information matrix is used for the bread (the outer matrices) of the
+      sandwich only, while all the ingredients of the meat (the inner
+      matrix) remain based on the (first element of the)
+      \code{information} option. If \code{"default"}, the (first element
+      of the) \code{information} option is used for the bread as well,
+      and nothing changes.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust

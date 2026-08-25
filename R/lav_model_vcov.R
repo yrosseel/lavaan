@@ -145,7 +145,16 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
                                        attr_t_dvgvd = FALSE,
                                        attr_e_inv = FALSE,
                                        attr_wls_v = FALSE) {
-  # compute inverse of the expected(!) information matrix
+  # information.bread: use a different information matrix for the bread
+  # (E.inv) ONLY, while the meat ingredients (Delta, WLS.V) remain based on
+  # information[1]; "default" (or unset, for older option lists) means
+  # information[1], i.e. the classic behavior (new in 0.7-2)
+  info_bread <- lavoptions$information.bread
+  if (is.null(info_bread) || info_bread == "default") {
+    info_bread <- lavoptions$information[1]
+  }
+
+  # compute inverse of the information matrix (the bread)
   if (lavmodel@estimator == "ML" && lavoptions$information.expected.mplus) {
     # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
     # - A1 is not based on Sigma.hat and Mu.hat,
@@ -153,6 +162,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
     # - gamma is not identical to what is used for WLS; closer to EQS
     # - N/N-1 bug in G11 for NVarCov (but not test statistic)
     # - we divide by N-1! (just like EQS)
+    # (information.bread is not honored in this legacy branch)
+    info_bread <- lavoptions$information[1]
     e_inv <- lav_model_info_expected_mlm(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
@@ -161,6 +172,40 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       inverted = TRUE,
       use_ginv = use_ginv
     )
+  } else if (info_bread != lavoptions$information[1]) {
+    # bread-only substitution: E.inv is based on info_bread, but Delta and
+    # WLS.V (used for the meat below) are still based on information[1]
+    lavoptions_bread <- lavoptions
+    lavoptions_bread$information[1] <- info_bread
+    e_inv <- lav_model_info(
+      lavmodel = lavmodel,
+      lavsamplestats = lavsamplestats,
+      lavdata = lavdata,
+      lavimplied = lavimplied,
+      lavh1 = lavh1,
+      lavoptions = lavoptions_bread,
+      extra = FALSE,
+      augmented = TRUE,
+      inverted = TRUE,
+      use_ginv = use_ginv
+    )
+    if (inherits(e_inv, "try-error")) {
+      return(e_inv)
+    }
+    tmp_info <- lav_model_info(
+      lavmodel = lavmodel,
+      lavsamplestats = lavsamplestats,
+      lavdata = lavdata,
+      lavimplied = lavimplied,
+      lavh1 = lavh1,
+      lavoptions = lavoptions,
+      extra = TRUE,
+      augmented = FALSE,
+      inverted = FALSE,
+      use_ginv = use_ginv
+    )
+    attr(e_inv, "Delta") <- attr(tmp_info, "Delta")
+    attr(e_inv, "WLS.V") <- attr(tmp_info, "WLS.V")
   } else {
     e_inv <- lav_model_info(
       lavmodel = lavmodel,
@@ -237,12 +282,15 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
     attr(nvar_cov, "tDVGVD") <- t_dvgvd
   }
 
-  if ((lavoptions$information[1] == lavoptions$information[2]) &&
+  if ((info_bread == lavoptions$information[1]) &&
+    (lavoptions$information[1] == lavoptions$information[2]) &&
     (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
     (lavoptions$information[2] == "expected" ||
       lavoptions$observed.information[1] ==
         lavoptions$observed.information[2])) {
     # only when same type of information is used # new in 0.6-6
+    # (and never when information.bread deviates from information[1]: the
+    #  bread-flavored E.inv must not leak into the test machinery)
     attr(nvar_cov, "E.inv") <- e_inv
     attr(nvar_cov, "WLS.V") <- wls_v
   }
@@ -270,6 +318,15 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
   # where A.inv == E.inv
   #       B == outer product of case-wise scores
 
+  # information.bread: bread-only override of information[1] (new in 0.7-2);
+  # "default" (or unset, for older option lists) = information[1]
+  info_bread <- lavoptions$information.bread
+  if (is.null(info_bread) || info_bread == "default") {
+    info_bread <- lavoptions$information[1]
+  }
+  lavoptions_bread <- lavoptions
+  lavoptions_bread$information[1] <- info_bread
+
   # inverse observed/expected information matrix
   e_inv <- lav_model_info(
     lavmodel = lavmodel,
@@ -278,7 +335,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
     lavcache = lavcache,
     lavimplied = lavimplied,
     lavh1 = lavh1,
-    lavoptions = lavoptions,
+    lavoptions = lavoptions_bread,
     extra = FALSE,
     augmented = TRUE,
     inverted = TRUE,
@@ -321,12 +378,14 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
 
   attr(nvar_cov, "B0.group") <- attr(b0, "B0.group")
 
-  if ((lavoptions$information[1] == lavoptions$information[2]) &&
+  if ((info_bread == lavoptions$information[1]) &&
+    (lavoptions$information[1] == lavoptions$information[2]) &&
     (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
     (lavoptions$information[2] == "expected" ||
       lavoptions$observed.information[1] ==
         lavoptions$observed.information[2])) {
     # only when same type of information is used # new in 0.6-6
+    # (and never when information.bread deviates from information[1])
     attr(nvar_cov, "E.inv") <- e_inv
   }
 
