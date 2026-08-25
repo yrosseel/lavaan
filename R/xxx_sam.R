@@ -246,6 +246,16 @@ sam <- function(model = NULL,
       se <- "twostep.robust"
       fit@Options$se <- se
     }
+    # check if we have latent interactions (same handling as a fresh call;
+    # the flag is needed later for the Gamma.eta computation)
+    lv_interaction_flag <- FALSE
+    if (length(unlist(fit@pta$vnames$lv.interaction)) > 0L) {
+      lv_interaction_flag <- TRUE
+      if (!se %in% c("none", "bootstrap")) {
+        se <- "local"
+        fit@Options$se <- se
+      }
+    }
     # remove @internal slot
     fit@internal <- list()
   } else {
