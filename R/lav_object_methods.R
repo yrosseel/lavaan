@@ -1338,10 +1338,14 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "information.meat") <- object@Options$information.meat
         # information.bread (bread-only override; "default" = information[1]);
         # for sam() with se = "local"/"local.nt" the reported SEs come from
-        # the structural fit (FIT.PA), so a bread option passed via
-        # struc_args applies and should be shown (new in 0.7-2)
+        # the structural fit (FIT.PA), so the (resolved) bread option in
+        # sam.struc.args applies and should be shown (new in 0.7-2); the
+        # same holds for se = "twostep.robust" under conditional.x, which
+        # is rerouted to the FIT.PA sandwich (tsrobust_condx_flag)
         info_bread <- object@Options$information.bread
-        if (object@Options$se %in% c("local", "local.nt") &&
+        if ((object@Options$se %in% c("local", "local.nt") ||
+             (object@Options$se == "twostep.robust" &&
+              object@Model@conditional.x)) &&
             !is.null(object@internal$sam.struc.args$information.bread)) {
           info_bread <- object@internal$sam.struc.args$information.bread
         }

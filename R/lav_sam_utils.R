@@ -1318,6 +1318,16 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
   }
 
 
+  # record the EFFECTIVE structural information.bread: lav_sam_step2() may
+  # have resolved "default" to "observed" (the default bread for the local
+  # standard errors since 0.7-2), and summary() reads it from
+  # sam.struc.args (see lavParameterEstimates)
+  if (is.null(struc_args[["information.bread"]]) &&
+      !is.null(fit_pa@Options$information.bread) &&
+      fit_pa@Options$information.bread != "default") {
+    struc_args$information.bread <- fit_pa@Options$information.bread
+  }
+
   sam_1 <- list(
     sam.cmd = cmd,
     sam.method = sam_method,

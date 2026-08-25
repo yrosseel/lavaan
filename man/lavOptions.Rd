@@ -564,7 +564,10 @@ Estimation options:
       matrix) remain based on the (first element of the)
       \code{information} option. If \code{"default"}, the (first element
       of the) \code{information} option is used for the bread as well,
-      and nothing changes.}
+      and nothing changes. Exception: for the structural part of a
+      \code{\link{sam}} model with \code{se = "local"}, \code{"default"}
+      resolves to \code{"observed"}; see the \code{struc_args} argument
+      in \code{\link{sam}}.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust

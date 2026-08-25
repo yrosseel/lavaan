@@ -75,15 +75,18 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{"twostep.robust"}; \code{se = "local"} is available as well.}
 \item{struc_args}{List. Optional arguments for the fitting function of the
     structural part only. See \code{\link{lavOptions}} for a complete list.
-    For example, when \code{se = "local"}, adding
-    \code{struc_args = list(information.bread = "observed")} replaces the
-    (expected-information) bread of the local sandwich standard errors by
-    the observed information matrix of the structural model, while leaving
-    all other ingredients (and the structural test statistic) unchanged.
-    This makes the local standard errors more robust against
-    misspecification of the structural part; when the structural model is
-    correct, the results are virtually identical. The summary header then
-    shows an additional \code{Information bread} line.}
+    Note that when \code{se = "local"}, the bread of the local sandwich
+    standard errors is (since 0.7-2) by default the observed information
+    matrix of the structural model, while all other ingredients (and the
+    structural test statistic) are based on the expected information. This
+    makes the local standard errors more robust against misspecification of
+    the structural part; whenever every structural equation reproduces the
+    sample moments of its own predictors (for example, when all predictors
+    are exogenous), both versions are identical. The summary header shows
+    an additional \code{Information bread} line. The classic
+    (expected-information) bread can be requested by adding
+    \code{struc_args = list(information.bread = "default")} (or
+    \code{"expected"}).}
 \item{sam_method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
     Bartlett factor scores were used, without any bias correction.}

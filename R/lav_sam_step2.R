@@ -53,6 +53,33 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   lavoptions_pa$rotation <- "none"
   lavoptions_pa <- modifyList(lavoptions_pa, struc_args)
 
+  # new in 0.7-2: the bread of the structural sandwich behind the local
+  # standard errors uses the OBSERVED information by default: whenever the
+  # structural model constrains the moments of an equation's own predictors
+  # (eg two endogenous predictors without a residual covariance), the
+  # expected-information bread underestimates the sampling variability under
+  # misspecification, while the observed (hessian) bread remains correct;
+  # when every equation reproduces its own predictor moments (eg all
+  # predictors exogenous), both breads coincide and nothing changes. The
+  # classic behavior remains available via
+  # struc_args = list(information.bread = "default") (= follow the
+  # information option) or "expected". The twostep.robust + conditional.x
+  # reroute reads the same FIT.PA sandwich (see tsrobust_condx_flag in
+  # lav_sam_step2_se()) and must stay identical to se = "local".
+  info_bread_pa <- lavoptions_pa$information.bread
+  if (is.null(info_bread_pa)) {
+    info_bread_pa <- "default"
+  }
+  if (info_bread_pa == "default" &&
+      is.null(struc_args[["information.bread"]]) &&
+      lavoptions_pa$estimator == "ML" &&
+      sam_method %in% c("local", "fsr", "cfsr") &&
+      (lavoptions$se %in% c("local", "local.nt") ||
+       (lavoptions$se == "twostep.robust" && lavoptions_pa$conditional.x &&
+        gamma_flag))) {
+    lavoptions_pa$information.bread <- "observed"
+  }
+
   if (gamma_flag) {
     lavoptions_pa$check.vcov <- FALSE # always non-pd
                                       # if interactions + fixed.x = FALSE
