@@ -1336,6 +1336,19 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "parameterization") <- object@Model@parameterization
         attr(tmp_list, "information") <- object@Options$information[1]
         attr(tmp_list, "information.meat") <- object@Options$information.meat
+        # information.bread (bread-only override; "default" = information[1]);
+        # for sam() with se = "local"/"local.nt" the reported SEs come from
+        # the structural fit (FIT.PA), so a bread option passed via
+        # struc_args applies and should be shown (new in 0.7-2)
+        info_bread <- object@Options$information.bread
+        if (object@Options$se %in% c("local", "local.nt") &&
+            !is.null(object@internal$sam.struc.args$information.bread)) {
+          info_bread <- object@internal$sam.struc.args$information.bread
+        }
+        if (is.null(info_bread)) {
+          info_bread <- "default"
+        }
+        attr(tmp_list, "information.bread") <- info_bread
         attr(tmp_list, "se") <- object@Options$se
         attr(tmp_list, "group.label") <- object@Data@group.label
         attr(tmp_list, "level.label") <- object@Data@level.label

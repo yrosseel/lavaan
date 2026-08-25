@@ -237,8 +237,15 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
         ))
         # information
         if (attr(x, "se") != "bootstrap") {
+          # information.bread: bread-only override; only shown when it
+          # deviates from information[1] (new in 0.7-2)
+          info_bread <- attr(x, "information.bread")
+          has_bread <- (!is.null(info_bread) &&
+            info_bread != "default" &&
+            info_bread != attr(x, "information"))
           # type for information
-          if (attr(x, "se") == "robust.huber.white") {
+          if (attr(x, "se") == "robust.huber.white" && !has_bread) {
+            # the bread == information[1] here, so label it as such
             c1 <- c(c1, "Information bread")
           } else {
             c1 <- c(c1, "Information")
@@ -255,6 +262,15 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
             tmp_txt <- attr(x, "observed.information")
             c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
               substring(tmp_txt, 2),
+              sep = ""
+            ))
+          }
+
+          # deviating bread? show it on its own line
+          if (has_bread) {
+            c1 <- c(c1, "Information bread")
+            c2 <- c(c2, paste(toupper(substring(info_bread, 1, 1)),
+              substring(info_bread, 2),
               sep = ""
             ))
           }

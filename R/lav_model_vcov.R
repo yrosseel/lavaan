@@ -204,8 +204,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       inverted = FALSE,
       use_ginv = use_ginv
     )
-    attr(e_inv, "Delta") <- attr(tmp_info, "Delta")
-    attr(e_inv, "WLS.V") <- attr(tmp_info, "WLS.V")
+    attr(e_inv, "Delta") <- attr(tmp_info, "Delta") # same as e_inv
+    attr(e_inv, "WLS.V") <- attr(tmp_info, "WLS.V") # not the same as e_inv
   } else {
     e_inv <- lav_model_info(
       lavmodel = lavmodel,
