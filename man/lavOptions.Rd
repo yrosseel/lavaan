@@ -394,7 +394,10 @@ Multiple group options:
       constraints across multiple groups. As a shortcut, the single
       value \code{"all"} can be used to constrain all (free) parameters
       to be equal across groups; it is equivalent to listing all of the
-      values above. When the model is not the same across groups (for
+      values above, except when \code{meanstructure = FALSE} was
+      explicitly requested: in that case, the model contains no
+      mean-structure parameters, and \code{"intercepts"} and
+      \code{"means"} are not included. When the model is not the same across groups (for
       example when the \code{group:} modifier is used to specify a
       different model per group), only parameters that are present in two
       or more groups are constrained to be equal; a parameter that occurs

@@ -308,6 +308,10 @@ lav_options_set <- function(opt = NULL) {
     if (opt$test[1] == "default") opt$test <- "none"
   }
 
+  # did the user explicitly request meanstructure = FALSE? (needed further
+  # below, as opt$meanstructure may be forced to TRUE along the way)
+  meanstructure.false <- is.logical(opt$meanstructure) && !opt$meanstructure
+
   # marker.int.fixed ####
   if (opt$marker.int.zero) {
     opt$meanstructure <- TRUE
@@ -338,6 +342,12 @@ lav_options_set <- function(opt = NULL) {
                          "means", "thresholds", "regressions", "residuals",
                          "residual.covariances", "lv.variances",
                          "lv.covariances")
+    # ... unless the user explicitly requested meanstructure = FALSE: then
+    # the model contains no intercepts/means, and "all" should not add
+    # them (github issue #631)
+    if (is.logical(opt$meanstructure) && !opt$meanstructure) {
+      opt$group.equal <- setdiff(opt$group.equal, c("intercepts", "means"))
+    }
   }
 
   if (is.null(opt$group.partial) || all(nchar(opt$group.partial) == 0L)) {
@@ -1277,6 +1287,12 @@ lav_options_set <- function(opt = NULL) {
     opt$meanstructure <- TRUE
   }
   if (any(c("intercepts", "means") %in% opt$group.equal)) {
+    # warn if this overrides an explicit meanstructure = FALSE request
+    if (meanstructure.false && !opt$meanstructure) {
+      lav_msg_warn(gettextf(
+        "group.equal= contains %1$s or %2$s: forcing meanstructure = TRUE.",
+        dQuote("intercepts"), dQuote("means")))
+    }
     opt$meanstructure <- TRUE
   }
   # if(opt$se == "robust.huber.white" ||
