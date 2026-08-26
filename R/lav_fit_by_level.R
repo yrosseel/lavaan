@@ -458,6 +458,21 @@ lav_object_fit_by_level <- function(object) {
   out
 }
 
+
+# number of independent observations for the level-specific RMSEA at the
+# between level of a multilevel model (Ryu & West, 2009): J, the number of
+# clusters. The within level keeps the default N (i.e. returns NULL).
+lav_fit_by_level_rmsea_n <- function(object, target) {
+  if (target != "between") {
+    return(NULL)
+  }
+  nclusters <- 0L
+  for (g in 1:object@SampleStats@ngroups) {
+    nclusters <- nclusters + object@Data@Lp[[g]]$nclusters[[2]]
+  }
+  nclusters
+}
+
 # re-inject the (stripped) slots that a stored partially saturated fit
 # shares with the original object; the result is identical to the fit
 # as it came out of lavaan(), because these slots were passed along
@@ -572,7 +587,8 @@ lav_fit_by_level_fm <- function(object) {
       lav_fit(
         object = fit_l,
         fit_measures = list(fit.measures = c(measures, srmr_names[i])),
-        output = "vector"
+        output = "vector",
+        rmsea.n = lav_fit_by_level_rmsea_n(object, level_names[i])
       ),
       silent = TRUE
     )

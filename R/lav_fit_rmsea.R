@@ -219,7 +219,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
                                     ci_level = 0.90,
                                     close_h0 = 0.05, notclose_h0 = 0.08,
                                     robust = TRUE,
-                                    cat_nonpd = "na") {
+                                    cat_nonpd = "na",
+                                    n_override = NULL) {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
 
@@ -332,7 +333,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   x2 <- test[[test_idx]]$stat
   df <- test[[test_idx]]$df
   g <- lavobject@Data@ngroups # number of groups
-  n <- lav_inspect_ntotal(object = lavobject) # N vs N-1
+  n <- if (is.null(n_override)) lav_inspect_ntotal(object = lavobject) else n_override
 
   # scaled X2/df values
   #
