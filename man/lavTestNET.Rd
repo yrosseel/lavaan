@@ -66,9 +66,11 @@ A list of class \code{lavaan.net} with elements \code{nested} (a logical
 matrix; entry \eqn{[i, j]} indicates whether the model in row \eqn{i} is
 nested within the model in column \eqn{j}; \code{NA} means the pair could
 not be checked, or the result was inconclusive), \code{fx} (the
-corresponding fit function minima), \code{df} (the degrees of freedom of
-the models, in the order used in the matrix), \code{crit} and
-\code{npoints}.
+corresponding fit function minima), \code{reason} (a character matrix
+explaining -- for pairs that could not be checked -- why the check was
+skipped; these reasons are also shown by the print method), \code{df}
+(the degrees of freedom of the models, in the order used in the matrix),
+\code{crit} and \code{npoints}.
 }
 \references{
 Bentler, P. M., & Satorra, A. (2010). Testing model nesting and equivalence.

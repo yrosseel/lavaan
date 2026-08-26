@@ -161,15 +161,75 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       sort(lav_object_vnames(x))
     })
     ov <- ov_names[[1L]] # the observed variable names of the first model
-    if (!all(sapply(ov_names, function(x) identical(x, ov)))) {
+    same_ov_flag <- all(sapply(ov_names, function(x) identical(x, ov)))
+    if (!same_ov_flag) {
       lav_msg_warn(gettext(
         "some models are based on a different set of observed variables"))
     }
-    ## wow FIXME: we may need to reorder the rows/columns first!!
-    # COVS <- lapply(mods, function(x) slot(slot(x, "Sample"), "cov")[[1]])
-    # if(!all(sapply(COVS, all.equal, COVS[[1]]))) {
-    #    stop("lavaan ERROR: models must be fit to the same data")
-    # }
+
+    # 1b. all models fitted to the same data? (in the spirit of
+    #     semTools::net(); see GitHub issue #630). The chi-squared
+    #     difference test is only valid when all models are fitted to the
+    #     same set of sample statistics; we compare (a) the number of
+    #     groups, (b) the group labels, (c) the (group-specific) numbers of
+    #     observations, and (d) the observed sample statistics themselves.
+    #     Only the first (most fundamental) mismatch is reported.
+    ngroups_all <- sapply(mods, function(x) x@Data@ngroups)
+    glabel_all <- lapply(mods, function(x) x@Data@group.label)
+    nobs_all <- lapply(mods, function(x) unname(unlist(x@Data@nobs)))
+    meanstructure_all <- sapply(mods, function(x) x@Model@meanstructure)
+    condx_all <- sapply(mods, function(x) x@Model@conditional.x)
+    if (length(unique(ngroups_all)) > 1L) {
+      lav_msg_warn(gettextf(
+        "not all models are fitted with the same number of groups (%s):
+         their test statistics are computed relative to different sets of
+         sample statistics, and the chi-squared difference test is invalid.
+         To compare a single-group (pooled) model with a multiple-group
+         model, refit the pooled model as a multiple-group model with all
+         parameters constrained to be equal across groups (see the
+         group.equal= argument).",
+        lav_msg_view(ngroups_all, "none", qd = FALSE)))
+    } else if (!all(sapply(glabel_all, identical, glabel_all[[1L]]))) {
+      lav_msg_warn(gettext(
+        "not all models are fitted using the same grouping: the group
+         labels (or their order) differ across models. The models are not
+         fitted to the same set of sample statistics, and the chi-squared
+         difference test is invalid."))
+    } else if (!all(sapply(nobs_all, function(x) {
+                 isTRUE(all.equal(x, nobs_all[[1L]]))
+               }))) {
+      lav_msg_warn(gettextf(
+        "not all models are fitted to the same data: the (group-specific)
+         numbers of observations differ across models (%s), and the
+         chi-squared difference test is invalid. If listwise deletion
+         removed different cases in different models, consider refitting
+         all models using the same subset of cases (or using
+         missing = \"ml\").",
+        paste(names(mods), ":", sapply(nobs_all, paste, collapse = " + "),
+              collapse = ", ")))
+    } else if (same_ov_flag &&
+               length(unique(condx_all)) == 1L &&
+               length(unique(meanstructure_all)) == 1L) {
+      # (d) compare the observed (h1) sample statistics; because the
+      # variables may be ordered differently in each model, we compare the
+      # sorted values only (following semTools::net())
+      sampstat_all <- lapply(mods, function(x) {
+        try(sort(unname(unlist(lavTech(x, "sampstat")))), silent = TRUE)
+      })
+      if (!any(sapply(sampstat_all, inherits, "try-error"))) {
+        ref <- sampstat_all[[1L]]
+        same_stats_flag <- sapply(sampstat_all, function(x) {
+          length(x) == length(ref) &&
+            isTRUE(all.equal(x, ref, tolerance = 1e-6))
+        })
+        if (!all(same_stats_flag)) {
+          lav_msg_warn(gettext(
+            "not all models appear to be fitted to the same data: the
+             observed sample statistics differ across models, and the
+             chi-squared difference test is invalid."))
+        }
+      }
+    }
     # 2. nested models? verify with the NET procedure (Bentler & Satorra,
     #    2010; Asparouhov & Muthen, 2019): the less restricted model must
     #    be able to exactly reproduce the model-implied moments of the more

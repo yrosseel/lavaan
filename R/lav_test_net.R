@@ -70,6 +70,7 @@ lavTestNET <- function(object, ..., crit = 1e-7, npoints = 1L,          # nolint
   # both directions are tested: nested both ways means equivalent
   nested <- matrix(as.logical(NA), nmods, nmods)
   fx_mat <- matrix(as.numeric(NA), nmods, nmods)
+  reason_mat <- matrix("", nmods, nmods)
   diag(nested) <- TRUE
   diag(fx_mat) <- 0
   for (i in seq_len(nmods)[-1L]) {
@@ -86,6 +87,7 @@ lavTestNET <- function(object, ..., crit = 1e-7, npoints = 1L,          # nolint
       }
       nested[i, j] <- out$nested
       fx_mat[i, j] <- out$fx
+      reason_mat[i, j] <- out$reason
       if (ndf[i] == ndf[j]) {
         # same df: also test the reverse direction (equivalence)
         out2 <- try(
@@ -98,16 +100,17 @@ lavTestNET <- function(object, ..., crit = 1e-7, npoints = 1L,          # nolint
         if (!inherits(out2, "try-error")) {
           nested[j, i] <- out2$nested
           fx_mat[j, i] <- out2$fx
+          reason_mat[j, i] <- out2$reason
         }
       }
     }
   }
 
-  dimnames(nested) <- dimnames(fx_mat) <-
+  dimnames(nested) <- dimnames(fx_mat) <- dimnames(reason_mat) <-
     list(paste0(names(mods), " (df = ", ndf, ")"), names(mods))
 
   out <- list(
-    nested = nested, fx = fx_mat, df = ndf,
+    nested = nested, fx = fx_mat, reason = reason_mat, df = ndf,
     crit = crit, npoints = npoints
   )
   class(out) <- c("lavaan.net", "list")
@@ -138,6 +141,20 @@ lav_net_print <- function(x, ...) {
       "column j?\n")
   cat("(criterion: fit function value <", format(x$crit),
       "computed at", x$npoints, "parameter point(s))\n")
+  # explain why some pairs could not be checked (if we know)
+  if (!is.null(x$reason)) {
+    idx <- which(x$reason != "" & m_char == "?", arr.ind = TRUE)
+    if (nrow(idx) > 0L) {
+      cat("\nSome pairs could not be checked:\n")
+      model_names <- colnames(x$reason)
+      for (k in seq_len(nrow(idx))) {
+        i <- idx[k, 1L]
+        j <- idx[k, 2L]
+        cat("  - ", model_names[i], " within ", model_names[j], ": ",
+            x$reason[i, j], "\n", sep = "")
+      }
+    }
+  }
   invisible(x)
 }
 

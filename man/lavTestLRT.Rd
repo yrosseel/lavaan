@@ -62,7 +62,9 @@ anova(object, ...)
   test is meaningless) or not equivalent (the difference test is invalid).
   Pairs that cannot be checked are skipped silently; see
   \code{\link{lavTestNET}} for the details of the procedure (and for its
-  limitations).}
+  limitations). Independently of this argument, several sanity checks are
+  carried out to verify that all models were fitted to the same data (see
+  the Details section).}
 \item{type}{Character. If \code{"Chisq"}, the test statistic for each
   model is the (scaled or unscaled) model fit test statistic. If \code{"Cf"},
   the test statistic for each model is computed by the
@@ -81,6 +83,22 @@ anova(object, ...)
 \details{
     The \code{anova} function for lavaan objects simply calls the
     \code{lavTestLRT} function, which has a few additional arguments.
+
+    The chi-squared difference test is only valid when all models are
+    (nested and) fitted to the same set of sample statistics. Several
+    sanity checks are therefore carried out (in the spirit of
+    \code{semTools::net()}): all models must be fitted with the same
+    number of groups, the same group labels, and the same (group-specific)
+    numbers of observations, and the observed sample statistics must be
+    identical across models. If any of these checks fails, a warning is
+    issued (but the table is still computed). In particular, a
+    single-group (pooled) model cannot be compared directly with a
+    multiple-group model: although both models may be fitted to the same
+    data set, their test statistics are computed relative to different
+    (saturated) models. Instead, refit the pooled model as a
+    multiple-group model in which all parameters are constrained to be
+    equal across groups (e.g., \code{group.equal = "all"}), and compare
+    that model with the unrestricted multiple-group model.
 
     The only \code{test=} options that currently have actual consequences are
     \code{"satorra.bentler"}, \code{"yuan.bentler"}, or \code{"yuan.bentler.mplus"}
