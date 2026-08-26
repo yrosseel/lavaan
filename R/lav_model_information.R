@@ -36,7 +36,12 @@ lav_model_info <- function(lavmodel = NULL,
 
   # compute information matrix
   if (information == "observed") {
-    if (lavsamplestats@missing.flag || lavdata@nlevels > 1L) {
+    # two-level least-squares keeps the objective (and hence the hessian)
+    # in per-observation units with the usual fg group weights, exactly
+    # like single level; the multilevel conventions below are for ML only
+    wls_2l <- (lavdata@nlevels > 1L &&
+      lavmodel@estimator %in% c("WLS", "DWLS", "ULS"))
+    if ((lavsamplestats@missing.flag || lavdata@nlevels > 1L) && !wls_2l) {
       group_weight <- FALSE
     } else {
       group_weight <- TRUE
@@ -413,8 +418,12 @@ lav_model_info_observed <- function(lavmodel = NULL,
       # HJ: Does this need to be divided by sum of weights instead?
     }
 
-    # if multilevel, we should divide by 'J', the number of clusters
-    if (lavdata@nlevels > 1L) {
+    # if multilevel ML, we should divide by 'J', the number of clusters;
+    # NOT for two-level least-squares (WLS/DWLS/ULS), whose hessian is
+    # already unit (per-observation) information, matching the expected
+    # information and the ntotal-based vcov denominator
+    if (lavdata@nlevels > 1L &&
+      !lavmodel@estimator %in% c("WLS", "DWLS", "ULS")) {
       nc <- 0
       for (g in 1:lavsamplestats@ngroups) {
         nc <- nc + lavdata@Lp[[g]]$nclusters[[2]]
