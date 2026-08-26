@@ -290,6 +290,9 @@ lav_options_default <- function() {
   elm(c("rotation.args", "order_lv_by"), "index",
       chr = c("sumofsquares", "index", "none"))
   elm(c("rotation.args", "gpa_tol"), 1e-05, nm = "]0, 0.01]")
+  elm(c("rotation.args", "gpa_algorithm"), "bb",
+      chr = c("legacy", "bb", "cayley"))
+  elm(c("rotation.args", "gpa_fwindow"), 0L, nm = "[0, 100000]")
   elm(c("rotation.args", "tol"), 1e-08, nm = "]0, 0.01]")
   elm(c("rotation.args", "warn"), FALSE, bl = TRUE)
   elm(c("rotation.args", "verbose"), FALSE, bl = TRUE)

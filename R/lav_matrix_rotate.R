@@ -30,6 +30,8 @@ lav_mat_rotate <- function(a = NULL, # original matrix
                               reflect = TRUE, # reflect sign
                               order_lv_by = "index", # how to order the lv's
                               gpa_tol = 0.00001, # stopping tol gpa
+                              gpa_algorithm = "bb", # step size/projection gpa
+                              gpa_fwindow = 0L, # line search window gpa
                               tol = 1e-07, # stopping tol others
                               keep_rep = FALSE, # store replications
                               max_iter = 10000L, # max gpa iterations
@@ -182,6 +184,8 @@ lav_mat_rotate <- function(a = NULL, # original matrix
           method_fname = method_fname,
           method_args = method_args,
           gpa_tol = gpa_tol,
+          gpa_algorithm = gpa_algorithm,
+          gpa_fwindow = gpa_fwindow,
           max_iter = max_iter
         )
         info <- attr(rot, "info")
@@ -231,6 +235,8 @@ lav_mat_rotate <- function(a = NULL, # original matrix
         method_fname = method_fname,
         method_args = method_args,
         gpa_tol = gpa_tol,
+        gpa_algorithm = gpa_algorithm,
+        gpa_fwindow = gpa_fwindow,
         max_iter = max_iter
       )
     } else if (algorithm == "pairwise") {
@@ -345,6 +351,14 @@ lav_mat_rotate <- function(a = NULL, # original matrix
 # - as the orthogonal and oblique algorithm are so similar, they are
 #   combined in a single function
 # - the default is oblique rotation
+# - new in 0.7-2 (following GPArotation 2026-6): the step size alpha can be
+#   set using the Barzilai-Borwein (1988) method (gpa_algorithm = "bb", now
+#   the default), combined with a non-monotone line search (Grippo, Lampariello
+#   & Lucidi, 1986) over a window of gpa_fwindow previous criterion values;
+#   for orthogonal rotation only, the projection onto the orthogonal manifold
+#   can be done using the Cayley transform (gpa_algorithm = "cayley") instead
+#   of the SVD; gpa_algorithm = "legacy" gives the original (pre 0.7-2)
+#   behavior: alpha doubling + monotone line search + SVD projection
 #
 lav_mat_rotate_gpa <- function(a = NULL, # original matrix
                                   orthogonal = FALSE, # default is oblique
@@ -352,9 +366,34 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
                                   method_fname = NULL, # criterion function
                                   method_args = list(), # optional method args
                                   gpa_tol = 0.00001,
+                                  gpa_algorithm = "bb",
+                                  gpa_fwindow = 0L, # 0 = auto
                                   max_iter = 10000L) {
   # number of columns
   m <- ncol(a)
+
+  # check gpa_algorithm
+  gpa_algorithm <- tolower(gpa_algorithm)
+  if (!gpa_algorithm %in% c("legacy", "bb", "cayley")) {
+    lav_msg_stop(gettext("gpa_algorithm must be legacy, bb or cayley"))
+  }
+  if (gpa_algorithm == "cayley" && !orthogonal) {
+    lav_msg_stop(gettext(
+      "gpa_algorithm = \"cayley\" is only available for orthogonal rotation."))
+  }
+
+  # width of the (non-monotone) line search window; 0 = auto
+  gpa_fwindow <- as.integer(gpa_fwindow)
+  if (gpa_fwindow < 1L) {
+    gpa_fwindow <- if (gpa_algorithm == "legacy") 1L else 10L
+  }
+
+  # maximum number of step-halvings in the line search
+  if (gpa_algorithm == "legacy") {
+    ls_max_iter <- 1000L
+  } else {
+    ls_max_iter <- 11L
+  }
 
   # transpose of A (not needed for orthogonal)
   at <- t(a)
@@ -396,6 +435,10 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
 
   # start iterations
   converged <- FALSE
+  # history of criterion values (used by the non-monotone line search)
+  f_hist <- numeric(max_iter + 1L)
+  rot_prev <- NULL
+  gp_prev <- NULL
   for (iter in seq_len(max_iter + 1L)) {
     # compute projection Gp of GRAD onto the linear manifold tangent at
     # ROT to the manifold of orthogonal or normal (for oblique) matrices
@@ -413,6 +456,9 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
     # check Frobenius norm of Gp
     frob <- sqrt(sum(gp * gp))
 
+    # store current criterion value
+    f_hist[iter] <- q_current
+
     # if verbose, print
     if (lav_verbose()) {
       cat(
@@ -428,26 +474,54 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
       break
     }
 
-    # update
-    alpha <- 2 * alpha
-    for (i in seq_len(1000)) { # make option?
+    # determine (initial) step size alpha
+    if (gpa_algorithm != "legacy" && !is.null(rot_prev)) {
+      # Barzilai-Borwein step size; alpha is set directly, and we enter
+      # the line search without doubling
+      d_rot <- rot - rot_prev
+      d_gp <- gp - gp_prev
+      if (sum(d_gp * d_gp) > 0) {
+        alpha_new <- sum(d_rot * d_rot) / abs(sum(d_rot * d_gp))
+        if (is.finite(alpha_new)) {
+          alpha <- alpha_new
+        }
+        alpha <- max(1e-10, min(alpha, 20))
+      }
+    } else {
+      # original behavior: double the (accepted) step size
+      alpha <- 2 * alpha
+    }
 
-      # step in the negative projected gradient direction
-      # (note, the original algorithm in Jennrich 2001 used G, not Gp)
-      x <- rot - alpha * gp
+    # reference value for the (non-monotone) line search: the worst
+    # criterion value over the last gpa_fwindow iterations
+    # (if gpa_fwindow == 1, this is just q_current: monotone line search)
+    target_f <- max(f_hist[max(1L, iter - gpa_fwindow + 1L):iter])
 
-      if (orthogonal) {
-        # use SVD to compute the projection ROTt of X onto the manifold
-        # of orthogonal matrices
-        svd_out <- svd(x)
-        u <- svd_out$u
-        v_1 <- svd_out$v
-        rott <- u %*% t(v_1)
+    for (i in seq_len(ls_max_iter)) {
+
+      if (orthogonal && gpa_algorithm == "cayley") {
+        # use the Cayley transform to move over the manifold of
+        # orthogonal matrices along a descent curve
+        w_skew <- (alpha / 2) * (tcrossprod(gp, rot) - tcrossprod(rot, gp))
+        rott <- solve(diag(m) + w_skew, rot - w_skew %*% rot)
       } else {
-        # compute the projection ROTt of X onto the manifold
-        # of normal matrices
-        v <- 1 / sqrt(apply(x^2, 2, sum))
-        rott <- x %*% diag(v)
+        # step in the negative projected gradient direction
+        # (note, the original algorithm in Jennrich 2001 used G, not Gp)
+        x <- rot - alpha * gp
+
+        if (orthogonal) {
+          # use SVD to compute the projection ROTt of X onto the manifold
+          # of orthogonal matrices
+          svd_out <- svd(x)
+          u <- svd_out$u
+          v_1 <- svd_out$v
+          rott <- u %*% t(v_1)
+        } else {
+          # compute the projection ROTt of X onto the manifold
+          # of normal matrices
+          v <- 1 / sqrt(apply(x^2, 2, sum))
+          rott <- x %*% diag(v)
+        }
       }
 
       # rotate again
@@ -466,18 +540,20 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
       attr(q_new, "grad") <- NULL
 
       # check stopping criterion
-      if (q_new < q_current - 0.5 * frob * frob * alpha) {
+      if (q_new < target_f - 0.5 * frob * frob * alpha) {
         break
       } else {
         alpha <- alpha / 2
       }
 
-      if (i == 1000) {
+      if (i == ls_max_iter && gpa_algorithm == "legacy") {
         lav_msg_warn(gettext("half-stepping failed in GPA"))
       }
     }
 
     # update
+    rot_prev <- rot
+    gp_prev <- gp
     rot <- rott
     q_current <- q_new
 

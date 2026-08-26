@@ -302,6 +302,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
           reflect = ropts$reflect,
           order_lv_by = ropts$order_lv_by,
           gpa_tol = ropts$gpa_tol,
+          gpa_algorithm = ropts$gpa_algorithm,
+          gpa_fwindow = ropts$gpa_fwindow,
           tol = ropts$tol,
           max_iter = ropts$max_iter,
           group = g

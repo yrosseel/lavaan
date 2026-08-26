@@ -52,6 +52,18 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    \code{gpa_tol = 1e-05}, \code{tol = 1e-08}, \code{max_iter = 10000L},
    \code{warn = FALSE}, \code{verbose = FALSE}, \code{reflect = TRUE},
    \code{order_lv_by = "index"} (or \code{"sumofsquares"} or \code{"none"}).
+   Since version 0.7-2 (and similar to version 2026.6 of the GPArotation
+   package), the gradient projection algorithm determines the step size
+   using the Barzilai-Borwein method, combined with a non-monotone line
+   search (\code{gpa_algorithm = "bb"}, the default). For orthogonal
+   rotation only, \code{gpa_algorithm = "cayley"} uses the Cayley
+   transform to stay on the manifold of orthogonal matrices. The old
+   (pre 0.7-2) behavior (step size doubling with a monotone line search)
+   can be restored with \code{gpa_algorithm = "legacy"}. The width of the
+   window of the non-monotone line search can be set via the
+   \code{gpa_fwindow} option; the default (\code{0}) implies \code{10}
+   for the \code{"bb"} and \code{"cayley"} algorithms, and \code{1}
+   (i.e., a monotone line search) for the \code{"legacy"} algorithm.
    Other options are specific for a particular rotation criterion:
    \code{geomin_epsilon = 0.001}, \code{orthomax_gamma = 1},
    \code{promax_kappa = 4},
