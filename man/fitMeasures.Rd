@@ -103,7 +103,11 @@ fit of a latent variable model.}
   only, while the model at the other level is saturated. This uses the
   so-called partially saturated model approach (Ryu & West, 2009): any
   misfit of the partially saturated model can be attributed to the target
-  level. The incremental fit indices (e.g., CFI and TLI) are computed with
+  level. For the \code{between} level, the RMSEA and its associated
+  confidence interval and p-value use the number of clusters, \emph{J}, as
+  the effective sample size (rather than the total sample size, \emph{N}),
+  following the level-specific fit index definitions of Ryu & West (2009).
+  The incremental fit indices (e.g., CFI and TLI) are computed with
   respect to a level-specific baseline model: the independence model at
   the target level, again combined with a saturated model at the other
   level. By default, these partially saturated models are fitted (and
