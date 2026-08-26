@@ -564,8 +564,8 @@ Estimation options:
       matrix) remain based on the (first element of the)
       \code{information} option. If \code{"default"}, the (first element
       of the) \code{information} option is used for the bread as well,
-      with two exceptions (both new in 0.7-2). First, for single-level
-      categorical data estimated with DWLS or ULS and
+      with two exceptions (both new in 0.7-2). First, for categorical
+      data (single-level or two-level) estimated with DWLS or ULS and
       \code{se = "robust.sem"} (e.g., estimator \code{"WLSMV"} or
       \code{"ULSMV"}), \code{"default"} resolves to \code{"observed"}: the
       bread is then based on the full hessian of the (D)WLS/ULS fit

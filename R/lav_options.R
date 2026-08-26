@@ -1796,10 +1796,10 @@ lav_options_set <- function(opt = NULL) {
   # finite-sample misfit of a correctly specified model at small N; the
   # observed bread is consistent regardless of model fit, and reduces to
   # the classic bread for a perfectly fitting model. The classic behavior
-  # remains available via information.bread = "expected". Restricted to
-  # the single-level case; the test statistics are not affected.
+  # remains available via information.bread = "expected". Also applies to
+  # the two-level case (since 0.7-2); the test statistics are not affected.
   if (opt$information.bread == "default" && opt$.categorical &&
-      opt$se == "robust.sem" && !opt$.multilevel &&
+      opt$se == "robust.sem" &&
       opt$estimator %in% c("DWLS", "ULS")) {
     opt$information.bread <- "observed"
   }
