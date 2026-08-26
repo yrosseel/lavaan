@@ -17,7 +17,27 @@
 # correlation: the correlation between the indicator and the sum score of the
 # OTHER indicators of the same factor. This is computed from the (pooled)
 # unrestricted (h1) covariance matrix, so the behavior is consistent whether
-# or not we have missing data, categorical data, etc.
+# or not we have missing data, categorical data, etc. Before the item-total
+# correlations are computed, the items are aligned with their dominant common
+# direction (the sign pattern of the first eigenvector of their correlation
+# matrix): without this, a single reverse-coded item degrades the sum score
+# of the 'other' items, and a perfectly good marker item could be flagged as
+# poor (github issue #628).
+#
+# We only switch in the 'clean default' situation, where the user did not
+# set up (part of) the scaling or the measurement model deliberately. For
+# each latent variable/composite, we require -- in EVERY block -- that
+# exactly one indicator has a fixed loading/weight, that it is the FIRST
+# indicator, and that its value is 1.0 (i.e., the auto.fix.first default).
+# In addition, none of the loading/weight rows may carry user metadata: a
+# label (which may tie the parameter to other parameters through equality
+# constraints or ':=' definitions), a start value, a prior, or bounds; nor
+# may any of them be referenced -- through their plabels -- in user-written
+# constraint or definition rows (e.g. via the constraints= argument). See
+# again github issue #628: with a labeled marker, switching freed the marker
+# loading, but an equality constraint (same label on the -- still fixed --
+# markers of other factors) kept it pinned to 1.0, while the new marker was
+# also fixed to 1.0, yielding a doubly-scaled factor.
 #
 # Composites (op == "<~") get a similar treatment, but with a different
 # quality measure: the metric of a composite is set by fixing the WEIGHT of
@@ -95,25 +115,136 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
   }
 
   # corrected item-total correlations, given a covariance submatrix C
+  #
+  # the items are first aligned with their dominant common direction (the
+  # sign pattern of the first eigenvector of their correlation matrix), so
+  # that a reverse-coded item does not degrade the sum score of the 'other'
+  # items; the returned values keep each item's own direction (relative to
+  # the majority-positive orientation), so a reversed item still shows a
+  # negative value
   cit_from_cov <- function(C) {
+    s <- rep(1, nrow(C))
     d <- diag(C)
+    if (all(is.finite(C)) && all(d > 0)) {
+      isd <- 1 / sqrt(d)
+      ev <- try(eigen(C * tcrossprod(isd), symmetric = TRUE),
+                silent = TRUE)
+      if (!inherits(ev, "try-error")) {
+        s <- sign(ev$vectors[, 1L])
+        s[s == 0] <- 1
+        if (sum(s) < 0) {
+          s <- -s
+        }
+        C <- C * tcrossprod(s)
+      }
+    }
     R <- rowSums(C)
     S <- sum(C)
     cov_rest <- R - d
     var_rest <- S - 2 * R + d
-    out <- cov_rest / sqrt(d * var_rest)
+    out <- s * cov_rest / sqrt(d * var_rest)
     out[!is.finite(out)] <- NA_real_
+    # a value outside [-1, 1] is not a correlation; this can only happen if
+    # the (pseudo-)correlation matrix is not positive definite, and the
+    # quality measure is meaningless for such an item
+    out[abs(out) > 1 + sqrt(.Machine$double.eps)] <- NA_real_
     out
+  }
+
+  # TRUE if the user attached any metadata to these (loading/weight) rows: a
+  # label (which may tie the parameter to other parameters through equality
+  # constraints or ':=' definitions), a start value, a prior, or bounds; in
+  # that case the user has deliberately set up (part of) the measurement
+  # model, and switching the marker could silently change the meaning of the
+  # model (github issue #628)
+  user_modified_rows <- function(rows) {
+    if (!is.null(lavpartable$label)) {
+      lab <- lavpartable$label[rows]
+      lab <- lab[nchar(lab) > 0L]
+      # group.equal= writes the (auto-generated) plabels of the first group
+      # into the label column; those are regenerated consistently when the
+      # parameter table is rebuilt with a new marker, so only labels the
+      # user provided should block the switch
+      if (!is.null(lavpartable$plabel)) {
+        lab <- lab[!lab %in% lavpartable$plabel]
+      }
+      if (length(lab) > 0L) {
+        return(TRUE)
+      }
+    }
+    # user-provided starting values on free parameters
+    if (any(lavpartable$free[rows] != 0L &
+            !is.na(lavpartable$ustart[rows]))) {
+      return(TRUE)
+    }
+    if (!is.null(lavpartable$prior) &&
+        any(nchar(lavpartable$prior[rows]) > 0L)) {
+      return(TRUE)
+    }
+    if (!is.null(lavpartable$lower) &&
+        any(is.finite(lavpartable$lower[rows]))) {
+      return(TRUE)
+    }
+    if (!is.null(lavpartable$upper) &&
+        any(is.finite(lavpartable$upper[rows]))) {
+      return(TRUE)
+    }
+    FALSE
+  }
+
+  # user-written constraint/definition rows may also reference parameters
+  # through their plabels (e.g. via the constraints= argument); rows
+  # generated by lavaan itself (group.equal, effect.coding, ...) have
+  # user != 1 and are regenerated consistently when the parameter table is
+  # rebuilt with a new marker
+  con_idx <- which(lavpartable$op %in% c("==", "<", ">", ":=") &
+                   lavpartable$user == 1L)
+  con_text <- c(lavpartable$lhs[con_idx], lavpartable$rhs[con_idx])
+  plabel_referenced <- function(rows) {
+    if (length(con_idx) == 0L || is.null(lavpartable$plabel)) {
+      return(FALSE)
+    }
+    plabs <- lavpartable$plabel[rows]
+    plabs <- plabs[nchar(plabs) > 0L]
+    any(vapply(plabs, function(p) {
+      any(grepl(p, con_text, fixed = TRUE))
+    }, logical(1L)))
+  }
+
+  # TRUE if, in EVERY block, the rows for this lv show the clean default
+  # scaling: the same indicators (ind) in the same order, with exactly one
+  # fixed loading/weight (free == 0) that belongs to the FIRST indicator and
+  # equals 1.0
+  clean_default_scaling <- function(all_rows, ind) {
+    for (b in unique(lavpartable$block[all_rows])) {
+      rows_b <- all_rows[lavpartable$block[all_rows] == b &
+                         lavpartable$rhs[all_rows] %in% ind]
+      if (!identical(lavpartable$rhs[rows_b], ind)) {
+        return(FALSE)
+      }
+      fixed <- which(lavpartable$free[rows_b] == 0L)
+      if (length(fixed) != 1L || fixed != 1L ||
+          !isTRUE(lavpartable$ustart[rows_b][1L] == 1)) {
+        return(FALSE)
+      }
+    }
+    TRUE
   }
 
   new_marker <- character(0L)
   info <- list()
 
   for (lv in lv_regular) {
-    lv_rows <- which(lavpartable$op == "=~" & lavpartable$lhs == lv)
-    # only consider one block (the structure is identical across blocks)
-    b1 <- lavpartable$block[lv_rows]
-    lv_rows <- lv_rows[b1 == b1[1L]]
+    all_rows <- which(lavpartable$op == "=~" & lavpartable$lhs == lv)
+    # leave the factor alone if the user attached any metadata to its
+    # loadings (in any block), or references them in constraints
+    if (user_modified_rows(all_rows) || plabel_referenced(all_rows)) {
+      next
+    }
+    # only consider one block for the indicator list (the structure is
+    # identical across blocks)
+    b1 <- lavpartable$block[all_rows]
+    lv_rows <- all_rows[b1 == b1[1L]]
     ind <- lavpartable$rhs[lv_rows]
 
     # only observed indicators, and at least two of them
@@ -124,12 +255,11 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
       next
     }
 
-    # only adapt the 'clean' default situation: exactly one indicator has a
-    # fixed loading (free == 0), it is the FIRST indicator, and its value is
-    # 1.0; otherwise the user set up the scaling and we leave it alone
-    fixed <- which(lavpartable$free[lv_rows] == 0L)
-    if (length(fixed) != 1L || fixed != 1L ||
-        !isTRUE(lavpartable$ustart[lv_rows][1L] == 1)) {
+    # only adapt the 'clean' default situation (in every block): exactly one
+    # indicator has a fixed loading (free == 0), it is the FIRST indicator,
+    # and its value is 1.0; otherwise the user set up the scaling and we
+    # leave it alone
+    if (!clean_default_scaling(all_rows, ind)) {
       next
     }
     cur <- ind[1L]
@@ -173,10 +303,16 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
 
   # composites: check the implied relative weight of the first indicator
   for (lv in lv_comp) {
-    lv_rows <- which(lavpartable$op == "<~" & lavpartable$lhs == lv)
-    # only consider one block (the structure is identical across blocks)
-    b1 <- lavpartable$block[lv_rows]
-    lv_rows <- lv_rows[b1 == b1[1L]]
+    all_rows <- which(lavpartable$op == "<~" & lavpartable$lhs == lv)
+    # leave the composite alone if the user attached any metadata to its
+    # weights (in any block), or references them in constraints
+    if (user_modified_rows(all_rows) || plabel_referenced(all_rows)) {
+      next
+    }
+    # only consider one block for the indicator list (the structure is
+    # identical across blocks)
+    b1 <- lavpartable$block[all_rows]
+    lv_rows <- all_rows[b1 == b1[1L]]
     ind <- lavpartable$rhs[lv_rows]
 
     # only observed indicators, and at least two of them
@@ -187,12 +323,11 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
       next
     }
 
-    # only adapt the 'clean' default situation: exactly one indicator has a
-    # fixed weight (free == 0), it is the FIRST indicator, and its value is
-    # 1.0; otherwise the user set up the scaling and we leave it alone
-    fixed <- which(lavpartable$free[lv_rows] == 0L)
-    if (length(fixed) != 1L || fixed != 1L ||
-        !isTRUE(lavpartable$ustart[lv_rows][1L] == 1)) {
+    # only adapt the 'clean' default situation (in every block): exactly one
+    # indicator has a fixed weight (free == 0), it is the FIRST indicator,
+    # and its value is 1.0; otherwise the user set up the scaling and we
+    # leave it alone
+    if (!clean_default_scaling(all_rows, ind)) {
       next
     }
     cur <- ind[1L]

@@ -485,7 +485,19 @@ lavaan <- function(
   # also run when std.lv = TRUE and the model contains composites; the
   # 'clean default' guards in lav_pt_marker_adapt() keep reflective factors
   # (whose loadings are all free under std.lv) out of the check
-  if ((isTRUE(lavoptions$auto.fix.first) ||
+  #
+  # a switched marker can only take effect when the parameter table is
+  # rebuilt from the model syntax (see lav_step04_pt()); if the user
+  # provided a parameter table (or a fitted lavaan object), the rebuild
+  # would return the original table unchanged, so we skip the check
+  # altogether (this also keeps refits of a stored model -- which never had
+  # a marker switch applied -- free of spurious warnings)
+  marker_can_switch <- is.null(slot_par_table) &&
+    (is.character(model) || inherits(model, "formula") ||
+     (is.list(model) && !is.null(model$mod.idx) &&
+      !is.null(attr(model, "modifiers"))))
+  if (marker_can_switch &&
+      (isTRUE(lavoptions$auto.fix.first) ||
        (isTRUE(lavoptions$std.lv) && any(lavpartable$op == "<~"))) &&
       lavoptions$bad.marker.crit > 0) {
     adapt <- lav_pt_marker_adapt(

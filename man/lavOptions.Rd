@@ -185,9 +185,15 @@ Model features:
       convergence problems caused by a (very) poor marker item. The check is
       based on the (pooled) unrestricted (h1) covariance matrix, so it behaves
       consistently with or without missing data, categorical data, multiple
-      groups, etc. Larger values make the switching more aggressive; a value
-      of 0 disables the check and always keeps the first indicator as the
-      marker.}
+      groups, etc. Before the item-total correlations are computed, the
+      indicators are aligned with their dominant common direction, so that
+      reverse-coded indicators do not affect the check. The marker is only
+      switched in the clean default situation: the model was given as model
+      syntax, and none of the loadings of the latent variable carry user
+      modifiers (labels, start values, priors, bounds) or are referenced in
+      user-specified constraints. Larger values make the switching more
+      aggressive; a value of 0 disables the check and always keeps the first
+      indicator as the marker.}
     \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if
       included) of an observed indicator is set to zero if it is the only 
       indicator of a latent variable.}
