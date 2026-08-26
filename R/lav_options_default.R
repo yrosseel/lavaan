@@ -433,7 +433,9 @@ lav_options_default <- function() {
     "default", "structured", "unstructured"))
   # information for the bread (E.inv) of the robust/sandwich vcov ONLY,
   # keeping the meat (Delta, WLS.V, Gamma) based on information[1];
-  # "default" = information[1] (i.e., no change) (new in 0.7-2)
+  # "default" = information[1] (i.e., no change), EXCEPT for single-level
+  # categorical (D)WLS/ULS with se = "robust.sem", where "default" resolves
+  # to "observed" (see lav_options.R) (new in 0.7-2)
   elm("information.bread", "default", chr = c(
     "default", "expected", "observed"))
 

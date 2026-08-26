@@ -564,10 +564,22 @@ Estimation options:
       matrix) remain based on the (first element of the)
       \code{information} option. If \code{"default"}, the (first element
       of the) \code{information} option is used for the bread as well,
-      and nothing changes. Exception: for the structural part of a
-      \code{\link{sam}} model with \code{se = "local"}, \code{"default"}
-      resolves to \code{"observed"}; see the \code{struc_args} argument
-      in \code{\link{sam}}.}
+      with two exceptions (both new in 0.7-2). First, for single-level
+      categorical data estimated with DWLS or ULS and
+      \code{se = "robust.sem"} (e.g., estimator \code{"WLSMV"} or
+      \code{"ULSMV"}), \code{"default"} resolves to \code{"observed"}: the
+      bread is then based on the full hessian of the (D)WLS/ULS fit
+      function, which (unlike the expected-information bread) remains
+      consistent when the model does not fit perfectly. When the model
+      fits well, both versions are virtually identical; the classic
+      standard errors remain available with
+      \code{information.bread = "expected"}. The point estimates and all
+      test statistics are not affected. Second, for the structural part
+      of a \code{\link{sam}} model with \code{se = "local"},
+      \code{"default"} resolves to \code{"observed"} as well; see the
+      \code{struc_args} argument in \code{\link{sam}}. The summary header
+      shows an additional \code{Information bread} line whenever the bread
+      deviates from the (first element of the) \code{information} option.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust
