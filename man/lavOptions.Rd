@@ -179,21 +179,29 @@ Model features:
       a poor item, in the sense that it correlates weakly with the other
       indicators of the same factor (more precisely: the absolute value of its
       corrected item-total correlation is below \code{bad.marker.crit}). If so
-      (and a clearly better indicator is available), a warning is issued and
-      the loading of that better indicator is fixed to 1.0 instead, in order
-      to set the metric of that latent variable. The main purpose is to avoid
-      convergence problems caused by a (very) poor marker item. The check is
-      based on the (pooled) unrestricted (h1) covariance matrix, so it behaves
-      consistently with or without missing data, categorical data, multiple
-      groups, etc. Before the item-total correlations are computed, the
-      indicators are aligned with their dominant common direction, so that
-      reverse-coded indicators do not affect the check. The marker is only
-      switched in the clean default situation: the model was given as model
-      syntax, and none of the loadings of the latent variable carry user
-      modifiers (labels, start values, priors, bounds) or are referenced in
-      user-specified constraints. Larger values make the switching more
-      aggressive; a value of 0 disables the check and always keeps the first
-      indicator as the marker.}
+      (and a clearly better indicator is available), a warning is issued,
+      because a (very) poor marker item often leads to convergence problems.
+      The check is based on the (pooled) unrestricted (h1) covariance matrix,
+      so it behaves consistently with or without missing data, categorical
+      data, multiple groups, etc. Before the item-total correlations are
+      computed, the indicators are aligned with their dominant common
+      direction, so that reverse-coded indicators do not affect the check.
+      The check is only performed in the clean default situation: the model
+      was given as model syntax, and none of the loadings of the latent
+      variable carry user modifiers (labels, start values, priors, bounds) or
+      are referenced in user-specified constraints. Larger values make the
+      check more aggressive; a value of 0 disables the check and silences the
+      warning.}
+    \item{\code{bad.marker.switch}:}{Logical (default \code{FALSE}). Only
+      used if the \code{bad.marker.crit} check flagged the first indicator of
+      a latent variable as a poor marker item. If \code{FALSE}, lavaan only
+      warns, and the model is estimated exactly as specified. If \code{TRUE},
+      the loading of the best available indicator is fixed to 1.0 instead of
+      the loading of the first indicator, in order to set the metric of that
+      latent variable; if the model with the switched marker(s) does not
+      converge, lavaan falls back to the original marker(s). (In lavaan
+      0.7-1 and 0.7-2, switching was the default behavior; it now must be
+      requested explicitly.)}
     \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if
       included) of an observed indicator is set to zero if it is the only 
       indicator of a latent variable.}

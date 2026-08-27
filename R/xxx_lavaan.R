@@ -473,10 +473,11 @@ lavaan <- function(
 
   # ------------ adapt marker ------------------
   # if the first indicator (the default marker) of a latent variable turns
-  # out to be a poor item, switch to a better marker (and warn); this avoids
-  # convergence problems caused by a (very) poor marker item. We keep the
-  # original parameter table around: if the switched model fails to converge,
-  # we retry with the original marker(s) further below, so that the
+  # out to be a poor item, warn (a very poor marker item often causes
+  # convergence problems); only if bad.marker.switch = TRUE do we also
+  # switch to a better marker. When switching, we keep the original
+  # parameter table around: if the switched model fails to converge, we
+  # retry with the original marker(s) further below, so that the
   # bad.marker.crit mechanism can never make convergence worse.
   lavpartable_orig <- lavpartable
   marker_switched  <- FALSE
@@ -509,37 +510,66 @@ lavaan <- function(
     )
     if (!is.null(adapt)) {
       info_fac <- adapt$info[adapt$info$type == "factor", , drop = FALSE]
-      if (nrow(info_fac) > 0L) {
-        lav_msg_warn(gettextf(
-          "the first indicator of the following latent variable(s) is a poor
-           item; switching to another marker item (to set the metric) to avoid
-           convergence problems; use bad.marker.crit = 0 to switch off
-           this behavior: %s",
-          paste0(info_fac$lv, " (", info_fac$old, " -> ",
-                 info_fac$new, ")", collapse = ", ")))
-      }
       info_comp <- adapt$info[adapt$info$type == "composite", , drop = FALSE]
-      if (nrow(info_comp) > 0L) {
-        lav_msg_warn(gettextf(
-          "the first indicator of the following composite(s) has a (near)
-           zero implied weight; switching to another marker indicator (to set
-           the metric) to avoid convergence problems; use bad.marker.crit = 0
-           to switch off this behavior: %s",
-          paste0(info_comp$lv, " (", info_comp$old, " -> ",
-                 info_comp$new, ")", collapse = ", ")))
+      if (isTRUE(lavoptions$bad.marker.switch)) {
+        if (nrow(info_fac) > 0L) {
+          lav_msg_warn(gettextf(
+            "the first indicator of the following latent variable(s) is a
+             poor item; switching to another marker item (to set the metric)
+             to avoid convergence problems; use bad.marker.switch = FALSE to
+             only warn about this: %s",
+            paste0(info_fac$lv, " (", info_fac$old, ", r = ",
+                   sprintf("%.2f", info_fac$r.old), " -> ",
+                   info_fac$new, ", r = ",
+                   sprintf("%.2f", info_fac$r.new), ")", collapse = ", ")))
+        }
+        if (nrow(info_comp) > 0L) {
+          lav_msg_warn(gettextf(
+            "the first indicator of the following composite(s) has a (near)
+             zero implied weight; switching to another marker indicator (to
+             set the metric) to avoid convergence problems; use
+             bad.marker.switch = FALSE to only warn about this: %s",
+            paste0(info_comp$lv, " (", info_comp$old, ", w = ",
+                   sprintf("%.2f", info_comp$r.old), " -> ",
+                   info_comp$new, ", w = ",
+                   sprintf("%.2f", info_comp$r.new), ")", collapse = ", ")))
+        }
+        # rebuild the parameter table using the new marker(s)
+        temp <- lav_step04_pt(
+          slot_par_table = slot_par_table,
+          model          = model,
+          flat_model     = flat_model,
+          lavoptions     = lavoptions,
+          lavdata        = lavdata,
+          constraints    = constraints,
+          marker         = adapt$marker
+        )
+        lavpartable <- temp$lavpartable
+        marker_switched <- TRUE
+      } else {
+        # warn only: the model is left untouched
+        if (nrow(info_fac) > 0L) {
+          lav_msg_warn(gettextf(
+            "the first indicator (the marker item) of the following latent
+             variable(s) is a poor item (low corrected item-total
+             correlation); this may lead to convergence problems; consider
+             using a better indicator to set the metric, or set
+             bad.marker.switch = TRUE to let lavaan switch the marker
+             automatically (bad.marker.crit = 0 disables this check): %s",
+            paste0(info_fac$lv, " (", info_fac$old, ", r = ",
+                   sprintf("%.2f", info_fac$r.old), ")", collapse = ", ")))
+        }
+        if (nrow(info_comp) > 0L) {
+          lav_msg_warn(gettextf(
+            "the first indicator (the marker) of the following composite(s)
+             has a (near) zero implied weight; this may lead to convergence
+             problems; consider using another indicator to set the metric, or
+             set bad.marker.switch = TRUE to let lavaan switch the marker
+             automatically (bad.marker.crit = 0 disables this check): %s",
+            paste0(info_comp$lv, " (", info_comp$old, ", w = ",
+                   sprintf("%.2f", info_comp$r.old), ")", collapse = ", ")))
+        }
       }
-      # rebuild the parameter table using the new marker(s)
-      temp <- lav_step04_pt(
-        slot_par_table = slot_par_table,
-        model          = model,
-        flat_model     = flat_model,
-        lavoptions     = lavoptions,
-        lavdata        = lavdata,
-        constraints    = constraints,
-        marker         = adapt$marker
-      )
-      lavpartable <- temp$lavpartable
-      marker_switched <- TRUE
     }
   }
 

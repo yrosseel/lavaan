@@ -10,8 +10,9 @@
 # When bad.marker.crit > 0 (the default is 0.1, and auto.fix.first = TRUE),
 # lavaan inspects -- after the unrestricted (h1) sample statistics are
 # available -- whether the first indicator of each latent variable is a poor
-# item. If so, a warning is issued and another (better) indicator is used as
-# the marker instead. If the first indicator is good enough, nothing happens.
+# item. If so, a warning is issued; if in addition bad.marker.switch = TRUE
+# (the default is FALSE), another (better) indicator is used as the marker
+# instead. If the first indicator is good enough, nothing happens.
 #
 # The 'quality' of an indicator is measured by its corrected item-total
 # correlation: the correlation between the indicator and the sum score of the
