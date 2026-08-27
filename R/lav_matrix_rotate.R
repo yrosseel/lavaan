@@ -140,6 +140,21 @@ lav_mat_rotate <- function(a = NULL, # original matrix
     lav_msg_stop(gettext("algorithm must be gpa or pairwise"))
   }
 
+  # check gpa_algorithm here as well: inside the random-starts loop, a
+  # user error would be caught by the failed-start safety net (and turn
+  # into a misleading "all random starts failed" message)
+  if (algorithm == "gpa") {
+    gpa_algorithm <- tolower(gpa_algorithm)
+    if (!gpa_algorithm %in% c("legacy", "bb", "cayley")) {
+      lav_msg_stop(gettext("gpa_algorithm must be legacy, bb or cayley"))
+    }
+    if (gpa_algorithm == "cayley" && !orthogonal) {
+      lav_msg_stop(gettext(
+        "gpa_algorithm = \"cayley\" is only available for orthogonal rotation."
+      ))
+    }
+  }
+
 
 
   # 1. compute row weigths
@@ -176,35 +191,36 @@ lav_mat_rotate <- function(a = NULL, # original matrix
       }
 
 
-      # choose rotation algorithm
-      if (algorithm == "gpa") {
-        rot <- lav_mat_rotate_gpa(
-          a = a, orthogonal = orthogonal,
-          init_rot = init_rot,
-          method_fname = method_fname,
-          method_args = method_args,
-          gpa_tol = gpa_tol,
-          gpa_algorithm = gpa_algorithm,
-          gpa_fwindow = gpa_fwindow,
-          max_iter = max_iter
-        )
+      # choose rotation algorithm; if a start fails (eg a singular
+      # transformation matrix for a factor-collapsing criterion), discard
+      # it (criterion = +Inf) instead of aborting the whole rotation
+      res <- tryCatch({
+        if (algorithm == "gpa") {
+          rot <- lav_mat_rotate_gpa(
+            a = a, orthogonal = orthogonal,
+            init_rot = init_rot,
+            method_fname = method_fname,
+            method_args = method_args,
+            gpa_tol = gpa_tol,
+            gpa_algorithm = gpa_algorithm,
+            gpa_fwindow = gpa_fwindow,
+            max_iter = max_iter
+          )
+        } else if (algorithm == "pairwise") {
+          rot <- lav_mat_rotate_pairwise(
+            a = a,
+            orthogonal = orthogonal,
+            init_rot = init_rot,
+            method_fname = method_fname,
+            method_args = method_args,
+            tol = tol,
+            max_iter = max_iter
+          )
+        }
         info <- attr(rot, "info")
         attr(rot, "info") <- NULL
-        res <- c(info$method.value, lav_mat_vec(rot))
-      } else if (algorithm == "pairwise") {
-        rot <- lav_mat_rotate_pairwise(
-          a = a,
-          orthogonal = orthogonal,
-          init_rot = init_rot,
-          method_fname = method_fname,
-          method_args = method_args,
-          tol = tol,
-          max_iter = max_iter
-        )
-        info <- attr(rot, "info")
-        attr(rot, "info") <- NULL
-        res <- c(info$method.value, lav_mat_vec(rot))
-      }
+        c(info$method.value, lav_mat_vec(rot))
+      }, error = function(e) c(Inf, rep(NA_real_, m * m)))
 
       if (lav_verbose()) {
         cat(
@@ -215,6 +231,20 @@ lav_mat_rotate <- function(a = NULL, # original matrix
       res
     })
     best_idx <- which.min(rep_1[1, ])
+    if (!is.finite(rep_1[1, best_idx])) {
+      lav_msg_stop(gettext(
+        "rotation failed or degenerated (collapsed factors) for all random
+        starts. The rotation criterion may be unbounded for these data;
+        consider another rotation method, or fewer factors."))
+    }
+    n_bad <- sum(!is.finite(rep_1[1, ]))
+    if (n_bad > 0L) {
+      lav_msg_warn(gettextf(
+        "rotation failed or degenerated (collapsed factors) for %1$s out of
+        %2$s random starts; these starts were discarded.",
+        n_bad, rstarts
+      ))
+    }
     rot <- matrix(rep_1[-1, best_idx], nrow = m, ncol = m)
     if (keep_rep) {
       info <- list(method.value = rep_1[1, best_idx], REP = rep_1)
@@ -252,6 +282,13 @@ lav_mat_rotate <- function(a = NULL, # original matrix
     }
     info <- attr(rot, "info")
     attr(rot, "info") <- NULL
+    if (isTRUE(info$degenerate)) {
+      lav_msg_warn(gettext(
+        "the rotated solution is degenerate: two or more factors have
+        collapsed (correlation of (nearly) one). The rotation criterion may
+        be unbounded for these data; consider another rotation method, or
+        fewer factors."))
+    }
   }
 
   # final rotation
@@ -435,6 +472,7 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
 
   # start iterations
   converged <- FALSE
+  degenerate <- FALSE
   # history of criterion values (used by the non-monotone line search)
   f_hist <- numeric(max_iter + 1L)
   rot_prev <- NULL
@@ -497,6 +535,7 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
     # (if gpa_fwindow == 1, this is just q_current: monotone line search)
     target_f <- max(f_hist[max(1L, iter - gpa_fwindow + 1L):iter])
 
+    ls_ok <- FALSE # did any trial step produce a usable ROTt?
     for (i in seq_len(ls_max_iter)) {
 
       if (orthogonal && gpa_algorithm == "cayley") {
@@ -528,8 +567,18 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
       if (orthogonal) {
         mm_lambda <- a %*% rott
       } else {
-        mm_lambda <- t(solve(rott, at))
+        # for factor-collapsing criteria (eg oblimin with gamma > 0), a
+        # trial ROTt can be (numerically) singular; treat this as a
+        # failed step: halve alpha and try again (as alpha decreases,
+        # ROTt approaches the current -- nonsingular -- ROT)
+        mm_lambda <- tryCatch(t(solve(rott, at)), error = function(e) NULL)
+        if (is.null(mm_lambda)) {
+          alpha <- alpha / 2
+          next
+        }
       }
+      rott_ok <- rott
+      ls_ok <- TRUE
 
       # evaluate criterion
       q_new <- do.call(method_fname, c(
@@ -551,21 +600,64 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
       }
     }
 
+    # no trial step was usable (all singular): give up (not converged)
+    if (!ls_ok) {
+      break
+    }
+
     # update
     rot_prev <- rot
     gp_prev <- gp
-    rot <- rott
+    rot <- rott_ok
     q_current <- q_new
+
+    # oblique: stop early if two factors have (numerically) collapsed;
+    # some criteria (eg oblimin with gamma > 0) are unbounded below for
+    # oblique rotation, and the algorithm then chases -Inf towards a
+    # singular transformation matrix
+    if (!orthogonal) {
+      phi_1 <- crossprod(rot)
+      if (max(abs(phi_1[lower.tri(phi_1)])) > 1 - 1e-6) {
+        degenerate <- TRUE
+        break
+      }
+    }
 
     if (orthogonal) {
       grad <- crossprod(a, gq)
     } else {
-      grad <- -1 * solve(t(rot), crossprod(gq, mm_lambda))
+      # the (transposed) solve may still fail if the accepted ROT sits
+      # right at the singularity threshold; stop here (not converged)
+      grad <- tryCatch(
+        -1 * solve(t(rot), crossprod(gq, mm_lambda)),
+        error = function(e) NULL
+      )
+      if (is.null(grad)) {
+        break
+      }
     }
   } # iter
 
-  # warn if no convergence
-  if (!converged) {
+  # a non-converged oblique run that ends with (nearly) perfectly
+  # correlated factors, or with a criterion value that has diverged far
+  # below its starting value, is a factor-collapse trajectory (for an
+  # unbounded criterion, the projected gradient never becomes small):
+  # flag it
+  if (!degenerate && !orthogonal && !converged) {
+    phi_1 <- crossprod(rot)
+    if (max(abs(phi_1[lower.tri(phi_1)])) > 0.999 ||
+        q_current < -1000 * (1 + abs(f_hist[1]))) {
+      degenerate <- TRUE
+    }
+  }
+
+  # degenerate (collapsed) solution: not converged, and make sure this
+  # solution is never selected when multiple random starts are used
+  if (degenerate) {
+    converged <- FALSE
+    q_current <- Inf
+  } else if (!converged) {
+    # warn if no convergence
     lav_msg_warn(gettextf(
       "GP rotation algorithm did not converge after %s iterations",
       max_iter
@@ -577,6 +669,7 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
     algorithm = "gpa",
     iter = iter - 1L,
     converged = converged,
+    degenerate = degenerate,
     method.value = q_current
   )
 
