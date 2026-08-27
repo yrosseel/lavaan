@@ -196,14 +196,32 @@ lav_step16_rotation <- function(lavoptions = NULL,
       # use delta rule to recompute vcov
       if (lavoptions$rotation.se == "delta") {
         # Jacobian
+        # we use central (Richardson) differences with a modest step
+        # (d = 1e-3), and temporarily tighten the rotation tolerances:
+        # criteria like geomin are smooth only on the scale of (geomin)
+        # epsilon, so the (< 0.7-2) one-sided step of eps = 0.005 produced
+        # biased SEs for near-zero loadings, while steps below the rotation
+        # tolerance drown in the convergence noise of the warm-started
+        # rotation (hence the tight tolerances)
+        lavoptions_jac <- lavoptions
+        lavoptions_jac$rotation.args$gpa_tol <-
+          min(lavoptions$rotation.args$gpa_tol, 1e-10)
+        lavoptions_jac$rotation.args$tol <-
+          min(lavoptions$rotation.args$tol, 1e-10)
+        # the "legacy" gpa algorithm stalls (monotone line search with up
+        # to 1000 halvings per iteration) when the tolerance is below what
+        # machine precision allows; "bb" handles tight tolerances
+        # gracefully, and the choice only affects the (warm-started)
+        # jacobian evaluations, not the rotated solution itself
+        lavoptions_jac$rotation.args$gpa_algorithm <- "bb"
         jac <- numDeriv::jacobian(
           func = lav_model_efa_rotate_x,
           x = x_unrotated, lavmodel = lavmodel_unrot,
-          init_rot = lavmodel@H, lavoptions = lavoptions,
+          init_rot = lavmodel@H, lavoptions = lavoptions_jac,
           type = "user", extra = FALSE,
-          method.args = list(eps = 0.0050),
-          method = "simple"
-        ) # important!
+          method.args = list(d = 1e-3, r = 2),
+          method = "Richardson"
+        )
 
         # force VCOV to be pd, before we transform (not very elegant)
         vcov_in <- lav_mat_sym_force_pd(lavvcov$vcov,

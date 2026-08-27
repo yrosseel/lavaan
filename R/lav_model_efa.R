@@ -613,9 +613,15 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       }
 
       # std.ov? we use diagonal of Sigma for this set of ov's only
+      # note: unlike in lav_model_efa_rotate(), 'a' is the *rotated* lambda
+      # here, so for oblique rotation the implied variances involve PSI
       if (ropts$std_ov) {
         mm_theta <- theta_g[ov_idx, ov_idx, drop = FALSE]
-        sigma_1 <- tcrossprod(a) + mm_theta
+        if (ropts$orthogonal) {
+          sigma_1 <- tcrossprod(a) + mm_theta
+        } else {
+          sigma_1 <- a %*% mm_psi %*% t(a) + mm_theta
+        }
         this_ov_var <- diag(sigma_1)
       } else {
         this_ov_var <- rep(1, p)
