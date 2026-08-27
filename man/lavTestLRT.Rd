@@ -87,18 +87,17 @@ anova(object, ...)
     The chi-squared difference test is only valid when all models are
     (nested and) fitted to the same set of sample statistics. Several
     sanity checks are therefore carried out (in the spirit of
-    \code{semTools::net()}): all models must be fitted with the same
-    number of groups, the same group labels, and the same (group-specific)
-    numbers of observations, and the observed sample statistics must be
-    identical across models. If any of these checks fails, a warning is
-    issued (but the table is still computed). In particular, a
-    single-group (pooled) model cannot be compared directly with a
-    multiple-group model: although both models may be fitted to the same
-    data set, their test statistics are computed relative to different
-    (saturated) models. Instead, refit the pooled model as a
-    multiple-group model in which all parameters are constrained to be
-    equal across groups (e.g., \code{group.equal = "all"}), and compare
-    that model with the unrestricted multiple-group model.
+    \code{semTools::net()}): the number of groups, the group labels, the
+    (group-specific) numbers of observations, and the observed sample
+    statistics must all be identical across models. If any of these
+    checks fails, a warning is issued (but the table is still computed).
+    In particular, a single-group (pooled) model cannot be compared
+    directly with a multiple-group model: their test statistics are
+    computed relative to different (saturated) models. Instead, refit the
+    pooled model as a multiple-group model in which all parameters are
+    constrained to be equal across groups (\code{group.equal = "all"}),
+    and compare that model with the unrestricted multiple-group model.
+    See the Examples section for an illustration.
 
     The only \code{test=} options that currently have actual consequences are
     \code{"satorra.bentler"}, \code{"yuan.bentler"}, or \code{"yuan.bentler.mplus"}
@@ -187,6 +186,24 @@ fit1 <- cfa(HS.model, data = HolzingerSwineford1939)
 fit0 <- cfa(HS.model, data = HolzingerSwineford1939,
             orthogonal = TRUE)
 lavTestLRT(fit1, fit0)
+
+
+## A single-group (pooled) model can NOT be compared directly with a
+## multiple-group model; the warning explains why the test is invalid:
+HS <- '
+    visual  =~ x1 + x2 + x3
+    textual =~ x4 + x5 + x6
+    speed   =~ x7 + x8 + x9
+'
+fit.pooled <- cfa(HS, data = HolzingerSwineford1939, meanstructure = TRUE)
+fit.groups <- cfa(HS, data = HolzingerSwineford1939, group = "school")
+lavTestLRT(fit.pooled, fit.groups) # invalid comparison (warning)
+
+## A valid alternative: refit the pooled model as a multiple-group model
+## with all parameters constrained to be equal across groups
+fit.pooled2 <- cfa(HS, data = HolzingerSwineford1939, group = "school",
+                   group.equal = "all")
+lavTestLRT(fit.pooled2, fit.groups) # valid comparison
 
 
 ## When multiple test statistics are selected when the model is fitted,

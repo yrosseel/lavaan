@@ -181,29 +181,21 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     condx_all <- sapply(mods, function(x) x@Model@conditional.x)
     if (length(unique(ngroups_all)) > 1L) {
       lav_msg_warn(gettextf(
-        "not all models are fitted with the same number of groups (%s):
-         their test statistics are computed relative to different sets of
-         sample statistics, and the chi-squared difference test is invalid.
-         To compare a single-group (pooled) model with a multiple-group
-         model, refit the pooled model as a multiple-group model with all
-         parameters constrained to be equal across groups (see the
-         group.equal= argument).",
+        "the number of groups differs across models (%s): the chi-squared
+         difference test is invalid. See the Details section of ?lavTestLRT
+         for an example using the group.equal= argument.",
         lav_msg_view(ngroups_all, "none", qd = FALSE)))
     } else if (!all(sapply(glabel_all, identical, glabel_all[[1L]]))) {
       lav_msg_warn(gettext(
-        "not all models are fitted using the same grouping: the group
-         labels (or their order) differ across models. The models are not
-         fitted to the same set of sample statistics, and the chi-squared
-         difference test is invalid."))
+        "the group labels (or their order) differ across models: the
+         chi-squared difference test is invalid."))
     } else if (!all(sapply(nobs_all, function(x) {
                  isTRUE(all.equal(x, nobs_all[[1L]]))
                }))) {
       lav_msg_warn(gettextf(
-        "not all models are fitted to the same data: the (group-specific)
-         numbers of observations differ across models (%s), and the
-         chi-squared difference test is invalid. If listwise deletion
-         removed different cases in different models, consider refitting
-         all models using the same subset of cases (or using
+        "the (group-specific) numbers of observations differ across models
+         (%s): the chi-squared difference test is invalid. Consider
+         refitting all models using the same set of cases (or using
          missing = \"ml\").",
         paste(names(mods), ":", sapply(nobs_all, paste, collapse = " + "),
               collapse = ", ")))
@@ -224,8 +216,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
         })
         if (!all(same_stats_flag)) {
           lav_msg_warn(gettext(
-            "not all models appear to be fitted to the same data: the
-             observed sample statistics differ across models, and the
+            "the observed sample statistics differ across models (the
+             models do not appear to be fitted to the same data): the
              chi-squared difference test is invalid."))
         }
       }
