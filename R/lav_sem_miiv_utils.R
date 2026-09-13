@@ -704,6 +704,202 @@ lav_sem_miiv_eq_dresid_dvech <- function(sample_cov = NULL,
   m
 }
 
+# ----------------------------------------------------------------------
+# k-class (LIML / Fuller-LIML) helpers
+# (Maydeu-Olivares, Fisher, Bollen & Rosseel; see also Anderson & Rubin,
+#  1949; Fuller, 1977)
+#
+# the k-class slope estimator for one equation is
+#     beta = (S_xx - k C_xx.z)^{-1} (s_xy - k c_xy.z)
+# with the conditional (given the instruments z) moments
+#     C_xx.z = S_xx - S_xz S_zz^{-1} S_zx
+#     c_xy.z = s_xy - S_xz S_zz^{-1} s_zy
+# k = 1 gives 2SLS, k = 0 gives OLS, k = lambda gives LIML, where lambda
+# is the smallest generalized eigenvalue of S_vv q = lambda S_vv.z q with
+# v = (y, x); Fuller uses k = lambda - c/(N - nz - 1)
+# ----------------------------------------------------------------------
+
+# smallest generalized eigenvalue lambda (and its eigenvector q, scaled
+# so that its first element equals one, ie q = (1, -beta_liml')') of
+# S_vv q = lambda S_vv.z q, via the Cholesky-whitened symmetric problem
+# R^{-T} S_vv R^{-1} u = lambda u with S_vv.z = R'R and q = R^{-1} u
+lav_sem_miiv_kclass_lambda <- function(s_vv = NULL, s_vv_z = NULL) {
+  rmat <- try(chol(s_vv_z), silent = TRUE)
+  if (inherits(rmat, "try-error")) {
+    # non-PD conditional covariance matrix (severe collinearity among
+    # the variables/instruments); the caller falls back to 2SLS
+    return(list(lambda = as.numeric(NA), q = NULL, ok = FALSE))
+  }
+  # A = R^{-T} S_vv R^{-1} (symmetric)
+  tmp <- backsolve(rmat, s_vv, transpose = TRUE)
+  amat <- t(backsolve(rmat, t(tmp), transpose = TRUE))
+  amat <- (amat + t(amat)) / 2
+  ee <- eigen(amat, symmetric = TRUE)
+  nv <- ncol(amat)
+  lambda <- ee$values[nv]
+  q <- backsolve(rmat, ee$vectors[, nv])
+  if (abs(q[1]) < sqrt(.Machine$double.eps)) {
+    # eigenvector (nearly) orthogonal to the outcome: degenerate
+    return(list(lambda = as.numeric(NA), q = NULL, ok = FALSE))
+  }
+  q <- q / q[1]
+  # theory: lambda >= 1; clamp numerical noise
+  if (lambda < 1) {
+    lambda <- 1
+  }
+  list(lambda = lambda, q = q, ok = TRUE)
+}
+
+# the k value for a given method; Fuller: k = lambda - c/(N - nz - 1)
+lav_sem_miiv_kclass_k <- function(lambda = NULL, iv_method = "LIML",
+                                  nobs = NULL, nz = NULL,
+                                  iv_fuller_c = 1) {
+  k <- lambda
+  if (iv_method == "FULLER") {
+    denom <- nobs - nz - 1
+    if (denom <= 0) {
+      lav_msg_warn(gettext(
+        "[IV] Fuller correction not possible (N - nz - 1 <= 0); using the
+         plain LIML value instead."))
+    } else {
+      k <- lambda - iv_fuller_c / denom
+      if (k < 0) {
+        lav_msg_warn(gettext(
+          "[IV] Fuller k value is negative; clamping at zero."))
+        k <- 0
+      }
+    }
+  }
+  k
+}
+
+# the k-class solve for one equation; k = 1 reproduces 2SLS
+lav_sem_miiv_kclass_solve <- function(s_xx = NULL, s_xy = NULL,
+                                      s_xz = NULL, s_zx = NULL,
+                                      s_zz = NULL, s_zy = NULL,
+                                      k = 1) {
+  m_w <- lav_mat_sym_solve_spd(s_zz, s_zx)
+  cxx_z <- s_xx - s_xz %*% m_w
+  cxy_z <- s_xy - s_xz %*% lav_mat_sym_solve_spd(s_zz, s_zy)
+  amat <- s_xx - k * cxx_z
+  bvec <- s_xy - k * cxy_z
+  # amat is symmetric and PD for k in [0, lambda], but may be near-singular
+  # for k close to lambda under weak instruments; plain solve() keeps the
+  # failure mode predictable
+  beta <- drop(solve(amat, bvec))
+  list(amat = amat, bvec = bvec, beta = beta, cxx_z = cxx_z, cxy_z = cxy_z)
+}
+
+# per-equation overidentification statistic T_2NT (Maydeu-Olivares,
+# Fisher, Bollen & Rosseel, eq. 25-27), valid for any k-class estimator;
+# for 2SLS the adjustment term vanishes (first-order conditions) and the
+# statistic reduces to Sargan's J. With Omega = psi * S_zz the statistic
+# simplifies to
+#     T = (N/psi) * ( g' S_zz^{-1} g - h' amat1^{-1} h )
+# with g = s_zy - S_zx beta, h = S_xz S_zz^{-1} g, and amat1 the 2SLS
+# information S_xz S_zz^{-1} S_zx; psi is the ML (divisor N) residual
+# variance (paper eq. 15). df = nz - nx.
+lav_sem_miiv_t2nt <- function(s_zz = NULL, s_zx = NULL, s_xz = NULL,
+                              g = NULL, psi = NULL, nobs = NULL) {
+  out <- rep(as.numeric(NA), 3L)
+  names(out) <- c("stat", "df", "pvalue")
+  nz <- nrow(s_zx)
+  nx <- ncol(s_zx)
+  df <- nz - nx
+  out["df"] <- df
+  if (df < 1L) {
+    return(out)
+  }
+  u <- lav_mat_sym_solve_spd(s_zz, g)
+  h <- s_xz %*% u
+  amat1 <- s_xz %*% lav_mat_sym_solve_spd(s_zz, s_zx)
+  stat <- (nobs / psi) *
+    (sum(g * u) - drop(crossprod(h, solve(amat1, h))))
+  # the adjustment is a projection: the statistic is nonnegative in exact
+  # arithmetic; clamp numerical noise
+  if (stat < 0) {
+    stat <- 0
+  }
+  out["stat"] <- stat
+  out["pvalue"] <- pchisq(stat, df, lower.tail = FALSE)
+  out
+}
+
+# d lambda / d vech(S) for one equation (vech WITH diagonal, same layout
+# and off-diagonal doubling convention as lav_sem_miiv_eq_dresid_dvech).
+# Generalized-eigenvalue perturbation: for (S_vv - lambda S_vv.z) q = 0,
+#     d lambda = q'(dS_vv - lambda dS_vv.z) q / (q' S_vv.z q)
+# with q = (1, -beta_liml')' (scale-invariant). Expanding dS_vv.z with
+# w = S_zz^{-1} S_zv q gives the full-size sensitivity matrix
+#     G = (1-lambda) Q Q' + lambda (Q W' + W Q') - lambda W W'
+# where Q, W place q, w at the v = (y, x) and z positions. beta must be
+# the LIML slope vector (the eigenvector), also under Fuller (whose k
+# shift is constant in S, so d k_F = d lambda).
+lav_sem_miiv_eq_dlambda_dvech <- function(sample_cov = NULL,
+                                          y_idx = NULL, x_idx = NULL,
+                                          i_idx = NULL,
+                                          beta_liml = NULL,
+                                          lambda = NULL) {
+  nvar <- nrow(sample_cov)
+  pstar <- nvar * (nvar + 1L) / 2L
+  # exactly identified: lambda == 1 identically
+  if (length(i_idx) == length(x_idx)) {
+    return(numeric(pstar))
+  }
+  v_idx <- c(y_idx, x_idx)
+  q <- c(1, -beta_liml)
+  s_zz <- sample_cov[i_idx, i_idx, drop = FALSE]
+  s_zv <- sample_cov[i_idx, v_idx, drop = FALSE]
+  w <- drop(lav_mat_sym_solve_spd(s_zz, s_zv %*% q))
+  # denom = q' S_vv.z q = q' S_vv q - (S_zv q)' w
+  s_vv_q <- drop(sample_cov[v_idx, v_idx, drop = FALSE] %*% q)
+  denom <- sum(q * s_vv_q) - sum(drop(s_zv %*% q) * w)
+  qf <- numeric(nvar)
+  qf[v_idx] <- q
+  wf <- numeric(nvar)
+  wf[i_idx] <- w
+  gmat <- (1 - lambda) * tcrossprod(qf) +
+    lambda * (tcrossprod(qf, wf) + tcrossprod(wf, qf)) -
+    lambda * tcrossprod(wf)
+  a_vec <- lav_mat_vech_row_idx(nvar)
+  b_vec <- lav_mat_vech_col_idx(nvar)
+  mult <- ifelse(a_vec == b_vec, 1, 2)
+  mult * gmat[cbind(a_vec, b_vec)] / denom
+}
+
+# d(bvec_k - amat_k beta) / d vech(S) for one k-class equation, at an
+# arbitrary slope vector beta (used at the pooled solution too). The
+# k-class residual moment decomposes as
+#     r(beta, k) = (1-k) r_ols + k r_iv
+# whose two pieces are exactly the two branches of
+# lav_sem_miiv_eq_dresid_dvech(); the S-dependence of k itself adds the
+# rank-one term -(c_xy.z - C_xx.z beta) (d k/d vech(S))'
+lav_sem_miiv_eq_dresid_dvech_kclass <- function(sample_cov = NULL,
+                                                x_idx = NULL, y_idx = NULL,
+                                                i_idx = NULL,
+                                                beta = NULL, k = 1,
+                                                dk_vech = NULL,
+                                                cxx_z = NULL,
+                                                cxy_z = NULL) {
+  m_iv <- lav_sem_miiv_eq_dresid_dvech(
+    sample_cov = sample_cov, x_idx = x_idx, y_idx = y_idx,
+    i_idx = i_idx, beta = beta
+  )
+  if (k == 1 && (is.null(dk_vech) || !any(dk_vech != 0))) {
+    return(m_iv)
+  }
+  m_ols <- lav_sem_miiv_eq_dresid_dvech(
+    sample_cov = sample_cov, x_idx = x_idx, y_idx = y_idx,
+    i_idx = integer(0L), beta = beta
+  )
+  m <- (1 - k) * m_ols + k * m_iv
+  if (!is.null(dk_vech) && any(dk_vech != 0)) {
+    rvec <- drop(cxy_z - cxx_z %*% beta)
+    m <- m - tcrossprod(rvec, dk_vech)
+  }
+  m
+}
+
 
 # per equation, one block only!
 lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
@@ -898,10 +1094,27 @@ lav_sem_miiv_jack_analytic <- function(eqs = NULL, lavmodel = NULL,
       fp <- which(eq_free_idx > 0L)
       beta_full[fp] <- x[eq_free_idx[fp]]
       beta_full_list[[b]][[j]] <- beta_full
-      m_star <- lav_sem_miiv_eq_dresid_dvech(
-        sample_cov = cov_b, x_idx = sb$x_idx, y_idx = y_idx,
-        i_idx = i_idx, beta = beta_full
-      )
+      if (is.null(eq$kclass)) {
+        m_star <- lav_sem_miiv_eq_dresid_dvech(
+          sample_cov = cov_b, x_idx = sb$x_idx, y_idx = y_idx,
+          i_idx = i_idx, beta = beta_full
+        )
+      } else {
+        # k-class (LIML/FULLER) equation: lambda depends on the moments
+        # only (not on the pooled slopes), so the dk_vech stored at
+        # estimation time is the correct derivative here as well
+        if (is.null(eq$kclass$dk_vech)) {
+          # not available (should not happen on the gamma/h2 path);
+          # fall back to the numerical Jacobian
+          return(NULL)
+        }
+        m_star <- lav_sem_miiv_eq_dresid_dvech_kclass(
+          sample_cov = cov_b, x_idx = sb$x_idx, y_idx = y_idx,
+          i_idx = i_idx, beta = beta_full, k = eq$kclass$k,
+          dk_vech = eq$kclass$dk_vech,
+          cxx_z = eq$kclass$cxx_z, cxy_z = eq$kclass$cxy_z
+        )
+      }
       m_free <- m_star[fp, , drop = FALSE]
       pw <- match(sb$gcol, free_slope_idx)
       mm <- rowsum(m_free, group = pw)

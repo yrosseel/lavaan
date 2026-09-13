@@ -8,7 +8,11 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
                                   lavdata = NULL, lavoptions = NULL) {
   # IV options
   iv_method <- toupper(lavoptions$estimator.args$iv_method)
-  stopifnot(iv_method %in% "2SLS")
+  stopifnot(iv_method %in% c("2SLS", "LIML", "FULLER"))
+  iv_fuller_c <- lavoptions$estimator.args[["iv_fuller_c"]]
+  if (is.null(iv_fuller_c)) {
+    iv_fuller_c <- 1
+  }
   iv_varcov_method <- toupper(lavoptions$estimator.args$iv_varcov_method)
   iv_samplestats <- lavoptions$estimator.args$iv_samplestats
   if (lavdata@data.type == "moment") {
@@ -117,7 +121,8 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
         lavdata = lavdata, lavsamplestats = lavsamplestats,
         lavh1 = lavh1, free_directed_idx = free_directed_idx,
         iv_vcov_stage1 = iv_vcov_stage1, iv_sargan = iv_sargan,
-        iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml
+        iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml,
+        iv_method = iv_method, iv_fuller_c = iv_fuller_c
       )
     } else {
       theta1 <- lav_sem_miiv_2sls(
@@ -125,7 +130,8 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavdata = lavdata, free_directed_idx = free_directed_idx,
         iv_vcov_stage1 = iv_vcov_stage1, iv_sargan = iv_sargan,
-        iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml
+        iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml,
+        iv_method = iv_method, iv_fuller_c = iv_fuller_c
       )
     }
     # update equations
@@ -445,7 +451,9 @@ lav_sem_miiv_aug_vec0 <- function(lavdata = NULL, lavmodel = NULL,
 lav_sem_miiv_jac_full_numeric <- function(eqs = NULL, lavmodel = NULL,
                                           lavpartable = NULL, lavdata = NULL,
                                           lavsamplestats = NULL, lavh1 = NULL,
-                                          free_directed_idx = NULL) {
+                                          free_directed_idx = NULL,
+                                          iv_method = "2SLS",
+                                          iv_fuller_c = 1) {
   av <- lav_sem_miiv_aug_vec0(lavdata = lavdata, lavmodel = lavmodel,
                               lavh1 = lavh1)
   numDeriv::jacobian(func = function(v) {
@@ -453,7 +461,8 @@ lav_sem_miiv_jac_full_numeric <- function(eqs = NULL, lavmodel = NULL,
       lavmodel = lavmodel, lavpartable = lavpartable, lavdata = lavdata,
       lavsamplestats = lavsamplestats, lavh1 = lavh1,
       free_directed_idx = free_directed_idx,
-      aug_vec = v, aug_pdim = av$pdim)
+      aug_vec = v, aug_pdim = av$pdim,
+      iv_method = iv_method, iv_fuller_c = iv_fuller_c)
   }, x = av$vec)
 }
 
@@ -787,7 +796,8 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
                               lavdata = NULL, free_directed_idx = NULL,
                               iv_vcov_stage1 = "lm.vcov.dfres",
                               iv_vcov_stage2 = "delta",
-                              iv_sargan = TRUE, iv_mimic_ml = FALSE) {
+                              iv_sargan = TRUE, iv_mimic_ml = FALSE,
+                              iv_method = "2SLS", iv_fuller_c = 1) {
   # this function is for continuous/raw-data only
   stopifnot(lavdata@data.type == "full")
   stopifnot(!lavmodel@categorical)
@@ -956,10 +966,86 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
         )
       }
 
+      # 2b. k-class override (LIML / Fuller-LIML): recompute the intercept
+      # and slopes from the equation's ML moments via the shared k-class
+      # helpers (identical to the samplestats engine by construction);
+      # exactly identified LIML equations are left at the (algebraically
+      # identical) 2SLS solution. The downstream code (fill, resvar via the
+      # actual x columns, Browne test) then runs at the k-class estimates.
+      kclass <- iv_flag &&
+        (iv_method == "FULLER" ||
+          (iv_method == "LIML" && length(i_idx) > length(x_idx)))
+      eq_lambda <- eq_k <- as.numeric(NA)
+      ks <- NULL
+      nobs_e <- nrow(xy)
+      if (kclass) {
+        nx_e <- length(x_idx)
+        nz_e <- length(i_idx)
+        vz <- cbind(yvec, xmat, xy[, i_idx, drop = FALSE])
+        if (is.null(weights)) {
+          mom_mean <- colMeans(vz)
+          mom_cov <- crossprod(sweep(vz, 2L, mom_mean)) / nrow(vz)
+        } else {
+          tmp_wt <- stats::cov.wt(vz, wt = weights, method = "ML")
+          mom_mean <- tmp_wt$center
+          mom_cov <- tmp_wt$cov
+        }
+        yi <- 1L
+        xi <- 1L + seq_len(nx_e)
+        zi <- 1L + nx_e + seq_len(nz_e)
+        vi <- c(yi, xi)
+        if (nz_e == nx_e) {
+          # exactly identified (FULLER only): lambda == 1 identically
+          eq_lambda <- 1
+        } else {
+          s_vv <- mom_cov[vi, vi, drop = FALSE]
+          s_vz <- mom_cov[vi, zi, drop = FALSE]
+          s_vv_z <- s_vv - s_vz %*% lav_mat_sym_solve_spd(
+            mom_cov[zi, zi, drop = FALSE], t(s_vz)
+          )
+          lam <- lav_sem_miiv_kclass_lambda(s_vv = s_vv, s_vv_z = s_vv_z)
+          if (!lam$ok) {
+            lav_msg_warn(gettextf(
+              "[IV] LIML eigenvalue problem is degenerate for equation %s;
+               falling back to 2SLS for this equation.",
+              paste(eq$lhs_new, "~", paste(eq$rhs_new, collapse = " + "))))
+            kclass <- FALSE
+          } else {
+            eq_lambda <- lam$lambda
+          }
+        }
+      }
+      if (kclass) {
+        eq_k <- lav_sem_miiv_kclass_k(
+          lambda = eq_lambda, iv_method = iv_method,
+          nobs = nobs_e, nz = length(i_idx), iv_fuller_c = iv_fuller_c
+        )
+        ks <- lav_sem_miiv_kclass_solve(
+          s_xx = mom_cov[xi, xi, drop = FALSE],
+          s_xy = mom_cov[xi, yi, drop = FALSE],
+          s_xz = mom_cov[xi, zi, drop = FALSE],
+          s_zx = mom_cov[zi, xi, drop = FALSE],
+          s_zz = mom_cov[zi, zi, drop = FALSE],
+          s_zy = mom_cov[zi, yi, drop = FALSE],
+          k = eq_k
+        )
+        beta0_k <- as.vector(mom_mean[yi] -
+          sum(mom_mean[xi] * ks$beta))
+        fit_y_on_xhat$coefficients <- c(beta0_k, ks$beta)
+      }
+
       # store the (centered) slope system for the pooled solve that handles
       # simple equality constraints across equations (see below)
       if (length(x_idx) > 0L) {
-        if (is.null(weights)) {
+        if (kclass) {
+          # k-class system on the crossprod scale (matching the
+          # crossprod(xhat_c) scale of the 2SLS equations below)
+          sw <- if (is.null(weights)) nrow(xy) else sum(weights)
+          x_bar <- mom_mean[xi]
+          y_bar <- mom_mean[yi]
+          amat <- sw * ks$amat
+          bvec <- sw * ks$bvec
+        } else if (is.null(weights)) {
           x_bar <- colMeans(xhat)
           y_bar <- mean(yvec)
           xc <- sweep(xhat, 2L, x_bar)
@@ -1044,19 +1130,54 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       # 5. naive cov (for standard errors) (see summary.lm in base R)
       vcov <- NULL
       if (iv_vcov_stage1 %in% c("lm.vcov.dfres", "lm.vcov")) {
-        p1 <- 1L:fit_y_on_xhat$rank
-        r <- chol2inv(fit_y_on_xhat$qr$qr[p1, p1, drop = FALSE])
-        if (iv_vcov_stage1 == "lm.vcov") {
-          vcov <- r * resvar
+        if (kclass) {
+          # the (Xhat'Xhat)^{-1} route is 2SLS-only; build the k-class
+          # covariance from amat_k as in the samplestats engine
+          # (intercept first, then slopes)
+          this_resvar <- resvar_df_res
+          if (iv_vcov_stage1 == "lm.vcov") {
+            this_resvar <- resvar
+          }
+          sw <- if (is.null(weights)) nrow(xy) else sum(weights)
+          ainv <- lav_mat_sym_solve_spd(
+            ks$amat, diag(x = 1, nrow = nrow(ks$amat))
+          )
+          vcov_slopes <- (this_resvar / sw) * ainv
+          x_bar_k <- mom_mean[xi]
+          vcov_beta0 <- (this_resvar / sw) +
+            t(x_bar_k) %*% vcov_slopes %*% x_bar_k
+          cov_beta0_slopes <- -vcov_slopes %*% x_bar_k
+          vcov <- matrix(0, length(x_idx) + 1L, length(x_idx) + 1L)
+          vcov[1, 1] <- vcov_beta0
+          vcov[1, -1] <- t(cov_beta0_slopes)
+          vcov[-1, 1] <- cov_beta0_slopes
+          vcov[-1, -1] <- vcov_slopes
         } else {
-          vcov <- r * resvar_df_res
+          p1 <- 1L:fit_y_on_xhat$rank
+          r <- chol2inv(fit_y_on_xhat$qr$qr[p1, p1, drop = FALSE])
+          if (iv_vcov_stage1 == "lm.vcov") {
+            vcov <- r * resvar
+          } else {
+            vcov <- r * resvar_df_res
+          }
         }
       }
 
-      # 6. Sargan test (see summary.ivreg.R 363--371)
+      # 6. Sargan test (see summary.ivreg.R 363--371); k-class (LIML/FULLER)
+      # equations report the T_2NT statistic instead (which reduces to
+      # Sargan under 2SLS)
       if (iv_flag && iv_sargan && iv_vcov_stage1 != "none") {
         sargan["df"] <- length(i_idx) - length(x_idx)
-        if (sargan["df"] > 0L) {
+        if (sargan["df"] > 0L && kclass) {
+          g <- mom_cov[zi, yi, drop = FALSE] -
+            mom_cov[zi, xi, drop = FALSE] %*% ks$beta
+          sargan <- lav_sem_miiv_t2nt(
+            s_zz = mom_cov[zi, zi, drop = FALSE],
+            s_zx = mom_cov[zi, xi, drop = FALSE],
+            s_xz = mom_cov[xi, zi, drop = FALSE],
+            g = g, psi = resvar, nobs = length(res)
+          )
+        } else if (sargan["df"] > 0L) {
           if (is.null(weights)) {
             fit_yres_on_z <- lm.fit(x = imat, y = res)
             rssr <- sum((res - mean(res))^2)
@@ -1102,6 +1223,15 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       eqs[[b]][[j]]$vcov <- vcov
       eqs[[b]][[j]]$sargan <- sargan
       eqs[[b]][[j]]$browne <- browne
+      # k-class (LIML/FULLER) state; no analytic Jacobian here (the raw
+      # engine has no k_mat, so the vcov machinery falls back to the
+      # numerical directed Jacobian automatically)
+      if (kclass) {
+        eqs[[b]][[j]]$kclass <- list(
+          method = iv_method, k = eq_k, lambda = eq_lambda,
+          dk_vech = NULL, cxx_z = ks$cxx_z, cxy_z = ks$cxy_z
+        )
+      }
     } # eqs
   } # nblocks
 
@@ -1136,7 +1266,9 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
                                           iv_sargan = TRUE,
                                           free_directed_idx = NULL,
                                           aug_vec = NULL, aug_pdim = NULL,
-                                          iv_mimic_ml = FALSE) {
+                                          iv_mimic_ml = FALSE,
+                                          iv_method = "2SLS",
+                                          iv_fuller_c = 1) {
   # no conditional.x for now!
   stopifnot(!lavmodel@conditional.x)
   iv_vcov_stage1 <- tolower(iv_vcov_stage1)
@@ -1387,9 +1519,41 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         next
       }
 
-      # 1. + 2. OLS + 2SLS
+      # 1. + 2. OLS + 2SLS (or k-class: LIML / Fuller-LIML)
       fit_y_on_xhat <- list()
-      if (iv_flag) {
+      # k-class state (LIML/FULLER); exactly identified LIML equations have
+      # lambda == 1 identically and are routed through the 2SLS branch
+      kclass <- iv_flag &&
+        (iv_method == "FULLER" || (iv_method == "LIML" && nz > nx))
+      eq_lambda <- eq_k <- as.numeric(NA)
+      beta_liml <- NULL
+      dk_vech <- NULL
+      ks <- NULL
+      if (kclass) {
+        v_idx <- c(y_idx, x_idx)
+        s_vv <- sample_cov[v_idx, v_idx, drop = FALSE]
+        s_vz <- sample_cov[v_idx, i_idx, drop = FALSE]
+        s_vv_z <- s_vv - s_vz %*%
+          lav_mat_sym_solve_spd(s_zz, t(s_vz))
+        if (nz == nx) {
+          # exactly identified (FULLER only): lambda == 1 identically
+          eq_lambda <- 1
+          beta_liml <- NULL # filled below from the 2SLS-equal solve
+        } else {
+          lam <- lav_sem_miiv_kclass_lambda(s_vv = s_vv, s_vv_z = s_vv_z)
+          if (!lam$ok) {
+            lav_msg_warn(gettextf(
+              "[IV] LIML eigenvalue problem is degenerate for equation %s;
+               falling back to 2SLS for this equation.",
+              paste(eq$lhs_new, "~", paste(eq$rhs_new, collapse = " + "))))
+            kclass <- FALSE
+          } else {
+            eq_lambda <- lam$lambda
+            beta_liml <- -lam$q[-1]
+          }
+        }
+      }
+      if (iv_flag && !kclass) {
         # Step 1: compute S_ZZ^{-1} S_ZX and S_ZZ^{-1} S_Zy
         m_w <- lav_mat_sym_solve_spd(s_zz, s_zx)
         v <- lav_mat_sym_solve_spd(s_zz, s_zy)
@@ -1397,6 +1561,28 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         amat <- s_xz %*% m_w
         bvec <- s_xz %*% v
         beta_slopes <- drop(lav_mat_sym_solve_spd(amat, bvec))
+        beta0 <- as.vector(y_bar - t(x_bar) %*% beta_slopes)
+      } else if (iv_flag) {
+        # k-class solve; downstream consumers (slope_block pooling, resvar,
+        # eq$vcov, k_mat) work off amat/bvec and pick up the k-class system
+        eq_k <- lav_sem_miiv_kclass_k(
+          lambda = eq_lambda, iv_method = iv_method,
+          nobs = nobs, nz = nz, iv_fuller_c = iv_fuller_c
+        )
+        ks <- lav_sem_miiv_kclass_solve(
+          s_xx = s_xx, s_xy = s_xy, s_xz = s_xz, s_zx = s_zx,
+          s_zz = s_zz, s_zy = s_zy, k = eq_k
+        )
+        amat <- ks$amat
+        bvec <- ks$bvec
+        beta_slopes <- ks$beta
+        if (is.null(beta_liml)) {
+          # exactly identified FULLER: the LIML solution is the 2SLS one
+          beta_liml <- drop(lav_sem_miiv_kclass_solve(
+            s_xx = s_xx, s_xy = s_xy, s_xz = s_xz, s_zx = s_zx,
+            s_zz = s_zz, s_zy = s_zy, k = 1
+          )$beta)
+        }
         beta0 <- as.vector(y_bar - t(x_bar) %*% beta_slopes)
       } else {
         if (nx > 0L) {
@@ -1454,6 +1640,19 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         # solution (see lav_sem_miiv_eq_dresid_dvech)
         if (nx == 0L) {
           j_slopes_s <- matrix(0.0, nrow = 0L, ncol = pstar)
+        } else if (kclass) {
+          # k-class (LIML/FULLER): r = (1-k) r_ols + k r_iv, plus the
+          # rank-one term from the S-dependence of lambda (d k_F = d lambda)
+          dk_vech <- lav_sem_miiv_eq_dlambda_dvech(
+            sample_cov = sample_cov, y_idx = y_idx, x_idx = x_idx,
+            i_idx = i_idx, beta_liml = beta_liml, lambda = eq_lambda
+          )
+          m <- lav_sem_miiv_eq_dresid_dvech_kclass(
+            sample_cov = sample_cov, x_idx = x_idx, y_idx = y_idx,
+            i_idx = i_idx, beta = beta_slopes, k = eq_k,
+            dk_vech = dk_vech, cxx_z = ks$cxx_z, cxy_z = ks$cxy_z
+          )
+          j_slopes_s <- solve(amat, m) # amat == amat_k here
         } else {
           m <- lav_sem_miiv_eq_dresid_dvech(
             sample_cov = sample_cov, x_idx = x_idx, y_idx = y_idx,
@@ -1607,8 +1806,21 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         # classic Sargan test (see summary.ivreg.R 363--371); for categorical
         # data the p-value is left NA because the classical Sargan test is not
         # valid for polychoric correlations (use the Browne test below instead)
+        # for k-class (LIML/FULLER) equations, the 2SLS first-order conditions
+        # do not hold and the Sargan form is replaced by the T_2NT statistic
+        # (Maydeu-Olivares, Fisher, Bollen & Rosseel), which reduces to Sargan
+        # under 2SLS
         sargan["df"] <- nz - nx
-        if (sargan["df"] > 0L) {
+        if (sargan["df"] > 0L && kclass) {
+          g <- s_zy - s_zx %*% beta_slopes
+          sargan <- lav_sem_miiv_t2nt(
+            s_zz = s_zz, s_zx = s_zx, s_xz = s_xz,
+            g = g, psi = resvar, nobs = nobs
+          )
+          if (lavmodel@categorical) {
+            sargan["pvalue"] <- as.numeric(NA)
+          }
+        } else if (sargan["df"] > 0L) {
           g <- s_zy - s_zx %*% beta_slopes
           w <- lav_mat_sym_solve_spd(s_zz, g)
           sargan["stat"] <- as.numeric(nobs * t(g) %*% w / resvar_df_res)
@@ -1658,6 +1870,14 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       eqs[[b]][[j]]$k_mat <- k_mat
       eqs[[b]][[j]]$k_mat_full <- k_mat_full
       eqs[[b]][[j]]$k_mat_int_full <- k_mat_int_full
+      # k-class (LIML/FULLER) state; consumed by the pooled analytic
+      # Jacobian chain (lav_sem_miiv_jack_analytic) and lavInspect
+      if (kclass) {
+        eqs[[b]][[j]]$kclass <- list(
+          method = iv_method, k = eq_k, lambda = eq_lambda,
+          dk_vech = dk_vech, cxx_z = ks$cxx_z, cxy_z = ks$cxy_z
+        )
+      }
     } # eqs
   } # nblocks
 
@@ -1978,6 +2198,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   iv_vcov_jack_numerical <- lavoptions$estimator.args$iv_vcov_jack_numerical
   iv_vcov_jaca_numerical <- lavoptions$estimator.args$iv_vcov_jaca_numerical
   # iv_vcov_jacb_numerical <- lavoptions$estimator.args$iv_vcov_jacb_numerical
+  # k-class (LIML/FULLER): the numerical directed Jacobians re-invoke the
+  # estimation engine and must differentiate the SAME (k-class) map
+  iv_method <- toupper(lavoptions$estimator.args$iv_method)
+  iv_fuller_c <- lavoptions$estimator.args[["iv_fuller_c"]]
+  if (length(iv_method) == 0L) {
+    iv_method <- "2SLS"
+  }
+  if (is.null(iv_fuller_c)) {
+    iv_fuller_c <- 1
+  }
 
   # empty vcov
   vcov <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
@@ -2259,7 +2489,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           samplestats = TRUE, eqs = eqs, lavmodel = lavmodel,
           lavpartable = lavpartable, lavsamplestats = lavsamplestats,
           lavh1 = lavh1, lavdata = lavdata,
-          free_directed_idx = free_directed_idx)
+          free_directed_idx = free_directed_idx,
+          iv_method = iv_method, iv_fuller_c = iv_fuller_c)
       }
     }
 
@@ -2413,7 +2644,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           jac_k_aug <- lav_sem_miiv_jac_full_numeric(
             eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
             lavdata = lavdata, lavsamplestats = lavsamplestats,
-            lavh1 = lavh1, free_directed_idx = free_directed_idx)
+            lavh1 = lavh1, free_directed_idx = free_directed_idx,
+            iv_method = iv_method, iv_fuller_c = iv_fuller_c)
         }
         tmp <- h2_aug %*% (diag(ntot_aug) - delta1_aug %*% jac_k_aug)
         # continuous NT gamma over the augmented moments: per-block
@@ -2600,7 +2832,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavsamplestats = lavsamplestats,
         lavh1 = lavh1, lavdata = lavdata,
-        free_directed_idx = free_directed_idx
+        free_directed_idx = free_directed_idx,
+        iv_method = iv_method, iv_fuller_c = iv_fuller_c
       )
     }
   }
@@ -2661,7 +2894,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           jac_full <- lav_sem_miiv_jac_full_numeric(
             eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
             lavdata = lavdata, lavsamplestats = lavsamplestats,
-            lavh1 = lavh1, free_directed_idx = free_directed_idx)
+            lavh1 = lavh1, free_directed_idx = free_directed_idx,
+            iv_method = iv_method, iv_fuller_c = iv_fuller_c)
           cov_aug <- lav_sem_miiv_aug_moments(
             lavdata = lavdata, b = 1L, ov_names = lavdata@ov.names[[1]],
             sample_cov = lavh1$implied$cov[[1]],
@@ -2863,7 +3097,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
             jac_full <- lav_sem_miiv_jac_full_numeric(
               eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
               lavdata = lavdata, lavsamplestats = lavsamplestats,
-              lavh1 = lavh1, free_directed_idx = free_directed_idx)
+              lavh1 = lavh1, free_directed_idx = free_directed_idx,
+              iv_method = iv_method, iv_fuller_c = iv_fuller_c)
           } else {
             jac_full <- lav_sem_miiv_jack_eqs_aug(
               eqs = eqs, block = 1L, lavmodel = lavmodel,

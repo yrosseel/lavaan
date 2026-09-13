@@ -3798,6 +3798,19 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
     adjust <- "none"
   }
 
+  # k-class estimators (LIML/FULLER): the classic Sargan statistic is
+  # replaced by the T_2NT statistic (which reduces to Sargan under 2SLS);
+  # label the columns accordingly
+  iv_method <- object@Options$estimator.args[["iv_method"]]
+  if (is.null(iv_method)) {
+    iv_method <- "2SLS"
+  }
+  classic_lab <- if (toupper(iv_method) %in% c("LIML", "FULLER")) {
+    "t2nt"
+  } else {
+    "sargan"
+  }
+
   # helper to pull a named element from a per-equation test vector (the
   # 'browne' slot may be absent in objects fitted by older versions)
   pull <- function(eqs, slot, what) {
@@ -3827,8 +3840,10 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
       table[[b]] <- data.frame(
         lhs = lhs, rhs = rhs,
         df = sargan_df,
-        sargan.stat = sargan_stat, sargan.pval = sargan_pvalue
+        stat = sargan_stat, pval = sargan_pvalue
       )
+      names(table[[b]])[4:5] <- paste(classic_lab, c("stat", "pval"),
+        sep = ".")
     }
 
     # remove rows for which the test was not computed (just-identified
@@ -3845,8 +3860,9 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
         table[[b]]$browne.pval.adj <- stats::p.adjust(
           table[[b]]$browne.pval, method = adjust)
       } else {
-        table[[b]]$sargan.pval.adj <- stats::p.adjust(
-          table[[b]]$sargan.pval, method = adjust)
+        pval_col <- paste0(classic_lab, ".pval")
+        table[[b]][[paste0(pval_col, ".adj")]] <- stats::p.adjust(
+          table[[b]][[pval_col]], method = adjust)
       }
     }
 

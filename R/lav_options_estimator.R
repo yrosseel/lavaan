@@ -1151,6 +1151,7 @@ lav_options_est_iv <- function(opt) {
   if (is.null(opt$estimator.args)) {
     # create default list
     opt$estimator.args <- list(iv_method = "2SLS",
+                               iv_fuller_c = 1,
                                iv_samplestats = TRUE,
                                iv_varcov_method = "RLS",
                                iv_sargan = TRUE,
@@ -1167,8 +1168,21 @@ lav_options_est_iv <- function(opt) {
   } else {
     if (is.null(opt$estimator.args$iv_method)) {
       opt$estimator.args$iv_method <- "2SLS"
-    } else if (!opt$estimator.args$iv_method %in% "2SLS") {
-      lav_msg_stop(gettext("iv_method should be 2SLS (for now)."))
+    } else if (!toupper(opt$estimator.args$iv_method) %in%
+               c("2SLS", "LIML", "FULLER")) {
+      lav_msg_stop(gettext("iv_method should be 2SLS, LIML or FULLER."))
+    } else {
+      opt$estimator.args$iv_method <- toupper(opt$estimator.args$iv_method)
+    }
+    # Fuller (1977) modification constant c: k = lambda - c/(N - nz - 1)
+    if (is.null(opt$estimator.args[["iv_fuller_c"]])) {
+      opt$estimator.args$iv_fuller_c <- 1
+    } else if (!is.numeric(opt$estimator.args[["iv_fuller_c"]]) ||
+               length(opt$estimator.args[["iv_fuller_c"]]) != 1L ||
+               !is.finite(opt$estimator.args[["iv_fuller_c"]]) ||
+               opt$estimator.args[["iv_fuller_c"]] <= 0) {
+      lav_msg_stop(gettext(
+        "iv_fuller_c should be a single positive number."))
     }
     if (is.null(opt$estimator.args$iv_samplestats)) {
       opt$estimator.args$iv_samplestats <- TRUE

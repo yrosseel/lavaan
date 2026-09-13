@@ -73,9 +73,30 @@ The option names use snake_case. For backward compatibility, dot.case names
 (e.g. \code{iv.varcov.method}) are also accepted and silently converted.
 
 \describe{
-  \item{\code{iv_method}:}{Character. The instrumental-variable method.
-    Currently only \code{"2SLS"} (two-stage least squares) is available.
-    Default is \code{"2SLS"}.}
+  \item{\code{iv_method}:}{Character. The instrumental-variable method used
+    for the first-stage (directed) coefficients. One of \code{"2SLS"}
+    (two-stage least squares, the default), \code{"LIML"} (limited-information
+    maximum likelihood; Anderson & Rubin, 1949) or \code{"FULLER"} (Fuller's,
+    1977, modification of LIML). All three are k-class estimators computed
+    from the same per-equation sample moments: 2SLS uses \eqn{k = 1}, LIML
+    uses \eqn{k = \lambda}, the smallest generalized eigenvalue of the
+    (outcome, regressors) covariance matrix relative to its conditional
+    (given the instruments) counterpart, and Fuller uses
+    \eqn{k = \lambda - c/(N - n_z - 1)} with \eqn{n_z} the number of
+    instruments (see \code{iv_fuller_c}). For an exactly identified equation
+    \eqn{\lambda = 1}, so LIML and 2SLS coincide. The estimators are
+    asymptotically equivalent, but with many (weak) instruments 2SLS can
+    exhibit substantial finite-sample bias, which LIML largely avoids;
+    Fuller's modification in addition ensures finite moments. LIML and
+    FULLER therefore allow retaining the full set of model-implied
+    instruments (and their overidentifying restrictions) without an
+    instrument-selection step (Maydeu-Olivares, Fisher, Bollen & Rosseel,
+    2026).}
+  \item{\code{iv_fuller_c}:}{Numeric. The positive constant \eqn{c} of the
+    Fuller (1977) correction \eqn{k = \lambda - c/(N - n_z - 1)}; only used
+    when \code{iv_method = "FULLER"}. Default is \code{1} (approximately
+    unbiased estimates); \code{c = 4} is sometimes used to minimize the mean
+    squared error.}
   \item{\code{iv_samplestats}:}{Logical. If \code{TRUE} (the default), the
     equations are estimated from the sample moments (covariances and means)
     rather than from the raw data. This is required for categorical data and
@@ -279,15 +300,32 @@ Several \code{\link{lavInspect}} fields are specific to IV estimation:
     data the classical Sargan p-value is \code{NA} (not valid), so use the
     \code{browne.*} columns. Adjusted p-values (\code{sargan.pval.adj} and
     \code{browne.pval.adj}) are added when \code{iv_sargan_adjust} is set.
-    \code{lavInspect(fit, "hansen")} is an alias.}
+    \code{lavInspect(fit, "hansen")} is an alias. When
+    \code{iv_method = "LIML"} or \code{"FULLER"}, the 2SLS first-order
+    conditions no longer hold and the classical Sargan form is replaced by
+    the (asymptotically equivalent under 2SLS) normal-theory residual
+    statistic \eqn{T_{2,NT}} of Maydeu-Olivares, Fisher, Bollen & Rosseel
+    (2026), reported in columns \code{t2nt.stat} and \code{t2nt.pval} with
+    the same degrees of freedom.}
   \item{\code{lavInspect(fit, "eqs")}:}{the underlying per-equation
     information.}
 }
 }
 }
 \references{
+Anderson, T. W., & Rubin, H. (1949). Estimation of the parameters of a single
+equation in a complete system of stochastic equations. \emph{The Annals of
+Mathematical Statistics}, 20(1), 46-63.
+
 Bollen, K. A. (1996). An alternative two stage least squares (2SLS) estimator
 for latent variable equations. \emph{Psychometrika}, 61(1), 109-121.
+
+Fuller, W. A. (1977). Some properties of a modification of the limited
+information estimator. \emph{Econometrica}, 45(4), 939-953.
+
+Maydeu-Olivares, A., Fisher, Z. F., Bollen, K. A., & Rosseel, Y. (2026).
+Model-implied instrumental variables with many instruments: LIML estimation
+and goodness-of-fit testing. Working paper.
 
 Bollen, K. A., & Maydeu-Olivares, A. (2007). A polychoric instrumental variable
 (PIV) estimator for structural equation models with categorical variables.
@@ -344,6 +382,16 @@ fit2 <- sem(model, data = PoliticalDemocracy,
                              iv_sargan_adjust = "BH",
                              iv_weak = "warn"))
 lavInspect(fit2, "sargan")
+
+## LIML instead of 2SLS (less finite-sample bias with many instruments);
+## the per-equation overidentification test is then the T_2NT statistic
+fit.liml <- sem(model, data = PoliticalDemocracy,
+                estimator = list(estimator = "IV", iv_method = "LIML"))
+lavInspect(fit.liml, "sargan")
+
+## Fuller-LIML with the default c = 1
+fit.fuller <- sem(model, data = PoliticalDemocracy,
+                  estimator = list(estimator = "IV", iv_method = "FULLER"))
 
 ## specify instruments manually with the |~ operator:
 ## use only x2, x3 as instruments for the dem60 ~ ind60 equation

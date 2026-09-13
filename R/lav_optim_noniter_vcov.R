@@ -1696,6 +1696,12 @@ lav_noniter_se_rows <- function(object = NULL) {
 
   out <- c("Standard errors" = "Delta")
   if (estimator == "IV") {
+    # k-class variant (LIML/FULLER): show the method (2SLS stays implicit,
+    # keeping the classic header unchanged)
+    iv_method <- toupper(ea[["iv_method"]])
+    if (length(iv_method) == 1L && iv_method %in% c("LIML", "FULLER")) {
+      out <- c(out, "IV method" = iv_method)
+    }
     out <- c(out,
       "Regression part (stage 1)" = ea[["iv_vcov_stage1"]],
       "Variance part (stage 2)"   = ea[["iv_vcov_stage2"]])
