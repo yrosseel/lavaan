@@ -30,6 +30,15 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # ML divisor (N) instead of the unbiased N-P divisor for the residual
   # variances (see lav_options_est_iv())
   iv_mimic_ml <- isTRUE(lavoptions$estimator.args$iv_mimic_ml)
+  # do the sample moments feeding the samplestats engine carry the N-1
+  # divisor? (complete continuous data without rescaling; under
+  # iv_mimic_ml the covariance is rescaled to N, two-stage missing uses
+  # EM (ML-scale) moments, and categorical uses correlations). Needed to
+  # put the psi/N term of the per-equation intercept variance on the ML
+  # scale (see lav_sem_miiv_2sls_samp, step 5).
+  iv_cov_nm1 <- !lavmodel@categorical &&
+    !isTRUE(lavoptions$sample.cov.rescale) &&
+    !any(lavoptions$missing == c("two.stage", "robust.two.stage"))
   # just in case
   if (lavmodel@categorical) {
     iv_samplestats <- TRUE
@@ -122,7 +131,8 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
         lavh1 = lavh1, free_directed_idx = free_directed_idx,
         iv_vcov_stage1 = iv_vcov_stage1, iv_sargan = iv_sargan,
         iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml,
-        iv_method = iv_method, iv_fuller_c = iv_fuller_c
+        iv_method = iv_method, iv_fuller_c = iv_fuller_c,
+        iv_cov_nm1 = iv_cov_nm1
       )
     } else {
       theta1 <- lav_sem_miiv_2sls(
@@ -1268,7 +1278,8 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
                                           aug_vec = NULL, aug_pdim = NULL,
                                           iv_mimic_ml = FALSE,
                                           iv_method = "2SLS",
-                                          iv_fuller_c = 1) {
+                                          iv_fuller_c = 1,
+                                          iv_cov_nm1 = FALSE) {
   # no conditional.x for now!
   stopifnot(!lavmodel@conditional.x)
   iv_vcov_stage1 <- tolower(iv_vcov_stage1)
@@ -1783,12 +1794,23 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         if (iv_vcov_stage1 == "lm.vcov") {
           this_resvar <- resvar
         }
+        # psi/nobs term of the intercept variance: 'resvar' inherits the
+        # divisor of the sample moments (N-1 when iv_cov_nm1). For the
+        # slopes this cancels exactly against the same divisor in amat,
+        # but the psi/nobs term has no such counterpart; rescale it to the
+        # ML (divisor N) residual variance so that the intercept variance
+        # matches the textbook psi_hat * (X'X)^{-1} expression (summary.lm,
+        # ivreg) and the raw-data engine.
+        int_resvar <- this_resvar
+        if (iv_cov_nm1) {
+          int_resvar <- this_resvar * (nobs - 1) / nobs
+        }
         if (nx > 0L) {
           ainv <-
             lav_mat_sym_solve_spd(amat, diag(x = 1, nrow = nrow(amat)))
           vcov_slopes <- (this_resvar / nobs) * ainv
           vcov_beta0 <-
-            (this_resvar / nobs) + t(x_bar) %*% vcov_slopes %*% x_bar
+            (int_resvar / nobs) + t(x_bar) %*% vcov_slopes %*% x_bar
           cov_beta0_slopes <- -vcov_slopes %*% x_bar
           vcov <- matrix(0, nx + 1L, nx + 1L)
           vcov[1, 1] <- vcov_beta0
@@ -1797,7 +1819,7 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
           vcov[-1, -1] <- vcov_slopes
         } else {
           # only intercept
-          vcov <- matrix(this_resvar / nobs, 1L, 1L)
+          vcov <- matrix(int_resvar / nobs, 1L, 1L)
         }
       }
 
