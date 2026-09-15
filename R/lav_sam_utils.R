@@ -473,6 +473,76 @@ lav_sam_fs_missing <- function(y = NULL, mm_lambda = NULL, mm_theta = NULL,
   )
 }
 
+# Truncation floor for the second-order (interaction) lambda correction,
+# obtained by half-sample debiasing of the Fuller lambda.
+#
+# lambda is the smallest generalized eigenvalue of the (var_fs2, var_error)
+# pencil. In finite samples it is severely downward-biased: the pencil is
+# high-dimensional (all latent variables plus all product terms) and
+# var_fs2 is built from fourth-order moments of the factor scores, so the
+# smallest sample eigenvalue can sit far below its population counterpart
+# even when the population matrix is well-conditioned. When the truncation
+# binds, the truncated VETA2 has a generalized-eigenvalue margin equal to
+# the floor; with the historical p2/(n-1) floor this margin vanishes with
+# n, and in weakly-identified conditions (low reliability, strongly
+# correlated predictors) the structural estimates -- which invert VETA2 --
+# can become *less* accurate with increasing n over a long pre-asymptotic
+# range.
+#
+# This floor instead estimates the population margin (lambda_pop - 1)
+# directly. The bias of lambda decays approximately like a/sqrt(n) (the
+# smallest eigenvalue behaves like the minimum over a cluster of nearby
+# eigenvalues, each perturbed at the 1/sqrt(n) scale), so with six
+# deterministic interleaved half-samples we extrapolate
+#   lambda_deb = lambda + (lambda - mean(lambda_half)) / (sqrt(2) - 1)
+# and return
+#   max(lambda_deb - 1, 2 * se(lambda), p2/(n-1))
+# where se(lambda) = sd(lambda_half)/sqrt(2): even when the debiased margin
+# is genuinely small, the floor never drops below (twice) the sampling
+# noise of lambda itself -- this caps the noise amplification of the
+# VETA2 inversion in the structural step -- nor below the historical
+# p2/(n-1) floor.
+#
+# With missing data (pattern-based factor scores) or when n < 4 * p2, we
+# fall back to the historical floor.
+lav_sam_veta2_floor_debias <- function(fs2 = NULL, var_error = NULL,
+                                       lambda = NULL, n = NULL,
+                                       mi_flag = FALSE) {
+  p2 <- ncol(fs2)
+  floor_default <- p2 / (n - 1)
+  if (mi_flag || n < 4L * p2 || !is.finite(lambda)) {
+    return(floor_default)
+  }
+  idx <- seq_len(n)
+  mod2 <- idx %% 2L
+  mod4 <- idx %% 4L
+  half_list <- list(
+    which(mod2 == 1L), which(mod2 == 0L),
+    which(mod4 <= 1L), which(mod4 >= 2L),
+    which(mod4 == 0L | mod4 == 3L), which(mod4 == 1L | mod4 == 2L)
+  )
+  lambda_half <- vapply(half_list, function(ii) {
+    nh <- length(ii)
+    vh <- var(fs2[ii, , drop = FALSE]) * (nh - 1) / nh
+    out <- try(lav_mat_sym_diff_smallest_root(vh, var_error), silent = TRUE)
+    if (inherits(out, "try-error")) {
+      return(as.numeric(NA))
+    }
+    out
+  }, numeric(1L))
+  lambda_half <- lambda_half[is.finite(lambda_half)]
+  if (length(lambda_half) < 4L) {
+    return(floor_default)
+  }
+  # half-sample extrapolation (bias ~ a/sqrt(n)); note that lambda_deb may
+  # come out below the sample lambda (the extrapolation found no bias): the
+  # caller truncates only if lambda < 1 + floor, so in that case the sample
+  # VETA2 is left untouched -- the floor acts as a floor, not as a target
+  lambda_deb <- lambda + (lambda - mean(lambda_half)) / (sqrt(2) - 1)
+  noise_se <- stats::sd(lambda_half) / sqrt(2)
+  max(lambda_deb - 1, 2 * noise_se, floor_default)
+}
+
 # compute veta including quadratic/interaction terms
 lav_sam_veta2 <- function(fs = NULL, m = NULL,
                           veta = NULL, eeta = NULL, mm_theta = NULL,
@@ -481,6 +551,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
                           dummy_lv_names = character(0L),
                           alpha_correction = 0L,
                           lambda_correction = TRUE,
+                          lambda_floor = "default",
                           lambda1 = 1,
                           pattern_list = NULL,
                           fs_outlier_idx = integer(0L),
@@ -620,10 +691,38 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     if (inherits(lambda, "try-error")) {
       lav_msg_warn(gettext("failed to compute lambda"))
       veta2 <- var_fs2 - var_error # and hope for the best
-    } else {
+    } else if (identical(lambda_floor, "default")) {
+      # historical behavior; note that the p2/(n-1) truncation margin
+      # vanishes with n, while the sample lambda of this high-dimensional
+      # fourth-order-moment pencil is severely downward-biased -- in
+      # weakly-identified conditions the truncation then binds over a long
+      # pre-asymptotic range of n with an ever smaller margin, and the
+      # accuracy of the structural estimates can *deteriorate* with
+      # increasing n; lambda.floor = "debias" is a data-driven alternative
       cutoff <- 1 + 2 / n # be more conservative for VETA2
       if (lambda < cutoff) {
         lambda_star <- max(c(0, lambda - ncol(var_fs2) / (n - 1)))
+        veta2 <- var_fs2 - lambda_star * var_error
+      } else {
+        veta2 <- var_fs2 - var_error
+      }
+    } else {
+      # alternative truncation floors: a numeric constant, or "debias"
+      # (half-sample debiased margin, see lav_sam_veta2_floor_debias());
+      # truncate if (and only if) the fully corrected VETA2 would have a
+      # generalized-eigenvalue margin below the floor, so the truncated
+      # matrix never has a smaller margin than the floor
+      if (is.numeric(lambda_floor)) {
+        floor_2 <- lambda_floor
+      } else {
+        floor_2 <- lav_sam_veta2_floor_debias(
+          fs2 = fs2[, lv_keep, drop = FALSE],
+          var_error = var_error, lambda = lambda, n = n,
+          mi_flag = mi_flag
+        )
+      }
+      if (lambda < 1 + floor_2) {
+        lambda_star <- max(c(0, lambda - floor_2))
         veta2 <- var_fs2 - lambda_star * var_error
       } else {
         veta2 <- var_fs2 - var_error
@@ -1353,6 +1452,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
 lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
                                   M.method = "ML",
                                   lambda.correction = TRUE,
+                                  lambda.floor = "default",
                                   alpha.correction = 0L,
                                   twolevel.method = "h1"
                                 )) {

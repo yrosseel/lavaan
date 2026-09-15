@@ -10,8 +10,9 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     mm_list = NULL, mm_args = list(bounds = "wide.zerovar"), 
     struc_args = list(estimator = "ML"), 
     sam_method = "local", ..., 
-    local_options = list(M.method = "ML", lambda.correction = TRUE, 
-                         alpha.correction = 0L, twolevel.method = "h1"), 
+    local_options = list(M.method = "ML", lambda.correction = TRUE,
+                         lambda.floor = "default",
+                         alpha.correction = 0L, twolevel.method = "h1"),
     global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
     output = "lavaan",
@@ -96,8 +97,17 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
 \item{local_options}{List. Options specific for local SAM method (these
      options may change over time). If \code{lambda.correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
-     is positive definite. The \code{alpha.correction} option must be an
-     integer. Acceptable values are in the range 0 to
+     is positive definite. The \code{lambda.floor} option controls the
+     truncation margin that is used (only) when the model contains latent
+     quadratic/interaction terms and the lambda correction must truncate:
+     \code{"default"} uses the historical (vanishing-with-N) margin
+     P2/(N-1), where P2 is the number of latent variables plus the number
+     of product terms; \code{"debias"} estimates the margin from the data
+     by half-sample debiasing of lambda (recommended when the structural
+     model contains several product terms, weakly reliable indicators, or
+     strongly correlated predictors); a single nonnegative number fixes
+     the margin at that value. The \code{alpha.correction} option must be
+     an integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
      and the bias-correction is the same as with local SAM. When equal to N-1,
      the bias-correction is eliminated, and the results are the same as

@@ -20,6 +20,7 @@ sam <- function(model = NULL,
                 local_options = list(
                   M.method = "ML", # mapping matrix
                   lambda.correction = TRUE,
+                  lambda.floor = "default", # or "debias", or a number
                   alpha.correction = 0L, # 0 -> (N-1)
                   twolevel.method = "h1"
                 ),
@@ -387,6 +388,7 @@ sam <- function(model = NULL,
     local_opt <- list(
       M.method = "ML",
       lambda.correction = TRUE,
+      lambda.floor = "default",
       alpha.correction = 0L,
       twolevel.method = "h1"
     )
