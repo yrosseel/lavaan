@@ -6,6 +6,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
                                   M.method = "ML",
                                   lambda.correction = TRUE,
                                   lambda.floor = "default",
+                                  lambda1.floor = "debias",
                                   alpha.correction = 0L,
                                   twolevel.method = "h1"
                                 ),
@@ -33,6 +34,26 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
          is.finite(local_lambda_floor) && local_lambda_floor >= 0))) {
     lav_msg_stop(gettext(
       "local option lambda.floor should be \"default\", \"debias\", or a
+       single nonnegative number."))
+  }
+
+  # local.lambda1.floor: truncation floor for the FIRST-order lambda
+  # correction; "debias" (default) = gated bootstrap-debiased margin (a
+  # strict no-op whenever the sample margin is comfortably positive; see
+  # lav_sam_veta1_floor_debias()), "default" = historical 1/(n-1) rule,
+  # or a single nonnegative number
+  local_lambda1_floor <- local_options[["lambda1.floor"]]
+  if (is.null(local_lambda1_floor)) { # eg stored local.options of old objects
+    local_lambda1_floor <- "debias"
+  }
+  if (!((is.character(local_lambda1_floor) &&
+         length(local_lambda1_floor) == 1L &&
+         local_lambda1_floor %in% c("default", "debias")) ||
+        (is.numeric(local_lambda1_floor) &&
+         length(local_lambda1_floor) == 1L &&
+         is.finite(local_lambda1_floor) && local_lambda1_floor >= 0))) {
+    lav_msg_stop(gettext(
+      "local option lambda1.floor should be \"debias\", \"default\", or a
        single nonnegative number."))
   }
 
@@ -338,6 +359,22 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       fs_mean[[b]] <- eeta[[b]] # ok if no interaction
     }
 
+    # raw data for the (gated) first-order debias floor: only in the
+    # supported setting (single-level, continuous, complete data, no
+    # conditional.x, unweighted); in all other settings lav_sam_veta()
+    # falls back to the historical rule
+    yb1 <- NULL
+    if (identical(local_lambda1_floor, "debias") &&
+        fit@Data@nlevels == 1L &&
+        !fit@Model@categorical && !fit@Model@correlation &&
+        !fit@Model@conditional.x &&
+        is.null(fit@Data@weights[[this_group]])) {
+      yb1 <- fit@Data@X[[b]]
+      if (anyNA(yb1) || ncol(yb1) != ncol(cov_1)) {
+        yb1 <- NULL
+      }
+    }
+
     # compute VETA
     if (sam_method == "local") {
       if (lsam_analytic_flag[b]) {
@@ -345,6 +382,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           m = mb, s = cov_1, mm_theta = mm_theta[[b]],
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
+          lambda_floor = local_lambda1_floor, y = yb1,
           n = fit@SampleStats@nobs[[this_group]],
           dummy_lv_idx = dummy_lv_idx,
           extra = TRUE
@@ -386,6 +424,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         m = mb, s = cov_1, mm_theta = mm_theta[[b]],
         alpha_correction = 0L,
         lambda_correction = local_options[["lambda.correction"]],
+        lambda_floor = local_lambda1_floor, y = yb1,
         n = fit@SampleStats@nobs[[this_group]],
         dummy_lv_idx = dummy_lv_idx,
         extra = FALSE

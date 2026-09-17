@@ -11,7 +11,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     struc_args = list(estimator = "ML"), 
     sam_method = "local", ..., 
     local_options = list(M.method = "ML", lambda.correction = TRUE,
-                         lambda.floor = "default",
+                         lambda.floor = "default", lambda1.floor = "debias",
                          alpha.correction = 0L, twolevel.method = "h1"),
     global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
@@ -106,7 +106,20 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      by half-sample debiasing of lambda (recommended when the structural
      model contains several product terms, weakly reliable indicators, or
      strongly correlated predictors); a single nonnegative number fixes
-     the margin at that value. The \code{alpha.correction} option must be
+     the margin at that value. The \code{lambda1.floor} option controls
+     the truncation margin of the first-order lambda correction (the
+     correction of VETA itself). The default \code{"debias"} is a gated
+     rule: whenever the sample margin is comfortably positive (the vast
+     majority of well-behaved analyses), the historical behavior is
+     reproduced exactly; only when the smallest generalized eigenvalue of
+     the (MSM, MTM) pencil is within (twice) its own sampling noise of
+     the boundary is the truncation margin replaced by a bootstrap
+     debiased estimate of the population margin. \code{"default"}
+     restores the historical 1/(N-1) rule; a single nonnegative number
+     fixes the margin at that value. The gated rule requires raw,
+     complete, single-level continuous data (no \code{conditional.x});
+     in all other settings it automatically falls back to
+     \code{"default"}. The \code{alpha.correction} option must be
      an integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
      and the bias-correction is the same as with local SAM. When equal to N-1,

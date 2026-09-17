@@ -21,6 +21,7 @@ sam <- function(model = NULL,
                   M.method = "ML", # mapping matrix
                   lambda.correction = TRUE,
                   lambda.floor = "default", # or "debias", or a number
+                  lambda1.floor = "debias", # or "default", or a number
                   alpha.correction = 0L, # 0 -> (N-1)
                   twolevel.method = "h1"
                 ),
@@ -389,6 +390,7 @@ sam <- function(model = NULL,
       M.method = "ML",
       lambda.correction = TRUE,
       lambda.floor = "default",
+      lambda1.floor = "debias",
       alpha.correction = 0L,
       twolevel.method = "h1"
     )
