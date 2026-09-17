@@ -11,7 +11,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     struc_args = list(estimator = "ML"), 
     sam_method = "local", ..., 
     local_options = list(M.method = "ML", lambda.correction = TRUE,
-                         lambda.floor = "default", lambda1.floor = "debias",
+                         lambda1.floor = "debias", lambda2.floor = "default",
                          alpha.correction = 0L, twolevel.method = "h1"),
     global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
@@ -97,29 +97,32 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
 \item{local_options}{List. Options specific for local SAM method (these
      options may change over time). If \code{lambda.correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
-     is positive definite. The \code{lambda.floor} option controls the
-     truncation margin that is used (only) when the model contains latent
-     quadratic/interaction terms and the lambda correction must truncate:
-     \code{"default"} uses the historical (vanishing-with-N) margin
-     P2/(N-1), where P2 is the number of latent variables plus the number
-     of product terms; \code{"debias"} estimates the margin from the data
-     by half-sample debiasing of lambda (recommended when the structural
-     model contains several product terms, weakly reliable indicators, or
-     strongly correlated predictors); a single nonnegative number fixes
-     the margin at that value. The \code{lambda1.floor} option controls
-     the truncation margin of the first-order lambda correction (the
-     correction of VETA itself). The default \code{"debias"} is a gated
+     is positive definite. When the lambda correction must truncate, the
+     truncation margin (floor) is controlled by \code{lambda1.floor} for
+     the first-order correction (of VETA itself) and by
+     \code{lambda2.floor} for the second-order correction (of the
+     product-term augmented VETA2, only when the model contains latent
+     quadratic/interaction terms). Both options accept the same values.
+     \code{"debias"} (the default for \code{lambda1.floor}) is a gated
      rule: whenever the sample margin is comfortably positive (the vast
      majority of well-behaved analyses), the historical behavior is
      reproduced exactly; only when the smallest generalized eigenvalue of
-     the (MSM, MTM) pencil is within (twice) its own sampling noise of
-     the boundary is the truncation margin replaced by a bootstrap
-     debiased estimate of the population margin. \code{"default"}
-     restores the historical 1/(N-1) rule; a single nonnegative number
-     fixes the margin at that value. The gated rule requires raw,
-     complete, single-level continuous data (no \code{conditional.x});
-     in all other settings it automatically falls back to
-     \code{"default"}. The \code{alpha.correction} option must be
+     the pencil is within (twice) its own sampling noise of the boundary
+     is the truncation margin replaced by a bootstrap debiased estimate
+     of the population margin. \code{"default"} (the default for
+     \code{lambda2.floor}) uses the historical (vanishing-with-N) rules:
+     margin 1/(N-1) for the first order, and P2/(N-1) for the second
+     order, where P2 is the number of latent variables plus the number of
+     product terms. A single nonnegative number fixes the margin at that
+     value. \code{lambda2.floor = "debias"} is recommended when the
+     structural model contains several product terms, weakly reliable
+     indicators, or strongly correlated predictors. The gated rules
+     require raw, complete, single-level continuous data (no
+     \code{conditional.x}); in all other settings they automatically fall
+     back to \code{"default"}. (Before September 2026,
+     \code{lambda2.floor} was briefly called \code{lambda.floor}; the old
+     name is still accepted with a warning.) The
+     \code{alpha.correction} option must be
      an integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
      and the bias-correction is the same as with local SAM. When equal to N-1,

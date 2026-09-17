@@ -300,37 +300,42 @@ lav_sam_tmat <- function(mm_lambda = NULL,
 }
 
 
-# Gated, bootstrap-debiased truncation floor for the FIRST-order lambda
-# correction (see lav_sam_veta() below).
+# Gated, bootstrap-debiased truncation floor for the lambda corrections --
+# the shared core behind lav_sam_veta1_floor_debias() (first order, see
+# lav_sam_veta()) and lav_sam_veta2_floor_debias() (second order, see
+# lav_sam_veta2()).
 #
-# The sample Fuller lambda (smallest generalized eigenvalue of the
-# (MSM, MTM) pencil) is downward-biased -- mildly in well-separated
+# 'score' holds the casewise contributions whose (n-divisor) covariance is
+# the left-hand side of the pencil: the Bartlett factor scores
+# f_i = M (y_i - ybar) for the first order (Var(f) = MSM), and the
+# second-order products fs2_i (kept columns) for the second order
+# (Var(fs2) = var_fs2); 'err' is the right-hand side of the pencil (MTM
+# resp. var.error), and lambda its smallest generalized root.
+#
+# The sample lambda is downward-biased -- mildly in well-separated
 # settings, severely when the bottom of the spectrum is clustered (highly
-# correlated factors, weak reliability). The historical rule truncates
-# with a floor 1/(n-1) that vanishes with n, so in those difficult
-# settings the accuracy of the structural estimates can deteriorate with
-# increasing n (see also lav_sam_veta2_floor_debias() for the same
-# phenomenon, in aggravated form, at the second-order level).
-#
-# This rule is designed to be a strict no-op whenever the sample is
-# comfortably away from the boundary, and to repair the difficult cases:
+# correlated factors, weak reliability, many product terms). The
+# historical rules truncate with floors (1/(n-1) resp. p2/(n-1)) that
+# vanish with n, so in difficult settings the accuracy of the structural
+# estimates can deteriorate with increasing n. This rule is designed to
+# be a strict no-op whenever the sample is comfortably away from the
+# boundary, and to repair the difficult cases:
 #
 # 1. GATE: six deterministic interleaved half-samples give a cheap noise
 #    estimate se(lambda) = sd(lambda_half)/sqrt(2). If
-#        lambda - 1 >= max(2 * se(lambda), 1/(n-1))
+#        lambda - 1 >= max(2 * se(lambda), floor_default)
 #    the sample margin is comfortably positive: return NULL, and the
-#    caller applies the full correction, bit-for-bit identical to the
-#    historical behavior.
+#    caller applies the historical rule -- which then performs the full
+#    correction, bit-for-bit identical to the historical behavior.
 # 2. Otherwise (the danger zone), estimate the bias and the sampling
-#    noise of lambda by a casewise-score bootstrap (B = 40 resamples of
-#    the p-dimensional score vectors f_i = M (y_i - ybar); a fixed
-#    internal seed makes the resampling plan deterministic, and the
-#    user's .Random.seed is saved and restored):
+#    noise of lambda by a casewise bootstrap of the score rows (B = 40
+#    resamples; a fixed internal seed makes the resampling plan
+#    deterministic, and the user's .Random.seed is saved and restored):
 #        bias = max(0, mean(lambda_boot) - lambda)
 #        se_b = sd(lambda_boot)
 #    and return the floor
 #        max(min(lambda - 1 + bias, lambda - 1 + 3 * se_b),
-#            2 * se_b, 1/(n-1))
+#            2 * se_b, floor_default)
 #    i.e. the debiased margin, capped at three standard errors above the
 #    sample margin, and never below (twice) the noise level of lambda nor
 #    below the historical floor. The caller truncates iff
@@ -338,18 +343,15 @@ lav_sam_tmat <- function(mm_lambda = NULL,
 #
 # Return value: a numeric floor (danger zone only), or NULL. NULL covers
 # both the open gate and any ineligible/degenerate situation (no usable
-# raw data, n < 4 * nrow(m), failed sub-sample roots); on NULL the caller
-# falls back to the historical rule, which in the open-gate case applies
-# the full correction (the gate implies lambda >= 1 + 1/(n-1)), so the
-# result is bit-for-bit the historical behavior. The caller only passes y
-# in the supported setting (single-level, continuous, complete data, no
-# conditional.x, no dummy/higher-order lvs).
-lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
-                                       lambda = NULL, n = NULL) {
-  p_lv <- nrow(m)
-  floor_default <- 1 / (n - 1)
-  if (is.null(y) || nrow(y) != n || anyNA(y) || n < 4L * p_lv ||
-      !is.finite(lambda)) {
+# scores, n < 4 * ncol(score), failed sub-sample roots); on NULL the
+# caller falls back to the historical rule, which in the open-gate case
+# applies the full correction (the gate implies lambda >= 1 + cutoff -
+# 1), so the result is bit-for-bit the historical behavior.
+lav_sam_lambda_floor_debias <- function(score = NULL, err = NULL,
+                                        lambda = NULL, n = NULL,
+                                        floor_default = NULL) {
+  if (is.null(score) || nrow(score) != n || anyNA(score) ||
+      n < 4L * ncol(score) || !is.finite(lambda)) {
     return(NULL) # unusable: historical rule
   }
   idx <- seq_len(n)
@@ -360,16 +362,16 @@ lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
     which(mod4 <= 1L), which(mod4 >= 2L),
     which(mod4 == 0L | mod4 == 3L), which(mod4 == 1L | mod4 == 2L)
   )
-  lambda_half <- vapply(half_list, function(ii) {
+  lambda_sub <- function(ii) {
     nh <- length(ii)
-    sh <- var(y[ii, , drop = FALSE]) * (nh - 1) / nh
-    out <- try(lav_mat_sym_diff_smallest_root(m %*% sh %*% t(m), mtm),
-      silent = TRUE)
+    vh <- var(score[ii, , drop = FALSE]) * (nh - 1) / nh
+    out <- try(lav_mat_sym_diff_smallest_root(vh, err), silent = TRUE)
     if (inherits(out, "try-error")) {
       return(as.numeric(NA))
     }
     out
-  }, numeric(1L))
+  }
+  lambda_half <- vapply(half_list, lambda_sub, numeric(1L))
   lambda_half <- lambda_half[is.finite(lambda_half)]
   if (length(lambda_half) < 4L) {
     return(NULL) # degenerate: historical rule
@@ -381,9 +383,7 @@ lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
     return(NULL)
   }
 
-  # danger zone: casewise-score bootstrap for bias and noise of lambda
-  yc <- t(t(y) - colMeans(y))
-  f_sc <- yc %*% t(m)
+  # danger zone: casewise bootstrap for bias and noise of lambda
   b_reps <- 40L
   seed_old <- NULL
   if (exists(".Random.seed", envir = globalenv())) {
@@ -391,13 +391,7 @@ lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
   }
   set.seed(272727L)
   lambda_boot <- vapply(seq_len(b_reps), function(b) {
-    ii <- sample.int(n, n, replace = TRUE)
-    msm_b <- var(f_sc[ii, , drop = FALSE]) * (n - 1) / n
-    out <- try(lav_mat_sym_diff_smallest_root(msm_b, mtm), silent = TRUE)
-    if (inherits(out, "try-error")) {
-      return(as.numeric(NA))
-    }
-    out
+    lambda_sub(sample.int(n, n, replace = TRUE))
   }, numeric(1L))
   if (!is.null(seed_old)) {
     assign(".Random.seed", seed_old, envir = globalenv())
@@ -410,6 +404,24 @@ lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
   se_boot <- stats::sd(lambda_boot)
   margin <- min(lambda - 1 + bias_hat, lambda - 1 + 3 * se_boot)
   max(margin, 2 * se_boot, floor_default)
+}
+
+# First-order wrapper: Bartlett factor scores f_i = M (y_i - ybar), so
+# that Var(f) equals MSM = M S M' (the per-subsample re-centering of
+# var() makes the global centering immaterial). The caller only passes y
+# in the supported setting (single-level, continuous, complete data, no
+# conditional.x, no dummy/higher-order lvs); everything else -> NULL ->
+# historical rule (see lav_sam_lambda_floor_debias() for the design).
+lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
+                                       lambda = NULL, n = NULL) {
+  if (is.null(y) || nrow(y) != n || anyNA(y)) {
+    return(NULL) # unusable: historical rule
+  }
+  yc <- t(t(y) - colMeans(y))
+  lav_sam_lambda_floor_debias(
+    score = yc %*% t(m), err = mtm, lambda = lambda, n = n,
+    floor_default = 1 / (n - 1)
+  )
 }
 
 # compute VETA
@@ -613,74 +625,25 @@ lav_sam_fs_missing <- function(y = NULL, mm_lambda = NULL, mm_theta = NULL,
   )
 }
 
-# Truncation floor for the second-order (interaction) lambda correction,
-# obtained by half-sample debiasing of the Fuller lambda.
-#
-# lambda is the smallest generalized eigenvalue of the (var_fs2, var_error)
-# pencil. In finite samples it is severely downward-biased: the pencil is
+# Second-order wrapper: the scores are the (kept columns of the)
+# second-order factor-score products fs2, whose covariance is var_fs2;
+# the error side of the pencil is var.error. With missing data the
+# scores are pattern-based (heterogeneous error contributions), so we
+# fall back to the historical rule (see lav_sam_lambda_floor_debias()
+# for the design). Note that the second-order sample lambda is much more
+# severely biased than its first-order counterpart: the pencil is
 # high-dimensional (all latent variables plus all product terms) and
-# var_fs2 is built from fourth-order moments of the factor scores, so the
-# smallest sample eigenvalue can sit far below its population counterpart
-# even when the population matrix is well-conditioned. When the truncation
-# binds, the truncated VETA2 has a generalized-eigenvalue margin equal to
-# the floor; with the historical p2/(n-1) floor this margin vanishes with
-# n, and in weakly-identified conditions (low reliability, strongly
-# correlated predictors) the structural estimates -- which invert VETA2 --
-# can become *less* accurate with increasing n over a long pre-asymptotic
-# range.
-#
-# This floor instead estimates the population margin (lambda_pop - 1)
-# directly. The bias of lambda decays approximately like a/sqrt(n) (the
-# smallest eigenvalue behaves like the minimum over a cluster of nearby
-# eigenvalues, each perturbed at the 1/sqrt(n) scale), so with six
-# deterministic interleaved half-samples we extrapolate
-#   lambda_deb = lambda + (lambda - mean(lambda_half)) / (sqrt(2) - 1)
-# and return
-#   max(lambda_deb - 1, 2 * se(lambda), p2/(n-1))
-# where se(lambda) = sd(lambda_half)/sqrt(2): even when the debiased margin
-# is genuinely small, the floor never drops below (twice) the sampling
-# noise of lambda itself -- this caps the noise amplification of the
-# VETA2 inversion in the structural step -- nor below the historical
-# p2/(n-1) floor.
-#
-# With missing data (pattern-based factor scores) or when n < 4 * p2, we
-# fall back to the historical floor.
+# var_fs2 is built from fourth-order moments of the factor scores.
 lav_sam_veta2_floor_debias <- function(fs2 = NULL, var_error = NULL,
                                        lambda = NULL, n = NULL,
                                        mi_flag = FALSE) {
-  p2 <- ncol(fs2)
-  floor_default <- p2 / (n - 1)
-  if (mi_flag || n < 4L * p2 || !is.finite(lambda)) {
-    return(floor_default)
+  if (mi_flag) {
+    return(NULL) # pattern-based scores: historical rule
   }
-  idx <- seq_len(n)
-  mod2 <- idx %% 2L
-  mod4 <- idx %% 4L
-  half_list <- list(
-    which(mod2 == 1L), which(mod2 == 0L),
-    which(mod4 <= 1L), which(mod4 >= 2L),
-    which(mod4 == 0L | mod4 == 3L), which(mod4 == 1L | mod4 == 2L)
+  lav_sam_lambda_floor_debias(
+    score = fs2, err = var_error, lambda = lambda, n = n,
+    floor_default = ncol(fs2) / (n - 1)
   )
-  lambda_half <- vapply(half_list, function(ii) {
-    nh <- length(ii)
-    vh <- var(fs2[ii, , drop = FALSE]) * (nh - 1) / nh
-    out <- try(lav_mat_sym_diff_smallest_root(vh, var_error), silent = TRUE)
-    if (inherits(out, "try-error")) {
-      return(as.numeric(NA))
-    }
-    out
-  }, numeric(1L))
-  lambda_half <- lambda_half[is.finite(lambda_half)]
-  if (length(lambda_half) < 4L) {
-    return(floor_default)
-  }
-  # half-sample extrapolation (bias ~ a/sqrt(n)); note that lambda_deb may
-  # come out below the sample lambda (the extrapolation found no bias): the
-  # caller truncates only if lambda < 1 + floor, so in that case the sample
-  # VETA2 is left untouched -- the floor acts as a floor, not as a target
-  lambda_deb <- lambda + (lambda - mean(lambda_half)) / (sqrt(2) - 1)
-  noise_se <- stats::sd(lambda_half) / sqrt(2)
-  max(lambda_deb - 1, 2 * noise_se, floor_default)
 }
 
 # compute veta including quadratic/interaction terms
@@ -831,41 +794,48 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     if (inherits(lambda, "try-error")) {
       lav_msg_warn(gettext("failed to compute lambda"))
       veta2 <- var_fs2 - var_error # and hope for the best
-    } else if (identical(lambda_floor, "default")) {
-      # historical behavior; note that the p2/(n-1) truncation margin
-      # vanishes with n, while the sample lambda of this high-dimensional
-      # fourth-order-moment pencil is severely downward-biased -- in
-      # weakly-identified conditions the truncation then binds over a long
-      # pre-asymptotic range of n with an ever smaller margin, and the
-      # accuracy of the structural estimates can *deteriorate* with
-      # increasing n; lambda.floor = "debias" is a data-driven alternative
-      cutoff <- 1 + 2 / n # be more conservative for VETA2
-      if (lambda < cutoff) {
-        lambda_star <- max(c(0, lambda - ncol(var_fs2) / (n - 1)))
-        veta2 <- var_fs2 - lambda_star * var_error
-      } else {
-        veta2 <- var_fs2 - var_error
-      }
     } else {
-      # alternative truncation floors: a numeric constant, or "debias"
-      # (half-sample debiased margin, see lav_sam_veta2_floor_debias());
-      # truncate if (and only if) the fully corrected VETA2 would have a
-      # generalized-eigenvalue margin below the floor, so the truncated
-      # matrix never has a smaller margin than the floor
-      if (is.numeric(lambda_floor)) {
-        floor_2 <- lambda_floor
-      } else {
+      # determine the truncation floor:
+      #   NULL     -> historical rule (cutoff 1 + 2/n, floor p2/(n-1))
+      #   a number -> coherent rule: truncate iff lambda < 1 + floor
+      floor_2 <- NULL
+      if (identical(lambda_floor, "debias")) {
+        # gated bootstrap-debiased floor; NULL when the sample margin is
+        # comfortably positive (then lambda >= 1 + 2/n by the gate
+        # construction, and the historical rule below applies the full
+        # correction: bit-for-bit the historical behavior) or when the
+        # setting is ineligible/degenerate (-> historical rule as well)
         floor_2 <- lav_sam_veta2_floor_debias(
           fs2 = fs2[, lv_keep, drop = FALSE],
           var_error = var_error, lambda = lambda, n = n,
           mi_flag = mi_flag
         )
+      } else if (is.numeric(lambda_floor)) {
+        floor_2 <- lambda_floor
       }
-      if (lambda < 1 + floor_2) {
-        lambda_star <- max(c(0, lambda - floor_2))
-        veta2 <- var_fs2 - lambda_star * var_error
+      if (!is.null(floor_2)) {
+        if (lambda < 1 + floor_2) {
+          lambda_star <- max(c(0, lambda - floor_2))
+          veta2 <- var_fs2 - lambda_star * var_error
+        } else {
+          veta2 <- var_fs2 - var_error
+        }
       } else {
-        veta2 <- var_fs2 - var_error
+        # historical rule; note that the p2/(n-1) truncation margin
+        # vanishes with n, while the sample lambda of this
+        # high-dimensional fourth-order-moment pencil is severely
+        # downward-biased -- in weakly-identified conditions the
+        # truncation then binds over a long pre-asymptotic range of n
+        # with an ever smaller margin, and the accuracy of the
+        # structural estimates can *deteriorate* with increasing n;
+        # lambda2.floor = "debias" is a data-driven alternative
+        cutoff <- 1 + 2 / n # be more conservative for VETA2
+        if (lambda < cutoff) {
+          lambda_star <- max(c(0, lambda - ncol(var_fs2) / (n - 1)))
+          veta2 <- var_fs2 - lambda_star * var_error
+        } else {
+          veta2 <- var_fs2 - var_error
+        }
       }
     }
   } else {
@@ -1592,8 +1562,8 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
 lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
                                   M.method = "ML",
                                   lambda.correction = TRUE,
-                                  lambda.floor = "default",
                                   lambda1.floor = "debias",
+                                  lambda2.floor = "default",
                                   alpha.correction = 0L,
                                   twolevel.method = "h1"
                                 )) {

@@ -20,8 +20,8 @@ sam <- function(model = NULL,
                 local_options = list(
                   M.method = "ML", # mapping matrix
                   lambda.correction = TRUE,
-                  lambda.floor = "default", # or "debias", or a number
                   lambda1.floor = "debias", # or "default", or a number
+                  lambda2.floor = "default", # or "debias", or a number
                   alpha.correction = 0L, # 0 -> (N-1)
                   twolevel.method = "h1"
                 ),
@@ -385,12 +385,23 @@ sam <- function(model = NULL,
   #          only needed for local approach!       #
   ##################################################
   if (sam_method %in% c("local", "fsr", "cfsr")) {
+    # renamed (September 2026): lambda.floor -> lambda2.floor (the floor of
+    # the SECOND-order correction; the first-order floor is lambda1.floor)
+    if (!is.null(local_options[["lambda.floor"]])) {
+      lav_msg_warn(gettext(
+        "local option lambda.floor has been renamed to lambda2.floor;
+         please use lambda2.floor instead."))
+      if (is.null(local_options[["lambda2.floor"]])) {
+        local_options[["lambda2.floor"]] <- local_options[["lambda.floor"]]
+      }
+      local_options[["lambda.floor"]] <- NULL
+    }
     # default local_options
     local_opt <- list(
       M.method = "ML",
       lambda.correction = TRUE,
-      lambda.floor = "default",
       lambda1.floor = "debias",
+      lambda2.floor = "default",
       alpha.correction = 0L,
       twolevel.method = "h1"
     )

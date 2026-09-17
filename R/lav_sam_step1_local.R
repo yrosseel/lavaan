@@ -5,8 +5,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
                                 local_options = list(
                                   M.method = "ML",
                                   lambda.correction = TRUE,
-                                  lambda.floor = "default",
                                   lambda1.floor = "debias",
+                                  lambda2.floor = "default",
                                   alpha.correction = 0L,
                                   twolevel.method = "h1"
                                 ),
@@ -19,21 +19,26 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       "local option M.method should be one of ML, GLS or ULS."))
   }
 
-  # local.lambda.floor: truncation floor for the second-order (interaction)
-  # lambda correction; "default" = historical p2/(n-1), "debias" =
-  # half-sample debiased margin, or a single nonnegative number
-  local_lambda_floor <- local_options[["lambda.floor"]]
-  if (is.null(local_lambda_floor)) { # eg stored local.options of old objects
-    local_lambda_floor <- "default"
+  # local.lambda2.floor: truncation floor for the second-order (interaction)
+  # lambda correction; "default" = historical p2/(n-1) rule, "debias" =
+  # gated bootstrap-debiased margin, or a single nonnegative number
+  local_lambda2_floor <- local_options[["lambda2.floor"]]
+  if (is.null(local_lambda2_floor)) {
+    # silently accept the pre-rename name (eg stored local.options of
+    # objects fitted before the rename; sam() itself warns + remaps)
+    local_lambda2_floor <- local_options[["lambda.floor"]]
   }
-  if (!((is.character(local_lambda_floor) &&
-         length(local_lambda_floor) == 1L &&
-         local_lambda_floor %in% c("default", "debias")) ||
-        (is.numeric(local_lambda_floor) &&
-         length(local_lambda_floor) == 1L &&
-         is.finite(local_lambda_floor) && local_lambda_floor >= 0))) {
+  if (is.null(local_lambda2_floor)) { # eg stored local.options of old objects
+    local_lambda2_floor <- "default"
+  }
+  if (!((is.character(local_lambda2_floor) &&
+         length(local_lambda2_floor) == 1L &&
+         local_lambda2_floor %in% c("default", "debias")) ||
+        (is.numeric(local_lambda2_floor) &&
+         length(local_lambda2_floor) == 1L &&
+         is.finite(local_lambda2_floor) && local_lambda2_floor >= 0))) {
     lav_msg_stop(gettext(
-      "local option lambda.floor should be \"default\", \"debias\", or a
+      "local option lambda2.floor should be \"default\", \"debias\", or a
        single nonnegative number."))
   }
 
@@ -586,7 +591,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           dummy_lv_names = lv_names_b[dummy_lv_idx],
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
-          lambda_floor = local_lambda_floor,
+          lambda_floor = local_lambda2_floor,
           lambda1 = lambda1[[b]],
           pattern_list = pattern_list,
           return_fs = return_fs,
