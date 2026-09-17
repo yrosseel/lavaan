@@ -403,7 +403,17 @@ lav_sam_lambda_floor_debias <- function(score = NULL, err = NULL,
   bias_hat <- max(0, mean(lambda_boot) - lambda)
   se_boot <- stats::sd(lambda_boot)
   margin <- min(lambda - 1 + bias_hat, lambda - 1 + 3 * se_boot)
-  max(margin, 2 * se_boot, floor_default)
+  out <- max(margin, 2 * se_boot, floor_default)
+  # branch bookkeeping for the SE machinery: when the lambda-tracking
+  # margin binds, lambda.star = lambda - floor is locally constant in
+  # lambda (kappa = 0); when a lambda-independent guard binds (2*se_boot
+  # or floor_default), lambda.star tracks lambda one-for-one (kappa = 1)
+  attr(out, "kappa") <- if (margin >= max(2 * se_boot, floor_default)) {
+    0
+  } else {
+    1
+  }
+  out
 }
 
 # First-order wrapper: Bartlett factor scores f_i = M (y_i - ybar), so
@@ -463,7 +473,17 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   }
 
   lambda <- lambda_star <- +Inf
-  if (lambda_correction) {
+  lambda_kappa <- 0
+  lambda_w <- NULL
+  lambda_floor_used <- as.numeric(NA)
+  if (lambda_correction && is.list(lambda_floor)) {
+    # internal (SE machinery only): frozen effective multiplier -- the
+    # numeric-jacobian channels re-run this function at perturbed inputs,
+    # and a kappa = 0 truncation (lambda-tracking debias margin) must keep
+    # lambda.star fixed at its at-the-estimates value there
+    lambda_star <- lambda_floor[["star"]]
+    veta <- msm - lambda_star * mtm
+  } else if (lambda_correction) {
     # use Fuller (1987) approach to ensure VETA is positive
     lambda <- try(lav_mat_sym_diff_smallest_root(msm, mtm),
       silent = TRUE
@@ -476,6 +496,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
       #   NULL     -> historical rule (cutoff 1 + 1/(n-1), floor 1/(n-1))
       #   a number -> coherent rule: truncate iff lambda < 1 + floor
       floor_1 <- NULL
+      kappa_1 <- 1 # a fixed (numeric) floor: lambda.star tracks lambda
       if (identical(lambda_floor, "debias") &&
           length(empty_idx) == 0L && length(dummy_lv_idx) == 0L) {
         # gated bootstrap-debiased floor; NULL when the sample margin is
@@ -486,25 +507,54 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
         floor_1 <- lav_sam_veta1_floor_debias(
           y = y, m = m, mtm = mtm, lambda = lambda, n = n
         )
+        if (!is.null(floor_1) && !is.null(attr(floor_1, "kappa"))) {
+          kappa_1 <- attr(floor_1, "kappa")
+        }
       } else if (is.numeric(lambda_floor)) {
         floor_1 <- lambda_floor
       }
       if (!is.null(floor_1)) {
+        lambda_floor_used <- as.numeric(floor_1)
         if (lambda < 1 + floor_1) {
           lambda_star <- max(0, lambda - floor_1)
           veta <- msm - lambda_star * mtm
+          # clamped at zero -> VETA = MSM exactly, no lambda term left
+          lambda_kappa <- if (lambda_star > 0) kappa_1 else 0
         } else {
           veta <- msm - mtm
         }
       } else {
         # historical rule
+        lambda_floor_used <- 1 / (n - 1)
         cutoff <- 1 + 1 / (n - 1)
         if (lambda < cutoff) {
           lambda_star <- lambda - 1 / (n - 1)
           veta <- msm - lambda_star * mtm
+          lambda_kappa <- 1 # fixed floor, no clamp: always tracks lambda
         } else {
           veta <- msm - mtm
         }
+      }
+      # eigenvector for the SE machinery: when the truncation binds with
+      # lambda.star tracking lambda (kappa = 1), the jacobian of
+      # vech(VETA) w.r.t. vech(S) carries the extra rank-1 term
+      # -vech(MTM) . (d lambda / d vech(S))' with
+      # d lambda = t(w) dS w, w = t(M) v (v the smallest-root pencil
+      # eigenvector, normalized t(v) MTM v = 1)
+      if (extra && lambda_kappa == 1) {
+        # recompute of the same pencil: suppress its (duplicate) warnings
+        lam_v <- try(suppressWarnings(
+                       lav_mat_sym_diff_smallest_root(msm, mtm,
+                                                      vector = TRUE)),
+                     silent = TRUE)
+        vv <- attr(lam_v, "v")
+        if (!inherits(lam_v, "try-error") && !is.null(vv) &&
+            all(is.finite(vv))) {
+          lambda_w <- drop(t(m) %*% vv)
+        }
+        # no usable direction -> lambda.w stays NULL and the analytic
+        # rank-1 term is simply skipped (old, conservative behavior);
+        # kappa is kept, so the frozen re-runs still track lambda
       }
     }
   } else {
@@ -531,6 +581,11 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
     attr(veta, "lambda.star") <- lambda_star
     attr(veta, "MSM") <- msm
     attr(veta, "MTM") <- mtm
+    # SE machinery (see lav_sam_jacb_lambda1_g() and the frozen-floor
+    # re-runs in the numeric jacobian channels)
+    attr(veta, "lambda.kappa") <- lambda_kappa
+    attr(veta, "lambda.w") <- lambda_w
+    attr(veta, "lambda.floor.used") <- lambda_floor_used
   }
 
   veta

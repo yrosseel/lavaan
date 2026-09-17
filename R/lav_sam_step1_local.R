@@ -61,6 +61,13 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       "local option lambda1.floor should be \"debias\", \"default\", or a
        single nonnegative number."))
   }
+  # internal (SE machinery only, see lav_sam_local_options_frozen()):
+  # per-block frozen first-order truncation state, so that the perturbed
+  # re-runs of the numeric jacobian channels do not re-estimate the
+  # (gated, bootstrap-based) debias floor -- the gate is a step function,
+  # and a finite difference across a gate flip produces a garbage column
+  local_lambda1_frozen_floor <- local_options[["lambda1.floor.frozen"]]
+  local_lambda1_frozen_star <- local_options[["lambda1.star.frozen"]]
 
   lavoptions <- fit@Options
   lavpta <- fit@pta
@@ -244,6 +251,10 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   alpha      <- vector("list", nblocks)
   lambda     <- vector("list", nblocks)
   lambda1    <- vector("list", nblocks)
+  lambda1_kappa      <- vector("list", nblocks)
+  lambda1_w          <- vector("list", nblocks)
+  lambda1_floor_used <- vector("list", nblocks)
+  lambda1_star_used  <- vector("list", nblocks)
   if (lavoptions$meanstructure) {
     eeta <- vector("list", nblocks)
   } else {
@@ -380,6 +391,21 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       }
     }
 
+    # frozen truncation state for this block (numeric jacobian re-runs
+    # only): a finite frozen lambda.star (kappa = 0 truncation) pins the
+    # effective multiplier; otherwise a finite frozen floor replaces the
+    # data-driven ("debias") floor by its at-the-estimates value
+    lambda_floor_b <- local_lambda1_floor
+    if (!is.null(local_lambda1_frozen_star) &&
+        b <= length(local_lambda1_frozen_star) &&
+        is.finite(local_lambda1_frozen_star[b])) {
+      lambda_floor_b <- list(star = local_lambda1_frozen_star[b])
+    } else if (!is.null(local_lambda1_frozen_floor) &&
+               b <= length(local_lambda1_frozen_floor) &&
+               is.finite(local_lambda1_frozen_floor[b])) {
+      lambda_floor_b <- local_lambda1_frozen_floor[b]
+    }
+
     # compute VETA
     if (sam_method == "local") {
       if (lsam_analytic_flag[b]) {
@@ -387,7 +413,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           m = mb, s = cov_1, mm_theta = mm_theta[[b]],
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
-          lambda_floor = local_lambda1_floor, y = yb1,
+          lambda_floor = lambda_floor_b, y = yb1,
           n = fit@SampleStats@nobs[[this_group]],
           dummy_lv_idx = dummy_lv_idx,
           extra = TRUE
@@ -397,6 +423,12 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         lambda[[b]] <- attr(tmp, "lambda.star")
         msm_list[[b]] <- attr(tmp, "MSM")
         mtm_list[[b]] <- attr(tmp, "MTM")
+        lambda1_kappa[[b]]      <- attr(tmp, "lambda.kappa")
+        # note: [b] <- list(...), because the attribute may be NULL (a
+        # [[b]] <- NULL assignment would *delete* the list element)
+        lambda1_w[b]            <- list(attr(tmp, "lambda.w"))
+        lambda1_floor_used[[b]] <- attr(tmp, "lambda.floor.used")
+        lambda1_star_used[[b]]  <- attr(tmp, "lambda.star")
         # effective first-order coefficient on the (pd-forced) MTM matrix,
         # so that VETA = MSM - lambda1 * MTM; this absorbs both the
         # lambda.star correction (1 if the correction was not needed) and
@@ -422,6 +454,9 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         lambda1[[b]] <- as.numeric(NA)
         msm_list[[b]] <- matrix(0, 0, 0)
         mtm_list[[b]] <- matrix(0, 0, 0)
+        lambda1_kappa[[b]]      <- 0
+        lambda1_floor_used[[b]] <- as.numeric(NA)
+        lambda1_star_used[[b]]  <- as.numeric(NA)
       }
     } else if (sam_method == "cfsr") {
       # first, we need the 'true' VETA (to get Sigma)
@@ -429,7 +464,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         m = mb, s = cov_1, mm_theta = mm_theta[[b]],
         alpha_correction = 0L,
         lambda_correction = local_options[["lambda.correction"]],
-        lambda_floor = local_lambda1_floor, y = yb1,
+        lambda_floor = lambda_floor_b, y = yb1,
         n = fit@SampleStats@nobs[[this_group]],
         dummy_lv_idx = dummy_lv_idx,
         extra = FALSE
@@ -701,6 +736,16 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$M        <- m
   step1$lambda   <- lambda
   step1$lambda1  <- lambda1
+  # first-order truncation state for the SE machinery (kappa = d
+  # lambda.star / d lambda of the branch taken; w = the pencil direction
+  # for the analytic rank-1 jacobian term; floor/star.used = the frozen
+  # values for the numeric jacobian re-runs). Note: step1$lambda gets
+  # overwritten by the second-order lambda.star when lv interactions are
+  # present, so the first-order star is kept separately here.
+  step1$lambda1.kappa      <- lambda1_kappa
+  step1$lambda1.w          <- lambda1_w
+  step1$lambda1.floor.used <- lambda1_floor_used
+  step1$lambda1.star.used  <- lambda1_star_used
   step1$alpha    <- alpha
   step1$MSM      <- msm_list
   step1$MTM      <- mtm_list
@@ -882,16 +927,88 @@ lav_sam_veta_vec <- function(step1_obj, groups, meanstructure,
   }))
 }
 
+# Local options for the numeric-jacobian re-runs of lav_sam_step1_local():
+# freeze the first-order truncation state at its at-the-estimates values.
+# A kappa = 0 truncation (lambda-tracking debias margin, or a clamp at
+# zero) pins the effective multiplier lambda.star; any other block gets
+# its floor as a fixed number (the data-driven "debias" floor must not be
+# re-estimated at perturbed inputs: its gate is a step function, and a
+# finite difference across a gate flip produces a garbage column -- on
+# top of the pointless bootstrap cost per perturbation).
+lav_sam_local_options_frozen <- function(step1) {
+  lo <- step1$local.options
+  nblocks <- length(step1$VETA)
+  get_num <- function(x, b) {
+    if (b > length(x) || is.null(x[[b]]) || !is.numeric(x[[b]])) {
+      return(as.numeric(NA))
+    }
+    x[[b]]
+  }
+  floors <- vapply(seq_len(nblocks), function(b) {
+    get_num(step1$lambda1.floor.used, b)
+  }, numeric(1L))
+  stars <- vapply(seq_len(nblocks), function(b) {
+    kappa <- step1$lambda1.kappa[[b]]
+    star <- get_num(step1$lambda1.star.used, b)
+    if (!is.null(kappa) && isTRUE(kappa == 0) && is.finite(star)) {
+      star
+    } else {
+      as.numeric(NA)
+    }
+  }, numeric(1L))
+  if (any(is.finite(floors))) {
+    lo[["lambda1.floor.frozen"]] <- floors
+  }
+  if (any(is.finite(stars))) {
+    lo[["lambda1.star.frozen"]] <- stars
+  }
+  lo
+}
+
+# First-order lambda-truncation term for the analytic (continuous) JACb:
+# when the truncation binds with lambda.star tracking lambda (kappa = 1),
+# vech(VETA) = vech(MSM) - lambda.star * vech(MTM) with
+# lambda.star = lambda - floor, so d vech(VETA) / d vech(S) carries the
+# extra rank-1 term
+#   - vech(MTM) %*% (d lambda / d vech(S))'
+# with d lambda = t(w) dS w, w = t(M) v (v the smallest-root pencil
+# eigenvector, normalized t(v) MTM v = 1; see lav_sam_veta()). In the
+# pinned direction this exactly cancels the MSM variation
+# (d [t(v) VETA v] = d lambda - d lambda = 0), which is what the
+# truncation enforces. The term touches only the trailing
+# vech(VETA) x vech(S) block (the mean -- or conditional intercept/slope
+# -- rows do not involve lambda), so when nothing binds the jacobian is
+# returned unchanged.
+lav_sam_jacb_lambda1_g <- function(jacb, step1, g) {
+  kappa <- step1$lambda1.kappa[[g]]
+  w <- step1$lambda1.w[[g]]
+  if (is.null(kappa) || !isTRUE(kappa == 1) || is.null(w)) {
+    return(jacb)
+  }
+  mtm_vech <- lav_mat_vech(step1$MTM[[g]])
+  ww2 <- 2 * tcrossprod(w)
+  diag(ww2) <- diag(ww2) / 2
+  dlam <- lav_mat_vech(ww2) # d lambda / d vech(S)
+  nr <- length(mtm_vech)
+  nc <- length(dlam)
+  row_idx <- nrow(jacb) - nr + seq_len(nr)
+  col_idx <- ncol(jacb) - nc + seq_len(nc)
+  jacb[row_idx, col_idx] <- jacb[row_idx, col_idx] -
+    tcrossprod(mtm_vech, dlam)
+  jacb
+}
+
 # Numeric jacobian of the stacked structural moments w.r.t. a set of
 # free-parameter rows of step1$PT$est (rows_idx). Used for JACc (rows_idx =
 # keep_idx) and the psi channel (rows_idx = the joint factor (co)variance rows).
 lav_sam_jac_est_rows <- function(rows_idx, step1, fit, groups, meanstructure) {
   conditional_x <- fit@Model@conditional.x
+  local_options_1 <- lav_sam_local_options_frozen(step1)
   ff <- function(x) {
     step1_1 <- step1
     step1_1$PT$est[rows_idx] <- x
     step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-      sam_method = step1$sam.method, local_options = step1$local.options)
+      sam_method = step1$sam.method, local_options = local_options_1)
     lav_sam_veta_vec(step1_1, groups, meanstructure, conditional_x)
   }
   verbose_flag <- lav_verbose()
@@ -937,7 +1054,8 @@ lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
                                     ncol = ncol(slopes_g))
     }
     step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-      sam_method = step1$sam.method, local_options = step1$local.options)
+      sam_method = step1$sam.method,
+      local_options = lav_sam_local_options_frozen(step1))
     lav_sam_veta_vec(step1_1, g, meanstructure, conditional_x)
   }
   verbose_flag <- lav_verbose()
@@ -1360,7 +1478,8 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       colnames(ytrans[[1]]) <- fit@pta$vnames$ov[[1]]
 
       step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit, y = ytrans,
-           sam_method = step1$sam.method, local_options = step1$local.options)
+           sam_method = step1$sam.method,
+           local_options = lav_sam_local_options_frozen(step1))
       if (lavmodel@meanstructure) {
         out <- c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
       } else {
@@ -1388,8 +1507,10 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     jacb <- lav_sam_jacb_cont_condx_g(step1$M[[g]],
       nexo = length(fit@Data@ov.names.x[[g]]),
       d_std = step1$D.STD[[g]])
+    jacb <- lav_sam_jacb_lambda1_g(jacb, step1, g)
   } else { # no latent interactions
     jacb <- lav_sam_jacb_cont_g(step1$M[[g]], lavmodel@meanstructure)
+    jacb <- lav_sam_jacb_lambda1_g(jacb, step1, g)
   }
 
   # JACc: jacobian of vech(VETA) = f(theta.mm), keeping vech(S) fixed
@@ -1740,6 +1861,7 @@ lav_sam_gamma_eta_2l <- function(step1 = NULL, fit = NULL) {
   for (b in 1:2) {
     # direct part: (EETA_b, vech(VETA_b)) = f(mean_b, vech(S_b)), theta fixed
     jacb_core <- lav_sam_jacb_cont_g(step1$M[[b]], meanstructure)
+    jacb_core <- lav_sam_jacb_lambda1_g(jacb_core, step1, b)
     jacb <- matrix(0, nrow = nrow(jacb_core), ncol = n_s)
     jacb[, seg_offset[b] + seq_len(seg_len[b])] <- jacb_core
     # indirect part: through the measurement estimates
@@ -2111,7 +2233,8 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
     }
   } else {
     for (g in seq_len(ngroups)) {
-      jacb_list[[g]] <- lav_sam_jacb_cont_g(step1$M[[g]], meanstructure)
+      jacb_list[[g]] <- lav_sam_jacb_lambda1_g(
+        lav_sam_jacb_cont_g(step1$M[[g]], meanstructure), step1, g)
     }
   }
   jacb <- lav_mat_bdiag(jacb_list)

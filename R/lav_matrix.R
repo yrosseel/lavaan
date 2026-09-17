@@ -1288,7 +1288,14 @@ lav_mat_sym_inverse_update <- function(s_inv, rm_idx = integer(0L),
 # if P is (numerically) zero, there are no finite roots, and we return +Inf
 # (the callers test 'lambda < cutoff', and with P = 0 the correction term
 # vanishes anyway)
-lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
+#
+# if vector = TRUE, the corresponding (full-space) eigenvector v is returned
+# in the "v" attribute, normalized so that t(v) P v = 1; it satisfies
+# (M - lambda*P) v = 0 and gives the first-order perturbation
+# d lambda = t(v) dM v - lambda * t(v) dP v (used by the SE machinery of
+# the SAM lambda correction)
+lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL,
+                                           vector = FALSE) {
   # check input (we will 'assume' they are square and symmetric)
   stopifnot(is.matrix(m), is.matrix(p))
 
@@ -1324,6 +1331,7 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
   # regress out the M-block corresponding to zero diagonal elements in P
   # (for a positive semidefinite P, a zero diagonal element implies a zero
   # row/column, i.e. a null space direction of P)
+  m_np_out <- m_nn_out <- NULL
   if (length(zero_idx) > 0L) {
     m_pp <- m[-zero_idx, -zero_idx, drop = FALSE]
     m_pn <- m[-zero_idx, zero_idx, drop = FALSE]
@@ -1332,14 +1340,22 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
 
     m <- m_pp - m_pn %*% lav_mat_sym_solve_spd(m_nn, m_np)
     p <- p[-zero_idx, -zero_idx, drop = FALSE]
+    m_np_out <- m_np
+    m_nn_out <- m_nn
   }
 
   # compute the smallest root of |M - lambda*P| = 0
+  v_red <- NULL
   if (pdiag_flag) {
     # diagonal P with strictly positive diagonal elements
     ldiag <- 1 / sqrt(diag(p))
     lml <- t(ldiag * m) * ldiag
-    lambda <- eigen(lml, symmetric = TRUE, only.values = TRUE)$values[nrow(p)]
+    eig_l <- eigen(lml, symmetric = TRUE, only.values = !vector)
+    lambda <- eig_l$values[nrow(p)]
+    if (vector) {
+      # v = D^{-1} u with u the (unit) eigenvector; t(v) P v = t(u) u = 1
+      v_red <- ldiag * eig_l$vectors[, nrow(p)]
+    }
   } else {
     eig_p <- eigen(p, symmetric = TRUE)
     ev <- eig_p$values
@@ -1357,7 +1373,8 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
         "matrix to subtract is not positive semidefinite; using its positive part only"))
     }
 
-    vt_mv <- crossprod(eig_p$vectors, m %*% eig_p$vectors)
+    vt_mv_full <- crossprod(eig_p$vectors, m %*% eig_p$vectors)
+    vt_mv <- vt_mv_full
     if (rank_p < nrow(p)) {
       # hidden rank deficiency: regress out the null space of P
       pos_idx <- seq_len(rank_p)
@@ -1370,7 +1387,40 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
 
     d_p <- ev[seq_len(rank_p)]
     lml <- t(vt_mv / sqrt(d_p)) / sqrt(d_p)
-    lambda <- eigen(lml, symmetric = TRUE, only.values = TRUE)$values[rank_p]
+    eig_l <- eigen(lml, symmetric = TRUE, only.values = !vector)
+    lambda <- eig_l$values[rank_p]
+    if (vector) {
+      # coordinates in the eigenbasis of P: z1 (positive part) from the
+      # whitened eigenvector, z2 (null-space part) from the Schur
+      # complement relation z2 = -Mt22^{-1} Mt21 z1
+      z1 <- eig_l$vectors[, rank_p] / sqrt(d_p)
+      z <- z1
+      if (rank_p < nrow(p)) {
+        pos_idx <- seq_len(rank_p)
+        m_np_i <- vt_mv_full[-pos_idx, pos_idx, drop = FALSE]
+        m_nn_i <- vt_mv_full[-pos_idx, -pos_idx, drop = FALSE]
+        z2 <- -1 * lav_mat_sym_solve_spd(m_nn_i, m_np_i %*% z1)
+        z <- numeric(nrow(p))
+        z[pos_idx] <- z1
+        z[-pos_idx] <- z2
+      }
+      v_red <- drop(eig_p$vectors %*% z)
+    }
+  }
+
+  if (vector && !is.null(v_red)) {
+    # embed into the full space: the zero rows/columns of P satisfy the
+    # second block row of (M - lambda*P) v = 0 via
+    # v_zero = -M_nn^{-1} M_np v_red
+    if (length(zero_idx) > 0L) {
+      v_full <- numeric(n_p)
+      v_full[-zero_idx] <- v_red
+      v_full[zero_idx] <- -1 * drop(lav_mat_sym_solve_spd(
+        m_nn_out, m_np_out %*% v_red))
+    } else {
+      v_full <- v_red
+    }
+    attr(lambda, "v") <- v_full
   }
 
   lambda
