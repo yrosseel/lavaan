@@ -29,7 +29,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     local_lambda2_floor <- local_options[["lambda.floor"]]
   }
   if (is.null(local_lambda2_floor)) { # eg stored local.options of old objects
-    local_lambda2_floor <- "default"
+    local_lambda2_floor <- "debias"
   }
   if (!((is.character(local_lambda2_floor) &&
          length(local_lambda2_floor) == 1L &&

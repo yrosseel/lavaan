@@ -1697,7 +1697,7 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
                                   M.method = "ML",
                                   lambda.correction = TRUE,
                                   lambda1.floor = "debias",
-                                  lambda2.floor = "default",
+                                  lambda2.floor = "debias",
                                   alpha.correction = 0L,
                                   twolevel.method = "h1"
                                 )) {

@@ -11,7 +11,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     struc_args = list(estimator = "ML"), 
     sam_method = "local", ..., 
     local_options = list(M.method = "ML", lambda.correction = TRUE,
-                         lambda1.floor = "debias", lambda2.floor = "default",
+                         lambda1.floor = "debias", lambda2.floor = "debias",
                          alpha.correction = 0L, twolevel.method = "h1"),
     global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
@@ -102,30 +102,33 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      the first-order correction (of VETA itself) and by
      \code{lambda2.floor} for the second-order correction (of the
      product-term augmented VETA2, only when the model contains latent
-     quadratic/interaction terms). Both options accept the same values.
-     \code{"debias"} (the default for \code{lambda1.floor}) is a gated
-     rule: whenever the sample margin is comfortably positive (the vast
-     majority of well-behaved analyses), the historical behavior is
-     reproduced exactly; only when the smallest generalized eigenvalue of
-     the pencil is within (twice) its own sampling noise of the boundary
-     is the truncation margin replaced by a bootstrap debiased estimate
-     of the population margin. \code{"default"} (the default for
-     \code{lambda2.floor}) uses the historical (vanishing-with-N) rules:
-     margin 1/(N-1) for the first order, and P2/(N-1) for the second
-     order, where P2 is the number of latent variables plus the number of
-     product terms. A single nonnegative number fixes the margin at that
-     value. \code{lambda2.floor = "debias"} is recommended when the
-     structural model contains several product terms, weakly reliable
-     indicators, or strongly correlated predictors. The gated rules
-     require raw, complete, single-level continuous data (no
-     \code{conditional.x}); in all other settings they automatically fall
-     back to \code{"default"}. (Before September 2026,
-     \code{lambda2.floor} was briefly called \code{lambda.floor}; the old
-     name is still accepted with a warning.) The standard errors of the
+     quadratic/interaction terms). Both options accept the same values,
+     and both default to \code{"debias"}: a gated rule that, whenever
+     the sample margin is comfortably positive (the vast majority of
+     well-behaved analyses), reproduces the historical behavior exactly;
+     only when the smallest generalized eigenvalue of the pencil is
+     within (twice) its own sampling noise of the boundary is the
+     truncation margin replaced by a bootstrap debiased estimate of the
+     population margin. \code{"default"} requests the historical
+     (vanishing-with-N) rules: margin 1/(N-1) for the first order, and
+     P2/(N-1) for the second order, where P2 is the number of latent
+     variables plus the number of product terms; in weakly-identified
+     product-term models the second-order historical margin can make the
+     accuracy of the structural estimates deteriorate with increasing N.
+     A single nonnegative number fixes the margin at that value. The
+     gated rules require raw, complete, single-level continuous data (no
+     \code{conditional.x}); in all other settings they automatically
+     fall back to \code{"default"}. (Before September 2026,
+     \code{lambda2.floor} was briefly called \code{lambda.floor} -- with
+     \code{"default"} as its default -- and the old name is still
+     accepted with a warning.) The standard errors of the
      local family (and the corrected structural test statistic) account
      for the sampling variability of a binding truncation -- both the
      first-order one and, for models with latent product terms, the
      second-order one; when no truncation binds, they are unaffected.
+     Note that when the debiased truncation engages, large product-term
+     coefficients are somewhat shrunken, and their confidence intervals
+     can be slightly anti-conservative.
      The
      \code{alpha.correction} option must be
      an integer. Acceptable values are in the range 0 to
