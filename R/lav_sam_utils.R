@@ -840,7 +840,18 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
 
   lambda <- +Inf
   lambda_star <- 1
-  if (lambda_correction) {
+  lambda_kappa <- 0
+  lambda_v <- NULL
+  lambda_floor_used <- as.numeric(NA)
+  if (lambda_correction && is.list(lambda_floor)) {
+    # internal (SE machinery only): frozen effective multiplier -- the
+    # numeric-jacobian channels re-run this function at perturbed inputs,
+    # and a kappa = 0 truncation (lambda-tracking debias margin, or a
+    # clamp at zero) must keep lambda.star fixed at its at-the-estimates
+    # value there
+    lambda_star <- lambda_floor[["star"]]
+    veta2 <- var_fs2 - lambda_star * var_error
+  } else if (lambda_correction) {
     # use Fuller (1987) approach to ensure VETA2 is positive
     lambda <- try(lav_mat_sym_diff_smallest_root(
       var_fs2,
@@ -854,6 +865,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
       #   NULL     -> historical rule (cutoff 1 + 2/n, floor p2/(n-1))
       #   a number -> coherent rule: truncate iff lambda < 1 + floor
       floor_2 <- NULL
+      kappa_2 <- 1 # a fixed (numeric) floor: lambda.star tracks lambda
       if (identical(lambda_floor, "debias")) {
         # gated bootstrap-debiased floor; NULL when the sample margin is
         # comfortably positive (then lambda >= 1 + 2/n by the gate
@@ -865,13 +877,19 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
           var_error = var_error, lambda = lambda, n = n,
           mi_flag = mi_flag
         )
+        if (!is.null(floor_2) && !is.null(attr(floor_2, "kappa"))) {
+          kappa_2 <- attr(floor_2, "kappa")
+        }
       } else if (is.numeric(lambda_floor)) {
         floor_2 <- lambda_floor
       }
       if (!is.null(floor_2)) {
+        lambda_floor_used <- as.numeric(floor_2)
         if (lambda < 1 + floor_2) {
           lambda_star <- max(c(0, lambda - floor_2))
           veta2 <- var_fs2 - lambda_star * var_error
+          # clamped at zero -> VETA2 = var_fs2 exactly, no lambda term
+          lambda_kappa <- if (lambda_star > 0) kappa_2 else 0
         } else {
           veta2 <- var_fs2 - var_error
         }
@@ -884,13 +902,31 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
         # with an ever smaller margin, and the accuracy of the
         # structural estimates can *deteriorate* with increasing n;
         # lambda2.floor = "debias" is a data-driven alternative
+        lambda_floor_used <- ncol(var_fs2) / (n - 1)
         cutoff <- 1 + 2 / n # be more conservative for VETA2
         if (lambda < cutoff) {
           lambda_star <- max(c(0, lambda - ncol(var_fs2) / (n - 1)))
           veta2 <- var_fs2 - lambda_star * var_error
+          lambda_kappa <- if (lambda_star > 0) 1 else 0
         } else {
           veta2 <- var_fs2 - var_error
         }
+      }
+      # pencil eigenvector for the SE machinery: when the truncation
+      # binds with lambda.star tracking lambda (kappa = 1), the casewise
+      # contributions below gain the influence of lambda-hat itself
+      # (recompute of the same pencil: suppress its duplicate warnings)
+      if ((return_cov_iveta2 || extra) && lambda_kappa == 1) {
+        lam_v <- try(suppressWarnings(
+                       lav_mat_sym_diff_smallest_root(var_fs2, var_error,
+                                                      vector = TRUE)),
+                     silent = TRUE)
+        vv <- attr(lam_v, "v")
+        if (!inherits(lam_v, "try-error") && !is.null(vv) &&
+            all(is.finite(vv))) {
+          lambda_v <- vv
+        }
+        # no usable direction -> the IF term is skipped (old behavior)
       }
     }
   } else {
@@ -1000,6 +1036,45 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
                t(t(fs2[, col_21, drop = FALSE]) * b_12) +
                quad_case))
 
+    # sampling variability of the second-order lambda-hat itself
+    # (kappa = 1 truncation): d lambda = t(v) (d var_fs2 -
+    # lambda * d var_error) v, with v the smallest-root pencil
+    # eigenvector (t(v) var_error v = 1). Casewise:
+    #   IF_i = [ (z_i'v)^2 - mean ] -
+    #          lambda * (1 - alpha_n1) * [ u_i - mean(u) ]
+    # where z_i are the centered kept second-order scores, and
+    # u_i = t(v) tmp_i v is the casewise var.error representation: with
+    # V the nfac x nfac embedding of v (V[i1k, i2k] = v) and
+    # Vs = V + t(V), the F-linear part collapses into the single form
+    #   u_i = < F_i, Vs B Vs >
+    # (all four F x B index shapes of tmp_i; the case-constant parts
+    # cancel in the centering; under mi the per-pattern quadratic parts
+    # are added per case). The vech(VETA2) contributions then gain
+    # - var_error[pa, pb] * IF_i, which is exactly mean-zero: the
+    # statistics are unchanged, only their covariance changes.
+    if (lambda_kappa == 1 && !is.null(lambda_v)) {
+      zv <- drop(fs2kc %*% lambda_v)
+      v2mat <- matrix(0, nrow = nfac, ncol = nfac)
+      v2mat[cbind(i1k, i2k)] <- lambda_v
+      vs_m <- v2mat + t(v2mat)
+      w_m <- vs_m %*% mtm %*% vs_m
+      u_i <- drop(fs2 %*% as.vector(t(w_m)))
+      if (mi_flag) {
+        # per-pattern quadratic part (the (I+K)Q and D terms vary over
+        # the patterns; globally constant parts cancel in the centering)
+        u_quad <- vapply(bp_aug, function(b) {
+          q1 <- b[i1k, i1k, drop = FALSE] * b[i2k, i2k, drop = FALSE]
+          q2 <- b[i2k, i1k, drop = FALSE] * b[i1k, i2k, drop = FALSE]
+          drop(crossprod(lambda_v, (q1 + q2) %*% lambda_v)) +
+            sum(lambda_v * b[cbind(i1k, i2k)])^2
+        }, numeric(1L))
+        u_i <- u_i + u_quad[pat_of_case]
+      }
+      if_lambda <- (zv * zv - mean(zv * zv)) -
+        lambda * (1 - alpha_n1) * (u_i - mean(u_i))
+      part2 <- part2 - tcrossprod(if_lambda, var_error[cbind(pa, pb)])
+    }
+
     iveta2_1 <- cbind(part1, part2)
     cov_iveta2 <- cov(iveta2_1) * (n - 1) / n
   }
@@ -1012,6 +1087,10 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     attr(veta2, "MSM") <- var_fs2
     attr(veta2, "MTM") <- var_error
     attr(veta2, "FS.mean") <- fs_mean
+    # SE machinery (see lav_sam_gamma_add() and the frozen-floor re-runs
+    # in the numeric jacobian channels)
+    attr(veta2, "lambda.kappa") <- lambda_kappa
+    attr(veta2, "lambda.floor.used") <- lambda_floor_used
   }
   if (return_fs) {
     attr(veta2, "FS") <- fs2[, lv_keep, drop = FALSE]

@@ -68,6 +68,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   # and a finite difference across a gate flip produces a garbage column
   local_lambda1_frozen_floor <- local_options[["lambda1.floor.frozen"]]
   local_lambda1_frozen_star <- local_options[["lambda1.star.frozen"]]
+  local_lambda2_frozen_floor <- local_options[["lambda2.floor.frozen"]]
+  local_lambda2_frozen_star <- local_options[["lambda2.star.frozen"]]
 
   lavoptions <- fit@Options
   lavpta <- fit@pta
@@ -255,6 +257,9 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   lambda1_w          <- vector("list", nblocks)
   lambda1_floor_used <- vector("list", nblocks)
   lambda1_star_used  <- vector("list", nblocks)
+  lambda2_kappa      <- vector("list", nblocks)
+  lambda2_floor_used <- vector("list", nblocks)
+  lambda2_star_used  <- vector("list", nblocks)
   if (lavoptions$meanstructure) {
     eeta <- vector("list", nblocks)
   } else {
@@ -617,6 +622,18 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
       # VETA2
       if (sam_method == "local") {
+        # frozen second-order truncation state (numeric jacobian re-runs
+        # only), mirroring the first-order handling above
+        lambda2_floor_b <- local_lambda2_floor
+        if (!is.null(local_lambda2_frozen_star) &&
+            b <= length(local_lambda2_frozen_star) &&
+            is.finite(local_lambda2_frozen_star[b])) {
+          lambda2_floor_b <- list(star = local_lambda2_frozen_star[b])
+        } else if (!is.null(local_lambda2_frozen_floor) &&
+                   b <= length(local_lambda2_frozen_floor) &&
+                   is.finite(local_lambda2_frozen_floor[b])) {
+          lambda2_floor_b <- local_lambda2_frozen_floor[b]
+        }
         tmp <- lav_sam_veta2(
           fs = fs_b, m = mb_v2,
           veta = veta[[b]], eeta = eeta1,
@@ -626,7 +643,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           dummy_lv_names = lv_names_b[dummy_lv_idx],
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
-          lambda_floor = local_lambda2_floor,
+          lambda_floor = lambda2_floor_b,
           lambda1 = lambda1[[b]],
           pattern_list = pattern_list,
           return_fs = return_fs,
@@ -639,6 +656,9 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         msm_list[[b]] <- attr(tmp, "MSM")
         mtm_list[[b]] <- attr(tmp, "MTM")
         fs_mean[[b]] <- attr(tmp, "FS.mean")
+        lambda2_kappa[[b]]      <- attr(tmp, "lambda.kappa")
+        lambda2_floor_used[[b]] <- attr(tmp, "lambda.floor.used")
+        lambda2_star_used[[b]]  <- attr(tmp, "lambda.star")
         if (return_fs) {
           fs[[b]] <- attr(tmp, "FS")
         }
@@ -746,6 +766,11 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$lambda1.w          <- lambda1_w
   step1$lambda1.floor.used <- lambda1_floor_used
   step1$lambda1.star.used  <- lambda1_star_used
+  # idem for the second-order (VETA2) truncation; empty unless the model
+  # contains latent quadratic/interaction terms
+  step1$lambda2.kappa      <- lambda2_kappa
+  step1$lambda2.floor.used <- lambda2_floor_used
+  step1$lambda2.star.used  <- lambda2_star_used
   step1$alpha    <- alpha
   step1$MSM      <- msm_list
   step1$MTM      <- mtm_list
@@ -944,24 +969,31 @@ lav_sam_local_options_frozen <- function(step1) {
     }
     x[[b]]
   }
-  floors <- vapply(seq_len(nblocks), function(b) {
-    get_num(step1$lambda1.floor.used, b)
-  }, numeric(1L))
-  stars <- vapply(seq_len(nblocks), function(b) {
-    kappa <- step1$lambda1.kappa[[b]]
-    star <- get_num(step1$lambda1.star.used, b)
-    if (!is.null(kappa) && isTRUE(kappa == 0) && is.finite(star)) {
-      star
-    } else {
-      as.numeric(NA)
+  freeze_order <- function(kappa_l, floor_l, star_l, tag) {
+    floors <- vapply(seq_len(nblocks), function(b) {
+      get_num(floor_l, b)
+    }, numeric(1L))
+    stars <- vapply(seq_len(nblocks), function(b) {
+      kappa <- if (b <= length(kappa_l)) kappa_l[[b]] else NULL
+      star <- get_num(star_l, b)
+      if (!is.null(kappa) && isTRUE(kappa == 0) && is.finite(star)) {
+        star
+      } else {
+        as.numeric(NA)
+      }
+    }, numeric(1L))
+    if (any(is.finite(floors))) {
+      lo[[paste0(tag, ".floor.frozen")]] <<- floors
     }
-  }, numeric(1L))
-  if (any(is.finite(floors))) {
-    lo[["lambda1.floor.frozen"]] <- floors
+    if (any(is.finite(stars))) {
+      lo[[paste0(tag, ".star.frozen")]] <<- stars
+    }
+    invisible(NULL)
   }
-  if (any(is.finite(stars))) {
-    lo[["lambda1.star.frozen"]] <- stars
-  }
+  freeze_order(step1$lambda1.kappa, step1$lambda1.floor.used,
+               step1$lambda1.star.used, "lambda1")
+  freeze_order(step1$lambda2.kappa, step1$lambda2.floor.used,
+               step1$lambda2.star.used, "lambda2")
   lo
 }
 
@@ -2379,12 +2411,24 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   i2k <- tmp$idx2[keep_idx]
 
   # the second-order lambda.star, and the effective first-order lambda1,
-  # are treated as fixed constants (not differentiated)
+  # are treated as fixed constants (not differentiated) -- EXCEPT when a
+  # kappa = 1 truncation bound at the estimates (lambda.star tracking
+  # lambda-hat through a lambda-independent floor): the step-1-parameter
+  # channel must then differentiate through lambda-hat as well, so
+  # lbar() recomputes the pencil root at the perturbed parameters, with
+  # the floor frozen at its at-the-estimates value. The closed-form
+  # jacobian does not carry these terms; we fall back to numDeriv there.
   lambda_star <- step1$lambda[[1]]
   lambda1 <- step1$lambda1[[1]]
   if (is.null(lambda1) || !is.finite(lambda1)) {
     lambda1 <- 1
   }
+  kappa1 <- step1$lambda1.kappa[[1]]
+  floor1 <- step1$lambda1.floor.used[[1]]
+  track1 <- isTRUE(kappa1 == 1) && is.numeric(floor1) && is.finite(floor1)
+  kappa2 <- step1$lambda2.kappa[[1]]
+  floor2 <- step1$lambda2.floor.used[[1]]
+  track2 <- isTRUE(kappa2 == 1) && is.numeric(floor2) && is.finite(floor2)
   # effective second-order multiplier of the unscaled var.error term,
   # absorbing the alpha correction (see lav_sam_veta2())
   alpha_n1 <- lav_sam_alpha_n1(step1$alpha[[1]], n)
@@ -2477,6 +2521,19 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
       this_m[dummy_lv_idx, ] <- 0
       this_m[cbind(dummy_lv_idx, dummy_ov_idx)] <- 1
     }
+    # first-order lambda at the perturbed parameters (kappa = 1 only):
+    # same pencil as lav_sam_veta(), with the floor frozen
+    this_lambda1 <- lambda1
+    if (track1) {
+      msm_1 <- this_m %*% step1$COV[[1]] %*% t(this_m)
+      mtm_1 <- (1 - alpha_n1) * (this_m %*% this_theta %*% t(this_m))
+      lam1 <- try(suppressWarnings(
+                    lav_mat_sym_diff_smallest_root(msm_1, mtm_1)),
+                  silent = TRUE)
+      if (!inherits(lam1, "try-error") && is.finite(lam1)) {
+        this_lambda1 <- (1 - alpha_n1) * max(0, lam1 - floor1)
+      }
+    }
     m_pre_std <- this_m
     d_std <- NULL
     if (std_lv_flag) {
@@ -2486,7 +2543,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
       # never rescaled
       msm_diag <- rowSums((this_m %*% step1$COV[[1]]) * this_m)
       mtm_diag <- rowSums((this_m %*% this_theta) * this_m)
-      d_std <- sqrt(msm_diag - lambda1 * mtm_diag)
+      d_std <- sqrt(msm_diag - this_lambda1 * mtm_diag)
       d_std[dummy_lv_idx] <- 1
       this_m <- this_m / d_std
     }
@@ -2518,7 +2575,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
 
     # C2 = (1/N) \sum_i f_i t(f_i)
     c2 <- crossprod(fs) / n
-    e_mat <- c2 - lambda1 * b_aug
+    e_mat <- c2 - this_lambda1 * b_aug
 
     # first-order part
     out1 <- e_mat[cbind(i2k, i1k)]
@@ -2549,7 +2606,20 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
                           b_aug[i2k, i1k] * b_aug[i1k, i2k])
     }
 
-    out_vec <- c(out1, lav_mat_vech(var_fs2k - lambda2_eff * tmpbar))
+    # second-order lambda at the perturbed parameters (kappa = 1 only):
+    # same pencil as lav_sam_veta2() -- var_fs2k against the (scaled)
+    # tmpbar reconstruction of var.error -- with the floor frozen
+    this_lambda2_eff <- lambda2_eff
+    if (track2) {
+      lam2 <- try(suppressWarnings(
+                    lav_mat_sym_diff_smallest_root(
+                      var_fs2k, (1 - alpha_n1) * tmpbar)),
+                  silent = TRUE)
+      if (!inherits(lam2, "try-error") && is.finite(lam2)) {
+        this_lambda2_eff <- (1 - alpha_n1) * max(0, lam2 - floor2)
+      }
+    }
+    out_vec <- c(out1, lav_mat_vech(var_fs2k - this_lambda2_eff * tmpbar))
     if (!.return_all) {
       return(out_vec)
     }
@@ -2575,6 +2645,11 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # the analytic jacobian assumes a single (complete-data) mapping matrix;
   # with missing patterns we fall back to numDeriv on lbar()
   if (mi_flag) {
+    use_analytic <- FALSE
+  }
+  # a tracking (kappa = 1) truncation: lbar() differentiates through the
+  # recomputed pencil roots, which the closed form does not carry
+  if (track1 || track2) {
     use_analytic <- FALSE
   }
   if (use_analytic) {

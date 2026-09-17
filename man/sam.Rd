@@ -121,11 +121,12 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      \code{conditional.x}); in all other settings they automatically fall
      back to \code{"default"}. (Before September 2026,
      \code{lambda2.floor} was briefly called \code{lambda.floor}; the old
-     name is still accepted with a warning.) For continuous data without
-     latent product terms, the standard errors of the local family (and
-     the corrected structural test statistic) account for the sampling
-     variability of a binding first-order truncation; when the truncation
-     does not bind, they are unaffected. The
+     name is still accepted with a warning.) The standard errors of the
+     local family (and the corrected structural test statistic) account
+     for the sampling variability of a binding truncation -- both the
+     first-order one and, for models with latent product terms, the
+     second-order one; when no truncation binds, they are unaffected.
+     The
      \code{alpha.correction} option must be
      an integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
