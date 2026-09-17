@@ -1614,6 +1614,83 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   list(test = out, baseline.test = baseline_test)
 }
 
+# Truncation-bias report: when the (first- or second-order) lambda
+# truncation engaged (lambda.star < 1), the structural summary statistics
+# retain (1 - lambda.star) * MTM (resp. var.error) of extra error
+# (co)variance, and the step-2 estimates are shrunken toward zero. This
+# helper collects the engaged state, plus a first-order (delta-method)
+# approximation of the per-coefficient shrinkage bias
+#   bias = d theta / d stats . (1 - lambda.star) vech(MTM)
+# i.e. theta at the truncated statistics minus theta at the
+# (estimand-consistent) multiplier-1 statistics, linearized at the
+# truncated fit. The result is stored in the @internal slot and reported
+# as a note by summary(); the estimates themselves are NOT modified.
+# The magnitude is only computed in the plain setting (single level, no
+# conditional.x, no categorical, no across-group Case B); otherwise only
+# the engaged state is returned. Returns NULL when nothing engaged.
+lav_sam_trunc_bias <- function(step1 = NULL, fit_pa = NULL) {
+  lam <- unlist(step1$lambda)
+  if (is.null(lam) || !is.numeric(lam)) {
+    return(NULL)
+  }
+  engaged <- is.finite(lam) & lam < 1
+  if (!any(engaged)) {
+    return(NULL)
+  }
+  vn1 <- colnames(step1$VETA[[1]])
+  out <- list(
+    lambda.star = lam, engaged = engaged,
+    order = if (any(grepl(":", vn1, fixed = TRUE))) 2L else 1L,
+    bias = NULL
+  )
+  if (isTRUE(step1$caseB) || fit_pa@Model@conditional.x ||
+      fit_pa@Model@categorical || fit_pa@Data@nlevels > 1L) {
+    return(out)
+  }
+  out$bias <- tryCatch({
+    delta <- lavTech(fit_pa, "delta")
+    wls_v <- lavTech(fit_pa, "wls.v")
+    if (!is.list(delta)) delta <- list(delta)
+    if (!is.list(wls_v)) wls_v <- list(wls_v)
+    ng <- length(delta)
+    fg <- unlist(fit_pa@SampleStats@nobs) / fit_pa@SampleStats@ntotal
+    a_mat <- 0
+    rhs <- 0
+    for (g in seq_len(ng)) {
+      # the extra error (co)variance retained by the truncation, in the
+      # (possibly sub-block selected) order of the step-2 statistics
+      vn <- colnames(step1$VETA[[g]])
+      mtm <- step1$MTM[[g]]
+      if (!is.null(colnames(mtm))) {
+        idx <- match(vn, colnames(mtm))
+      } else {
+        idx <- match(vn, step1$LV.NAMES[[g]])
+      }
+      dstats <- numeric(nrow(delta[[g]]))
+      if (engaged[g] && !anyNA(idx)) {
+        vb <- (1 - lam[g]) *
+          lav_mat_vech(mtm[idx, idx, drop = FALSE])
+        # the vech(VETA) entries are the trailing block of the step-2
+        # statistics (any mean/intercept entries come first)
+        dstats[length(dstats) - length(vb) + seq_along(vb)] <- vb
+      }
+      vd <- wls_v[[g]] %*% delta[[g]]
+      a_mat <- a_mat + fg[g] * crossprod(delta[[g]], vd)
+      rhs <- rhs + fg[g] * crossprod(vd, dstats)
+    }
+    if (fit_pa@Model@eq.constraints) {
+      k_mat <- fit_pa@Model@eq.constraints.K
+      b_full <- drop(k_mat %*% solve(
+        crossprod(k_mat, a_mat %*% k_mat), crossprod(k_mat, rhs)))
+    } else {
+      b_full <- drop(solve(a_mat, rhs))
+    }
+    names(b_full) <- names(coef(fit_pa))
+    b_full
+  }, error = function(e) NULL)
+  out
+}
+
 lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
                           cmd = NULL, lavoptions = NULL,
                           mm_args = list(), struc_args = list(),
@@ -1639,6 +1716,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
   class(sam_mm_table) <- c("lavaan.data.frame", "data.frame")
 
   # extra info for @internal slot
+  sam_trunc <- NULL
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     # the structural fit object, with the (two-step robust) corrected test
     # and baseline injected; for multigroup models with across-group
@@ -1652,6 +1730,9 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     # (two-step robust) fit measures for the structural part
     sam_struc_fit <- lav_sam_struc_fit(fit_pa = sam_struc_fit_object)
     sam_mm_rel <- step1$REL
+    # engaged lambda truncation? collect the state + the approximate
+    # shrinkage bias of the structural estimates (summary() note)
+    sam_trunc <- lav_sam_trunc_bias(step1 = step1, fit_pa = fit_pa)
   } else {
     sam_struc_fit <- paste0("no local fit measures available for",
                     "structural part if sam.method is global")
@@ -1684,6 +1765,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     }),
     sam.mm.table = sam_mm_table,
     sam.mm.rel = sam_mm_rel,
+    sam.trunc = sam_trunc,
     sam.struc.estimator = fit_pa@Model@estimator,
     sam.struc.args = struc_args,
     sam.struc.fit = sam_struc_fit,

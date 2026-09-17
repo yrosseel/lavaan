@@ -1303,6 +1303,49 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         }
       }
 
+      # engaged lambda truncation: the structural estimates are shrunken
+      # (see the lambda1.floor/lambda2.floor entries in ?sam); the full
+      # per-coefficient bias approximation is stored in
+      # object@internal$sam.trunc$bias
+      sam_trunc <- y$sam$sam.trunc
+      if (!is.null(sam_trunc)) {
+        ls_txt <- paste(sprintf("%.3f",
+                                sam_trunc$lambda.star[sam_trunc$engaged]),
+                        collapse = " ")
+        cat("\n")
+        cat("  Note: the lambda truncation engaged (lambda.star = ",
+            ls_txt, "):\n", sep = "")
+        bias_max <- NULL
+        if (!is.null(sam_trunc$bias)) {
+          # report the regression coefficients (the variance parameters
+          # absorb most of the retained error variance by construction)
+          bb <- sam_trunc$bias
+          reg_idx <- grepl("~", names(bb), fixed = TRUE) &
+                     !grepl("~~", names(bb), fixed = TRUE) &
+                     !grepl("~1", names(bb), fixed = TRUE)
+          bias_max <- max(abs(if (any(reg_idx)) bb[reg_idx] else bb))
+        }
+        if (!is.null(bias_max)) {
+          bias_txt <- if (bias_max < 5e-4) {
+            "< 0.001"
+          } else {
+            sprintf("%.3f", bias_max)
+          }
+          cat("  the structural estimates are biased (typically",
+              "attenuated); max.\n")
+          cat(sprintf(
+            "  approximate bias among the regression coefficients: %s.",
+            bias_txt), "\n", sep = "")
+          cat("  Large coefficients may have undercovering confidence",
+              "intervals.\n")
+        } else {
+          cat("  the structural estimates are biased (typically",
+              "attenuated);\n")
+          cat("  large coefficients may have undercovering confidence",
+              "intervals.\n")
+        }
+      }
+
       # skipped if fit.measures were requested: the (structural) test
       # statistics and fit measures are printed in full further below
       if (!is.null(sam_struc_fit)) {

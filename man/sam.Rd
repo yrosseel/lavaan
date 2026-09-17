@@ -128,7 +128,11 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      second-order one; when no truncation binds, they are unaffected.
      Note that when the debiased truncation engages, large product-term
      coefficients are somewhat shrunken, and their confidence intervals
-     can be slightly anti-conservative.
+     can be slightly anti-conservative. When a truncation engaged,
+     \code{summary()} prints a note with the truncated multiplier(s)
+     and (where available) a delta-method approximation of the maximal
+     shrinkage bias; the per-coefficient approximation is stored in the
+     fitted object (\code{object@internal$sam.trunc$bias}).
      The
      \code{alpha.correction} option must be
      an integer. Acceptable values are in the range 0 to
