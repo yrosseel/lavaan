@@ -2463,8 +2463,15 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # depend on the step 1 parameters, so they are differentiated through)
   std_lv_flag <- fit@Options$std.lv
 
-  # step 1 free parameters
-  step1_idx <- which(step1$PT$free %in% step1$step1.free.idx)
+  # step 1 free parameters, in the order of step1$step1.free.idx (= the
+  # row/column order of step1$Sigma.11: per measurement block, NOT in
+  # parameter table order); step1.free.idx uses the numbering of
+  # step1$PT.free (the *unconstrained* numbering under ceq.simple)
+  pt_free <- step1$PT.free
+  if (is.null(pt_free)) {
+    pt_free <- step1$PT$free
+  }
+  step1_idx <- match(step1$step1.free.idx, pt_free)
   x_step1 <- step1$PT$est[step1_idx]
   pt_1 <- step1$PT
 
