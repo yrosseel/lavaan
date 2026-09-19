@@ -12,7 +12,8 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     sam_method = "local", ..., 
     local_options = list(M.method = "ML", lambda.correction = TRUE,
                          lambda1.floor = "debias", lambda2.floor = "debias",
-                         alpha.correction = 0L, twolevel.method = "h1"),
+                         alpha.correction = 0L, twolevel.method = "h1",
+                         gamma.eta = "casewise"),
     global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
     output = "lavaan",
@@ -133,6 +134,25 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      and (where available) a delta-method approximation of the maximal
      shrinkage bias; the per-coefficient approximation is stored in the
      fitted object (\code{object@internal$sam.trunc$bias}).
+     The option \code{gamma.eta} is only relevant if the model contains
+     latent quadratic/interaction terms. It determines how the sampling
+     variability of the step 1 (measurement) estimates enters the
+     asymptotic variance matrix (Gamma.eta) of the summary statistics of
+     the latent variables, which is used for the standard errors of the
+     local family and for the corrected structural test statistic. If
+     \code{"casewise"} (the default), Gamma.eta is computed from the
+     casewise contributions to these statistics, augmented with the
+     casewise influence of the step 1 estimates (based on the casewise
+     scores of the measurement blocks). If \code{"additive"} (the only
+     available method before 0.7-2), the step 1 variability is added as a
+     separate term, which ignores the covariance between the two
+     sources; this is not innocent for the intercepts of the indicators
+     (which depend on the factor scores), and results in standard errors
+     that are too large for the covariances between the latent variables
+     and their product terms; the additive form also ignores the
+     covariances between the estimates of different measurement blocks,
+     and relies on the (usually normal-theory) standard errors of the
+     measurement blocks.
      The
      \code{alpha.correction} option must be
      an integer. Acceptable values are in the range 0 to

@@ -23,7 +23,8 @@ sam <- function(model = NULL,
                   lambda1.floor = "debias", # or "default", or a number
                   lambda2.floor = "debias", # or "default", or a number
                   alpha.correction = 0L, # 0 -> (N-1)
-                  twolevel.method = "h1"
+                  twolevel.method = "h1",
+                  gamma.eta = "casewise" # or "additive" (lv interactions)
                 ),
                 # h1, anova, mean
                 global_options = list(), # not used for now
@@ -403,11 +404,22 @@ sam <- function(model = NULL,
       lambda1.floor = "debias",
       lambda2.floor = "debias",
       alpha.correction = 0L,
-      twolevel.method = "h1"
+      twolevel.method = "h1",
+      gamma.eta = "casewise"
     )
     local_options <- modifyList(local_opt, local_options,
       keep.null = FALSE
     )
+
+    # gamma.eta: how do we compute Gamma.eta in the presence of latent
+    # interaction/quadratic terms? "casewise" (default) or "additive" (the
+    # only option available in < 0.7-2); see lav_sam_gamma_add()
+    local_options[["gamma.eta"]] <- tolower(local_options[["gamma.eta"]])
+    if (!local_options[["gamma.eta"]] %in% c("casewise", "additive")) {
+      lav_msg_stop(gettext(
+        "local option gamma.eta should be either \"casewise\" or
+         \"additive\"."))
+    }
 
     # collect COV/YBAR sample statistics per block from FIT
     out <- lav_sam_get_cov_ybar(fit = fit, local_options = local_options)
@@ -453,7 +465,8 @@ sam <- function(model = NULL,
           # initial Gamma.eta
           gamma_eta_init <- step1$COV.IVETA2[[g]]
           # compute 'additional variability' due to step1
-          gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit, group = g)
+          gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit,
+            group = g, method = local_options[["gamma.eta"]])
           gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
         }
       } else if (fit@Data@nlevels > 1L) {
@@ -560,6 +573,8 @@ sam <- function(model = NULL,
       step1$Gamma.eta <- NULL
     }
   }
+  # the (N x q) casewise contributions are no longer needed
+  step1$IVETA2 <- step1$IVETA2.idx <- NULL
 
   if (output == "list.step1.only") {
     # stop here, return interim results

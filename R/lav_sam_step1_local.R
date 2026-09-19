@@ -249,6 +249,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   fs_mean    <- vector("list", nblocks)
   fs         <- vector("list", nblocks)
   cov_iveta2 <- vector("list", nblocks)
+  iveta2 <- vector("list", nblocks)
+  iveta2_idx <- vector("list", nblocks)
   rel        <- vector("list", nblocks)
   alpha      <- vector("list", nblocks)
   lambda     <- vector("list", nblocks)
@@ -664,6 +666,9 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         }
         if (return_cov_iveta2) {
           cov_iveta2[[b]] <- attr(tmp, "cov.iveta2")
+          # casewise contributions + the rows (cases) they belong to
+          iveta2[[b]] <- attr(tmp, "iveta2")
+          iveta2_idx[[b]] <- if (mi_flag) ok_idx else seq_len(nrow(fs_b))
           if (mi_flag && nrow(fs_b) < n_all) {
             # the casewise contributions cover the scoreable cases only;
             # Var(stat) = Gamma.eff / n.eff, while step 2 consumes the NACOV
@@ -777,6 +782,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$FS.mean  <- fs_mean
   step1$FS       <- fs
   step1$COV.IVETA2 <- cov_iveta2
+  step1$IVETA2 <- iveta2 # temporary; removed once Gamma.eta is available
+  step1$IVETA2.idx <- iveta2_idx
   step1$LV.NAMES <- lv_names_1
   # store also sam.method and local.options
   step1$sam.method <- sam_method
@@ -2356,8 +2363,31 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
 # operations; the centering terms (involving the mean of the second-order
 # factor scores) can be ignored, as they cancel out when summing over the
 # observations
+#
+# YR 19 Sept 2026: method = "casewise" (the default) or "additive".
+# With l_i the casewise contributions to the statistics (theta1 fixed, see
+# lav_sam_veta2()), psi_i the casewise influence of the step 1 estimates,
+# and C = d Lbar / d theta1, the statistics are asymptotically linear in
+#     a_i = l_i + C psi_i
+# so that
+#     Gamma.eta = Var(a_i) = Var(l_i) + C Var(psi_i) C' + R + R'
+# with R = Cov(l_i, psi_i) C'.
+# - "additive": Gamma.eta = Var(l_i) + N * C Sigma.11 C', ie R is dropped.
+#   This is only valid if the influence of the step 1 estimates is
+#   uncorrelated with the l_i, which holds (under normal measurement errors)
+#   for loadings and residual variances, but NOT for the intercepts when the
+#   factor means are fixed to zero (nu.hat = ybar, whose influence y_i - mu
+#   contains the factor scores): eg the entries of the (identically zero)
+#   first-order means get 2 * Var(f_k) instead of 0. In addition, Sigma.11
+#   is block-diagonal over the measurement blocks, and inherits the (eg
+#   normal-theory) flavour of the block standard errors.
+# - "casewise": Gamma.eta = (1/N) sum_i a_i t(a_i), where psi_i is computed
+#   from the casewise scores of the measurement blocks. Includes R, the
+#   cross-block covariances, and is distribution-free. Blocks for which the
+#   casewise scores are not available fall back to the additive form.
+# In both cases, we return the 'addition': Gamma.eta - COV.IVETA2
 lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
-                              use_analytic = TRUE) {
+                              use_analytic = TRUE, method = "casewise") {
 
   lavdata <- fit@Data
   lavmodel <- fit@Model
@@ -2678,8 +2708,108 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # Sigma.11 is the (full-N based) vcov of the step-1 estimates, and step 2
   # consumes the NACOV on the full-N scale, so we scale by n_full (equal to
   # n unless unscoreable cases were removed above)
+  if (method == "casewise") {
+    l_i <- step1$IVETA2[[g]]
+    l_idx <- step1$IVETA2.idx[[g]]
+    psi <- NULL
+    if (!is.null(l_i) && ncol(l_i) == nrow(cveta)) {
+      psi <- lav_sam_step1_casewise(step1 = step1, fit = fit, group = g)
+    }
+    if (!is.null(psi)) {
+      # a_i = l_i + C psi_i, on the full-N scale (the l_i cover the
+      # scoreable cases only; their mean is an average over n.eff cases)
+      a_i <- psi %*% t(cveta)
+      l_c <- t(t(l_i) - colMeans(l_i))
+      a_i[l_idx, ] <- a_i[l_idx, , drop = FALSE] + (n_full / nrow(l_c)) * l_c
+      gamma_full <- crossprod(a_i) / n_full
+      # parameters without casewise influence: additive form
+      add_idx <- attr(psi, "additive.idx")
+      if (length(add_idx) > 0L) {
+        c_add <- cveta[, add_idx, drop = FALSE]
+        gamma_full <- gamma_full + n_full * (c_add %*%
+          step1$Sigma.11[add_idx, add_idx, drop = FALSE] %*% t(c_add))
+      }
+      gamma_addition <- gamma_full - step1$COV.IVETA2[[g]]
+      return(gamma_addition)
+    }
+    # casewise route not available: fall through
+  }
+
   gamma_addition <- n_full * (cveta %*% step1$Sigma.11 %*% t(cveta))
   gamma_addition
+}
+
+# casewise influence of the step 1 (measurement) estimates: a N x npar1
+# matrix psi, with the columns in the order of step1$step1.free.idx (= the
+# order of Sigma.11), so that theta1.hat - theta1 ~= colMeans(psi). Per
+# measurement block b: psi_i^(b) = (N/n_b) I_b^{-1} g_i^(b), with g_i^(b) the
+# casewise scores and I_b the unit information of the block (the same
+# construction as in lav_sam_step2_se_hw_v() and lav_sam_gamma_eta_pml()).
+# Blocks for which this is not possible get zero columns; their column
+# indices are returned in the attribute "additive.idx". Returns NULL if no
+# block could be handled.
+lav_sam_step1_casewise <- function(step1 = NULL, fit = NULL, group = 1L) {
+  ntot <- nrow(fit@Data@X[[group]])
+  if (length(fit@Data@weights[[group]]) > 0L) {
+    return(NULL) # sampling weights: not yet
+  }
+  pt_free <- step1$PT.free
+  if (is.null(pt_free)) {
+    pt_free <- step1$PT$free
+  }
+  psi_full <- matrix(0, ntot, max(pt_free))
+  done_idx <- integer(0L)
+  for (mm in seq_along(step1$MM.FIT)) {
+    fb <- step1$MM.FIT[[mm]]
+    if (!fb@Options$estimator %in% c("ML", "GLS", "ULS", "WLS") ||
+        fb@Model@categorical || fb@Model@conditional.x) {
+      next
+    }
+    hb <- tryCatch({
+      # ignore_constraints: the blocks are fitted with bounds =
+      # "wide.zerovar" (inactive linear inequality constraints); do not
+      # project the scores onto them
+      scb <- lav_sc(fb, remove_empty_cases = FALSE,
+                    ignore_constraints = TRUE)
+      scb[is.na(scb)] <- 0 # cases with no data in this block
+      if (nrow(scb) != ntot) {
+        lav_msg_stop(gettext("case alignment failure"))
+      }
+      if (fb@Model@eq.constraints || fb@Model@ceq.simple.only) {
+        ib_inv <- lavTech(fb, "inverted.information")
+      } else {
+        ib_inv <- solve(lavTech(fb, "information"))
+      }
+      nb <- fb@SampleStats@ntotal
+      tmp <- (ntot / nb) * scb %*% ib_inv
+      if (!all(is.finite(tmp))) {
+        lav_msg_stop(gettext("non-finite casewise influence"))
+      }
+      tmp
+    }, error = function(e) NULL)
+    if (is.null(hb)) {
+      next
+    }
+    # map the block's free parameters into the joint free numbering (the same
+    # mapping used for the Sigma.11 assembly in lav_sam_step1())
+    mm_idx <- step1$block.mm.idx[[mm]]
+    ptm_idx <- step1$block.ptm.idx[[mm]]
+    par_idx <- pt_free[mm_idx[ptm_idx]]
+    keep_idx <- fb@ParTable$free[ptm_idx]
+    ok <- par_idx > 0L & keep_idx > 0L # drop := etc.
+    if (max(keep_idx[ok]) > ncol(hb)) {
+      next
+    }
+    psi_full[, par_idx[ok]] <- hb[, keep_idx[ok], drop = FALSE]
+    done_idx <- c(done_idx, par_idx[ok])
+  }
+  if (length(done_idx) == 0L) {
+    return(NULL)
+  }
+  psi <- psi_full[, step1$step1.free.idx, drop = FALSE]
+  psi <- t(t(psi) - colMeans(psi))
+  attr(psi, "additive.idx") <- which(!step1$step1.free.idx %in% done_idx)
+  psi
 }
 
 # Closed-form jacobian of the augmented summary statistics Lbar w.r.t. the
