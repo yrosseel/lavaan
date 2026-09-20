@@ -328,7 +328,7 @@ lav_sam_tmat <- function(mm_lambda = NULL,
 #    caller applies the historical rule -- which then performs the full
 #    correction, bit-for-bit identical to the historical behavior.
 # 2. Otherwise (the danger zone), estimate the bias and the sampling
-#    noise of lambda by a casewise bootstrap of the score rows (B = 40
+#    noise of lambda by a casewise bootstrap of the score rows (B = 200
 #    resamples; a fixed internal seed makes the resampling plan
 #    deterministic, and the user's .Random.seed is saved and restored):
 #        bias = max(0, mean(lambda_boot) - lambda)
@@ -384,7 +384,12 @@ lav_sam_lambda_floor_debias <- function(score = NULL, err = NULL,
   }
 
   # danger zone: casewise bootstrap for bias and noise of lambda
-  b_reps <- 40L
+  # (B = 200: with fewer resamples, the Monte Carlo error of se_boot -- and
+  # hence of the floor, which is a deterministic but arbitrary function of
+  # the internal seed -- is not negligible: with B = 40, lambda.star varied
+  # by about +/- 0.1 across seeds in small samples; the cost remains
+  # negligible, and the floor is frozen in the numerical jacobians)
+  b_reps <- 200L
   seed_old <- NULL
   if (exists(".Random.seed", envir = globalenv())) {
     seed_old <- get(".Random.seed", envir = globalenv())
@@ -397,7 +402,7 @@ lav_sam_lambda_floor_debias <- function(score = NULL, err = NULL,
     assign(".Random.seed", seed_old, envir = globalenv())
   }
   lambda_boot <- lambda_boot[is.finite(lambda_boot)]
-  if (length(lambda_boot) < 20L) {
+  if (length(lambda_boot) < b_reps / 2) {
     return(NULL) # degenerate: historical rule
   }
   bias_hat <- max(0, mean(lambda_boot) - lambda)
@@ -1661,8 +1666,13 @@ lav_sam_trunc_bias <- function(step1 = NULL, fit_pa = NULL) {
     rhs <- 0
     for (g in seq_len(ng)) {
       # the extra error (co)variance retained by the truncation, in the
-      # (possibly sub-block selected) order of the step-2 statistics
-      vn <- colnames(step1$VETA[[g]])
+      # (possibly sub-block selected) order of the step-2 statistics; note
+      # that the variable order of the structural fit may differ from the
+      # order in VETA (the sample statistics are matched by name)
+      vn <- fit_pa@Data@ov.names[[g]]
+      if (!all(vn %in% colnames(step1$VETA[[g]]))) {
+        vn <- colnames(step1$VETA[[g]])
+      }
       mtm <- step1$MTM[[g]]
       if (!is.null(colnames(mtm))) {
         idx <- match(vn, colnames(mtm))
@@ -1691,7 +1701,160 @@ lav_sam_trunc_bias <- function(step1 = NULL, fit_pa = NULL) {
     names(b_full) <- names(coef(fit_pa))
     b_full
   }, error = function(e) NULL)
+
+  # the exact counterpart: by how much do the structural estimates differ
+  # from the ones obtained under the historical truncation rule (floor
+  # 1/(n-1))? The linearized bias above is blind to the nonlinearity that
+  # characterizes the real danger zone (an ill-conditioned predictor block,
+  # where the historical estimates explode); there, this shift is large,
+  # while it is small if the truncation engaged for a harmless reason (eg
+  # an almost perfectly predicted latent outcome). First-order truncation
+  # only; one extra (point estimates only) fit of the structural part.
+  out$move <- tryCatch({
+    if (out$order != 1L) lav_msg_stop(gettext("First-order only."))
+    star_used <- unlist(step1$lambda1.star.used)
+    floor_used <- unlist(step1$lambda1.floor.used)
+    nobs <- unlist(fit_pa@SampleStats@nobs)
+    ng <- length(step1$VETA)
+    veta_h <- vector("list", ng)
+    changed <- FALSE
+    for (g in seq_len(ng)) {
+      veta_g <- step1$VETA[[g]]
+      veta_h[[g]] <- veta_g
+      if (!engaged[g]) next
+      if (!is.finite(star_used[g]) || star_used[g] <= 0 ||
+          !is.finite(floor_used[g])) {
+        lav_msg_stop(gettext("Raw lambda not available.")) # clamped at zero
+      }
+      lambda_raw <- star_used[g] + floor_used[g]
+      floor_h <- 1 / (nobs[g] - 1)
+      star_h <- if (lambda_raw < 1 + floor_h) lambda_raw - floor_h else 1
+      if (star_h - star_used[g] < 1e-12) next # same rule was active
+      vn <- colnames(veta_g)
+      mtm <- step1$MTM[[g]]
+      idx <- if (!is.null(colnames(mtm))) {
+        match(vn, colnames(mtm))
+      } else {
+        match(vn, step1$LV.NAMES[[g]])
+      }
+      if (anyNA(idx)) lav_msg_stop(gettext("Names do not match."))
+      d_std <- rep(1, length(idx))
+      if (!is.null(step1$D.STD) && !is.null(step1$D.STD[[g]])) {
+        d_std <- step1$D.STD[[g]][idx]
+      }
+      veta_raw <- t(veta_g * d_std) * d_std # undo the std.lv rescaling
+      veta_raw <- veta_raw -
+        (star_h - star_used[g]) * mtm[idx, idx, drop = FALSE]
+      if (any(d_std != 1)) {
+        d_new <- d_std
+        d_new[d_std != 1] <- sqrt(diag(veta_raw))[d_std != 1]
+        veta_raw <- t(veta_raw / d_new) / d_new
+      }
+      dimnames(veta_raw) <- dimnames(veta_g)
+      veta_h[[g]] <- veta_raw
+      changed <- TRUE
+    }
+    if (!changed) {
+      move <- 0 * coef(fit_pa)
+    } else {
+      pt_h <- as.list(fit_pa@ParTable)
+      pt_h$start <- pt_h$est
+      pt_h$est <- pt_h$se <- NULL
+      opt_h <- fit_pa@Options
+      opt_h$se <- "none"
+      opt_h$test <- "none"
+      opt_h$baseline <- FALSE
+      opt_h$h1 <- FALSE
+      opt_h$check.post <- FALSE
+      opt_h$check.gradient <- FALSE
+      opt_h$verbose <- FALSE
+      opt_h$warn <- FALSE
+      mean_h <- NULL
+      if (fit_pa@Model@meanstructure) {
+        mean_h <- fit_pa@SampleStats@mean
+        for (g in seq_along(mean_h)) {
+          names(mean_h[[g]]) <- fit_pa@Data@ov.names[[g]]
+        }
+      }
+      fit_h <- suppressWarnings(lavaan::lavaan(pt_h,
+        sample_cov = veta_h, sample_mean = mean_h,
+        sample_nobs = fit_pa@SampleStats@nobs,
+        slot_options = opt_h, verbose = FALSE
+      ))
+      if (!lavInspect(fit_h, "converged")) {
+        lav_msg_stop(gettext("No convergence."))
+      }
+      move <- coef(fit_pa) - coef(fit_h)
+    }
+    move
+  }, error = function(e) NULL)
   out
+}
+
+# Truncation report, part 2 (used by summary()): put the approximate
+# shrinkage bias, and the exact shift away from the historical-rule
+# estimates, on the scale of the standard errors (which are only available
+# in the final object). Adds to the stored sam.trunc list:
+#   bias.max    = max |bias| among the regression coefficients (or among all
+#                 structural parameters if there are no regressions)
+#   bias.se.max = max |bias| / se among the same parameters
+#   move.max, move.se.max = idem, for the shift ('move')
+# (NA if not available). The note printed by summary() is proportional: it
+# is merely informative if BOTH bias.se.max and move.se.max are available
+# and at most 0.5 (a bias of half a standard error lowers the coverage of a
+# 95% confidence interval to about 92%); in all other cases -- including
+# the settings where the shift cannot be computed -- the full warning is
+# printed.
+lav_sam_trunc_bias_se <- function(object = NULL) {
+  sam_trunc <- object@internal$sam.trunc
+  if (is.null(sam_trunc) || is.null(sam_trunc$bias)) {
+    return(sam_trunc)
+  }
+  pt <- object@ParTable
+  # same labels as coef(): user labels if any, else lhs-op-rhs (+ group
+  # suffix); equality-constrained duplicates share label, est and se
+  pt_labels <- tryCatch(lav_pt_labels(pt, type = "user"),
+                        error = function(e) NULL)
+  if (length(pt_labels) != length(pt$lhs)) {
+    pt_labels <- paste0(pt$lhs, pt$op, pt$rhs)
+  }
+  # the regression coefficients (the variance parameters absorb most of the
+  # retained error variance by construction)
+  reg_names <- unique(pt_labels[pt$op == "~" & pt$free > 0L])
+  se <- NULL
+  if (!is.null(pt$se) && !identical(object@Options$se, "none")) {
+    se <- pt$se[pt$free > 0L]
+    names(se) <- pt_labels[pt$free > 0L]
+  }
+  max_abs <- function(v) {
+    out <- c(as.numeric(NA), as.numeric(NA))
+    if (is.null(v)) {
+      return(out)
+    }
+    if (any(names(v) %in% reg_names)) {
+      v <- v[names(v) %in% reg_names]
+    }
+    v <- v[is.finite(v)]
+    if (length(v) == 0L) {
+      return(out)
+    }
+    out[1] <- max(abs(v))
+    if (!is.null(se)) {
+      ratio <- abs(v) / se[match(names(v), names(se))]
+      ratio <- ratio[is.finite(ratio)]
+      if (length(ratio) > 0L) {
+        out[2] <- max(ratio)
+      }
+    }
+    out
+  }
+  tmp <- max_abs(sam_trunc$bias)
+  sam_trunc$bias.max <- tmp[1]
+  sam_trunc$bias.se.max <- tmp[2]
+  tmp <- max_abs(sam_trunc$move)
+  sam_trunc$move.max <- tmp[1]
+  sam_trunc$move.se.max <- tmp[2]
+  sam_trunc
 }
 
 lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,

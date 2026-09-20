@@ -1312,37 +1312,53 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         ls_txt <- paste(sprintf("%.3f",
                                 sam_trunc$lambda.star[sam_trunc$engaged]),
                         collapse = " ")
-        cat("\n")
-        cat("  Note: the lambda truncation engaged (lambda.star = ",
-            ls_txt, "):\n", sep = "")
-        bias_max <- NULL
-        if (!is.null(sam_trunc$bias)) {
-          # report the regression coefficients (the variance parameters
-          # absorb most of the retained error variance by construction)
-          bb <- sam_trunc$bias
-          reg_idx <- grepl("~", names(bb), fixed = TRUE) &
-                     !grepl("~~", names(bb), fixed = TRUE) &
-                     !grepl("~1", names(bb), fixed = TRUE)
-          bias_max <- max(abs(if (any(reg_idx)) bb[reg_idx] else bb))
-        }
-        if (!is.null(bias_max)) {
-          bias_txt <- if (bias_max < 5e-4) {
-            "< 0.001"
-          } else {
-            sprintf("%.3f", bias_max)
+        # the note is proportional (see lav_sam_trunc_bias_se()): if both
+        # the approximate shrinkage bias and the exact shift away from the
+        # historical-rule estimates are at most half a standard error, the
+        # truncation is of little practical consequence -> a neutral,
+        # informative note; larger, or unknown -> the full warning
+        fmt <- function(v, v_se) {
+          if (is.null(v) || !is.finite(v)) {
+            return(NULL)
           }
-          cat("  the structural estimates are biased (typically",
-              "attenuated); max.\n")
-          cat(sprintf(
-            "  approximate bias among the regression coefficients: %s.",
-            bias_txt), "\n", sep = "")
-          cat("  Large coefficients may have undercovering confidence",
-              "intervals.\n")
+          out <- if (v < 5e-4) "< 0.001" else sprintf("%.3f", v)
+          if (!is.null(v_se) && is.finite(v_se)) {
+            out <- paste0(out, sprintf(" (at most %.2f SE)", v_se))
+          }
+          out
+        }
+        bias_max <- sam_trunc$bias.max
+        if (is.null(bias_max) && !is.null(sam_trunc$bias)) {
+          # summary object without the bias.max entry
+          bias_max <- max(abs(sam_trunc$bias))
+        }
+        bias_txt <- fmt(bias_max, sam_trunc$bias.se.max)
+        move_txt <- fmt(sam_trunc$move.max, sam_trunc$move.se.max)
+        is_minor <- function(v_se) {
+          !is.null(v_se) && is.finite(v_se) && v_se <= 0.5
+        }
+        minor_flag <- is_minor(sam_trunc$bias.se.max) &&
+          is_minor(sam_trunc$move.se.max)
+        cat("\n")
+        if (minor_flag) {
+          cat("  Note: the lambda truncation engaged (lambda.star = ",
+              ls_txt, "), with little\n", sep = "")
+          cat("  practical consequence for the regression coefficients:\n")
         } else {
+          cat("  Note: the lambda truncation engaged (lambda.star = ",
+              ls_txt, "):\n", sep = "")
           cat("  the structural estimates are biased (typically",
-              "attenuated);\n")
-          cat("  large coefficients may have undercovering confidence",
+              "attenuated), and large\n")
+          cat("  coefficients may have undercovering confidence",
               "intervals.\n")
+        }
+        if (!is.null(bias_txt)) {
+          cat("    max. approximate shrinkage bias : ", bias_txt, "\n",
+              sep = "")
+        }
+        if (!is.null(move_txt)) {
+          cat("    max. shift from historical rule : ", move_txt, "\n",
+              sep = "")
         }
       }
 

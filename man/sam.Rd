@@ -131,9 +131,24 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      coefficients are somewhat shrunken, and their confidence intervals
      can be slightly anti-conservative. When a truncation engaged,
      \code{summary()} prints a note with the truncated multiplier(s)
-     and (where available) a delta-method approximation of the maximal
-     shrinkage bias; the per-coefficient approximation is stored in the
-     fitted object (\code{object@internal$sam.trunc$bias}).
+     and (where available) two diagnostics for the regression
+     coefficients, also expressed in standard error units: a
+     delta-method approximation of the maximal shrinkage bias, and the
+     maximal (exact) shift away from the estimates that the historical
+     rule would have produced; the per-coefficient values are
+     stored in the fitted object
+     (\code{object@internal$sam.trunc$bias} and \code{$move}). As long
+     as neither of them exceeds half a standard error, the
+     truncation is of little practical consequence, and the note is
+     merely informative. This is the typical situation when the
+     truncation engages because a latent outcome is (almost) perfectly
+     predicted (a residual variance close to zero, or equivalently a
+     very high correlation between a latent predictor and its outcome),
+     as opposed to (almost) collinear latent predictors, where the
+     truncation can change the estimates substantially. (To reproduce
+     the results of older versions of lavaan, use
+     \code{lambda1.floor = "default"} and
+     \code{lambda2.floor = "default"}.)
      The option \code{gamma.eta} is only relevant if the model contains
      latent quadratic/interaction terms. It determines how the sampling
      variability of the step 1 (measurement) estimates enters the
