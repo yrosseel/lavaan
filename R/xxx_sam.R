@@ -68,6 +68,10 @@ sam <- function(model = NULL,
   }
 
   # check sam_method
+  # (keep track of a missing sam_method argument *before* we touch it:
+  #  missing() is no longer reliable after an assignment; needed if model=
+  #  is a stored sam object)
+  sam_method_missing <- missing(sam_method)
   sam_method <- tolower(sam_method)
   if (!sam_method %in% c("local", "global", "fsr", "cfsr")) {
     lav_msg_stop(gettextf(
@@ -220,7 +224,7 @@ sam <- function(model = NULL,
     } else {
       struc_args <- struc_args
     }
-    if (missing(sam_method)) {
+    if (sam_method_missing) {
       sam_method <- fit@internal$sam.method
     } # else: sam_method already holds the validated sam_method
     if (missing(local_options)) {
@@ -234,6 +238,9 @@ sam <- function(model = NULL,
     if (missing(se)) {
       se <- fit@Options$se
     } else {
+      # a new se= argument: apply the same setting-specific adaptations as
+      # a fresh call (eg categorical data: twostep -> twostep.robust)
+      se <- lav_sam_step0_se(fit = fit, se = se, sam_method = sam_method)
       fit@Options$se <- se
     }
     if (missing(cmd)) {
@@ -266,6 +273,8 @@ sam <- function(model = NULL,
       cmd = cmd, model = model, data = data, se = se,
       sam_method = sam_method, dotdotdot = dotdotdot
     )
+    # lav_sam_step0() may have adapted the se= argument to the setting
+    se <- fit@Options$se
 
     # check for data.type == "none"
     if (fit@Data@data.type == "none") {
@@ -312,59 +321,131 @@ sam <- function(model = NULL,
         fit@Options$se <- se
       }
     }
+  }
 
-    # check for multiple blocks: multigroup (single level) is supported for
-    # the local approach as long as the measurement model has no across-group
-    # constraints (checked later in lav_sam_step1_local_jac_mg()); multilevel
-    # local SEs are supported for the single-group continuous complete-data
-    # setting (see lav_sam_gamma_eta_2l()), but not the normal-theory variant
-    if (fit@Data@nlevels > 1L && se == "local.nt") {
-      lav_msg_stop(gettext("se = \"local.nt\" not available if multiple
-                            levels are involved; use se = \"local\"."))
+  # the checks below depend on the (final) se= argument; they apply to both
+  # a fresh call and to a re-entry with a stored sam object
+
+  # no raw data (sample.cov= input): only the settings that can be
+  # computed from the summary statistics are available
+  if (fit@Data@data.type == "moment") {
+    nacov_flag <- length(fit@SampleStats@NACOV) > 0L &&
+      all(vapply(fit@SampleStats@NACOV, is.matrix, logical(1L)))
+    if (lv_interaction_flag) {
+      lav_msg_stop(gettext("sam() needs the raw data (data= argument) if
+        the model contains latent interaction terms."))
     }
-
-    # single-level clustered data: the normal-theory Gamma used by
-    # se = "local.nt" does not account for clustering
-    if (se == "local.nt" && fit@Data@nlevels == 1L &&
-        length(fit@Data@cluster) > 0L) {
-      lav_msg_warn(gettext("se = \"local.nt\" uses the normal-theory Gamma,
-        which does not account for clustering; consider se = \"local\"
-        instead."))
+    if (fit@Model@conditional.x) {
+      lav_msg_stop(gettext("sam() needs the raw data (data= argument) if
+        conditional.x = TRUE."))
     }
+    if (se == "bootstrap") {
+      lav_msg_stop(gettext("se = \"bootstrap\" needs the raw data (data=
+        argument)."))
+    }
+    if (mgm_mm_flag && se == "twostep.robust" && !nacov_flag) {
+      lav_msg_stop(gettext("estimator MGM (in mm.args) needs either the raw
+        data (data= argument) or the NACOV= argument for its (robust)
+        standard errors if only summary statistics are provided;
+        alternatively, use se = \"naive\" or se = \"none\"."))
+    }
+    if (se %in% c("local", "twostep.robust") && !nacov_flag) {
+      lav_msg_stop(gettextf("se = \"%1$s\" needs either the raw data (data=
+        argument) or the NACOV= argument if only summary statistics are
+        provided; alternatively, use the normal-theory variant
+        se = \"%2$s\".", se,
+        if (se == "local") "local.nt" else "twostep"))
+    }
+  }
 
-    # twostep.huber.white (casewise-score sandwich): current scope is
-    # continuous ML, single level, no equality constraints, no clustering,
-    # complete data or missing = "ml"; single- or multigroup. Outside that
-    # scope, fall back to the closest supported flavour. (PML is handled
-    # earlier, in lav_sam_step0(): although casewise PML scores exist, the
-    # joint-score linearization does not describe the local step-2
-    # estimator for PML -- see the note there.)
-    if (se == "twostep.huber.white") {
-      hw_fallback <- NULL
-      if (fit@Data@nlevels > 1L) {
-        hw_fallback <- "twostep" # no casewise scores for multilevel (yet)
-      } else if (fit@Model@conditional.x) {
-        hw_fallback <- "twostep.robust" # no scores under conditional.x (yet)
-      } else if (fit@Model@categorical) {
-        hw_fallback <- "twostep.robust" # untested for (D)WLS scores (yet)
-      } else if (fit@Model@eq.constraints || fit@Model@ceq.simple.only ||
-        nrow(fit@Model@ceq.JAC) > 0L) {
-        # the block-to-joint free-parameter mapping of the casewise influence
-        # does not handle equality constraints (yet); the extra ceq.JAC check
-        # catches equality constraints coexisting with inequality
-        # constraints/bounds, where both packing flags are FALSE
-        hw_fallback <- "twostep.robust"
-      } else if (length(fit@Data@cluster) > 0L) {
-        # the casewise meat would need within-cluster score aggregation (yet)
-        hw_fallback <- "twostep.robust"
-      }
-      if (!is.null(hw_fallback)) {
-        lav_msg_warn(gettextf(
-          "se = \"twostep.huber.white\" is not available (yet) for this
-           setting; using se = \"%s\" instead.", hw_fallback))
-        se <- hw_fallback
-        fit@Options$se <- se
-      }
+  # latent interactions: local approach only, single group only (unless no
+  # analytic standard errors are needed)
+  if (lv_interaction_flag) {
+    if (sam_method != "local") {
+      lav_msg_stop(gettextf("latent interaction terms are only supported by
+        sam.method = \"local\" (not sam.method = \"%s\").", sam_method))
+    }
+    if (fit@Data@ngroups > 1L && !se %in% c("none", "bootstrap")) {
+      lav_msg_stop(gettext("analytic standard errors are not available (yet)
+        for latent interaction terms if multiple groups are involved;
+        use se = \"none\" or se = \"bootstrap\"."))
+    }
+  }
+
+  # conditional.x: the structural part is fitted to the residual (y | x)
+  # latent moments only, but the (normal-theory) GLS weight matrix needs the
+  # joint moments
+  if (fit@Model@conditional.x && sam_method != "global" &&
+      identical(toupper(struc_args[["estimator"]]), "GLS")) {
+    lav_msg_stop(gettext("estimator GLS is not available (yet) for the
+      structural part (struc.args) if conditional.x = TRUE; use ML or ULS
+      instead."))
+  }
+
+  # check for multiple blocks: multigroup (single level) is supported for
+  # the local approach as long as the measurement model has no across-group
+  # constraints (checked later in lav_sam_step1_local_jac_mg()); multilevel
+  # local SEs are supported for the single-group continuous complete-data
+  # setting (see lav_sam_gamma_eta_2l()), but not the normal-theory variant
+  if (fit@Data@nlevels > 1L && se == "local.nt") {
+    lav_msg_stop(gettext("se = \"local.nt\" not available if multiple
+                          levels are involved; use se = \"local\"."))
+  }
+
+  # two-level: the joint-score (twostep.robust) sandwich is not available;
+  # the robust (cluster-sandwich) flavour is se = "local"
+  if (fit@Data@nlevels > 1L && se == "twostep.robust") {
+    se_2l <- if (sam_method == "global") "twostep" else "local"
+    lav_msg_warn(gettextf(
+      "se = \"twostep.robust\" is not available (yet) if multiple levels
+       are involved; using se = \"%s\" instead.", se_2l))
+    se <- se_2l
+    fit@Options$se <- se
+  }
+
+  # single-level clustered data: the normal-theory Gamma used by
+  # se = "local.nt" does not account for clustering
+  if (se == "local.nt" && fit@Data@nlevels == 1L &&
+      length(fit@Data@cluster) > 0L) {
+    lav_msg_warn(gettext("se = \"local.nt\" uses the normal-theory Gamma,
+      which does not account for clustering; consider se = \"local\"
+      instead."))
+  }
+
+  # twostep.huber.white (casewise-score sandwich): current scope is
+  # continuous ML, single level, no equality constraints, no clustering,
+  # complete data or missing = "ml"; single- or multigroup. Outside that
+  # scope, fall back to the closest supported flavour. (PML is handled
+  # earlier, in lav_sam_step0(): although casewise PML scores exist, the
+  # joint-score linearization does not describe the local step-2
+  # estimator for PML -- see the note there.)
+  if (se == "twostep.huber.white") {
+    hw_fallback <- NULL
+    if (fit@Data@data.type == "moment") {
+      hw_fallback <- "twostep" # no casewise scores without raw data
+    } else if (fit@Data@nlevels > 1L) {
+      hw_fallback <- "twostep" # no casewise scores for multilevel (yet)
+    } else if (fit@Model@conditional.x) {
+      hw_fallback <- "twostep.robust" # no scores under conditional.x (yet)
+    } else if (fit@Model@categorical) {
+      hw_fallback <- "twostep.robust" # untested for (D)WLS scores (yet)
+    } else if (fit@Model@eq.constraints || fit@Model@ceq.simple.only ||
+      nrow(fit@Model@ceq.JAC) > 0L) {
+      # the block-to-joint free-parameter mapping of the casewise influence
+      # does not handle equality constraints (yet); the extra ceq.JAC check
+      # catches equality constraints coexisting with inequality
+      # constraints/bounds, where both packing flags are FALSE
+      hw_fallback <- "twostep.robust"
+    } else if (length(fit@Data@cluster) > 0L) {
+      # the casewise meat would need within-cluster score aggregation (yet)
+      hw_fallback <- "twostep.robust"
+    }
+    if (!is.null(hw_fallback)) {
+      lav_msg_warn(gettextf(
+        "se = \"twostep.huber.white\" is not available (yet) for this
+         setting; using se = \"%s\" instead.", hw_fallback))
+      se <- hw_fallback
+      fit@Options$se <- se
     }
   }
 

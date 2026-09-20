@@ -278,6 +278,13 @@ lav_sam_step2_se_lv_var <- function(joint = NULL) {
   target <- target[vapply(target, function(i) {
     lavpartable$lhs[i] %in% lv_block[[lavpartable$block[i]]]
   }, logical(1L))]
+  # only the data-derived ones, which belong to the structural part (step 2);
+  # the residual variances of the first-order factors of a higher-order
+  # factor (under std.lv = TRUE) belong to a measurement block (step 1), and
+  # are genuinely fixed (to 1): their se should stay zero
+  if (!is.null(lavpartable$step)) {
+    target <- target[lavpartable$step[target] == 2L]
+  }
   if (length(target) == 0L) {
     return(se_out)
   }
@@ -344,8 +351,10 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
   # catch empty step2.free.idx
   if (length(step2_free_idx) == 0L) {
-    # no (free) structural parameters at all!
+    # no (free) structural parameters at all! (eg a higher-order factor
+    # with std.lv = TRUE); keep the se label, as it ends up in @Options$se
     out <- list(
+      se = lavoptions$se,
       V1 = matrix(0, 0, 0), V2 = matrix(0, 0, 0),
       VCOV = matrix(0, 0, 0)
     )
@@ -626,7 +635,20 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       # get V22 (= the robust covariance of the step 2 estimating function,
       # already aggregated over groups by lav_model_nvcov_robust_sem())
       if (is.null(joint@SampleStats@NACOV[[1]])) {
-        joint@SampleStats@NACOV <- lavTech(joint, "gamma")
+        # not stored (eg re-entry with a sam object fitted with another
+        # se=): recompute; the unbiased Gamma is not available for fixed.x
+        # (or clustered data): fall back to the biased Gamma, as elsewhere
+        gamma_joint <- tryCatch(lavTech(joint, "gamma"),
+                                error = function(e) NULL)
+        if (is.null(gamma_joint) && isTRUE(joint@Options$gamma.unbiased)) {
+          joint@Options$gamma.unbiased <- FALSE
+          gamma_joint <- lavTech(joint, "gamma")
+          joint@Options$gamma.unbiased <- TRUE
+        }
+        if (is.null(gamma_joint)) {
+          gamma_joint <- lavTech(joint, "gamma") # re-raise the error
+        }
+        joint@SampleStats@NACOV <- gamma_joint
       }
       tmp <- lav_model_nvcov_robust_sem(
         lavmodel = joint@Model, lavsamplestats = joint@SampleStats,

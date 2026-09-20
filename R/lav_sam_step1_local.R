@@ -94,6 +94,18 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
   # all the measurement parameters are already stored in PT
   pt_1 <- step1$PT
+  # the structural regressions (not part of any measurement block) should
+  # not leak into the measurement matrices: in the delta parameterization
+  # (categorical data), THETA is a function of the model-implied variances
+  # of the latent variables, and hence of BETA. In a fresh call, they still
+  # hold their (zero) starting values, but not if they have user-specified
+  # starting values, or in a re-entry call with a stored sam object (where
+  # they hold the final estimates)
+  struc_reg_idx <- which(pt_1$free > 0L & pt_1$op == "~" &
+                         !(step1$PT.free %in% step1$step1.free.idx))
+  if (length(struc_reg_idx) > 0L) {
+    pt_1$est[struc_reg_idx] <- 0
+  }
   if (fit@Model@ceq.simple.only) {
     x_free <- pt_1$est[pt_1$free > 0 & !duplicated(pt_1$free)]
   } else {
@@ -385,7 +397,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     # raw data for the (gated) first-order debias floor: only in the
     # supported setting (single-level, continuous, complete data, no
     # conditional.x, unweighted); in all other settings lav_sam_veta()
-    # falls back to the historical rule
+    # falls back to the historical rule; this includes the case where no
+    # raw data is available (sample.cov= input): fit@Data@X[[b]] is NULL
     yb1 <- NULL
     if (identical(local_lambda1_floor, "debias") &&
         fit@Data@nlevels == 1L &&
@@ -393,7 +406,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         !fit@Model@conditional.x &&
         is.null(fit@Data@weights[[this_group]])) {
       yb1 <- fit@Data@X[[b]]
-      if (anyNA(yb1) || ncol(yb1) != ncol(cov_1)) {
+      if (!is.matrix(yb1) || anyNA(yb1) || ncol(yb1) != ncol(cov_1)) {
         yb1 <- NULL
       }
     }
@@ -823,6 +836,9 @@ lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
       fit@Data@nlevels > 1L || length(fit@Data@cluster) > 0L ||
       (unbiased && isTRUE(lavoptions$gamma.n.minus.one))) {
     return(NULL)
+  }
+  if (!is.matrix(fit@Data@X[[g]])) {
+    return(NULL) # no raw data (sample.cov= input): leave it to the NACOV path
   }
   m_y <- unname(as.matrix(fit@Data@X[[g]]))
   if (anyNA(m_y)) {

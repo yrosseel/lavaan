@@ -2298,6 +2298,13 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         } else {
           ov_names[[g]]
         }
+        # the normal-theory weight matrix needs the joint (y, x) moments
+        if (conditional_x && is.null(cov[[g]])) {
+          lav_msg_stop(gettext("estimator GLS is not available if
+            conditional.x = TRUE and only the residual (y | x) sample
+            statistics are provided; provide the joint sample statistics,
+            or use another estimator."))
+        }
         wls_v[[g]] <- lav_samp_wls_v_nt_g(
           m_cov         = cov[[g]],
           m_mean        = mean[[g]],

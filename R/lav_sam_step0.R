@@ -83,8 +83,16 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
     # observed Gamma on demand only when needed (eg categorical), so it needs
     # neither -- and the default ov_order is already "model".
     if (se %in% c("ij", "twostep.robust")) {
-      dotdotdot0$NACOV <- TRUE
-      dotdotdot0$ov_order <- "force.model" # avoid data ordering...
+      # (do not overwrite a user-supplied NACOV: needed if only summary
+      #  statistics are available; sam() has normalized its name to 'nacov')
+      # (and no raw data, no Gamma: sam() will complain later on)
+      if (is.null(dotdotdot0$NACOV) && is.null(dotdotdot0$nacov) &&
+          !is.null(data)) {
+        dotdotdot0$NACOV <- TRUE
+      }
+      if (!is.null(dotdotdot0$NACOV) || !is.null(dotdotdot0$nacov)) {
+        dotdotdot0$ov_order <- "force.model" # avoid data ordering...
+      }
     }
   }
 
@@ -156,62 +164,8 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
     fit@Options$sample.icov <- TRUE
   }
 
-  # se
-  # PML: the two-step (robust) corrections need ingredients (eg the h1
-  # information, the block influence P) that are not available for the
-  # pairwise likelihood; only the naive (structural-fit) standard errors
-  # can be computed, and only for the local methods
-  if (identical(fit@Options$estimator.orig, "PML")) {
-    if (sam_method == "global") {
-      lav_msg_stop(gettext(
-        "sam(sam.method = \"global\") does not support estimator PML (yet);
-         use sam.method = \"local\" or sem() instead."))
-    }
-    # notes:
-    # - se = "local" IS available for PML: it uses the casewise
-    #   structural-space Gamma.eta (see lav_sam_gamma_eta_pml(); single
-    #   group, complete data, all-ordinal -- guarded there);
-    # - "twostep.huber.white" is in the fallback list DELIBERATELY, even
-    #   though casewise PML scores exist (lav_sc_pml()): for
-    #   sam.method = "local" the joint-PML-given-theta1 estimator that the
-    #   huber.white sandwich linearizes is NOT the local (VETA-fit) step-2
-    #   estimator (their variance estimates differ substantially), so the
-    #   sandwich describes the wrong estimator; use se = "local" instead.
-    if (se %in% c("twostep", "twostep.robust", "twostep.huber.white",
-                  "local.nt")) {
-      lav_msg_warn(gettextf(
-        "se = \"%s\" is not available (yet) for estimator PML; naive
-         standard errors are reported instead
-         (tip: se = \"local\" is available for PML).", se))
-      se <- "naive"
-    }
-  }
-  if (fit@Model@categorical && se == "twostep") {
-    # for categorical data, the classic ('global') two-step correction uses
-    # the model-based information matrix, which underestimates the standard
-    # errors for the (D)WLS estimator. Use the robust (Yuan & Chan, 2002)
-    # correction instead. This needs the 'P' matrix (the influence of the
-    # measurement parameters on the sample statistics), which is available for
-    # all sam methods (the measurement blocks are always fitted in step 1).
-    se <- "twostep.robust"
-  }
-  if (fit@Model@conditional.x && se == "twostep" &&
-      sam_method %in% c("local", "fsr", "cfsr")) {
-    # conditional.x + local sam method: the classic two-step correction is
-    # built on the joint information matrix, so it linearizes the
-    # joint-model-given-theta1 estimator. Under conditional.x that estimator
-    # is NOT asymptotically equivalent to the local step-2 estimator (the
-    # structural fit is saturated in the latent-on-x slopes and cannot pool
-    # information across statistics the way the joint estimator does), and
-    # the joint-information formula underestimates the sampling variability
-    # (badly so for binary covariates). Use the robust variant instead: under
-    # conditional.x it is computed as the structural-space sandwich (see the
-    # tsrobust_condx_flag note in lav_sam_step2_se.R), which linearizes the
-    # actual two-step estimator (and coincides with se = "local"). For
-    # sam.method = "global" step 2 IS the joint estimator, and the classic
-    # formula still applies.
-    se <- "twostep.robust"
-  }
+  # se: some settings need another flavour (PML, categorical, conditional.x)
+  se <- lav_sam_step0_se(fit = fit, se = se, sam_method = sam_method)
   fit@Options$se <- se
 
   # test
@@ -255,4 +209,78 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
 
   fit
+}
+
+# adapt the se= argument to the setting (PML, categorical data,
+# conditional.x); used for a fresh call (lav_sam_step0()), but also if sam()
+# is called again with a stored sam object (and perhaps a new se= argument)
+lav_sam_step0_se <- function(fit = NULL, se = "twostep",
+                             sam_method = "local") {
+  # single-level clustered data: the classic twostep correction is not
+  # robust to clustering (see lav_sam_step0(), where this switch is needed
+  # before the model is processed; repeated here for the re-entry case)
+  if (se == "twostep" && fit@Data@nlevels == 1L &&
+      length(fit@Data@cluster) > 0L) {
+    se <- "twostep.robust"
+  }
+
+  # PML: the two-step (robust) corrections need ingredients (eg the h1
+  # information, the block influence P) that are not available for the
+  # pairwise likelihood; only the naive (structural-fit) standard errors
+  # can be computed, and only for the local methods
+  if (identical(fit@Options$estimator.orig, "PML")) {
+    if (sam_method == "global") {
+      lav_msg_stop(gettext(
+        "sam(sam.method = \"global\") does not support estimator PML (yet);
+         use sam.method = \"local\" or sem() instead."))
+    }
+    # notes:
+    # - se = "local" IS available for PML: it uses the casewise
+    #   structural-space Gamma.eta (see lav_sam_gamma_eta_pml(); single
+    #   group, complete data, all-ordinal -- guarded there);
+    # - "twostep.huber.white" is in the fallback list DELIBERATELY, even
+    #   though casewise PML scores exist (lav_sc_pml()): for
+    #   sam.method = "local" the joint-PML-given-theta1 estimator that the
+    #   huber.white sandwich linearizes is NOT the local (VETA-fit) step-2
+    #   estimator (their variance estimates differ substantially), so the
+    #   sandwich describes the wrong estimator; use se = "local" instead.
+    if (se %in% c("twostep", "twostep.robust", "twostep.huber.white",
+                  "local.nt")) {
+      lav_msg_warn(gettextf(
+        "se = \"%s\" is not available (yet) for estimator PML; naive
+         standard errors are reported instead
+         (tip: se = \"local\" is available for PML).", se))
+      se <- "naive"
+    }
+  }
+  if (fit@Model@categorical && se == "twostep") {
+    # for categorical data, the classic ('global') two-step correction uses
+    # the model-based information matrix, which underestimates the standard
+    # errors for the (D)WLS estimator. Use the robust (Yuan & Chan, 2002)
+    # correction instead. This needs the 'P' matrix (the influence of the
+    # measurement parameters on the sample statistics), which is available for
+    # all sam methods (the measurement blocks are always fitted in step 1).
+    se <- "twostep.robust"
+  }
+  # (not if only summary statistics are available: the robust variant needs
+  #  the raw data)
+  if (fit@Model@conditional.x && se == "twostep" &&
+      fit@Data@data.type != "moment" &&
+      sam_method %in% c("local", "fsr", "cfsr")) {
+    # conditional.x + local sam method: the classic two-step correction is
+    # built on the joint information matrix, so it linearizes the
+    # joint-model-given-theta1 estimator. Under conditional.x that estimator
+    # is NOT asymptotically equivalent to the local step-2 estimator (the
+    # structural fit is saturated in the latent-on-x slopes and cannot pool
+    # information across statistics the way the joint estimator does), and
+    # the joint-information formula underestimates the sampling variability
+    # (badly so for binary covariates). Use the robust variant instead: under
+    # conditional.x it is computed as the structural-space sandwich (see the
+    # tsrobust_condx_flag note in lav_sam_step2_se.R), which linearizes the
+    # actual two-step estimator (and coincides with se = "local"). For
+    # sam.method = "global" step 2 IS the joint estimator, and the classic
+    # formula still applies.
+    se <- "twostep.robust"
+  }
+  se
 }

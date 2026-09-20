@@ -3,6 +3,10 @@ lav_samp_icov <- function(cov_1 = NULL, ridge = 0.0, x_idx = integer(0L),
 
   c_s <- tryCatch(chol(cov_1), error = function(e) NULL)
 
+  # x_idx refers to the joint (y, x) matrix; a residual (y | x) covariance
+  # matrix (conditional.x = TRUE) does not contain the exogenous part
+  x_idx <- x_idx[x_idx <= ncol(cov_1)]
+
   # what if this fails...
   # ridge exogenous part only (if any); this may help for GLS (but not ML)
   if (is.null(c_s)) {

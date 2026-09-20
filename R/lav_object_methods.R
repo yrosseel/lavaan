@@ -1631,7 +1631,10 @@ setMethod(
     # sam objects store the original sam() call in the call slot (>= 0.7-1);
     # in older versions, the call slot contained an internal lavaan() call
     # that cannot be re-evaluated
+    # (if sam() was called via do.call(sam, ...), call[[1]] is the function
+    # itself, not its name)
     if (!is.null(object@internal$sam.method) &&
+        !is.function(call[[1]]) &&
         !any(as.character(call[[1]]) == "sam")) {
       lav_msg_stop(gettext(
         "update() does not work for a sam object created by an older
