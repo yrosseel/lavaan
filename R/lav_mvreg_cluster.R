@@ -15,22 +15,22 @@
 # conversion functions (tilde padding, ordering, the dual parameter-map/
 # gradient-adjoint role of 2l2implied); everything there applies here
 # too, with these conditional.x differences:
-# - the mean parts are (residual) intercepts + slopes: beta.w/beta.b/
-#   beta.z instead of mu.w/mu.b/mu.z, with the same folding convention
-#   (only beta.w + beta.b is identified for the 'both' variables; their
-#   sum is beta.wb)
+# - the mean parts are (residual) intercepts + slopes: beta_w/beta_b/
+#   beta_z instead of mu_w/mu_b/mu_z, with the same folding convention
+#   (only beta_w + beta_b is identified for the 'both' variables; their
+#   sum is beta_wb)
 # - the y block contains only the 'y' variables (ov.y.idx): the
 #   exogenous x variables (within.x.idx, between.x.idx) are removed
 #   from the tilde universe together with the between-only y variables
 #   (between.y.idx, the 'z' block)
 
 # when conditional.x = TRUE:
-# - sigma.w and sigma.b: same dimensions, level-1 'Y' variables only
-# - sigma.zz: level-2 variables only
-# - sigma.yz: cov(level-1, level-2)
-# - beta.w: beta y within part
-# - beta.b: beta y between part
-# - beta.z: beta z (between-only)
+# - sigma_w and sigma_b: same dimensions, level-1 'Y' variables only
+# - sigma_zz: level-2 variables only
+# - sigma_yz: cov(level-1, level-2)
+# - beta_w: beta y within part
+# - beta_b: beta y between part
+# - beta_z: beta z (between-only)
 lav_mvreg_cl_implied22l <- function(lp = NULL,
                                     implied = NULL,
                                     res_int_w = NULL,
@@ -97,10 +97,10 @@ lav_mvreg_cl_implied22l <- function(lp = NULL,
     l1_idx = ov_y_idx1, l2_idx = ov_y_idx2,
     z_idx = between_y_idx, rm_idx = rm_idx
   )
-  sigma_w <- out_sigma$sigma.w
-  sigma_b <- out_sigma$sigma.b
-  sigma_zz <- out_sigma$sigma.zz
-  sigma_yz <- out_sigma$sigma.yz
+  sigma_w <- out_sigma$sigma_w
+  sigma_b <- out_sigma$sigma_b
+  sigma_zz <- out_sigma$sigma_zz
+  sigma_yz <- out_sigma$sigma_yz
 
   # beta blocks
   y_idx <- seq_len(p_tilde)
@@ -115,15 +115,15 @@ lav_mvreg_cl_implied22l <- function(lp = NULL,
     beta_z <- matrix(0, 0L, 0L)
   }
 
-  # beta.wb # FIXME: not correct if some 'x' are split (overlap)
+  # beta_wb # FIXME: not correct if some 'x' are split (overlap)
   # but because we ALWAYS treat split-x as 'y', this is not a problem
   beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
   beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
 
   list(
-    sigma.w = sigma_w, sigma.b = sigma_b, sigma.zz = sigma_zz,
-    sigma.yz = sigma_yz, beta.w = beta_w, beta.b = beta_b, beta.z = beta_z,
-    beta.wb = beta_wb
+    sigma_w = sigma_w, sigma_b = sigma_b, sigma_zz = sigma_zz,
+    sigma_yz = sigma_yz, beta_w = beta_w, beta_b = beta_b, beta_z = beta_z,
+    beta_wb = beta_wb
   )
 }
 
@@ -347,12 +347,12 @@ lav_mvreg_cl_loglik_samp_2l <- function(ylp = NULL,
       res_int_b = res_int_b, res_pi_b = res_pi_b
     )
   }
-  sigma_w <- out$sigma.w
-  sigma_b <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
-  beta_z <- out$beta.z
-  beta_wb <- out$beta.wb # out= must be a complete implied22l output
+  sigma_w <- out$sigma_w
+  sigma_b <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
+  beta_z <- out$beta_z
+  beta_wb <- out$beta_wb # out= must be a complete implied22l output
 
   # log 2*pi
   log_2pi <- log(2 * pi)
@@ -501,14 +501,14 @@ lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
       res_int_b = res_int_b, res_pi_b = res_pi_b
     )
   }
-  sigma_w <- out$sigma.w
-  sigma_b <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
-  beta_w <- out$beta.w
-  beta_b <- out$beta.b
-  beta_z <- out$beta.z
-  beta_wb <- out$beta.wb # out= must be a complete implied22l output
+  sigma_w <- out$sigma_w
+  sigma_b <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
+  beta_w <- out$beta_w
+  beta_b <- out$beta_b
+  beta_z <- out$beta_z
+  beta_wb <- out$beta_wb # out= must be a complete implied22l output
 
   # Lp
   cluster_size <- lp$cluster.size[[2]]
@@ -682,7 +682,7 @@ lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
 
   d_sigma_w <- d_sigma_w1 + d_sigma_w2
 
-  # beta.w (bis)
+  # beta_w (bis)
   d_beta_w2 <- -2 * (ylp[[2]]$sample.XX.wb1 %*%
       (ylp[[2]]$sample.wb - beta_wb))[w1_idx, , drop = FALSE] %*% sigma_w_inv
 
@@ -733,14 +733,14 @@ lav_mvreg_cl_sc_2l <- function(y1 = NULL,
       res_int_b = res_int_b, res_pi_b = res_pi_b
     )
   }
-  sigma_w <- out$sigma.w
-  sigma_b <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
-  beta_w <- out$beta.w
-  beta_b <- out$beta.b
-  beta_z <- out$beta.z
-  beta_wb <- out$beta.wb # out= must be a complete implied22l output
+  sigma_w <- out$sigma_w
+  sigma_b <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
+  beta_w <- out$beta_w
+  beta_b <- out$beta_b
+  beta_z <- out$beta_z
+  beta_wb <- out$beta_wb # out= must be a complete implied22l output
 
   # Lp
   nclusters <- lp$nclusters[[2]]
@@ -855,7 +855,7 @@ lav_mvreg_cl_sc_2l <- function(y1 = NULL,
       g_sigma_yz_1[cl, ] <- g$sigma_yz
 
       # BETA.Z
-      # here, we avoid the (sample.z - beta.z) approach
+      # here, we avoid the (sample.z - beta_z) approach
       exo_z <- cbind(1, y2[cl, between_x_idx, drop = FALSE])
       tmp1 <- (sigma_zz_inv + nj * (sigma_zi_zy_ji %*% sigma_yz_zi)) %*% zc
       tmp2 <- nj * (sigma_zi_zy_ji) %*% yc
@@ -920,7 +920,7 @@ lav_mvreg_cl_sc_2l <- function(y1 = NULL,
     } # cl
   } # no-between-y
 
-  # beta.w (bis)
+  # beta_w (bis)
   y1_wb_res_i <- y1_wb_res %*% sigma_w_inv
   w1_idx <- seq_len(length(within_x_idx) + 1L)
   a1_idx <- rep(w1_idx, times = ncol(y1_wb_res_i))
@@ -1006,7 +1006,7 @@ lav_mvreg_cl_sc_2l <- function(y1 = NULL,
     beta_z_idx <- matrix(seq_along(beta_z), nrow(beta_z), ncol(beta_z))
     int_b[, between_y_idx] <- g_beta_z[, beta_z_idx[1L, ], drop = FALSE]
 
-    # Pi.B: add beta.z
+    # Pi.B: add beta_z
     col_idx <- lav_mat_vecr(beta_b_tilde[-1L, between_y_idx, drop = FALSE])
     pi_b[, col_idx] <-
       g_beta_z[, lav_mat_vecr(beta_z_idx[-1L, ]), drop = FALSE]

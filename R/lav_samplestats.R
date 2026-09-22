@@ -2745,14 +2745,14 @@ lav_samp_cl_patterns <- function(y = NULL, lp = NULL,
         exo_wb2 <- matrix(1, nrow(y2), 1L)
       }
 
-      # sample beta.wb (level 1)
+      # sample beta_wb (level 1)
       sample_wb <- solve(crossprod(exo_wb1), crossprod(exo_wb1, y1_wb))
       sample_yhat_wb1 <- exo_wb1 %*% sample_wb
       sample_yres_wb1 <- y1_wb - sample_yhat_wb1
       sample_yyres_wb1 <- crossprod(sample_yres_wb1)
       sample_xx_wb1 <- crossprod(exo_wb1)
 
-      # sample beta.wb (level 2)
+      # sample beta_wb (level 2)
       xx_wb2 <- crossprod(exo_wb2)
       sample_wb2 <- try(solve(xx_wb2, crossprod(exo_wb2, y2_wb)),
         silent = TRUE

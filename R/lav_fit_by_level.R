@@ -16,7 +16,7 @@
 # YR 11 July 2026 (initial version)
 
 # generate 'saturated' rows for all blocks at the other level(s)
-# (level != level.keep)
+# (level != level_keep)
 #
 # important: any exogenous (fixed.x) covariates at the saturated level
 # must REMAIN exogenous, because we re-use the sample statistics (and h1)
@@ -24,7 +24,7 @@
 # *conditionally* on the covariates (free y-(co)variances, free y~x
 # slopes), just as if the user had written out a saturated level in the
 # model syntax
-lav_fit_by_level_sat_rows <- function(lavobject, level.keep = 1L) {
+lav_fit_by_level_sat_rows <- function(lavobject, level_keep = 1L) {
   lavdata <- lavobject@Data
   lavpta <- lavobject@pta
   lavh1 <- lavobject@h1
@@ -52,7 +52,7 @@ lav_fit_by_level_sat_rows <- function(lavobject, level.keep = 1L) {
 
   for (g in seq_len(ngroups)) {
     for (l in seq_len(nlevels)) {
-      if (l == level.keep) {
+      if (l == level_keep) {
         next
       }
       b <- (g - 1L) * nlevels + l
@@ -164,14 +164,14 @@ lav_fit_by_level_sat_rows <- function(lavobject, level.keep = 1L) {
 }
 
 # construct the parameter table for a partially saturated model:
-# - the rows of the target level (level.keep) are taken from the user model
+# - the rows of the target level (level_keep) are taken from the user model
 #   (or from the independence model, if independent = TRUE), while
 # - the other level(s) are saturated
 #
 # returns NULL if the model contains constraints involving parameters from
 # different levels (in that case, the misfit cannot be attributed to a
 # single level)
-lav_pt_partial_saturation <- function(lavobject, level.keep = 1L,
+lav_pt_partial_saturation <- function(lavobject, level_keep = 1L,
                                       independent = FALSE) {
   stopifnot(inherits(lavobject, "lavaan"))
   pt_user <- as.data.frame(lavobject@ParTable, stringsAsFactors = FALSE)
@@ -192,7 +192,7 @@ lav_pt_partial_saturation <- function(lavobject, level.keep = 1L,
 
   # saturated rows for the other level(s); note: exogenous (fixed.x)
   # covariates remain exogenous (see lav_fit_by_level_sat_rows)
-  pt_sat <- lav_fit_by_level_sat_rows(lavobject, level.keep = level.keep)
+  pt_sat <- lav_fit_by_level_sat_rows(lavobject, level_keep = level_keep)
 
   # the columns we retain in the new parameter table
   core <- c(
@@ -224,7 +224,7 @@ lav_pt_partial_saturation <- function(lavobject, level.keep = 1L,
   # user values, so the combined partable is consistent
   group_values <- lav_pt_group_values(pt_user)
   level_values <- lav_pt_level_values(pt_user)
-  level_keep_val <- level_values[level.keep]
+  level_keep_val <- level_values[level_keep]
   pt_sat$group <- group_values[pt_sat$group]
   pt_sat$level <- level_values[pt_sat$level]
   if (independent) {
@@ -390,7 +390,7 @@ lav_object_fit_by_level <- function(object) {
   for (l in seq_len(lavdata@nlevels)) {
     # partially saturated model for this level
     pt_ps <- lav_pt_partial_saturation(object,
-      level.keep = l,
+      level_keep = l,
       independent = FALSE
     )
     if (is.null(pt_ps)) {
@@ -419,7 +419,7 @@ lav_object_fit_by_level <- function(object) {
 
     # level-specific baseline model
     pt_bl <- lav_pt_partial_saturation(object,
-      level.keep = l,
+      level_keep = l,
       independent = TRUE
     )
     fit_bl <- try(

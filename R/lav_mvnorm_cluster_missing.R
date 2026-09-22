@@ -31,12 +31,12 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
       sigma_w = sigma_w, sigma_b = sigma_b
     )
   }
-  mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  sigma_w_1 <- out$sigma.w
-  sigma_b_1 <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  sigma_w_1 <- out$sigma_w
+  sigma_b_1 <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
   # Lp
   nclusters <- lp$nclusters[[2]]
@@ -49,7 +49,7 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
     return(+Inf)
   }
 
-  # check is both.idx part of sigma.b is 'too' negative; if so, return +Inf
+  # check is both.idx part of sigma_b is 'too' negative; if so, return +Inf
   ev <- eigen(sigma_b_1[both_idx, both_idx, drop = FALSE],
     symmetric = TRUE,
     only.values = TRUE
@@ -58,9 +58,9 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
     return(+Inf)
   }
 
-  # cat("sigma.w = \n"); print(sigma.w)
-  # cat("sigma.b = \n"); print(sigma.b)
-  # cat("mu.y = \n"); print(mu.y)
+  # cat("sigma_w = \n"); print(sigma_w)
+  # cat("sigma_b = \n"); print(sigma_b)
+  # cat("mu_y = \n"); print(mu_y)
 
   # global
   sigma_w_inv <- solve.default(sigma_w_1)
@@ -264,17 +264,17 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
 # estimation with TYPE = TWOLEVEL and missing data)
 #
 # notation (same '2l' parameterization as the loglik function above):
-# - y_ij = mu.y + u_j + e_ij, where mu.y = mu.w + mu.b,
-#   u_j ~ N(0, sigma.b) (only the 'both' part has nonzero variance), and
-#   e_ij ~ N(0, sigma.w)
-# - z_j are the between-only variables: z_j = mu.z + (z-part), with
-#   Var(z) = sigma.zz and Cov(u, z) = sigma.yz (only the 'both' rows)
+# - y_ij = mu_y + u_j + e_ij, where mu_y = mu_w + mu_b,
+#   u_j ~ N(0, sigma_b) (only the 'both' part has nonzero variance), and
+#   e_ij ~ N(0, sigma_w)
+# - z_j are the between-only variables: z_j = mu_z + (z-part), with
+#   Var(z) = sigma_zz and Cov(u, z) = sigma_yz (only the 'both' rows)
 #
 # E-step, per cluster j (writing beta = u_j['both'] and centering all
 # observed data):
 # - the observed units contribute the precision A.j = sum_i T_i' W_i^{-1} T_i
-#   and the information vector p.j = sum_i T_i' W_i^{-1} (y_i.obs - mu.y),
-#   where W_i is the observed block of sigma.w for the pattern of unit i
+#   and the information vector p.j = sum_i T_i' W_i^{-1} (y_i.obs - mu_y),
+#   where W_i is the observed block of sigma_w for the pattern of unit i
 #   (these are the same quantities used in the loglik function above)
 # - the prior of w = (beta, z.mis) given z.obs is N(m0, C0) (standard
 #   conditioning of the joint normal); the posterior is then
@@ -283,7 +283,7 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
 #   with Atilde = blkdiag(A.j, 0) and ptilde = c(p.j, 0); this form remains
 #   valid even if C0 is singular
 # - the missing y-values of unit i, given (beta, y_i.obs), follow the usual
-#   within-pattern regression: mean B_p (y.obs - mu.y[obs] - beta[obs]),
+#   within-pattern regression: mean B_p (y.obs - mu_y[obs] - beta[obs]),
 #   covariance C_p
 #
 # the M-step is the standard saturated update based on the expected
@@ -635,7 +635,7 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
       case_idx <- mp$case.idx[[p]]
       j_idx <- mp$j.idx[[p]]
 
-      # E(d_i): observed part = y - mu.b - E(beta); missing part via B_p
+      # E(d_i): observed part = y - mu_b - E(beta); missing part via B_p
       f_o <- y1w_c[case_idx, o_idx, drop = FALSE] -
         eb_full[j_idx, o_idx, drop = FALSE]
       e_full <- matrix(0, length(case_idx), ny)
@@ -669,8 +669,8 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
       }
     } # patterns
 
-    # empty units (all level-1 variables missing): E(d) = mu.w,
-    # Cov(d) = sigma.w -- no data contribution
+    # empty units (all level-1 variables missing): E(d) = mu_w,
+    # Cov(d) = sigma_w -- no data contribution
     n_empty <- length(mp$empty.idx)
     if (n_empty > 0L) {
       tw1 <- tw1 + (n_empty * mu_w)
@@ -720,16 +720,16 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
   } # em_step
 
   # loglikelihood at theta -- the state is already in 2l form, so we can
-  # skip the 2l -> implied -> 2l round trip (mu.y = mu.w + mu.b, with
-  # mu.b[within-only] structurally zero; see the invariants at the top of
+  # skip the 2l -> implied -> 2l round trip (mu_y = mu_w + mu_b, with
+  # mu_b[within-only] structurally zero; see the invariants at the top of
   # lav_mvnorm_cluster.R)
   em_logl <- function(theta) {
     th <- em_unpack(theta)
     out <- list(
-      sigma.w = th$sigma_w, sigma.b = th$sigma_b,
-      sigma.zz = th$sigma_zz, sigma.yz = th$sigma_yz,
-      mu.z = th$mu_z, mu.y = th$mu_w + th$mu_b,
-      mu.w = th$mu_w, mu.b = th$mu_b
+      sigma_w = th$sigma_w, sigma_b = th$sigma_b,
+      sigma_zz = th$sigma_zz, sigma_yz = th$sigma_yz,
+      mu_z = th$mu_z, mu_y = th$mu_w + th$mu_b,
+      mu_w = th$mu_w, mu_b = th$mu_b
     )
     lav_mvn_cl_mi_loglik_samp_2l(
       y1 = y1, y2 = y2, lp = lp, mp = mp,
@@ -918,12 +918,12 @@ lav_mvn_cl_mi_posterior <- function(y1 = NULL,
       sigma_w = sigma_w, sigma_b = sigma_b
     )
   }
-  mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  sw <- out$sigma.w
-  sb <- out$sigma.b[lp$both.idx[[2]], lp$both.idx[[2]], drop = FALSE]
-  sigma_zz <- out$sigma.zz
-  syz <- out$sigma.yz[lp$both.idx[[2]], , drop = FALSE]
+  mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  sw <- out$sigma_w
+  sb <- out$sigma_b[lp$both.idx[[2]], lp$both.idx[[2]], drop = FALSE]
+  sigma_zz <- out$sigma_zz
+  syz <- out$sigma_yz[lp$both.idx[[2]], , drop = FALSE]
 
   # dimensions and indices
   nclusters <- lp$nclusters[[2]]
@@ -1061,7 +1061,7 @@ lav_mvn_cl_mi_posterior <- function(y1 = NULL,
     y1w = y1w, y1w_c = y1w_c, z = z, zc = zc,
     mu_y = mu_y, mu_z = mu_z,
     sb = sb, syz = syz, sigma_zz = sigma_zz, sigma_w = sw,
-    mu_b_2l = out$mu.b, mu_w_2l = out$mu.w,
+    mu_b_2l = out$mu_b, mu_w_2l = out$mu_w,
     both_idx = both_idx, between_idx = between_idx,
     zmis_q = zmis_q, zpat2j = zpat2j
   )
@@ -1257,8 +1257,8 @@ lav_mvn_cl_mi_info_firstorder <- function(
 }
 
 # observed information
-# order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are splitted within/between are forced to zero
+# order: mu_w within, vech(sigma_w) within, mu_b between, vech(sigma_b) between
+# mu_w rows/cols that are splitted within/between are forced to zero
 #
 # numerical approximation (for now)
 lav_mvn_cl_mi_info_observed <- function(

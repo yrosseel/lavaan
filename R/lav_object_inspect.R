@@ -3491,9 +3491,9 @@ lav_inspect_ranef <- function(object, add_labels = FALSE,
     } else {
       out <- lav_mvn_cl_implied22l(lp = tmp_lp, implied = implied_group)
       mb_j <- lav_mvn_cl_em_estep_ranef(ylp = tmp_ylp, lp = tmp_lp,
-        sigma_w = out$sigma.w, sigma_b = out$sigma.b,
-        sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
-        mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
+        sigma_w = out$sigma_w, sigma_b = out$sigma_b,
+        sigma_zz = out$sigma_zz, sigma_yz = out$sigma_yz,
+        mu_z = out$mu_z, mu_w = out$mu_w, mu_b = out$mu_b,
         se = FALSE)
     }
     return_value[[g]] <- mb_j

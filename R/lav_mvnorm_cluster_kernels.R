@@ -50,9 +50,9 @@ lav_cl_sigma_22l <- function(sigma_w = NULL,
   }
 
   list(
-    sigma.w = sigma_w_tilde[y_idx, y_idx, drop = FALSE],
-    sigma.b = sigma_b_tilde[y_idx, y_idx, drop = FALSE],
-    sigma.zz = sigma_zz, sigma.yz = sigma_yz
+    sigma_w = sigma_w_tilde[y_idx, y_idx, drop = FALSE],
+    sigma_b = sigma_b_tilde[y_idx, y_idx, drop = FALSE],
+    sigma_zz = sigma_zz, sigma_yz = sigma_yz
   )
 }
 
@@ -172,7 +172,7 @@ lav_mvn_cl_scores_2implied <- function(lp = NULL,
   cbind(mu_w, sigma_w, mu_b, sigma_b)
 }
 
-# 3) zero out the rows/cols of a (mu.w, vech(sigma.w), mu.b, vech(sigma.b))
+# 3) zero out the rows/cols of a (mu_w, vech(sigma_w), mu_b, vech(sigma_b))
 #    information matrix that correspond to fixed exogenous variables
 lav_mvn_cl_zero_x_idx <- function(information,
                                   lp = NULL,
@@ -358,12 +358,12 @@ lav_mvn_cl_grad_engine <- function(ylp = NULL,
     lp = lp, mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
-  mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  sigma_w_1 <- out$sigma.w
-  sigma_b_1 <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  sigma_w_1 <- out$sigma_w
+  sigma_b_1 <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
   # Lp
   nclusters <- lp$nclusters[[2]]
@@ -397,7 +397,7 @@ lav_mvn_cl_grad_engine <- function(ylp = NULL,
 
     # Y2
     y2 <- ylp[[2]]$Y2
-    # NOTE: ORDER mu.b must match Y2
+    # NOTE: ORDER mu_b must match Y2
     mu_b_2 <- numeric(ncol(y2))
     if (length(between_idx) > 0L) {
       mu_b_2[-between_idx] <- mu_y
@@ -500,7 +500,7 @@ lav_mvn_cl_grad_engine <- function(ylp = NULL,
 
       # SIGMA.W
       if (score_mode) {
-        # data within for the cluster (centered by mu.y)
+        # data within for the cluster (centered by mu_y)
         y1m <- y1w_cm[cluster_idx == u, , drop = FALSE]
         g_sigma_w <- ((nj - 1) * sigma_w_inv
           - sigma_w_inv %*% (crossprod(y1m) - nj * y2yc_yy) %*% sigma_w_inv
@@ -564,7 +564,7 @@ lav_mvn_cl_grad_engine <- function(ylp = NULL,
 
       # SIGMA.W
       if (score_mode) {
-        # data within for the cluster (centered by mu.y)
+        # data within for the cluster (centered by mu_y)
         y1m <- y1w_cm[cluster_idx == u, , drop = FALSE]
         g_sigma_w <- ((nj - 1) * sigma_w_inv
           - sigma_w_inv %*% (crossprod(y1m) - nj * y2yc_yy) %*% sigma_w_inv
@@ -667,12 +667,12 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
     lp = lp, mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
-  mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  sigma_w_1 <- out$sigma.w
-  sigma_b_1 <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  sigma_w_1 <- out$sigma_w
+  sigma_b_1 <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
   # Lp
   nclusters <- lp$nclusters[[2]]
@@ -680,7 +680,7 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
   cluster_idx <- lp$cluster.idx[[2]]
   both_idx <- lp$both.idx[[2]]
 
-  # sigma.w
+  # sigma_w
   sigma_w_inv <- solve.default(sigma_w_1)
   sigma_b_1 <- sigma_b_1[both_idx, both_idx, drop = FALSE] # only both part
 
@@ -713,10 +713,10 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
   # cluster-wise gradient blocks
   g_muy <- matrix(0, nclusters, length(mu_y))
   g_sigma_w <- matrix(0, nclusters, length(lav_mat_vech(sigma_w_1)))
-  g_sigma_b <- matrix(0, nclusters, length(lav_mat_vech(out$sigma.b)))
+  g_sigma_b <- matrix(0, nclusters, length(lav_mat_vech(out$sigma_b)))
   g_muz <- matrix(0, nclusters, length(mu_z))
   g_sigma_zz <- matrix(0, nclusters, length(lav_mat_vech(sigma_zz)))
-  g_sigma_yz <- matrix(0, nclusters, length(lav_mat_vec(out$sigma.yz)))
+  g_sigma_yz <- matrix(0, nclusters, length(lav_mat_vec(out$sigma_yz)))
 
   # Z per missing pattern
   if (nz > 0L) {
@@ -889,7 +889,7 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
       t3 <- -tcrossprod(p_ibza_j_inv, zijzizyp)
       t4 <- 2 * tcrossprod(a_ibza_j_inv_g, zij)
       tmp <- t0 + t1 + t2 + t3 + t4
-      tmp2 <- matrix(0, nrow(out$sigma.yz), ncol(out$sigma.yz))
+      tmp2 <- matrix(0, nrow(out$sigma_yz), ncol(out$sigma_yz))
       tmp2[both_idx, ] <- tmp
       g_sigma_yz[j, ] <- lav_mat_vec(tmp2)
 
@@ -901,7 +901,7 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
       # symmetry correction
       zz <- 2 * tmp
       diag(zz) <- diag(tmp)
-      zz2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
+      zz2 <- matrix(0, nrow(out$sigma_b), ncol(out$sigma_b))
       zz2[both_idx, both_idx] <- zz
       g_sigma_b[j, ] <- lav_mat_vech(zz2)
 
@@ -921,7 +921,7 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
       # symmetry correction
       zz <- 2 * tmp
       diag(zz) <- diag(tmp)
-      zz2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
+      zz2 <- matrix(0, nrow(out$sigma_b), ncol(out$sigma_b))
       zz2[both_idx, both_idx] <- zz
       g_sigma_b[j, ] <- lav_mat_vech(zz2)
 
@@ -1003,12 +1003,12 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
     dx_sigma_zz <- lav_mat_vech_rev(colSums(g_sigma_zz))
     dx_sigma_yz <- matrix(
       colSums(g_sigma_yz),
-      nrow(out$sigma.yz), ncol(out$sigma.yz)
+      nrow(out$sigma_yz), ncol(out$sigma_yz)
     )
   } else {
     dx_mu_z <- numeric(0L)
     dx_sigma_zz <- matrix(0, 0L, 0L)
-    dx_sigma_yz <- matrix(0, nrow(out$sigma.yz), 0L)
+    dx_sigma_yz <- matrix(0, nrow(out$sigma_yz), 0L)
   }
 
   # rearrange

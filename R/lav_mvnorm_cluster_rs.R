@@ -559,7 +559,7 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
 # model-implied ingredients for the random-slope loglikelihood,
 # computed from GLIST
 #
-# returns: sigma.w (p1 x p1), mu.w (p1), P (p1 x nx),
+# returns: sigma_w (p1 x p1), mu_w (p1), P (p1 x nx),
 #          lmat (p1 x npaths), sigma.v (pv x pv), mu.v (pv),
 #          cc (pv x nexo.b), mu.exo (nexo.b)
 lav_mvn_cl_rs_implied <- function(lavmodel = NULL, glist = NULL,
@@ -776,11 +776,11 @@ lav_mvn_cl_rs_implied <- function(lavmodel = NULL, glist = NULL,
   }
 
   list(
-    sigma.w = sigma_w, mu.y = mu_y, mu.y.b = mu_y_b, P = pmat,
+    sigma_w = sigma_w, mu_y = mu_y, mu_y_b = mu_y_b, P = pmat,
     lmat = lmat, q0 = q0, z.v.idx = z_v_idx, pv = pv,
     sigma.v = sigma_v, mu.v = mu_v, cc = cc, mu.exo = mu_exo,
     eta.names = lv_names_b[eta_idx], meta = meta,
-    mu.z = mu_z, gmat = gmat, sigma.z = sigma_z
+    mu_z = mu_z, gmat = gmat, sigma.z = sigma_z
   )
 }
 
@@ -815,8 +815,8 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
   nclusters <- rs_stats$nclusters
   nj_all <- rs_stats$cluster.size
 
-  # invert sigma.w
-  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma.w,
+  # invert sigma_w
+  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma_w,
     logdet = TRUE, sinv_method = sinv_method
   )
   logdet_w <- attr(sigma_w_inv, "logdet")
@@ -842,7 +842,7 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
   w_mat <- sigma_w_inv
   lmat <- imp$lmat
   pmat <- imp$P
-  mu_y <- imp$mu.y
+  mu_y <- imp$mu_y
   q0 <- imp$q0
   z_v_idx <- imp$z.v.idx
 
@@ -874,7 +874,7 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
     wzg <- wzb %*% imp$gmat # kz x pv
     a_zb <- crossprod(imp$gmat, wzg) # pv x pv
     zb_all <- rs_stats$zb
-    mu_zb <- imp$mu.z
+    mu_zb <- imp$mu_z
   }
 
   # more constants (hoisted out of the cluster loop)
@@ -1062,7 +1062,7 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
 
   lmat <- imp$lmat
   pmat <- imp$P
-  mu_y <- imp$mu.y
+  mu_y <- imp$mu_y
   q0 <- imp$q0
   z_v_idx <- imp$z.v.idx
 
@@ -1092,7 +1092,7 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
     wzg <- wzb %*% imp$gmat # kz x pv
     a_zb <- crossprod(imp$gmat, wzg) # pv x pv
     zb_all <- rs_stats$zb
-    mu_zb <- imp$mu.z
+    mu_zb <- imp$mu_z
   }
 
   # per-cluster accumulators
@@ -1109,13 +1109,13 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
       o <- cell$o
       po <- length(o)
 
-      w_o <- lav_mat_sym_inverse(imp$sigma.w[o, o, drop = FALSE],
+      w_o <- lav_mat_sym_inverse(imp$sigma_w[o, o, drop = FALSE],
         logdet = TRUE, sinv_method = sinv_method
       )
       logdet_o <- attr(w_o, "logdet")
       if (!is.finite(logdet_o)) {
         # caught by the enclosing tryCatch() -> objective returns +Inf
-        lav_msg_stop(gettext("sigma.w is not positive definite."))
+        lav_msg_stop(gettext("sigma_w is not positive definite."))
       }
       # embed in the full p1 x p1 space
       w_mat <- matrix(0, p1, p1)
@@ -1499,8 +1499,8 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
       next
     }
     imp_list[[i]] <- list(
-      sigma.w = imp_i$sigma.w, mu.y = imp_i$mu.y,
-      mu.y.b = imp_i$mu.y.b, P = imp_i$P,
+      sigma_w = imp_i$sigma_w, mu_y = imp_i$mu_y,
+      mu_y_b = imp_i$mu_y_b, P = imp_i$P,
       lmat = imp_i$lmat[, ov_rows, drop = FALSE],
       q0 = imp_i$q0[, lin_v, drop = FALSE],
       z.v.idx = z_v_idx_c, pv = length(lin_v),
@@ -1510,7 +1510,7 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
       mu.exo = imp0$mu.exo,
       # z-outcomes: the slopes have no indicators, so the nl columns
       # of G are structurally zero and simply drop out
-      mu.z = imp_i$mu.z,
+      mu_z = imp_i$mu_z,
       gmat = imp_i$gmat[, lin_v, drop = FALSE],
       sigma.z = imp_i$sigma.z
     )
@@ -1805,7 +1805,7 @@ lav_mvn_cl_rs_estep <- function(rs_stats = NULL, imp = NULL,
   nj_all <- rs_stats$cluster.size
   ntotal <- rs_stats$ntotal
 
-  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma.w,
+  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma_w,
     logdet = TRUE, sinv_method = sinv_method
   )
   if (!is.finite(attr(sigma_w_inv, "logdet"))) {
@@ -1815,8 +1815,8 @@ lav_mvn_cl_rs_estep <- function(rs_stats = NULL, imp = NULL,
   }
   w_mat <- sigma_w_inv
   sigma_v <- imp$sigma.v
-  mu_y <- imp$mu.y
-  nu_map <- imp$mu.y.b
+  mu_y <- imp$mu_y
+  nu_map <- imp$mu_y_b
   q0 <- imp$q0
   z_v_idx <- imp$z.v.idx
   path_zcol <- z_v_idx[path_tab$z.idx]
@@ -1856,7 +1856,7 @@ lav_mvn_cl_rs_estep <- function(rs_stats = NULL, imp = NULL,
     sxy_j <- rs_stats$sxy[[j]]
     syy_j <- rs_stats$syy[[j]]
 
-    # A_j and p_j (centered at mu.y; no P term: the EM requires P = 0)
+    # A_j and p_j (centered at mu_y; no P term: the EM requires P = 0)
     se_j <- sy_j - nj * mu_y
     a_j <- nj * q0twq0
     p_j <- as.numeric(crossprod(wq0, se_j))
@@ -1986,10 +1986,10 @@ lav_mvn_cl_rs_estep_m <- function(rs_stats = NULL, imp = NULL,
   nclusters <- rs_stats$nclusters
   mp <- rs_stats$mp
 
-  sigma_w <- imp$sigma.w
+  sigma_w <- imp$sigma_w
   sigma_v <- imp$sigma.v
-  mu_y <- imp$mu.y
-  nu_map <- imp$mu.y.b
+  mu_y <- imp$mu_y
+  nu_map <- imp$mu_y_b
   q0 <- imp$q0
   lmat <- imp$lmat
   z_v_idx <- imp$z.v.idx
@@ -2661,10 +2661,10 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
 # (the adjoint pass uses the same layout)
 lav_mvn_cl_rs_phi_vec <- function(imp) {
   c(
-    as.numeric(imp$sigma.w), imp$mu.y, as.numeric(imp$P),
+    as.numeric(imp$sigma_w), imp$mu_y, as.numeric(imp$P),
     as.numeric(imp$lmat), as.numeric(imp$q0), as.numeric(imp$sigma.v),
     imp$mu.v, as.numeric(imp$cc), imp$mu.exo,
-    imp$mu.z, as.numeric(imp$gmat), as.numeric(imp$sigma.z)
+    imp$mu_z, as.numeric(imp$gmat), as.numeric(imp$sigma.z)
   )
 }
 
@@ -2689,7 +2689,7 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
   mu_v <- imp$mu.v
   cc_mat <- imp$cc
   mu_exo <- imp$mu.exo
-  mu_y <- imp$mu.y
+  mu_y <- imp$mu_y
   pmat <- imp$P
   pmat_t <- t(pmat)
   lmat <- imp$lmat
@@ -2722,7 +2722,7 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
   # z-outcome constants (the extra observation block)
   if (kz > 0L) {
     gmat_z <- imp$gmat
-    mu_zb <- imp$mu.z
+    mu_zb <- imp$mu_z
     zb_all <- rs_stats$zb
     wzb <- lav_mat_sym_inverse(imp$sigma.z,
       logdet = TRUE, sinv_method = sinv_method
@@ -2873,7 +2873,7 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
 
   if (is.null(rs_stats$mp)) {
     # -------------------- complete data --------------------
-    w_mat <- lav_mat_sym_inverse(imp$sigma.w,
+    w_mat <- lav_mat_sym_inverse(imp$sigma_w,
       logdet = TRUE, sinv_method = sinv_method
     )
     if (!is.finite(attr(w_mat, "logdet"))) {
@@ -2940,7 +2940,7 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
     w_list <- vector("list", npat)
     for (p in seq_len(npat)) {
       o <- mp$pattern[[p]]$o
-      w_o <- lav_mat_sym_inverse(imp$sigma.w[o, o, drop = FALSE],
+      w_o <- lav_mat_sym_inverse(imp$sigma_w[o, o, drop = FALSE],
         logdet = TRUE, sinv_method = sinv_method
       )
       if (!is.finite(attr(w_o, "logdet"))) {
@@ -3285,14 +3285,14 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
   nclusters <- rs_stats$nclusters
   nj_all <- rs_stats$cluster.size
 
-  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma.w, logdet = TRUE)
+  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma_w, logdet = TRUE)
   if (!is.finite(attr(sigma_w_inv, "logdet"))) {
     lav_msg_stop(gettext(
       "within covariance matrix is not positive definite."))
   }
   w_mat <- sigma_w_inv
   sigma_v <- imp$sigma.v
-  mu_y <- imp$mu.y
+  mu_y <- imp$mu_y
 
   # constants (as in the loglikelihood/E-step)
   wl <- w_mat %*% imp$lmat
@@ -3309,7 +3309,7 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
     wzg <- wzb %*% imp$gmat
     a_zb <- crossprod(imp$gmat, wzg)
     zb_all <- rs_stats$zb
-    mu_zb <- imp$mu.z
+    mu_zb <- imp$mu_z
   }
 
   # ---- per-cluster posterior of v_b: mu0_j (and posterior sd) ----
@@ -3327,7 +3327,7 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
     for (p in seq_len(mp$npatterns)) {
       cell <- mp$pattern[[p]]
       o <- cell$o
-      w_o <- lav_mat_sym_inverse(imp$sigma.w[o, o, drop = FALSE],
+      w_o <- lav_mat_sym_inverse(imp$sigma_w[o, o, drop = FALSE],
         logdet = TRUE)
       if (!is.finite(attr(w_o, "logdet"))) {
         lav_msg_stop(gettext(
@@ -3541,7 +3541,7 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
         if (length(o) == 0L) {
           next
         }
-        w_o <- lav_mat_sym_inverse(imp$sigma.w[o, o, drop = FALSE])
+        w_o <- lav_mat_sym_inverse(imp$sigma_w[o, o, drop = FALSE])
         upd[ridx, ] <- e_mat[ridx, o, drop = FALSE] %*%
           (w_o %*% t(ceta_y[, o, drop = FALSE]))
       }

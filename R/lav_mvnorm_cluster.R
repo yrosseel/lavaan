@@ -28,14 +28,14 @@
 # 2) the '2l' representation: the y/z partition in which the marginal
 #    likelihood of two-level data is naturally expressed, where
 #    y = the level-1 variables and z = the between-only variables:
-#      - sigma.w  : Var(e_ij)  (y variables; within residual)
-#      - sigma.b  : Var(u_j)   (y variables; only the 'both' block is
+#      - sigma_w  : Var(e_ij)  (y variables; within residual)
+#      - sigma_b  : Var(u_j)   (y variables; only the 'both' block is
 #                   nonzero)
-#      - sigma.zz : Var(z_j)
-#      - sigma.yz : Cov(u_j, z_j) (only the 'both' rows are nonzero)
-#      - mu.y     : E(y) = mu.w + mu.b
-#      - mu.z     : E(z)
-#      - mu.w/mu.b: the separate within/between mean parts (see below)
+#      - sigma_zz : Var(z_j)
+#      - sigma_yz : Cov(u_j, z_j) (only the 'both' rows are nonzero)
+#      - mu_y     : E(y) = mu_w + mu_b
+#      - mu_z     : E(z)
+#      - mu_w/mu_b: the separate within/between mean parts (see below)
 #
 # lav_mvn_cl_implied22l() maps 1) -> 2); lav_mvn_cl_2l2implied() maps
 # 2) -> 1). both maps pass through p.tilde x p.tilde 'tilde' matrices,
@@ -47,7 +47,7 @@
 #
 # * naming: list elements in the implied representation are Capitalized
 #   dot.case (Mu.W, Sigma.B); elements in the 2l representation are
-#   lowercase dot.case (mu.y, sigma.zz) -- the case tells you which space
+#   lowercase dot.case (mu_y, sigma_zz) -- the case tells you which space
 #   you are in
 #
 # * ordering: the tilde universe puts the between-only variables LAST;
@@ -60,10 +60,10 @@
 #   use it symmetrically (scatter and gather with the same index vector),
 #   so its internal order cancels out
 #
-# * mean folding: for the 'both' variables only the SUM mu.w + mu.b is
+# * mean folding: for the 'both' variables only the SUM mu_w + mu_b is
 #   identified; implied22l() therefore folds the two parts into
-#   mu.y = mu.w + mu.b, and its mu.w/mu.b outputs follow the convention
-#   mu.w[both.idx] = 0 and mu.b[within.idx] = 0
+#   mu_y = mu_w + mu_b, and its mu_w/mu_b outputs follow the convention
+#   mu_w[both.idx] = 0 and mu_b[within.idx] = 0
 #
 # * 2l2implied() is used in TWO distinct roles:
 #   (a) as the parameter map back (EM updates, final h1 estimates):
@@ -72,14 +72,14 @@
 #   (b) as the gradient ADJOINT (both maps are linear!): given the
 #       gradient of -2*logl wrt the 2l matrices, the same gather/scatter
 #       -- transposed -- yields the gradient wrt the implied matrices;
-#       in this role mu_y = d(-2logl)/d(mu.y) is given, and BOTH mu.w
-#       and mu.b receive the full mu.y block, because wrt the implied
-#       representation d/d(mu.w[both]) = d/d(mu.b[both]) = d/d(mu.y[both])
+#       in this role mu_y = d(-2logl)/d(mu_y) is given, and BOTH mu_w
+#       and mu_b receive the full mu_y block, because wrt the implied
+#       representation d/d(mu_w[both]) = d/d(mu_b[both]) = d/d(mu_y[both])
 #       (only their sum enters the likelihood).
-#       do NOT zero mu.w[both.idx] inside 2l2implied(): that would break
+#       do NOT zero mu_w[both.idx] inside 2l2implied(): that would break
 #       role (b), producing non-symmetric (numerically differentiated)
 #       Hessians -- this regressed twice before, in 0.6-5 and 0.6-18;
-#       zeroing mu.w[both.idx] is a post-estimation normalization only
+#       zeroing mu_w[both.idx] is a post-estimation normalization only
 #
 # * round trip: on the sigma parts, 2l2implied(implied22l(x)) == x
 #   exactly (pure scatter/gather, no arithmetic); on the mean parts the
@@ -92,13 +92,13 @@
 # to facilitate computing of (log)likelihood in the two-level case
 
 # when conditional.x = FALSE:
-# - sigma.w and sigma.b: same dimensions, level-1 variables only
-# - sigma.zz: level-2 variables only
-# - sigma.yz: cov(level-1, level-2)
-# - mu.y: level-1 variables only (mu.w + mu.b)
-# - mu.w: y within  part
-# - mu.b: y between part
-# - mu.z: level-2 variables only
+# - sigma_w and sigma_b: same dimensions, level-1 variables only
+# - sigma_zz: level-2 variables only
+# - sigma_yz: cov(level-1, level-2)
+# - mu_y: level-1 variables only (mu_w + mu_b)
+# - mu_w: y within  part
+# - mu_b: y between part
+# - mu_z: level-2 variables only
 lav_mvn_cl_implied22l <- function(lp = NULL,
                                   implied = NULL,
                                   mu_w = NULL,
@@ -140,7 +140,7 @@ lav_mvn_cl_implied22l <- function(lp = NULL,
   mu_b_tilde <- numeric(p_tilde)
   mu_b_tilde[ov_idx[[2]]] <- mu_b
 
-  # mean folding (see the header invariants): mu.y = mu.w + mu.b
+  # mean folding (see the header invariants): mu_y = mu_w + mu_b
   mu_wb_tilde <- numeric(p_tilde)
   mu_wb_tilde[within_idx] <- mu_w_tilde[within_idx]
   mu_wb_tilde[both_idx] <- (mu_b_tilde[both_idx] +
@@ -168,9 +168,9 @@ lav_mvn_cl_implied22l <- function(lp = NULL,
   }
 
   list(
-    sigma.w = out$sigma.w, sigma.b = out$sigma.b, sigma.zz = out$sigma.zz,
-    sigma.yz = out$sigma.yz, mu.z = mu_z, mu.y = mu_y, mu.w = mu_w_1,
-    mu.b = mu_b_1
+    sigma_w = out$sigma_w, sigma_b = out$sigma_b, sigma_zz = out$sigma_zz,
+    sigma_yz = out$sigma_yz, mu_z = mu_z, mu_y = mu_y, mu_w = mu_w_1,
+    mu_b = mu_b_1
   )
 }
 
@@ -195,8 +195,8 @@ lav_mvn_cl_2l2implied <- function(lp,
   p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
 
   # gradient-adjoint role (see the header invariants): mu_y is given, and
-  # BOTH mu.w and mu.b receive the full mu.y block; do NOT zero
-  # mu.w[both.idx] here (non-symmetric Hessians; regressed in 0.6-5 and
+  # BOTH mu_w and mu_b receive the full mu_y block; do NOT zero
+  # mu_w[both.idx] here (non-symmetric Hessians; regressed in 0.6-5 and
   # 0.6-18) -- that is a post-estimation normalization only
   if (!is.null(mu_y)) {
     mu_b <- mu_y
@@ -254,12 +254,12 @@ lav_mvn_cl_loglik_samp_2l <- function(ylp = NULL,
       sigma_w = sigma_w, sigma_b = sigma_b
     )
   }
-  mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  sigma_w_1 <- out$sigma.w
-  sigma_b_1 <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  sigma_w_1 <- out$sigma_w
+  sigma_b_1 <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
   # Lp
   # nclusters <- lp$nclusters[[2]]
@@ -477,8 +477,8 @@ lav_mvn_cl_info_firstorder <- function(y1 = NULL,
 }
 
 # expected information 'h1' model
-# order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are splitted within/between are forced to zero
+# order: mu_w within, vech(sigma_w) within, mu_b between, vech(sigma_b) between
+# mu_w rows/cols that are splitted within/between are forced to zero
 lav_mvn_cl_info_expected <- function(lp = NULL,
                                      mu_w = NULL,
                                      sigma_w = NULL,
@@ -492,12 +492,12 @@ lav_mvn_cl_info_expected <- function(lp = NULL,
     mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
-  # mu_y <- out$mu.y
-  # mu_z <- out$mu.z
-  sigma_w_1 <- out$sigma.w
-  sigma_b_1 <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  # mu_y <- out$mu_y
+  # mu_z <- out$mu_z
+  sigma_w_1 <- out$sigma_w
+  sigma_b_1 <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
   # create Delta.W.tilde, Delta.B.tilde
   ov_idx <- lp$ov.idx
@@ -597,12 +597,12 @@ lav_mvn_cl_info_expected_delta <- function(lp = NULL,
     mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
-  # mu_y <- out$mu.y
-  # mu_z <- out$mu.z
-  sigma_w_1 <- out$sigma.w
-  sigma_b_1 <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  # mu_y <- out$mu_y
+  # mu_z <- out$mu_z
+  sigma_w_1 <- out$sigma_w
+  sigma_b_1 <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
   # Delta -- this group
   npar <- NCOL(delta)
@@ -677,8 +677,8 @@ lav_mvn_cl_info_expected_delta <- function(lp = NULL,
 
 
 # observed information
-# order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are splitted within/between are forced to zero
+# order: mu_w within, vech(sigma_w) within, mu_b between, vech(sigma_b) between
+# mu_w rows/cols that are splitted within/between are forced to zero
 #
 # numerical approximation (for now)
 lav_mvn_cl_info_observed <- function(lp = NULL,
@@ -744,22 +744,22 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
     lp = lp,
     mu_w = mu_w_1, sigma_w = sigma_w_1, mu_b = mu_b_1, sigma_b = sigma_b_1
   )
-  # mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  mu_w <- out$mu.w
-  mu_b <- out$mu.b
-  sigma_w <- out$sigma.w
-  sigma_b <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  # mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  mu_w <- out$mu_w
+  mu_b <- out$mu_b
+  sigma_w <- out$sigma_w
+  sigma_b <- out$sigma_b
+  sigma_zz <- out$sigma_zz
+  sigma_yz <- out$sigma_yz
 
-  # mu.z and sigma.zz can be computed beforehand
+  # mu_z and sigma_zz can be computed beforehand
   if (length(between_idx) > 0L) {
     z <- y2[, between_idx, drop = FALSE]
     mu_z <- colMeans(z, na.rm = TRUE)
     sigma_zz <- cov(z, use = "pairwise.complete.obs") *
                               (lp$nclusters[[2]] - 1L) / lp$nclusters[[2]]
-    # sigma.zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu.z)
+    # sigma_zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu_z)
     # Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
   }
 
@@ -785,7 +785,7 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
          sigma_yz = sigma_yz)
   }
 
-  # one EM step: theta -> theta' (mu.z and sigma.zz stay fixed)
+  # one EM step: theta -> theta' (mu_z and sigma_zz stay fixed)
   em_step <- function(theta) {
     th <- em_unpack(theta)
     estep <- lav_mvn_cl_em_estepb( # Y1 = Y1,
@@ -801,31 +801,31 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
     )
 
     # mstep
-    sigma_w_new <- estep$sigma.w
+    sigma_w_new <- estep$sigma_w
 
     # check for (near-zero) variances at the within level, and set
     # them to min.variance
-    zero_var <- which(diag(estep$sigma.w) < min_variance)
+    zero_var <- which(diag(estep$sigma_w) < min_variance)
     if (length(zero_var) > 0L) {
       sigma_w_new[, zero_var] <- 0
       sigma_w_new[zero_var, ] <- 0
       diag(sigma_w_new)[zero_var] <- min_variance
     }
 
-    em_pack(estep$mu.w, estep$mu.b, sigma_w_new, estep$sigma.b,
-            estep$sigma.yz)
+    em_pack(estep$mu_w, estep$mu_b, sigma_w_new, estep$sigma_b,
+            estep$sigma_yz)
   }
 
   # loglikelihood at theta -- the state is already in 2l form, so we can
-  # skip the 2l -> implied -> 2l round trip (mu.y = mu.w + mu.b, with
-  # mu.b[within-only] structurally zero; see the header invariants)
+  # skip the 2l -> implied -> 2l round trip (mu_y = mu_w + mu_b, with
+  # mu_b[within-only] structurally zero; see the header invariants)
   em_logl <- function(theta) {
     th <- em_unpack(theta)
     out <- list(
-      sigma.w = th$sigma_w, sigma.b = th$sigma_b,
-      sigma.zz = sigma_zz, sigma.yz = th$sigma_yz,
-      mu.z = mu_z, mu.y = th$mu_w + th$mu_b,
-      mu.w = th$mu_w, mu.b = th$mu_b
+      sigma_w = th$sigma_w, sigma_b = th$sigma_b,
+      sigma_zz = sigma_zz, sigma_yz = th$sigma_yz,
+      mu_z = mu_z, mu_y = th$mu_w + th$mu_b,
+      mu_w = th$mu_w, mu_b = th$mu_b
     )
     lav_mvn_cl_loglik_samp_2l(
       ylp = ylp, lp = lp,
@@ -999,7 +999,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     lavimplied <- lav_model_implied(lavmodel)
   }
 
-  # TODO: what if current 'starting' parameters imply a non-pd sigma.b?
+  # TODO: what if current 'starting' parameters imply a non-pd sigma_b?
 
   # report initial fx
   if (missing_flag) {
@@ -1035,21 +1035,21 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       mu_w = lavimplied$mean[[1]], sigma_w = lavimplied$cov[[1]],
       mu_b = lavimplied$mean[[2]], sigma_b = lavimplied$cov[[2]]
     )
-    # mu_y <- out$mu.y
-    mu_z <- out$mu.z
-    mu_w <- out$mu.w
-    mu_b <- out$mu.b
-    sigma_w <- out$sigma.w
-    sigma_b <- out$sigma.b
-    sigma_zz <- out$sigma.zz
-    sigma_yz <- out$sigma.yz
+    # mu_y <- out$mu_y
+    mu_z <- out$mu_z
+    mu_w <- out$mu_w
+    mu_b <- out$mu_b
+    sigma_w <- out$sigma_w
+    sigma_b <- out$sigma_b
+    sigma_zz <- out$sigma_zz
+    sigma_yz <- out$sigma_yz
 
-    # mu.z and sigma.zz can be computed beforehand
+    # mu_z and sigma_zz can be computed beforehand
     if (length(between_idx) > 0L) {
       z <- y2[, between_idx, drop = FALSE]
       mu_z <- colMeans(y2)[between_idx]
       sigma_zz <- cov(z) * (lp$nclusters[[2]] - 1L) / lp$nclusters[[2]]
-      # sigma.zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu.z)
+      # sigma_zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu_z)
       # Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
     }
   }
@@ -1125,8 +1125,8 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     if (missing_flag) {
       # E-step + saturated update = the expected complete-data moments
       theta <- mi_engine$pack(
-        out2$mu.w, out2$mu.b, out2$sigma.w, out2$sigma.b,
-        out2$mu.z, out2$sigma.zz, out2$sigma.yz
+        out2$mu_w, out2$mu_b, out2$sigma_w, out2$sigma_b,
+        out2$mu_z, out2$sigma_zz, out2$sigma_yz
       )
       theta_new <- mi_engine$step(theta, logl = logl)
       implied <- mi_engine$implied(theta_new)
@@ -1134,20 +1134,20 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       estep <- lav_mvn_cl_em_estepb(
         ylp = ylp,
         lp = lp,
-        sigma_w = out2$sigma.w,
-        sigma_b = out2$sigma.b,
-        mu_w = out2$mu.w,
-        mu_b = out2$mu.b,
-        sigma_yz = out2$sigma.yz,
-        sigma_zz = out2$sigma.zz,
-        mu_z = out2$mu.z
+        sigma_w = out2$sigma_w,
+        sigma_b = out2$sigma_b,
+        mu_w = out2$mu_w,
+        mu_b = out2$mu_b,
+        sigma_yz = out2$sigma_yz,
+        sigma_zz = out2$sigma_zz,
+        mu_z = out2$mu_z
       )
       implied <- lav_mvn_cl_2l2implied(
         lp = lp,
-        sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
-        sigma_zz = out2$sigma.zz, sigma_yz = estep$sigma.yz,
-        mu_z = out2$mu.z,
-        mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
+        sigma_w = estep$sigma_w, sigma_b = estep$sigma_b,
+        sigma_zz = out2$sigma_zz, sigma_yz = estep$sigma_yz,
+        mu_z = out2$mu_z,
+        mu_y = NULL, mu_w = estep$mu_w, mu_b = estep$mu_b
       )
     }
     rownames(implied$Sigma.W) <- ov_names_l[[1]]
@@ -1311,10 +1311,10 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       # back to model-implied dimensions
       implied <- lav_mvn_cl_2l2implied(
         lp = lp,
-        sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
-        sigma_zz = sigma_zz, sigma_yz = estep$sigma.yz,
+        sigma_w = estep$sigma_w, sigma_b = estep$sigma_b,
+        sigma_zz = sigma_zz, sigma_yz = estep$sigma_yz,
         mu_z = mu_z,
-        mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
+        mu_y = NULL, mu_w = estep$mu_w, mu_b = estep$mu_b
       )
       rownames(implied$Sigma.W) <- ov_names_l[[1]]
       rownames(implied$Sigma.B) <- ov_names_l[[2]]
@@ -1393,13 +1393,13 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       }
 
       # state for the next E-step (converted above, right after the M-step)
-      mu_z <- out$mu.z
-      mu_w <- out$mu.w
-      mu_b <- out$mu.b
-      sigma_w <- out$sigma.w
-      sigma_b <- out$sigma.b
-      sigma_zz <- out$sigma.zz
-      sigma_yz <- out$sigma.yz
+      mu_z <- out$mu_z
+      mu_w <- out$mu_w
+      mu_b <- out$mu_b
+      sigma_w <- out$sigma_w
+      sigma_b <- out$sigma_b
+      sigma_zz <- out$sigma_zz
+      sigma_yz <- out$sigma_yz
     } # EM iterations
 
     x <- x_mstep
@@ -1653,8 +1653,8 @@ lav_mvn_cl_em_estep <- function( # Y1           = NULL,
   }
 
   list(
-    sigma.w = sigma_w, sigma.b = sigma_b, mu.w = mu_w, mu.b = mu_b,
-    sigma.yz = sigma_yz, sigma.zz = sigma_zz, mu.z = mu_z
+    sigma_w = sigma_w, sigma_b = sigma_b, mu_w = mu_w, mu_b = mu_b,
+    sigma_yz = sigma_yz, sigma_zz = sigma_zz, mu_z = mu_z
   )
 }
 
@@ -1780,7 +1780,7 @@ lav_mvn_cl_em_estepb <- function( # Y1           = NULL, # not used!
   }
 
   list(
-    sigma.w = sigma_w, sigma.b = sigma_b, mu.w = mu_w, mu.b = mu_b,
-    sigma.yz = sigma_yz, sigma.zz = sigma_zz, mu.z = mu_z
+    sigma_w = sigma_w, sigma_b = sigma_b, mu_w = mu_w, mu_b = mu_b,
+    sigma_yz = sigma_yz, sigma_zz = sigma_zz, mu_z = mu_z
   )
 }

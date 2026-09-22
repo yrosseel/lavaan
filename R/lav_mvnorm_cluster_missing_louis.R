@@ -57,12 +57,12 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
       sigma_w = sigma_w, sigma_b = sigma_b
     )
   }
-  mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  sw <- out$sigma.w # == sigma_w (within/y1w space)
-  sb <- out$sigma.b[lp$both.idx[[2]], lp$both.idx[[2]], drop = FALSE]
-  sigma_zz <- out$sigma.zz
-  syz <- out$sigma.yz[lp$both.idx[[2]], , drop = FALSE]
+  mu_y <- out$mu_y
+  mu_z <- out$mu_z
+  sw <- out$sigma_w # == sigma_w (within/y1w space)
+  sb <- out$sigma_b[lp$both.idx[[2]], lp$both.idx[[2]], drop = FALSE]
+  sigma_zz <- out$sigma_zz
+  syz <- out$sigma_yz[lp$both.idx[[2]], , drop = FALSE]
 
   # dimensions and indices
   nobs <- lp$nclusters[[1]]
@@ -195,13 +195,13 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
     cc_tot <- g_p %*% yy %*% t(g_p) + cross + t(cross) +
       f_p %*% w2 %*% t(f_p)
 
-    # (mu.w, mu.w): 4 freq * Ow V Ow
+    # (mu_w, mu_w): 4 freq * Ow V Ow
     scov[i_muw, i_muw] <- scov[i_muw, i_muw] +
       4 * freq * (ow %*% v_p %*% ow)
-    # (mu.w, sigma.w): 2 Ow [V x chat' + chat' x V] t(gow)
+    # (mu_w, sigma_w): 2 Ow [V x chat' + chat' x V] t(gow)
     m_x <- (v_p %x% t(chat_tot)) + (t(chat_tot) %x% v_p)
     scov[i_muw, i_sw] <- scov[i_muw, i_sw] + 2 * (ow %*% m_x %*% t(gow))
-    # (sigma.w, sigma.w): gow (I+K)[freq VxV + V x cc + cc x V] t(gow)
+    # (sigma_w, sigma_w): gow (I+K)[freq VxV + V x cc + cc x V] t(gow)
     m_q <- freq * (v_p %x% v_p) + (v_p %x% cc_tot) + (cc_tot %x% v_p)
     m_q <- m_q + kny %*% m_q
     scov[i_sw, i_sw] <- scov[i_sw, i_sw] + gow %*% m_q %*% t(gow)
@@ -298,7 +298,7 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
     et_tot <- et_tot + tcrossprod(that) + k_q %*% c1 %*% t(k_q)
     that_all <- that_all + that
   }
-  # part 1 has no (mu.w x sigma.w) transpose yet
+  # part 1 has no (mu_w x sigma_w) transpose yet
   scov[i_sw, i_muw] <- t(scov[i_muw, i_sw])
 
   # ---- expected score (Fisher identity: == observed-data score) ----
@@ -361,8 +361,8 @@ lav_mvn_cl_mi_h_louis <- function(lavmodel = NULL,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
   theta <- engine$pack(
-    out2$mu.w, out2$mu.b, out2$sigma.w, out2$sigma.b,
-    out2$mu.z, out2$sigma.zz, out2$sigma.yz
+    out2$mu_w, out2$mu_b, out2$sigma_w, out2$sigma_b,
+    out2$mu_z, out2$sigma_zz, out2$sigma_yz
   )
   estat <- engine$implied(engine$step(theta))
 

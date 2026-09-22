@@ -329,7 +329,7 @@ lav_sem_miiv_aug_cat_moments <- function(lavdata = NULL, b = 1L,
   }
 
   list(R = R, th = th, th.idx = th_idx, nacov = nacov,
-       ov.names = c(model_ov, aux_names_b), p.model = p_model)
+       ov.names = c(model_ov, aux_names_b), p_model = p_model)
 }
 
 

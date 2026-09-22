@@ -1236,9 +1236,9 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         )
         mb_j <- lav_mvn_cl_em_estep_ranef(
           ylp = list(list(), list(Y2 = y2_g)), lp = lp,
-          sigma_w = out$sigma.w, sigma_b = out$sigma.b,
-          sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
-          mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
+          sigma_w = out$sigma_w, sigma_b = out$sigma_b,
+          sigma_zz = out$sigma_zz, sigma_yz = out$sigma_yz,
+          mu_z = out$mu_z, mu_w = out$mu_w, mu_b = out$mu_b,
           se = FALSE
         )
       }
