@@ -14,14 +14,14 @@
 # the vcov of the (combined step 1 + step 2) coefficients
 lav_sam_step2_se_bootstrap <- function(sam_object = NULL, bootstrap = list()) {
   default_args <- list(R = 1000L, type = "ordinary",
-                       show.progress = FALSE,
-                       check.post = TRUE, keep.idx = FALSE)
+                       show_progress = FALSE,
+                       check_post = TRUE, keep_idx = FALSE)
   bootstrap <- lav_args_canonical(bootstrap, names(default_args))
   this_args <- modifyList(default_args, bootstrap)
   coef_1 <- lav_bootstrap_internal(object = sam_object,
-    r = this_args$R, show_progress = this_args$show.progress,
+    r = this_args$R, show_progress = this_args$show_progress,
     type = this_args$type, fun = "coef",
-    check_post = this_args$check.post, keep_idx = this_args$keep.idx)
+    check_post = this_args$check_post, keep_idx = this_args$keep_idx)
   coef_orig <- coef_1
   error_idx <- attr(coef_1, "error.idx")
   nfailed <- length(error_idx) # zero if NULL
@@ -707,9 +707,9 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     }
 
     # V for second step
-    if (!is.null(local_options$alpha.correction) &&
-      local_options$alpha.correction > 0) {
-      alpha_n1 <- lav_sam_alpha_n1(local_options$alpha.correction, n)
+    if (!is.null(local_options$alpha_correction) &&
+      local_options$alpha_correction > 0) {
+      alpha_n1 <- lav_sam_alpha_n1(local_options$alpha_correction, n)
       vcov_naive <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
       vcov_corrected <- v2 + v1
       vcov_1 <- alpha_n1 * vcov_naive + (1 - alpha_n1) * vcov_corrected

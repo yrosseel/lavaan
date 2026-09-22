@@ -68,13 +68,13 @@ setMethod(
            baseline_model = NULL,
            h1_model = NULL,
            fm_args = list(
-             standard.test = "default",
-             scaled.test = "default",
-             rmsea.ci.level = 0.90,
-             rmsea.close.h0 = 0.05,
-             rmsea.notclose.h0 = 0.08,
+             standard_test = "default",
+             scaled_test = "default",
+             rmsea_ci_level = 0.90,
+             rmsea_close_h0 = 0.05,
+             rmsea_notclose_h0 = 0.08,
              robust = TRUE,
-             cat.nonpd = "na"
+             cat_nonpd = "na"
            ),
            modindices = FALSE,
            srmr_close_h0 = NULL,

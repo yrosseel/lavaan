@@ -1032,14 +1032,14 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     tmp_est <- toupper(estimator)
     if (tmp_est == "DLS") {
       dls_first_letter <- substr(
-        estimator_args$dls.GammaNT,
+        estimator_args$dls_gamma_nt,
         1L, 1L
       )
       tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
     }
     # reduced-bias M-estimation: show IRBM / ERBM (estimator is ML internally)
-    if (!is.null(estimator_args$rbm.method)) {
-      tmp_est <- switch(estimator_args$rbm.method,
+    if (!is.null(estimator_args$rbm_method)) {
+      tmp_est <- switch(estimator_args$rbm_method,
         implicit = "IRB-ML",
         explicit = "ERB-ML",
         none = "ML",
@@ -1053,7 +1053,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       length(estimator_args) > 0L) {
       if (estimator == "DLS") {
         c1 <- c(c1, "Estimator DLS value for a")
-        c2 <- c(c2, estimator_args$dls.a)
+        c2 <- c(c2, estimator_args$dls_a)
       }
     }
 
@@ -1111,7 +1111,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     # options
     if (sam_method == "local") {
       c1 <- c(c1, "Mapping matrix M method")
-      c2 <- c(c2, sam_local_options$M.method)
+      c2 <- c(c2, sam_local_options$m_method)
       # TODo: more!
     }
 
@@ -1304,7 +1304,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       }
 
       # engaged lambda truncation: the structural estimates are shrunken
-      # (see the lambda1.floor/lambda2.floor entries in ?sam); the full
+      # (see the lambda1_floor/lambda2_floor entries in ?sam); the full
       # per-coefficient bias approximation is stored in
       # object@internal$sam.trunc$bias
       sam_trunc <- y$sam$sam.trunc

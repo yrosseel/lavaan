@@ -355,7 +355,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
 
       # reduced-bias M-estimation (RBM); optim.method is nlminb, so this is
       # keyed on the estimator.args marker instead
-    } else if (!is.null(lavoptions$estimator.args$rbm.method)) {
+    } else if (!is.null(lavoptions$estimator.args$rbm_method)) {
       x <- try(
         lav_model_est_rbm(
           lavmodel = lavmodel,

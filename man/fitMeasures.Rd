@@ -11,23 +11,23 @@ fit of a latent variable model.}
 \usage{
 \S4method{fitMeasures}{lavaan}(object, fit_measures = "all",
             baseline_model = NULL, h1_model = NULL,
-            fm_args = list(standard.test     = "default",
-                           scaled.test       = "default",
-                           rmsea.ci.level    = 0.90,
-                           rmsea.close.h0    = 0.05,
-                           rmsea.notclose.h0 = 0.08,
+            fm_args = list(standard_test     = "default",
+                           scaled_test       = "default",
+                           rmsea_ci_level    = 0.90,
+                           rmsea_close_h0    = 0.05,
+                           rmsea_notclose_h0 = 0.08,
                            robust            = TRUE,
-                           cat.nonpd         = "na"),
+                           cat_nonpd         = "na"),
             output = "vector", level = NULL, ...)
 \S4method{fitmeasures}{lavaan}(object, fit_measures = "all",
             baseline_model = NULL, h1_model = NULL,
-            fm_args = list(standard.test     = "default",
-                           scaled.test       = "default",
-                           rmsea.ci.level    = 0.90,
-                           rmsea.close.h0    = 0.05,
-                           rmsea.notclose.h0 = 0.08,
+            fm_args = list(standard_test     = "default",
+                           scaled_test       = "default",
+                           rmsea_ci_level    = 0.90,
+                           rmsea_close_h0    = 0.05,
+                           rmsea_notclose_h0 = 0.08,
                            robust            = TRUE,
-                           cat.nonpd         = "na"),
+                           cat_nonpd         = "na"),
             output = "vector", level = NULL, ...)
 }
 \arguments{
@@ -40,20 +40,20 @@ fit of a latent variable model.}
   holds the measures
   wanted, with the options supplied as further named elements of the list
   (both the dot.case and the snake_case spelling of the option names are
-  accepted, e.g., \code{rmsea.ci.level} or \code{rmsea_ci_level}). The
-  \code{standard.test} option determines the main test statistic (chi-square
+  accepted, e.g., \code{rmsea_ci_level} or \code{rmsea.ci.level}). The
+  \code{standard_test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
   test statistic. Usually this is \code{"standard"}. FMG p-value tests can be
   selected here using names such as \code{"peba4"}, \code{"pols3"},
-  \code{"pall"}, or \code{"all"}. The \code{scaled.test}
+  \code{"pall"}, or \code{"all"}. The \code{scaled_test}
   option determines which scaling method is to be used for the scaled fit
   measures (in case multiple scaling methods were requested). The
-  \code{rmsea.ci.level} option, default 0.9, determines the level of the confidence
-  interval for the rmsea value. The \code{rmsea.close.h0} option, default 0.05,
-  is the rmsea value that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
-  The \code{rmsea.notclose.h0} option, default 0.08, is the rmsea value that is used under the
-  null hypothesis that \code{rmsea >= rmsea.notclose.h0}. The
-  \code{gfi.ci.level} option, default 0.9, determines the level of the
+  \code{rmsea_ci_level} option, default 0.9, determines the level of the confidence
+  interval for the rmsea value. The \code{rmsea_close_h0} option, default 0.05,
+  is the rmsea value that is used under the null hypothesis that \code{rmsea <= rmsea_close_h0}.
+  The \code{rmsea_notclose_h0} option, default 0.08, is the rmsea value that is used under the
+  null hypothesis that \code{rmsea >= rmsea_notclose_h0}. The
+  \code{gfi_ci_level} option, default 0.9, determines the level of the
   confidence interval for the (new) goodness of fit index \code{gfi}. The
   \code{gfi} index (Maydeu-Olivares et al., 2024) is computed from the
   reweighted least squares (RLS) statistic; the version based on the
@@ -64,7 +64,7 @@ fit of a latent variable model.}
   \code{robust}
   option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
   rmsea/cfi/gfi measures (for example if the computations take too long).
-  The \code{cat.nonpd} option, default \code{"na"}, is only used when data is
+  The \code{cat_nonpd} option, default \code{"na"}, is only used when data is
   categorical, and determines what happens to the robust values of RMSEA, CFI
   and GFI when an input (polychoric/tetrachoric) correlation matrix is not
   positive-definite (for at least one group): if \code{"na"}, the robust
@@ -73,8 +73,8 @@ fit of a latent variable model.}
   using \code{estimator = "catML"}; if \code{"smooth"}, the input correlation
   matrix is smoothed, but the original (DWLS) parameter estimates are retained
   (this was the behavior in lavaan 0.6-13 and earlier). The older
-  \code{cat.check.pd = FALSE} option is a deprecated alias for
-  \code{cat.nonpd = "refit"}.}
+  \code{cat_check_pd = FALSE} option is a deprecated alias for
+  \code{cat_nonpd = "refit"}.}
 \item{baseline_model}{If not NULL, an object of class
   \code{\linkS4class{lavaan}}, representing a user-specified baseline model.
   If a baseline model is provided, all fit indices relying on a
@@ -154,9 +154,9 @@ computing these robust fit indices may be computationally intensive. To avoid
 long runtimes, the calculation of robust fit measures can be disabled by
 setting the \code{robust} argument to \code{FALSE} in the \code{fit_measures} list.
 
-FMG p-values can be selected through the existing \code{standard.test}
+FMG p-values can be selected through the existing \code{standard_test}
 mechanism, for example
-\code{fitMeasures(fit, "pvalue", fm_args = list(standard.test = "peba4"))}.
+\code{fitMeasures(fit, "pvalue", fm_args = list(standard_test = "peba4"))}.
 No separate FMG-specific fit-measure names are needed.
 
 For models fitted with \code{\link{sam}} using a local \code{sam.method}
@@ -221,11 +221,11 @@ fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "matrix")
 fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "text")
-fitMeasures(fit, "pvalue", fm_args = list(standard.test = "peba4"))
+fitMeasures(fit, "pvalue", fm_args = list(standard_test = "peba4"))
 ## specify another threshold for RMSEA confidence interval
 fitMeasures(fit, list(
   fit.measures = c("cfi", "rmsea"),
-  rmsea.ci.level = 0.95))
+  rmsea_ci_level = 0.95))
 
 ## fit a more restricted model
 fit0 <- cfa(HS.model, data = HolzingerSwineford1939, orthogonal = TRUE)

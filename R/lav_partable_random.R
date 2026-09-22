@@ -27,10 +27,10 @@ lav_pt_random <- function(lavpartable = NULL,
         "ov.var", "lv.var", "loadings",
         "covariances"
       ),
-      lower.factor = c(1.0, 1.0, 1.0, 0.999),
-      upper.factor = c(1.0, 1.0, 1.0, 0.999),
-      min.reliability.marker = 0.1,
-      min.var.lv.endo = 0.005
+      lower_factor = c(1.0, 1.0, 1.0, 0.999),
+      upper_factor = c(1.0, 1.0, 1.0, 0.999),
+      min_reliability_marker = 0.1,
+      min_var_lv_endo = 0.005
     )
   lavpartable <- lav_pt_add_bounds(
     partable = lavpartable,

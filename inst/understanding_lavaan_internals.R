@@ -123,7 +123,7 @@ lavh1$implied
 lavoptions$bounds <- "standard"
 lavoptions$optim.bounds <- list(lower = c("ov.var", "loadings"),
                                 upper = c("ov.var", "loadings"),
-                                min.reliability.marker = 0.1)
+                                min_reliability_marker = 0.1)
 lavpartable <- lavaan:::lav_pt_add_bounds(partable = lavpartable,
                 lavh1 = lavh1, lavdata = lavdata, lavsamplestats = lavsamplestats,
                 lavoptions = lavoptions)

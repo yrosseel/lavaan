@@ -11,13 +11,13 @@ lav_options_estimator_args_names <- function() {
     # GLS
     "gls.v11.mplus",
     # DLS
-    "dls.a", "dls.GammaNT", "dls.FtimesNminus1",
+    "dls_a", "dls_gamma_nt", "dls_ftimes_nminus1",
     # FABIN2/FABIN3, BENTLER1982
-    "thetapsi.method", "GLS", "quadprog",
+    "thetapsi_method", "GLS", "quadprog",
     # MGM
-    "zero.after.efa", "psi.mapping",
-    "crossload.detect", "crossload.epc", "crossload.z", "crossload.max",
-    "mgm.varcov", "mgm.gamma", "mgm.jacobian",
+    "zero_after_efa", "psi_mapping",
+    "crossload_detect", "crossload_epc", "crossload_z", "crossload_max",
+    "mgm_varcov", "mgm_gamma", "mgm_jacobian",
     # JS/JSA
     "js_small_sample", "js_theta", "js_theta_bounds", "js_theta_values",
     "js_varcov_method", "js_gamma", "js_jacobian", "js_mean_structure",
@@ -29,15 +29,15 @@ lav_options_estimator_args_names <- function() {
     "iv_vcov_gamma_modelbased", "iv_vcov_jaca_numerical",
     "iv_vcov_jacb_numerical", "iv_vcov_jack_numerical",
     # RBM
-    "rbm.method"
+    "rbm_method"
   )
 }
 
 # canonical (dot.case) names of the elements of optim.bounds
 lav_options_optim_bounds_names <- function() {
-  c("lower", "upper", "lower.factor", "upper.factor",
-    "min.reliability.marker", "min.var.ov", "min.var.lv.exo",
-    "min.var.lv.endo", "max.r2.lv.endo")
+  c("lower", "upper", "lower_factor", "upper_factor",
+    "min_reliability_marker", "min_var_ov", "min_var_lv_exo",
+    "min_var_lv_endo", "max_r2_lv_endo")
 }
 
 lav_options_est_ml <- function(opt) {
@@ -329,39 +329,39 @@ lav_options_est_dls <- function(opt) {
   # estimator.args
   if (is.null(opt$estimator.args)) {
     opt$estimator.args <- list(
-      dls.a = 1.0, dls.GammaNT = "model",
-      dls.FtimesNminus1 = FALSE
+      dls_a = 1.0, dls_gamma_nt = "model",
+      dls_ftimes_nminus1 = FALSE
     )
   } else {
-    if (is.null(opt$estimator.args$dls.a)) {
-      opt$estimator.args$dls.a <- 1.0
+    if (is.null(opt$estimator.args$dls_a)) {
+      opt$estimator.args$dls_a <- 1.0
     } else {
-      stopifnot(is.numeric(opt$estimator.args$dls.a))
-      if (opt$estimator.args$dls.a < 0.0 ||
-          opt$estimator.args$dls.a > 1.0) {
+      stopifnot(is.numeric(opt$estimator.args$dls_a))
+      if (opt$estimator.args$dls_a < 0.0 ||
+          opt$estimator.args$dls_a > 1.0) {
         lav_msg_stop(gettext(
-          "dls.a value in estimator.args must be between 0 and 1."))
+          "dls_a value in estimator.args must be between 0 and 1."))
       }
     }
-    if (is.null(opt$estimator.args$dls.GammaNT)) {
-      opt$estimator.args$dls.GammaNT <- "model"
+    if (is.null(opt$estimator.args$dls_gamma_nt)) {
+      opt$estimator.args$dls_gamma_nt <- "model"
     } else {
-      stopifnot(is.character(opt$estimator.args$dls.GammaNT))
-      opt$estimator.args$dls.GammaNT <-
-        tolower(opt$estimator.args$dls.GammaNT)
-      if (!opt$estimator.args$dls.GammaNT %in% c("sample", "model")) {
+      stopifnot(is.character(opt$estimator.args$dls_gamma_nt))
+      opt$estimator.args$dls_gamma_nt <-
+        tolower(opt$estimator.args$dls_gamma_nt)
+      if (!opt$estimator.args$dls_gamma_nt %in% c("sample", "model")) {
         lav_msg_stop(gettextf(
-          "dls.GammaNT value in estimator.args must be either %s.",
+          "dls_gamma_nt value in estimator.args must be either %s.",
           lav_msg_view(c("sample", "model"), log_sep = "or")))
       }
     }
-    if (is.null(opt$estimator.args$dls.FtimesNminus1)) {
-      opt$estimator.args$dls.FtimesNminus1 <- FALSE
+    if (is.null(opt$estimator.args$dls_ftimes_nminus1)) {
+      opt$estimator.args$dls_ftimes_nminus1 <- FALSE
     } else {
-      stopifnot(is.logical(opt$estimator.args$dls.FtimesNminus1))
+      stopifnot(is.logical(opt$estimator.args$dls_ftimes_nminus1))
     }
   }
-  if (opt$estimator.args$dls.GammaNT == "sample") {
+  if (opt$estimator.args$dls_gamma_nt == "sample") {
     if (opt$optim.method %in% c("nlminb", "gn")) {
       # nothing to do
     } else if (opt$optim.method == "default") {
@@ -745,27 +745,27 @@ lav_options_est_fabin <- function(opt) {
   # options for fabin
   if (lav_options_estimatorgroup(opt$estimator) %in% c("FABIN2", "FABIN3")) {
     if (is.null(opt$estimator.args)) {
-      opt$estimator.args <- list(thetapsi.method = "GLS")
+      opt$estimator.args <- list(thetapsi_method = "GLS")
     } else {
-      if (is.null(opt$estimator.args$thetapsi.method)) {
-        opt$estimator.args$thetapsi.method <- "GLS"
+      if (is.null(opt$estimator.args$thetapsi_method)) {
+        opt$estimator.args$thetapsi_method <- "GLS"
       } else {
-        opt$estimator.args$thetapsi.method <-
-          toupper(opt$estimator.args$thetapsi.method)
-        if (opt$estimator.args$thetapsi.method %in% c(
+        opt$estimator.args$thetapsi_method <-
+          toupper(opt$estimator.args$thetapsi_method)
+        if (opt$estimator.args$thetapsi_method %in% c(
           "ULS",
           "GLS", "WLS", "ULS.ML", "GLS.ML", "WLS.ML"
         )) {
-          if (opt$estimator.args$thetapsi.method == "WLS") {
-            opt$estimator.args$thetapsi.method <- "GLS"
+          if (opt$estimator.args$thetapsi_method == "WLS") {
+            opt$estimator.args$thetapsi_method <- "GLS"
           }
-          if (opt$estimator.args$thetapsi.method == "WLS.ML") {
-            opt$estimator.args$thetapsi.method <- "GLS.ML"
+          if (opt$estimator.args$thetapsi_method == "WLS.ML") {
+            opt$estimator.args$thetapsi_method <- "GLS.ML"
           }
         } else {
           lav_msg_stop(gettextf(
-            "unknown value for estimator.args$thetapsi.method option: %s.",
-            opt$estimator.args$thetapsi.method))
+            "unknown value for estimator.args$thetapsi_method option: %s.",
+            opt$estimator.args$thetapsi_method))
         }
       }
     }
@@ -789,11 +789,11 @@ lav_options_est_fabin <- function(opt) {
       opt$estimator.args <- list()
     }
     # NOTE: read with [[ ]] -- $ would partially match
-    if (is.null(opt$estimator.args[["zero.after.efa"]])) {
-      opt$estimator.args$zero.after.efa <- TRUE
+    if (is.null(opt$estimator.args[["zero_after_efa"]])) {
+      opt$estimator.args$zero_after_efa <- TRUE
     }
-    if (is.null(opt$estimator.args[["psi.mapping"]])) {
-      opt$estimator.args$psi.mapping <- FALSE
+    if (is.null(opt$estimator.args[["psi_mapping"]])) {
+      opt$estimator.args$psi_mapping <- FALSE
     }
     if (is.null(opt$estimator.args[["quadprog"]])) {
       opt$estimator.args$quadprog <- FALSE
@@ -802,81 +802,81 @@ lav_options_est_fabin <- function(opt) {
     # clearly nonzero (per an EPC + z screen on the residuals), free it and
     # refit, so the factor covariances are not biased by the omitted
     # cross-loading. Off by default (it respecifies the user's model).
-    # crossload.epc = minimum |EPC| (the freed loading must be this far from
-    # zero), crossload.z = minimum |z| (n-aware significance screen),
-    # crossload.max = maximum number of cross-loadings to free.
+    # crossload_epc = minimum |EPC| (the freed loading must be this far from
+    # zero), crossload_z = minimum |z| (n-aware significance screen),
+    # crossload_max = maximum number of cross-loadings to free.
     # (snake_case spellings were mapped to these names by
     # lav_args_canonical() in lavOptions())
-    if (is.null(opt$estimator.args[["crossload.detect"]])) {
-      opt$estimator.args$crossload.detect <- FALSE
+    if (is.null(opt$estimator.args[["crossload_detect"]])) {
+      opt$estimator.args$crossload_detect <- FALSE
     }
-    if (is.null(opt$estimator.args[["crossload.epc"]])) {
-      opt$estimator.args$crossload.epc <- 0.10
+    if (is.null(opt$estimator.args[["crossload_epc"]])) {
+      opt$estimator.args$crossload_epc <- 0.10
     }
-    if (is.null(opt$estimator.args[["crossload.z"]])) {
-      opt$estimator.args$crossload.z <- 3
+    if (is.null(opt$estimator.args[["crossload_z"]])) {
+      opt$estimator.args$crossload_z <- 3
     }
-    if (is.null(opt$estimator.args[["crossload.max"]])) {
-      opt$estimator.args$crossload.max <- 5L
+    if (is.null(opt$estimator.args[["crossload_max"]])) {
+      opt$estimator.args$crossload_max <- 5L
     } else {
-      opt$estimator.args$crossload.max <-
-        as.integer(opt$estimator.args[["crossload.max"]])
+      opt$estimator.args$crossload_max <-
+        as.integer(opt$estimator.args[["crossload_max"]])
     }
     # second stage for the variances/covariances (as in the IV/JS
     # estimators): "none" (classic MGM), or one of "ULS"/"GLS"/"RLS"/"2RLS";
     # the default ("default") becomes "RLS" when the model contains
     # residual covariances (which the classic computation cannot handle),
     # and "none" otherwise
-    if (is.null(opt$estimator.args[["mgm.varcov"]])) {
-      opt$estimator.args$mgm.varcov <- "default"
+    if (is.null(opt$estimator.args[["mgm_varcov"]])) {
+      opt$estimator.args$mgm_varcov <- "default"
     }
-    opt$estimator.args$mgm.varcov <-
-      toupper(opt$estimator.args[["mgm.varcov"]])
-    if (!opt$estimator.args[["mgm.varcov"]] %in%
+    opt$estimator.args$mgm_varcov <-
+      toupper(opt$estimator.args[["mgm_varcov"]])
+    if (!opt$estimator.args[["mgm_varcov"]] %in%
           c("DEFAULT", "NONE", "ULS", "GLS", "RLS", "2RLS")) {
       lav_msg_stop(gettextf(
-        "unknown value for estimator.args$mgm.varcov option: %s.",
-        opt$estimator.args[["mgm.varcov"]]))
+        "unknown value for estimator.args$mgm_varcov option: %s.",
+        opt$estimator.args[["mgm_varcov"]]))
     }
     # moment covariance (Gamma) flavor for the delta-method standard
     # errors: "nt" (normal-theory, default) or "adf" (distribution-free;
     # equals the infinitesimal-jackknife covariance of the estimator)
-    mgm_gamma_user <- !is.null(opt$estimator.args[["mgm.gamma"]])
+    mgm_gamma_user <- !is.null(opt$estimator.args[["mgm_gamma"]])
     if (!mgm_gamma_user) {
-      opt$estimator.args$mgm.gamma <- "nt"
+      opt$estimator.args$mgm_gamma <- "nt"
     }
-    opt$estimator.args$mgm.gamma <-
-      tolower(opt$estimator.args[["mgm.gamma"]])
-    if (!opt$estimator.args[["mgm.gamma"]] %in% c("nt", "adf")) {
+    opt$estimator.args$mgm_gamma <-
+      tolower(opt$estimator.args[["mgm_gamma"]])
+    if (!opt$estimator.args[["mgm_gamma"]] %in% c("nt", "adf")) {
       lav_msg_stop(gettextf(
-        "unknown value for estimator.args$mgm.gamma option: %s.",
-        opt$estimator.args[["mgm.gamma"]]))
+        "unknown value for estimator.args$mgm_gamma option: %s.",
+        opt$estimator.args[["mgm_gamma"]]))
     }
     # se = "robust": the delta-method standard errors with the ADF
     # (distribution-free) moment ACOV -- the infinitesimal-jackknife
     # (sandwich) flavor of this estimator family
     if (opt$se == "robust") {
       if (mgm_gamma_user &&
-          opt$estimator.args[["mgm.gamma"]] == "nt") {
+          opt$estimator.args[["mgm_gamma"]] == "nt") {
         lav_msg_warn(gettext(
-          "se = \"robust\" overrides estimator.args$mgm.gamma = \"nt\";
+          "se = \"robust\" overrides estimator.args$mgm_gamma = \"nt\";
            using the ADF moment covariance."))
       }
-      opt$estimator.args$mgm.gamma <- "adf"
+      opt$estimator.args$mgm_gamma <- "adf"
     }
     # Jacobian of the estimation map for the delta-method standard
     # errors: "analytic" (default; classic branch, with an automatic
     # numerical fallback for the other branches) or "numeric"
-    if (is.null(opt$estimator.args[["mgm.jacobian"]])) {
-      opt$estimator.args$mgm.jacobian <- "analytic"
+    if (is.null(opt$estimator.args[["mgm_jacobian"]])) {
+      opt$estimator.args$mgm_jacobian <- "analytic"
     }
-    opt$estimator.args$mgm.jacobian <-
-      tolower(opt$estimator.args[["mgm.jacobian"]])
-    if (!opt$estimator.args[["mgm.jacobian"]] %in%
+    opt$estimator.args$mgm_jacobian <-
+      tolower(opt$estimator.args[["mgm_jacobian"]])
+    if (!opt$estimator.args[["mgm_jacobian"]] %in%
           c("analytic", "numeric")) {
       lav_msg_stop(gettextf(
-        "unknown value for estimator.args$mgm.jacobian option: %s.",
-        opt$estimator.args[["mgm.jacobian"]]))
+        "unknown value for estimator.args$mgm_jacobian option: %s.",
+        opt$estimator.args[["mgm_jacobian"]]))
     }
     # simple (a == b) equality constraints (e.g., group.equal = "loadings")
     # are handled by a pooled solve; represent them compactly
@@ -1334,7 +1334,7 @@ lav_options_est_iv <- function(opt) {
   opt
 }
 
-# normalize the rbm.method estimator.arg (short forms allowed)
+# normalize the rbm_method estimator.arg (short forms allowed)
 # ("none" is an undocumented value that falls back to plain ML; kept for
 #  debugging / parity checks)
 lav_options_est_rbm_method <- function(x) {
@@ -1350,7 +1350,7 @@ lav_options_est_rbm_method <- function(x) {
     "implicit" # implicit, irbm, i
   } else {
     lav_msg_stop(gettextf(
-      "estimator.args$rbm.method must be one of %s.",
+      "estimator.args$rbm_method must be one of %s.",
       lav_msg_view(c("implicit", "explicit"), log_sep = "or")))
   }
 }
@@ -1361,14 +1361,14 @@ lav_options_est_rbm <- function(opt) {
   # penalized-ML point estimation; the discrepancy, implied moments, loglik,
   # test and information matrices are all the ML ones, so we keep the estimator
   # as "ml" internally. The dedicated fit function is triggered in step 11 by
-  # the presence of estimator.args$rbm.method (the optimizer itself is nlminb).
+  # the presence of estimator.args$rbm_method (the optimizer itself is nlminb).
 
   # estimator.args
   if (is.null(opt$estimator.args)) {
-    opt$estimator.args <- list(rbm.method = "implicit")
+    opt$estimator.args <- list(rbm_method = "implicit")
   } else {
-    opt$estimator.args$rbm.method <-
-      lav_options_est_rbm_method(opt$estimator.args$rbm.method)
+    opt$estimator.args$rbm_method <-
+      lav_options_est_rbm_method(opt$estimator.args$rbm_method)
   }
 
   # information: the penalty/bias need the observed information
@@ -1396,7 +1396,7 @@ lav_options_est_rbm <- function(opt) {
   }
 
   # the actual optimizer is nlminb (the rbm fit is triggered in step 11 by
-  # estimator.args$rbm.method)
+  # estimator.args$rbm_method)
   opt$optim.method <- "nlminb"
 
   # internally, treat as ML for all downstream machinery

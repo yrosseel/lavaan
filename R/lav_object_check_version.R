@@ -579,6 +579,19 @@ lav_object_check_version <- function(object = NULL) {
     new_options$rotation.args$mg_agreement_weight <- 0.5
   }
 
+  # 0.7-2: the elements of estimator.args and optim.bounds use snake_case
+  # names (before: dls.a, mgm.gamma, lower.factor, ...)
+  if (is.list(new_options$estimator.args) &&
+      length(new_options$estimator.args) > 0L) {
+    new_options$estimator.args <- lav_args_canonical(
+      new_options$estimator.args, lav_options_estimator_args_names())
+  }
+  if (is.list(new_options$optim.bounds) &&
+      length(new_options$optim.bounds) > 0L) {
+    new_options$optim.bounds <- lav_args_canonical(
+      new_options$optim.bounds, lav_options_optim_bounds_names())
+  }
+
   lavobject@Options <- new_options
 
   lavobject

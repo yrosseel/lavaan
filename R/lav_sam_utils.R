@@ -440,8 +440,8 @@ lav_sam_veta1_floor_debias <- function(y = NULL, m = NULL, mtm = NULL,
 }
 
 # compute VETA
-# - if alpha.correction == 0     -> same as local SAM (or MOC)
-# - if alpha.correction == (N-1) -> same as FSR+Bartlett
+# - if alpha_correction == 0     -> same as local SAM (or MOC)
+# - if alpha_correction == (N-1) -> same as FSR+Bartlett
 lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
                          alpha_correction = 0L, lambda_correction = TRUE,
                          lambda_floor = "default", y = NULL,
@@ -465,7 +465,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   # MTM natively, by regressing out its null space (which includes the
   # rows/columns of any dummy lvs, and any empty theta elements)
   if (all(abs(mtm) < sqrt(.Machine$double.eps))) {
-    # all zero? certainly no need for alpha or lambda.correction
+    # all zero? certainly no need for alpha or lambda_correction
     alpha_correction <- 0L
     lambda_correction <- FALSE
   }
@@ -906,7 +906,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
         # truncation then binds over a long pre-asymptotic range of n
         # with an ever smaller margin, and the accuracy of the
         # structural estimates can *deteriorate* with increasing n;
-        # lambda2.floor = "debias" is a data-driven alternative
+        # lambda2_floor = "debias" is a data-driven alternative
         lambda_floor_used <- ncol(var_fs2) / (n - 1)
         cutoff <- 1 + 2 / n # be more conservative for VETA2
         if (lambda < cutoff) {
@@ -1942,19 +1942,19 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
 }
 
 lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
-                                  M.method = "ML",
-                                  lambda.correction = TRUE,
-                                  lambda1.floor = "debias",
-                                  lambda2.floor = "debias",
-                                  alpha.correction = 0L,
-                                  twolevel.method = "h1"
+                                  m_method = "ML",
+                                  lambda_correction = TRUE,
+                                  lambda1_floor = "debias",
+                                  lambda2_floor = "debias",
+                                  alpha_correction = 0L,
+                                  twolevel_method = "h1"
                                 )) {
 
   # local.twolevel.method
-  local_twolevel_method <- tolower(local_options[["twolevel.method"]])
+  local_twolevel_method <- tolower(local_options[["twolevel_method"]])
   if (!local_twolevel_method %in% c("h1", "anova", "mean")) {
     lav_msg_stop(gettext(
-      "local option twolevel.method should be one of h1, anova or mean."))
+      "local option twolevel_method should be one of h1, anova or mean."))
   }
 
   lavpta <- fit@pta

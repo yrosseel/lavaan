@@ -28,7 +28,7 @@
 #   system is solved for the remaining parameters, and the trial point is
 #   projected onto the box
 #
-# estimator = "DLS" with dls.GammaNT = "model": the weight matrix is a
+# estimator = "DLS" with dls_gamma_nt = "model": the weight matrix is a
 # function of the model-implied moments, and the (IRLS) scoring gradient
 # omits the dV/dtheta terms of the monitored objective. The estimator is
 # defined by the scoring fixed point g(theta) = 0, so near convergence
@@ -65,7 +65,7 @@ lav_optim_gn_eval <- function(x, lavmodel = NULL, lavsamplestats = NULL,
   if (fast_ls) {
     # single-level moment-based estimators (WLS/DWLS/ULS/DLS): compute
     # Delta and the weight matrix A1 once, and share them between the
-    # gradient and the information; for DLS with dls.GammaNT = "model"
+    # gradient and the information; for DLS with dls_gamma_nt = "model"
     # this builds the (expensive) theta-dependent weight matrix a single
     # time per iteration
     lavimplied <- lav_model_implied(lavmodel = lavmodel2)
@@ -261,7 +261,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   group_w <- numeric(ngroups)
   for (g in seq_len(ngroups)) {
     if (lavmodel@estimator == "DLS" &&
-      !isTRUE(lavmodel@estimator.args$dls.FtimesNminus1)) {
+      !isTRUE(lavmodel@estimator.args$dls_ftimes_nminus1)) {
       group_w[g] <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
     } else {
       group_w[g] <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@ntotal
@@ -281,7 +281,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   # is the scoring gradient the exact gradient of the objective? not for
   # DLS with a model-based weight matrix (see the top of this file)
   scoring_flag <- (lavmodel@estimator == "DLS" &&
-    lavmodel@estimator.args$dls.GammaNT == "model")
+    lavmodel@estimator.args$dls_gamma_nt == "model")
 
   eval_point <- function(x_1, objective_only = TRUE) {
     lav_optim_gn_eval(

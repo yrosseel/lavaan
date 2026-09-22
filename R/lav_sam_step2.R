@@ -37,7 +37,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   } else if (gamma_flag) {
     # twostep / twostep.robust: the final SEs are recomputed in step 4
     # (lav_sam_step2_se). Use se = "standard" -- NOT "robust.sem" -- so that
-    # FIT.PA's vcov stays the NAIVE (standard) one: the alpha.correction blend
+    # FIT.PA's vcov stays the NAIVE (standard) one: the alpha_correction blend
     # in lav_sam_step2_se() reads it as 'vcov_naive'. The corrected structural
     # test is still computed (it is independent of the se).
     lavoptions_pa$se <- "standard"

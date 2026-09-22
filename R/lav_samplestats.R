@@ -92,8 +92,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   zero_keep_margins <- lavoptions$zero.keep.margins
   zero_cell_warn <- lavoptions$zero.cell.warn
   allow_empty_cell <- lavoptions$allow.empty.cell
-  dls_a <- lavoptions$estimator.args$dls.a
-  dls_gamma_nt <- lavoptions$estimator.args$dls.GammaNT
+  dls_a <- lavoptions$estimator.args$dls_a
+  dls_gamma_nt <- lavoptions$estimator.args$dls_gamma_nt
 
   # sample.icov (new in 0.6-9; ensure it exists, for older objects)
   sample_icov <- TRUE

@@ -673,10 +673,10 @@ lavaan <- function(
   # screen), free it and refit (steps 07-11), so the factor covariances are
   # not biased by the omitted cross-loading. Iterative forward search.
   if (lav_options_estimatorgroup(lavoptions$estimator) == "MGM" &&
-      isTRUE(lavoptions$estimator.args[["crossload.detect"]])) {
-    epc_cut <- lavoptions$estimator.args[["crossload.epc"]]
-    z_cut   <- lavoptions$estimator.args[["crossload.z"]]
-    max_cl  <- lavoptions$estimator.args[["crossload.max"]]
+      isTRUE(lavoptions$estimator.args[["crossload_detect"]])) {
+    epc_cut <- lavoptions$estimator.args[["crossload_epc"]]
+    z_cut   <- lavoptions$estimator.args[["crossload_z"]]
+    max_cl  <- lavoptions$estimator.args[["crossload_max"]]
     freed <- character(0L)
     repeat {
       if (length(freed) >= max_cl) break

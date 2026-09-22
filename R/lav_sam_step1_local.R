@@ -3,26 +3,26 @@
 lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
                                 sam_method = "local",
                                 local_options = list(
-                                  M.method = "ML",
-                                  lambda.correction = TRUE,
-                                  lambda1.floor = "debias",
-                                  lambda2.floor = "default",
-                                  alpha.correction = 0L,
-                                  twolevel.method = "h1"
+                                  m_method = "ML",
+                                  lambda_correction = TRUE,
+                                  lambda1_floor = "debias",
+                                  lambda2_floor = "default",
+                                  alpha_correction = 0L,
+                                  twolevel_method = "h1"
                                 ),
                                 return_cov_iveta2 = TRUE,
                                 return_fs = FALSE) {
   # local.M.method
-  local_m_method <- toupper(local_options[["M.method"]])
+  local_m_method <- toupper(local_options[["m_method"]])
   if (!local_m_method %in% c("GLS", "ML", "ULS")) {
     lav_msg_stop(gettext(
-      "local option M.method should be one of ML, GLS or ULS."))
+      "local option m_method should be one of ML, GLS or ULS."))
   }
 
   # local.lambda2.floor: truncation floor for the second-order (interaction)
   # lambda correction; "default" = historical p2/(n-1) rule, "debias" =
   # gated bootstrap-debiased margin, or a single nonnegative number
-  local_lambda2_floor <- local_options[["lambda2.floor"]]
+  local_lambda2_floor <- local_options[["lambda2_floor"]]
   if (is.null(local_lambda2_floor)) {
     # silently accept the pre-rename name (eg stored local.options of
     # objects fitted before the rename; sam() itself warns + remaps)
@@ -38,7 +38,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
          length(local_lambda2_floor) == 1L &&
          is.finite(local_lambda2_floor) && local_lambda2_floor >= 0))) {
     lav_msg_stop(gettext(
-      "local option lambda2.floor should be \"default\", \"debias\", or a
+      "local option lambda2_floor should be \"default\", \"debias\", or a
        single nonnegative number."))
   }
 
@@ -47,7 +47,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   # strict no-op whenever the sample margin is comfortably positive; see
   # lav_sam_veta1_floor_debias()), "default" = historical 1/(n-1) rule,
   # or a single nonnegative number
-  local_lambda1_floor <- local_options[["lambda1.floor"]]
+  local_lambda1_floor <- local_options[["lambda1_floor"]]
   if (is.null(local_lambda1_floor)) { # eg stored local.options of old objects
     local_lambda1_floor <- "debias"
   }
@@ -58,7 +58,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
          length(local_lambda1_floor) == 1L &&
          is.finite(local_lambda1_floor) && local_lambda1_floor >= 0))) {
     lav_msg_stop(gettext(
-      "local option lambda1.floor should be \"debias\", \"default\", or a
+      "local option lambda1_floor should be \"debias\", \"default\", or a
        single nonnegative number."))
   }
   # internal (SE machinery only, see lav_sam_local_options_frozen()):
@@ -431,8 +431,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       if (lsam_analytic_flag[b]) {
         tmp <- lav_sam_veta(
           m = mb, s = cov_1, mm_theta = mm_theta[[b]],
-          alpha_correction = local_options[["alpha.correction"]],
-          lambda_correction = local_options[["lambda.correction"]],
+          alpha_correction = local_options[["alpha_correction"]],
+          lambda_correction = local_options[["lambda_correction"]],
           lambda_floor = lambda_floor_b, y = yb1,
           n = fit@SampleStats@nobs[[this_group]],
           dummy_lv_idx = dummy_lv_idx,
@@ -459,7 +459,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         # lav_sam_veta2() and lav_sam_gamma_add()) needs this first-order
         # value
         nobs_b <- fit@SampleStats@nobs[[this_group]]
-        alpha_n1 <- lav_sam_alpha_n1(local_options[["alpha.correction"]],
+        alpha_n1 <- lav_sam_alpha_n1(local_options[["alpha_correction"]],
                                      nobs_b)
         l1 <- if (is.finite(lambda[[b]])) lambda[[b]] else 1
         lambda1[[b]] <- (1 - alpha_n1) * l1
@@ -483,7 +483,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       tmp <- lav_sam_veta(
         m = mb, s = cov_1, mm_theta = mm_theta[[b]],
         alpha_correction = 0L,
-        lambda_correction = local_options[["lambda.correction"]],
+        lambda_correction = local_options[["lambda_correction"]],
         lambda_floor = lambda_floor_b, y = yb1,
         n = fit@SampleStats@nobs[[this_group]],
         dummy_lv_idx = dummy_lv_idx,
@@ -656,8 +656,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           lv_names = lv_names1,
           lv_int_names = lv_int_names,
           dummy_lv_names = lv_names_b[dummy_lv_idx],
-          alpha_correction = local_options[["alpha.correction"]],
-          lambda_correction = local_options[["lambda.correction"]],
+          alpha_correction = local_options[["alpha_correction"]],
+          lambda_correction = local_options[["lambda_correction"]],
           lambda_floor = lambda2_floor_b,
           lambda1 = lambda1[[b]],
           pattern_list = pattern_list,
@@ -1806,10 +1806,10 @@ lav_sam_gamma_eta_2l <- function(step1 = NULL, fit = NULL) {
     lav_msg_stop(gettext(
       "two-level Gamma.eta: not available with latent interactions (yet)!"))
   }
-  if (!is.null(step1$local.options$twolevel.method) &&
-      step1$local.options$twolevel.method != "h1") {
+  if (!is.null(step1$local.options$twolevel_method) &&
+      step1$local.options$twolevel_method != "h1") {
     lav_msg_stop(gettext(
-      "two-level Gamma.eta: only available for twolevel.method = \"h1\"."))
+      "two-level Gamma.eta: only available for twolevel_method = \"h1\"."))
   }
   if (anyNA(lavdata@X[[g]])) {
     lav_msg_stop(gettext(
@@ -1828,7 +1828,7 @@ lav_sam_gamma_eta_2l <- function(step1 = NULL, fit = NULL) {
   n_s <- sum(seg_len)
 
   # h1 (saturated) estimates: step1$COV/YBAR hold them per level (this is
-  # the twolevel.method = "h1" path of lav_sam_get_cov_ybar())
+  # the twolevel_method = "h1" path of lav_sam_get_cov_ybar())
   mu_w <- drop(step1$YBAR[[1]])
   sigma_w <- step1$COV[[1]]
   mu_b <- drop(step1$YBAR[[2]])
@@ -2439,7 +2439,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
     out_mi0 <- lav_sam_fs_missing(
       y = y, mm_lambda = lambda_0, mm_theta = lavmodel_0@GLIST$theta,
       mm_nu = lavmodel_0@GLIST$nu, s = step1$COV[[1]],
-      method = step1$local.options$M.method
+      method = step1$local.options$m_method
     )
     y <- y[out_mi0$ok, , drop = FALSE]
     n <- nrow(y)
@@ -2484,9 +2484,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # patches of lav_sam_step1_local() inside lbar() below; a dummy lv's
   # factor score is the observed variable itself (no measurement error),
   # and the patched rows/columns are *constants* (zero derivative); for
-  # M.method = "ML" the patches are usually redundant (the model matrices
+  # m_method = "ML" the patches are usually redundant (the model matrices
   # already encode lambda = 1/theta = 0, and the mapping matrix reproduces
-  # the unit rows), but for M.method = "GLS" the unpatched mapping matrix
+  # the unit rows), but for m_method = "GLS" the unpatched mapping matrix
   # rows of the dummy lvs are *not* unit vectors
   lambda_gidx <- which(names(lavmodel@GLIST) == "lambda")[1]
   lv_names_full <- lavmodel@dimNames[[lambda_gidx]][[2L]]
@@ -2569,7 +2569,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
     this_m <- lav_sam_mapping_mat(mm_lambda = this_lambda,
                                      mm_theta = this_theta,
                                      s = step1$COV[[1]],
-                                     method = step1$local.options$M.method)
+                                     method = step1$local.options$m_method)
     if (length(dummy_ov_idx) > 0L) {
       this_m[dummy_lv_idx, ] <- 0
       this_m[cbind(dummy_lv_idx, dummy_ov_idx)] <- 1
@@ -2607,7 +2607,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
       out_mi <- lav_sam_fs_missing(
         y = y, mm_lambda = this_lambda, mm_theta = this_theta,
         mm_nu = this_nu, s = step1$COV[[1]],
-        method = step1$local.options$M.method, mp = mp_pre
+        method = step1$local.options$m_method, mp = mp_pre
       )
       fs_scores <- out_mi$fs
       bp_l <- out_mi$bp
@@ -2712,7 +2712,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
         x_step1 = x_step1, lavmodel = lavmodel, pt_1 = pt_1,
         step1_idx = step1_idx, rm_idx = rm_idx,
         dummy_ov_idx = dummy_ov_idx, s_cov = step1$COV[[1]],
-        method = step1$local.options$M.method, std_lv_flag = std_lv_flag,
+        method = step1$local.options$m_method, std_lv_flag = std_lv_flag,
         lambda1 = lambda1, lambda2_eff = lambda2_eff,
         i1k = i1k, i2k = i2k, y = y, n = n),
       error = function(e) NULL)

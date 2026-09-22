@@ -18,18 +18,18 @@ sam <- function(model = NULL,
                 sam_method = "local", # or "global", or "fsr", or "cfsr"
                 ..., # common options
                 local_options = list(
-                  M.method = "ML", # mapping matrix
-                  lambda.correction = TRUE,
-                  lambda1.floor = "debias", # or "default", or a number
-                  lambda2.floor = "debias", # or "default", or a number
-                  alpha.correction = 0L, # 0 -> (N-1)
-                  twolevel.method = "h1",
-                  gamma.eta = "casewise" # or "additive" (lv interactions)
+                  m_method = "ML", # mapping matrix
+                  lambda_correction = TRUE,
+                  lambda1_floor = "debias", # or "default", or a number
+                  lambda2_floor = "debias", # or "default", or a number
+                  alpha_correction = 0L, # 0 -> (N-1)
+                  twolevel_method = "h1",
+                  gamma_eta = "casewise" # or "additive" (lv interactions)
                 ),
                 # h1, anova, mean
                 global_options = list(), # not used for now
                 bootstrap = list(R = 1000L, type = "ordinary",
-                                      show.progress = FALSE),
+                                      show_progress = FALSE),
                 output = "lavaan",
                 bootstrap_args = bootstrap) {
   # capture the user's call; it is stored in the @call slot of the returned
@@ -285,8 +285,8 @@ sam <- function(model = NULL,
 
     # check if we have categorical data
     if (fit@Model@categorical) {
-      # switch to M.method = "ULS"
-      local_options[["M.method"]] <- "ULS"
+      # switch to m_method = "ULS"
+      local_options[["m_method"]] <- "ULS"
       # if sam_method = "global", force estimator to DWLS in struc par
       if (sam_method == "global" &&
           !is.null(struc_args[["estimator"]]) &&
@@ -467,26 +467,26 @@ sam <- function(model = NULL,
   #          only needed for local approach!       #
   ##################################################
   if (sam_method %in% c("local", "fsr", "cfsr")) {
-    # renamed (September 2026): lambda.floor -> lambda2.floor (the floor of
-    # the SECOND-order correction; the first-order floor is lambda1.floor)
+    # renamed (September 2026): lambda.floor -> lambda2_floor (the floor of
+    # the SECOND-order correction; the first-order floor is lambda1_floor)
     if (!is.null(local_options[["lambda.floor"]])) {
       lav_msg_warn(gettext(
-        "local option lambda.floor has been renamed to lambda2.floor;
-         please use lambda2.floor instead."))
-      if (is.null(local_options[["lambda2.floor"]])) {
-        local_options[["lambda2.floor"]] <- local_options[["lambda.floor"]]
+        "local option lambda.floor has been renamed to lambda2_floor;
+         please use lambda2_floor instead."))
+      if (is.null(local_options[["lambda2_floor"]])) {
+        local_options[["lambda2_floor"]] <- local_options[["lambda.floor"]]
       }
       local_options[["lambda.floor"]] <- NULL
     }
     # default local_options
     local_opt <- list(
-      M.method = "ML",
-      lambda.correction = TRUE,
-      lambda1.floor = "debias",
-      lambda2.floor = "debias",
-      alpha.correction = 0L,
-      twolevel.method = "h1",
-      gamma.eta = "casewise"
+      m_method = "ML",
+      lambda_correction = TRUE,
+      lambda1_floor = "debias",
+      lambda2_floor = "debias",
+      alpha_correction = 0L,
+      twolevel_method = "h1",
+      gamma_eta = "casewise"
     )
     # accept the snake_case spelling of the (dot.case) option names
     local_options <- lav_args_canonical(local_options, names(local_opt))
@@ -494,13 +494,13 @@ sam <- function(model = NULL,
       keep.null = FALSE
     )
 
-    # gamma.eta: how do we compute Gamma.eta in the presence of latent
+    # gamma_eta: how do we compute Gamma.eta in the presence of latent
     # interaction/quadratic terms? "casewise" (default) or "additive" (the
     # only option available in < 0.7-2); see lav_sam_gamma_add()
-    local_options[["gamma.eta"]] <- tolower(local_options[["gamma.eta"]])
-    if (!local_options[["gamma.eta"]] %in% c("casewise", "additive")) {
+    local_options[["gamma_eta"]] <- tolower(local_options[["gamma_eta"]])
+    if (!local_options[["gamma_eta"]] %in% c("casewise", "additive")) {
       lav_msg_stop(gettext(
-        "local option gamma.eta should be either \"casewise\" or
+        "local option gamma_eta should be either \"casewise\" or
          \"additive\"."))
     }
 
@@ -549,7 +549,7 @@ sam <- function(model = NULL,
           gamma_eta_init <- step1$COV.IVETA2[[g]]
           # compute 'additional variability' due to step1
           gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit,
-            group = g, method = local_options[["gamma.eta"]])
+            group = g, method = local_options[["gamma_eta"]])
           gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
         }
       } else if (fit@Data@nlevels > 1L) {

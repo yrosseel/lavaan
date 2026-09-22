@@ -180,11 +180,11 @@ lav_model_h1_info_ed <- function(what = "expected",
       }
     }
 
-  # 1b. DLS: for dls.GammaNT = "model", the weight matrix is a function of
+  # 1b. DLS: for dls_gamma_nt = "model", the weight matrix is a function of
   #     the model-implied moments and must be recomputed here (the @WLS.V
   #     slot only holds the plain inv(NACOV) fallback)
   } else if (lavmodel@estimator == "DLS") {
-    if (lavmodel@estimator.args$dls.GammaNT == "sample") {
+    if (lavmodel@estimator.args$dls_gamma_nt == "sample") {
       a1 <- lavsamplestats@WLS.V
     } else {
       a1 <- vector("list", length = lavsamplestats@ngroups)
@@ -193,7 +193,7 @@ lav_model_h1_info_ed <- function(what = "expected",
           m_cov         = lavimplied$cov[[g]],
           m_mean        = lavimplied$mean[[g]],
           nacov_g       = lavsamplestats@NACOV[[g]],
-          dls_a         = lavmodel@estimator.args$dls.a,
+          dls_a         = lavmodel@estimator.args$dls_a,
           x_idx         = lavsamplestats@x.idx[[g]],
           fixed_x       = lavmodel@fixed.x,
           conditional_x = lavmodel@conditional.x,

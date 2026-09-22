@@ -18,13 +18,13 @@ setMethod(
   "fitMeasures", signature(object = "lavaan"),
   function(object, fit_measures = "all", baseline_model = NULL, h1_model = NULL,
            fm_args = list(
-             standard.test = "default",
-             scaled.test = "default",
-             rmsea.ci.level = 0.90,
-             rmsea.close.h0 = 0.05,
-             rmsea.notclose.h0 = 0.08,
+             standard_test = "default",
+             scaled_test = "default",
+             rmsea_ci_level = 0.90,
+             rmsea_close_h0 = 0.05,
+             rmsea_notclose_h0 = 0.08,
              robust = TRUE,
-             cat.nonpd = "na"
+             cat_nonpd = "na"
            ),
            output = "vector", level = NULL, ...) {
     dotdotdot <- list(...)
@@ -44,13 +44,13 @@ setMethod(
   "fitmeasures", signature(object = "lavaan"),
   function(object, fit_measures = "all", baseline_model = NULL, h1_model = NULL,
            fm_args = list(
-             standard.test = "default",
-             scaled.test = "default",
-             rmsea.ci.level = 0.90,
-             rmsea.close.h0 = 0.05,
-             rmsea.notclose.h0 = 0.08,
+             standard_test = "default",
+             scaled_test = "default",
+             rmsea_ci_level = 0.90,
+             rmsea_close_h0 = 0.05,
+             rmsea_notclose_h0 = 0.08,
              robust = TRUE,
-             cat.nonpd = "na"
+             cat_nonpd = "na"
            ),
            output = "vector", level = NULL, ...) {
     dotdotdot <- list(...)
@@ -72,13 +72,13 @@ lav_efalist_fitmeasures <- function(
     fit_measures = "all",
     baseline_model = NULL, h1_model = NULL,
     fm_args = list(
-      standard.test = "default",
-      scaled.test = "default",
-      rmsea.ci.level = 0.90,
-      rmsea.close.h0 = 0.05,
-      rmsea.notclose.h0 = 0.08,
+      standard_test = "default",
+      scaled_test = "default",
+      rmsea_ci_level = 0.90,
+      rmsea_close_h0 = 0.05,
+      rmsea_notclose_h0 = 0.08,
       robust = TRUE,
-      cat.nonpd = "na"
+      cat_nonpd = "na"
     ),
     output = "list", ...) {
   dotdotdot <- list(...)
@@ -194,36 +194,36 @@ lav_fit_measures_list_alias <- function(fit_measures) {
   fit_measures
 }
 
-# the fit-measure options (rmsea.ci.level, ...) use dot.case names; accept
-# the snake_case spelling too (rmsea_ci_level), as well as the names that
-# summary() used for the close-fit cutoffs before 0.7-2
+# the fit-measure options use snake_case names (rmsea_ci_level, ...); accept
+# the dot.case spelling too (rmsea.ci.level, the canonical spelling before
+# 0.7-2), as well as the names that summary() used for the close-fit cutoffs
 lav_fit_measures_args_canonical <- function(x) {
   if (!is.list(x) || is.null(names(x))) {
     return(x)
   }
-  alias <- c(rmsea.h0.closefit = "rmsea.close.h0",
-             rmsea_h0_closefit = "rmsea.close.h0",
-             rmsea.h0.notclosefit = "rmsea.notclose.h0",
-             rmsea_h0_notclosefit = "rmsea.notclose.h0")
+  alias <- c(rmsea.h0.closefit = "rmsea_close_h0",
+             rmsea_h0_closefit = "rmsea_close_h0",
+             rmsea.h0.notclosefit = "rmsea_notclose_h0",
+             rmsea_h0_notclosefit = "rmsea_notclose_h0")
   idx <- which(names(x) %in% names(alias))
   if (length(idx) > 0L) {
     names(x)[idx] <- alias[names(x)[idx]]
   }
-  lav_args_canonical(x, c("fit.measures", "standard.test", "scaled.test",
-    "rmsea.ci.level", "rmsea.close.h0", "rmsea.notclose.h0", "robust",
-    "cat.nonpd", "cat.check.pd", "gfi.ci.level"))
+  lav_args_canonical(x, c("fit.measures", "standard_test", "scaled_test",
+    "rmsea_ci_level", "rmsea_close_h0", "rmsea_notclose_h0", "robust",
+    "cat_nonpd", "cat_check_pd", "gfi_ci_level"))
 }
 
 lav_fit <- function(object, fit_measures = "all",
                              baseline_model = NULL, h1_model = NULL,
                              fm_args = list(
-                               standard.test = "default",
-                               scaled.test = "default",
-                               rmsea.ci.level = 0.90,
-                               rmsea.close.h0 = 0.05,
-                               rmsea.notclose.h0 = 0.08,
+                               standard_test = "default",
+                               scaled_test = "default",
+                               rmsea_ci_level = 0.90,
+                               rmsea_close_h0 = 0.05,
+                               rmsea_notclose_h0 = 0.08,
                                robust = TRUE,
-                               cat.nonpd = "na"
+                               cat_nonpd = "na"
                              ),
                              output = "vector", level = NULL, rmsea.n = NULL) {
   # check object
@@ -303,13 +303,13 @@ lav_fit <- function(object, fit_measures = "all",
 
   # default fm_args
   default_fm_args <- list(
-    standard.test = "default",
-    scaled.test = "default",
-    rmsea.ci.level = 0.90,
-    rmsea.close.h0 = 0.05,
-    rmsea.notclose.h0 = 0.08,
+    standard_test = "default",
+    scaled_test = "default",
+    rmsea_ci_level = 0.90,
+    rmsea_close_h0 = 0.05,
+    rmsea_notclose_h0 = 0.08,
     robust = TRUE,
-    cat.nonpd = "na"
+    cat_nonpd = "na"
   )
   if (!missing(fm_args)) {
     lav_deprecated_args("fit_measures", "fm_args")
@@ -342,34 +342,34 @@ lav_fit <- function(object, fit_measures = "all",
   #    "smooth" -> smooth the matrix, but keep the (DWLS) parameter
   #                estimates (as in lavaan <= 0.6-13)
   # the older cat.check.pd = FALSE is a deprecated alias for "refit"
-  if (!is.null(fm_args$cat.check.pd) && !isTRUE(fm_args$cat.check.pd) &&
-      identical(fm_args$cat.nonpd, "na")) {
-    fm_args$cat.nonpd <- "refit"
+  if (!is.null(fm_args$cat_check_pd) && !isTRUE(fm_args$cat_check_pd) &&
+      identical(fm_args$cat_nonpd, "na")) {
+    fm_args$cat_nonpd <- "refit"
   }
-  if (!is.character(fm_args$cat.nonpd) ||
-      !fm_args$cat.nonpd %in% c("na", "refit", "smooth")) {
+  if (!is.character(fm_args$cat_nonpd) ||
+      !fm_args$cat_nonpd %in% c("na", "refit", "smooth")) {
     lav_msg_warn(gettextf(
       "invalid cat.nonpd value [%s] set to default \"na\".",
-      fm_args$cat.nonpd
+      fm_args$cat_nonpd
     ))
-    fm_args$cat.nonpd <- "na"
+    fm_args$cat_nonpd <- "na"
   }
 
   # standard test
-  if (fm_args$standard.test == "default") {
-    fm_args$standard.test <- object@Options$standard.test
+  if (fm_args$standard_test == "default") {
+    fm_args$standard_test <- object@Options$standard.test
     # usually "standard", but could have been changed
-    if (is.null(fm_args$standard.test)) { # <older objects
-      fm_args$standard.test <- "standard"
+    if (is.null(fm_args$standard_test)) { # <older objects
+      fm_args$standard_test <- "standard"
     }
   }
 
   # scaled test
-  if (fm_args$scaled.test == "default") {
-    fm_args$scaled.test <- object@Options$scaled.test
+  if (fm_args$scaled_test == "default") {
+    fm_args$scaled_test <- object@Options$scaled.test
     # usually "standard", but could have been changed
-    if (is.null(fm_args$scaled.test)) { # <older objects
-      fm_args$scaled.test <- "standard"
+    if (is.null(fm_args$scaled_test)) { # <older objects
+      fm_args$scaled_test <- "standard"
     }
   }
 
@@ -401,8 +401,8 @@ lav_fit <- function(object, fit_measures = "all",
     #FIXME: allow RMRs, log.likelihoods, info criteria, npar, ntotal
   }
 
-  standard_test <- fm_args$standard.test
-  scaled_test <- fm_args$scaled.test
+  standard_test <- fm_args$standard_test
+  scaled_test <- fm_args$scaled_test
 
   # check standard.test
   standard_test <- lav_test_rename(standard_test, check = TRUE)[1] # only 1
@@ -784,7 +784,7 @@ lav_fit <- function(object, fit_measures = "all",
         standard_test = standard_test,
         scaled_test = scaled_test,
         robust = fm_args$robust,
-        cat_nonpd = fm_args$cat.nonpd
+        cat_nonpd = fm_args$cat_nonpd
       )
     )
   }
@@ -809,9 +809,9 @@ lav_fit <- function(object, fit_measures = "all",
     rmsea_ci_level <- 0.90
     rmsea_close_h0 <- 0.05
     rmsea_notclose_h0 <- 0.08
-    if (!is.null(fm_args$rmsea.ci.level) &&
-        is.finite(fm_args$rmsea.ci.level)) {
-      rmsea_ci_level <- fm_args$rmsea.ci.level
+    if (!is.null(fm_args$rmsea_ci_level) &&
+        is.finite(fm_args$rmsea_ci_level)) {
+      rmsea_ci_level <- fm_args$rmsea_ci_level
       if (rmsea_ci_level < 0 || rmsea_ci_level > 1.0) {
         lav_msg_warn(gettextf(
           "invalid rmsea.ci.level value [%s] set to default 0.90.",
@@ -819,16 +819,16 @@ lav_fit <- function(object, fit_measures = "all",
         rmsea_ci_level <- 0.90
       }
     }
-    if (!is.null(fm_args$rmsea.close.h0) &&
-        is.finite(fm_args$rmsea.close.h0)) {
-      rmsea_close_h0 <- fm_args$rmsea.close.h0
+    if (!is.null(fm_args$rmsea_close_h0) &&
+        is.finite(fm_args$rmsea_close_h0)) {
+      rmsea_close_h0 <- fm_args$rmsea_close_h0
       if (rmsea_close_h0 < 0) {
         rmsea_close_h0 <- 0
       }
     }
-    if (!is.null(fm_args$rmsea.notclose.h0) &&
-        is.finite(fm_args$rmsea.notclose.h0)) {
-      rmsea_notclose_h0 <- fm_args$rmsea.notclose.h0
+    if (!is.null(fm_args$rmsea_notclose_h0) &&
+        is.finite(fm_args$rmsea_notclose_h0)) {
+      rmsea_notclose_h0 <- fm_args$rmsea_notclose_h0
       if (rmsea_notclose_h0 < 0) {
         rmsea_notclose_h0 <- 0
       }
@@ -844,7 +844,7 @@ lav_fit <- function(object, fit_measures = "all",
         close_h0 = rmsea_close_h0,
         notclose_h0 = rmsea_notclose_h0,
         robust = fm_args$robust,
-        cat_nonpd = fm_args$cat.nonpd,
+        cat_nonpd = fm_args$cat_nonpd,
         n_override = rmsea.n
       )
     )
@@ -867,9 +867,9 @@ lav_fit <- function(object, fit_measures = "all",
           %in% fit_measures)) {
     # check gfi.ci.level option (default 0.90)
     gfi_ci_level <- 0.90
-    if (!is.null(fm_args$gfi.ci.level) &&
-        is.finite(fm_args$gfi.ci.level)) {
-      gfi_ci_level <- fm_args$gfi.ci.level
+    if (!is.null(fm_args$gfi_ci_level) &&
+        is.finite(fm_args$gfi_ci_level)) {
+      gfi_ci_level <- fm_args$gfi_ci_level
       if (gfi_ci_level < 0 || gfi_ci_level > 1.0) {
         lav_msg_warn(gettextf(
           "invalid gfi.ci.level value [%s] set to default 0.90.",
@@ -886,7 +886,7 @@ lav_fit <- function(object, fit_measures = "all",
         scaled_test = scaled_test,
         ci_level = gfi_ci_level,
         robust = fm_args$robust,
-        cat_nonpd = fm_args$cat.nonpd
+        cat_nonpd = fm_args$cat_nonpd
       )
     )
     # return the value under the old (requested) name

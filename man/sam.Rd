@@ -10,12 +10,12 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     mm_list = NULL, mm_args = list(bounds = "wide.zerovar"), 
     struc_args = list(estimator = "ML"), 
     sam_method = "local", ..., 
-    local_options = list(M.method = "ML", lambda.correction = TRUE,
-                         lambda1.floor = "debias", lambda2.floor = "debias",
-                         alpha.correction = 0L, twolevel.method = "h1",
-                         gamma.eta = "casewise"),
+    local_options = list(m_method = "ML", lambda_correction = TRUE,
+                         lambda1_floor = "debias", lambda2_floor = "debias",
+                         alpha_correction = 0L, twolevel_method = "h1",
+                         gamma_eta = "casewise"),
     global_options = list(), 
-    bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
+    bootstrap = list(R = 1000L, type = "ordinary", show_progress = FALSE),
     output = "lavaan",
     bootstrap_args = bootstrap
 )
@@ -98,13 +98,13 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
 \item{local_options}{List. Options specific for local SAM method (these
      options may change over time; both the dot.case and the snake_case
      spelling of the element names are accepted, e.g.,
-     \code{lambda.correction} or \code{lambda_correction}).
-     If \code{lambda.correction = TRUE},
+     \code{lambda_correction} or \code{lambda_correction}).
+     If \code{lambda_correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
      is positive definite. When the lambda correction must truncate, the
-     truncation margin (floor) is controlled by \code{lambda1.floor} for
+     truncation margin (floor) is controlled by \code{lambda1_floor} for
      the first-order correction (of VETA itself) and by
-     \code{lambda2.floor} for the second-order correction (of the
+     \code{lambda2_floor} for the second-order correction (of the
      product-term augmented VETA2, only when the model contains latent
      quadratic/interaction terms). Both options accept the same values,
      and both default to \code{"debias"}: a gated rule that, whenever
@@ -123,7 +123,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      gated rules require raw, complete, single-level continuous data (no
      \code{conditional.x}); in all other settings they automatically
      fall back to \code{"default"}. (Before September 2026,
-     \code{lambda2.floor} was briefly called \code{lambda.floor} -- with
+     \code{lambda2_floor} was briefly called \code{lambda.floor} -- with
      \code{"default"} as its default -- and the old name is still
      accepted with a warning.) The standard errors of the
      local family (and the corrected structural test statistic) account
@@ -150,9 +150,9 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      as opposed to (almost) collinear latent predictors, where the
      truncation can change the estimates substantially. (To reproduce
      the results of older versions of lavaan, use
-     \code{lambda1.floor = "default"} and
-     \code{lambda2.floor = "default"}.)
-     The option \code{gamma.eta} is only relevant if the model contains
+     \code{lambda1_floor = "default"} and
+     \code{lambda2_floor = "default"}.)
+     The option \code{gamma_eta} is only relevant if the model contains
      latent quadratic/interaction terms. It determines how the sampling
      variability of the step 1 (measurement) estimates enters the
      asymptotic variance matrix (Gamma.eta) of the summary statistics of
@@ -172,7 +172,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      and relies on the (usually normal-theory) standard errors of the
      measurement blocks.
      The
-     \code{alpha.correction} option must be
+     \code{alpha_correction} option must be
      an integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
      and the bias-correction is the same as with local SAM. When equal to N-1,

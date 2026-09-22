@@ -147,12 +147,12 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   # 2. simple ULS method to get THETA and PSI (for now)
   gls_flag <- FALSE
   psi_mapping_ml_flag <- FALSE
-  if (!is.null(lavoptions$estimator.args$thetapsi.method) &&
-    lavoptions$estimator.args$thetapsi.method %in% c("GLS", "GLS.ML")) {
+  if (!is.null(lavoptions$estimator.args$thetapsi_method) &&
+    lavoptions$estimator.args$thetapsi_method %in% c("GLS", "GLS.ML")) {
     gls_flag <- TRUE
   }
-  if (!is.null(lavoptions$estimator.args$thetapsi.method) &&
-    lavoptions$estimator.args$thetapsi.method %in% c("ULS.ML", "GLS.ML")) {
+  if (!is.null(lavoptions$estimator.args$thetapsi_method) &&
+    lavoptions$estimator.args$thetapsi_method %in% c("ULS.ML", "GLS.ML")) {
     psi_mapping_ml_flag <- TRUE
   }
   out <- lav_cfa_lambda2thetapsi(

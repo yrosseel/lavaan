@@ -543,8 +543,8 @@ lav_snake_case <- function(old) {
 # ----------------------- lav_args_canonical ------------------------------ #
 # normalize the element names of a list of (sub)options to a set of known
 # 'canonical' names: a user-supplied name that differs from a canonical name
-# only in case, or in the use of dots versus underscores (eg rmsea_ci_level
-# versus rmsea.ci.level, or dls_a versus dls.a) is renamed to the canonical
+# only in case, or in the use of dots versus underscores (eg rmsea.ci.level
+# versus rmsea_ci_level, or dls.a versus dls_a) is renamed to the canonical
 # spelling. Names that do not match any canonical name are left untouched
 # (they may be meant for another consumer, or trigger an 'unknown option'
 # error downstream). Unlike lav_snake_case(), this accepts both the dot.case

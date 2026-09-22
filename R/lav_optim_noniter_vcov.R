@@ -84,7 +84,7 @@ lav_noniter_estimate_from_vec <- function(vec = NULL,
 #      W       = S* - rho_eff * diag(theta)                   (pd corr.)
 #      T       = X' W X,   U = W X T^{-1},   u_f = U[marker_f, f]
 #      lambda_pf = U_pf / u_f,   psi_fg = T_fg u_f u_g
-#      psi       = M W M', M = (L'KL)^{-1} L'K  (psi.mapping = TRUE)
+#      psi       = M W M', M = (L'KL)^{-1} L'K  (psi_mapping = TRUE)
 #    (the sum-score normalization cancels exactly)
 #  - stage 1, pooled (equality ties among the loadings, or quadprog):
 #      lstar_pf = (WX)_pf / sqrt(T_ff)  (normalized structure coeff.)
@@ -109,14 +109,14 @@ lav_noniter_estimate_from_vec <- function(vec = NULL,
 #  - residual covariances: the purge s0_ij = mean_(a,b) s_ia s_jb /
 #    s_ab is composed with the stage-1 derivatives (which are evaluated
 #    on the purged matrix)
-#  - stage 2 (mgm.varcov = ULS/GLS/RLS/2RLS): reuses the JS stage-2
+#  - stage 2 (mgm_varcov = ULS/GLS/RLS/2RLS): reuses the JS stage-2
 #    derivative (lav_sem_js_deriv_varcov), with the MGM loading
 #    derivatives as dx
 #  - mean structure: reuses the JS joint-GLS mean-solve derivative
 #    (free/tied intercepts, free latent means)
 #
 # Remaining fallbacks: cross-loadings combined with equality ties,
-# psi.mapping in the pooled branch, variance/covariance cells fixed to
+# psi_mapping in the pooled branch, variance/covariance cells fixed to
 # a NONZERO value combined with the second stage (the affine-offset
 # chain), tied residual variances without a second stage, unpurgeable
 # residual covariances, and (near-)non-smooth points (multiple pencil
@@ -264,9 +264,9 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
                                  lavoptions = NULL, lavpartable = NULL,
                                  implied0 = NULL) {
   ea <- lavoptions$estimator.args
-  psi_mapping <- isTRUE(ea[["psi.mapping"]])
+  psi_mapping <- isTRUE(ea[["psi_mapping"]])
   quadprog <- isTRUE(ea[["quadprog"]])
-  zae <- ea[["zero.after.efa"]]
+  zae <- ea[["zero_after_efa"]]
   zae <- is.null(zae) || isTRUE(zae)
   if (lavmodel@group.w.free) {
     return(NULL)
@@ -502,7 +502,7 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
     )
   }
   pooled <- (has_ties || quadprog) && !any_cross
-  # not covered (yet): cross-loadings combined with ties, psi.mapping in
+  # not covered (yet): cross-loadings combined with ties, psi_mapping in
   # the pooled branch or over an unzeroed lambda
   if (any_cross && has_ties) {
     return(NULL)
@@ -512,7 +512,7 @@ lav_cfa_mgm_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # resolved second stage (as in lav_cfa_guttman1952_internal)
-  mgm_varcov <- ea[["mgm.varcov"]]
+  mgm_varcov <- ea[["mgm_varcov"]]
   if (is.null(mgm_varcov)) {
     mgm_varcov <- "default"
   }
@@ -1581,7 +1581,7 @@ lav_noniter_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # Gamma flavor; NOTE: read with [[ ]] -- $ would partially match
-  gamma_flavor <- lavoptions$estimator.args[["mgm.gamma"]]
+  gamma_flavor <- lavoptions$estimator.args[["mgm_gamma"]]
   if (is.null(gamma_flavor)) {
     gamma_flavor <- "nt"
   }
@@ -1728,8 +1728,8 @@ lav_noniter_se_rows <- function(object = NULL) {
     out <- c(out, "Gamma matrix" = gamma_flavor)
   } else { # MGM
     # under two-stage missing data the moment ACOV is the two-stage one,
-    # whatever mgm.gamma says (see lav_noniter_vcov)
-    gamma_flavor <- toupper(ea[["mgm.gamma"]])
+    # whatever mgm_gamma says (see lav_noniter_vcov)
+    gamma_flavor <- toupper(ea[["mgm_gamma"]])
     if (two_stage) {
       gamma_flavor <- "TS"
     } else if (gamma_flavor == "ADF" && object@Data@data.type != "full") {
@@ -1764,10 +1764,10 @@ lav_noniter_jacobian <- function(lavmodel = NULL, lavsamplestats = NULL,
     vec0 <- c(vec0, lav_mat_vech(implied0$cov[[b]]))
   }
 
-  # analytic (mgm.jacobian = "analytic", the default); NOTE: read with
+  # analytic (mgm_jacobian = "analytic", the default); NOTE: read with
   # [[ ]] -- $ would partially match
   jac <- NULL
-  mgm_jacobian <- lavoptions$estimator.args[["mgm.jacobian"]]
+  mgm_jacobian <- lavoptions$estimator.args[["mgm_jacobian"]]
   if (is.null(mgm_jacobian)) {
     mgm_jacobian <- "analytic"
   }

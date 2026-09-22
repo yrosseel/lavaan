@@ -618,17 +618,17 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
 
   # options; NOTE: read with [[ ]] -- $ would partially match
   ea <- lavoptions$estimator.args
-  if (missing(zero_after_efa) && !is.null(ea[["zero.after.efa"]])) {
-    zero_after_efa <- ea[["zero.after.efa"]]
+  if (missing(zero_after_efa) && !is.null(ea[["zero_after_efa"]])) {
+    zero_after_efa <- ea[["zero_after_efa"]]
   }
-  if (missing(psi_mapping) && !is.null(ea[["psi.mapping"]])) {
-    psi_mapping <- ea[["psi.mapping"]]
+  if (missing(psi_mapping) && !is.null(ea[["psi_mapping"]])) {
+    psi_mapping <- ea[["psi_mapping"]]
   }
   if (missing(quadprog) && !is.null(ea[["quadprog"]])) {
     quadprog <- ea[["quadprog"]]
   }
   if (is.null(mgm_varcov)) {
-    mgm_varcov <- ea[["mgm.varcov"]]
+    mgm_varcov <- ea[["mgm_varcov"]]
     if (is.null(mgm_varcov)) {
       mgm_varcov <- ea[["mgm_varcov"]]
     }
@@ -1078,8 +1078,8 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     # against composites that exclude them (see lav_cfa_mgm_cross_block).
     # PSI comes from the Bartlett/ML mapping over the clean rows (the
     # sum-score correlation matrix is not usable here: with
-    # cross-loadings it mixes the factors); the psi.mapping /
-    # zero.after.efa / quadprog options are ignored for such blocks.
+    # cross-loadings it mixes the factors); the psi_mapping /
+    # zero_after_efa / quadprog options are ignored for such blocks.
     #
     # NOTE: the pd correction is DISABLED here. Its root is driven by the
     # (deliberately rough) communality placeholders of the cross-loading

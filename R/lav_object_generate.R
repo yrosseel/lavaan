@@ -100,17 +100,17 @@ lav_object_baseline <- function(object = NULL,
 
   # new in 0.6-8: if DLS, change to sample-based
   if (lavoptions$estimator == "DLS") {
-    if (lavoptions$estimator.args$dls.GammaNT == "sample") {
+    if (lavoptions$estimator.args$dls_gamma_nt == "sample") {
       # nothing to do
     } else {
-      lavoptions$estimator.args$dls.GammaNT <- "sample"
+      lavoptions$estimator.args$dls_gamma_nt <- "sample"
       for (g in 1:lavsamplestats@ngroups) {
         # overwrite
         lavsamplestats@WLS.V[[g]] <- lav_dls_wls_v_g(
           m_cov         = lavsamplestats@cov[[g]],
           m_mean        = lavsamplestats@mean[[g]],
           nacov_g       = lavsamplestats@NACOV[[g]],
-          dls_a         = lavoptions$estimator.args$dls.a,
+          dls_a         = lavoptions$estimator.args$dls_a,
           x_idx         = lavsamplestats@x.idx[[g]],
           fixed_x       = lavoptions$fixed.x,
           conditional_x = lavoptions$conditional.x,

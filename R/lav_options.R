@@ -1492,49 +1492,49 @@ lav_options_set <- function(opt = NULL) {
     opt$optim.bounds <- list(
       lower = c("ov.var", "lv.var", "loadings", "covariances"),
       upper = c("ov.var", "lv.var", "loadings", "covariances"),
-      lower.factor = c(1.05, 1.0, 1.1, 1.0),
-      upper.factor = c(1.20, 1.3, 1.1, 1.0),
-      min.reliability.marker = 0.1,
-      min.var.lv.endo = 0.005
+      lower_factor = c(1.05, 1.0, 1.1, 1.0),
+      upper_factor = c(1.20, 1.3, 1.1, 1.0),
+      min_reliability_marker = 0.1,
+      min_var_lv_endo = 0.005
     )
   } else if (opt$bounds == "wide.zerovar") {
     opt$optim.bounds <- list(
       lower = c("ov.var", "lv.var", "loadings", "covariances"),
       upper = c("ov.var", "lv.var", "loadings", "covariances"),
-      lower.factor = c(1.00, 1.0, 1.1, 1.0),
-      upper.factor = c(1.20, 1.3, 1.1, 1.0),
-      min.reliability.marker = 0.1,
-      min.var.lv.endo = 0.005
+      lower_factor = c(1.00, 1.0, 1.1, 1.0),
+      upper_factor = c(1.20, 1.3, 1.1, 1.0),
+      min_reliability_marker = 0.1,
+      min_var_lv_endo = 0.005
     )
   } else if (opt$bounds == "standard") {
     opt$optim.bounds <- list(
       lower = c("ov.var", "lv.var", "loadings", "covariances"),
       upper = c("ov.var", "lv.var", "loadings", "covariances"),
-      lower.factor = c(1.0, 1.0, 1.0, 0.999),
-      upper.factor = c(1.0, 1.0, 1.0, 0.999),
-      min.reliability.marker = 0.1,
-      min.var.lv.endo = 0.005
+      lower_factor = c(1.0, 1.0, 1.0, 0.999),
+      upper_factor = c(1.0, 1.0, 1.0, 0.999),
+      min_reliability_marker = 0.1,
+      min_var_lv_endo = 0.005
     )
   } else if (opt$bounds == "pos.var") {
     opt$optim.bounds <- list(
       lower = c("ov.var", "lv.var"),
-      lower.factor = c(1, 1),
-      min.reliability.marker = 0.0,
-      min.var.lv.exo = 0.0,
-      min.var.lv.endo = 0.0
+      lower_factor = c(1, 1),
+      min_reliability_marker = 0.0,
+      min_var_lv_exo = 0.0,
+      min_var_lv_endo = 0.0
     )
   } else if (opt$bounds == "pos.ov.var") {
     opt$optim.bounds <- list(
       lower = c("ov.var"),
-      lower.factor = 1
+      lower_factor = 1
     )
   } else if (opt$bounds == "pos.lv.var") {
     opt$optim.bounds <- list(
       lower = c("lv.var"),
-      lower.factor = 1,
-      min.reliability.marker = 0.0,
-      min.var.lv.exo = 0.0,
-      min.var.lv.endo = 0.0
+      lower_factor = 1,
+      min_reliability_marker = 0.0,
+      min_var_lv_exo = 0.0,
+      min_var_lv_endo = 0.0
     )
   }
 

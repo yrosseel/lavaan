@@ -88,7 +88,7 @@ lav_model_objective <- function(lavmodel = NULL,
       )
       mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
     }
-    if (estimator == "DLS" && estimator_args$dls.GammaNT == "model") {
+    if (estimator == "DLS" && estimator_args$dls_gamma_nt == "model") {
       sigma_hat <- lav_model_sigma(
         lavmodel = lavmodel, glist = glist,
         extra = FALSE
@@ -289,14 +289,14 @@ lav_model_objective <- function(lavmodel = NULL,
       if (estimator == "WLS") {
         wls_v <- lavsamplestats@WLS.V[[g]]
       } else if (estimator == "DLS") {
-        if (estimator_args$dls.GammaNT == "sample") {
+        if (estimator_args$dls_gamma_nt == "sample") {
           wls_v <- lavsamplestats@WLS.V[[g]]
         } else {
           wls_v <- lav_dls_wls_v_g(
             m_cov         = sigma_hat[[g]],
             m_mean        = mu_hat[[g]],
             nacov_g       = lavsamplestats@NACOV[[g]],
-            dls_a         = estimator_args$dls.a,
+            dls_a         = estimator_args$dls_a,
             x_idx         = lavsamplestats@x.idx[[g]],
             fixed_x       = lavmodel@fixed.x,
             conditional_x = lavmodel@conditional.x,
@@ -425,7 +425,7 @@ lav_model_objective <- function(lavmodel = NULL,
       estimator == "MML") {
       # do nothing
     } else if (estimator == "DLS") {
-      if (estimator_args$dls.FtimesNminus1) {
+      if (estimator_args$dls_ftimes_nminus1) {
         group_fx <- 0.5 * (lavsamplestats@nobs[[g]] - 1) /
             lavsamplestats@nobs[[g]] * group_fx
       } else {

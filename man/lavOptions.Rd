@@ -464,9 +464,9 @@ Estimation options:
       (penalized maximum likelihood; continuous-outcome models for now). By
       default sandwich standard errors are used
       (\code{se = "robust.huber.white"}). The type of bias reduction is
-      controlled by the \code{rbm.method} element of \code{estimator.args}
+      controlled by the \code{rbm_method} element of \code{estimator.args}
       (either \code{"implicit"} (default) or \code{"explicit"}), for example
-      \code{estimator = list(estimator = "RBM", rbm.method = "explicit")}.
+      \code{estimator = list(estimator = "RBM", rbm_method = "explicit")}.
       The \code{"explicit"} method is much faster for models with many
       parameters (it requires a single ML fit plus a one-step correction),
       and is recommended in that case.}
@@ -770,18 +770,18 @@ Optimization options:
       the bounds is enlarged (allowing again for slightly negative variances).}
     \item{\code{optim.bounds}:}{List. This can be used instead of the 
       \code{bounds} argument to allow more control. Possible elements of the
-      list are \code{lower}, \code{upper}, \code{lower.factor} and 
-      \code{upper.factor}. All of these accept a vector. The \code{lower} and
+      list are \code{lower}, \code{upper}, \code{lower_factor} and 
+      \code{upper_factor}. All of these accept a vector. The \code{lower} and
       \code{upper} elements indicate for which type of parameters bounds
       should be computed. Possible choices are \code{"ov.var"}, \code{"lv.var"},
-      \code{"loadings"} and \code{"covariances"}. The \code{lower.factor} and 
-      \code{upper.factor} elements should have the same length as the 
+      \code{"loadings"} and \code{"covariances"}. The \code{lower_factor} and 
+      \code{upper_factor} elements should have the same length as the 
       \code{lower} and \code{upper} elements respectively. They indicate the
       factor by which the range of the bounds should be enlarged (for 
       example, 1.1 or 1.2; the default is 1.0). Other elements are
-      \code{min.reliability.marker} which sets the lower bound for the
+      \code{min_reliability_marker} which sets the lower bound for the
       reliability of the marker indicator (if any) of each factor 
-      (default is 0.1). Finally, the \code{min.var.lv.endo} element indicates
+      (default is 0.1). Finally, the \code{min_var_lv_endo} element indicates
       the lower bound of the variance of any endogenous latent variable
       (default is 0.0). The snake_case spelling of these element names
       (e.g., \code{lower_factor}) is accepted too.}

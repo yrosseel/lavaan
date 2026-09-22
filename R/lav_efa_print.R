@@ -122,7 +122,7 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   tmp_est <- toupper(x$estimator)
   if (tmp_est == "DLS") {
     dls_first_letter <- substr(
-      x$estimator.args$dls.GammaNT,
+      x$estimator.args$dls_gamma_nt,
       1L, 1L
     )
     tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
@@ -134,7 +134,7 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
     length(x$estimator.args) > 0L) {
     if (x$estimator == "DLS") {
       c1 <- c(c1, "Estimator DLS value for a")
-      c2 <- c(c2, x$estimator.args$dls.a)
+      c2 <- c(c2, x$estimator.args$dls_a)
     }
   }
 

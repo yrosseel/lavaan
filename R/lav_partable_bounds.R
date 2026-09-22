@@ -46,71 +46,71 @@ lav_pt_add_bounds <- function(partable = NULL,
       optim_bounds$upper <- as.character(optim_bounds$upper)
     }
 
-    if (is.null(optim_bounds$min.reliability.marker)) {
-      optim_bounds$min.reliability.marker <- 0.0
+    if (is.null(optim_bounds$min_reliability_marker)) {
+      optim_bounds$min_reliability_marker <- 0.0
     } else {
-      if (optim_bounds$min.reliability.marker < 0 ||
-        optim_bounds$min.reliability.marker > 1.0) {
+      if (optim_bounds$min_reliability_marker < 0 ||
+        optim_bounds$min_reliability_marker > 1.0) {
         lav_msg_stop(gettextf(
-          "optim.bounds$min.reliability.marker is out of range: %s",
-          optim_bounds$min.reliability.marker
+          "optim.bounds$min_reliability_marker is out of range: %s",
+          optim_bounds$min_reliability_marker
         ))
       }
     }
 
-    if (is.null(optim_bounds$min.var.ov)) {
-      optim_bounds$min.var.ov <- -Inf
+    if (is.null(optim_bounds$min_var_ov)) {
+      optim_bounds$min_var_ov <- -Inf
     }
 
-    if (is.null(optim_bounds$min.var.lv.exo)) {
-      optim_bounds$min.var.lv.exo <- 0.0
+    if (is.null(optim_bounds$min_var_lv_exo)) {
+      optim_bounds$min_var_lv_exo <- 0.0
     }
 
-    if (is.null(optim_bounds$min.var.lv.endo)) {
-      optim_bounds$min.var.lv.endo <- 0.0
+    if (is.null(optim_bounds$min_var_lv_endo)) {
+      optim_bounds$min_var_lv_endo <- 0.0
     }
 
-    if (is.null(optim_bounds$max.r2.lv.endo)) {
-      optim_bounds$max.r2.lv.endo <- 1.0
+    if (is.null(optim_bounds$max_r2_lv_endo)) {
+      optim_bounds$max_r2_lv_endo <- 1.0
     }
 
-    if (is.null(optim_bounds$lower.factor)) {
-      optim_bounds$lower.factor <- rep(1.0, length(optim_bounds$lower))
+    if (is.null(optim_bounds$lower_factor)) {
+      optim_bounds$lower_factor <- rep(1.0, length(optim_bounds$lower))
     } else {
-      if (length(optim_bounds$lower.factor) == 1L &&
-        is.numeric(optim_bounds$lower.factor)) {
-        optim_bounds$lower.factor <- rep(
-          optim_bounds$lower.factor,
+      if (length(optim_bounds$lower_factor) == 1L &&
+        is.numeric(optim_bounds$lower_factor)) {
+        optim_bounds$lower_factor <- rep(
+          optim_bounds$lower_factor,
           length(optim_bounds$lower)
         )
-      } else if (length(optim_bounds$lower.factor) !=
+      } else if (length(optim_bounds$lower_factor) !=
         length(optim_bounds$lower)) {
         lav_msg_stop(
-          gettext("length(optim.bounds$lower.factor) is not equal to
+          gettext("length(optim.bounds$lower_factor) is not equal to
                   length(optim.bounds$lower)")
         )
       }
     }
-    lower_factor <- optim_bounds$lower.factor
+    lower_factor <- optim_bounds$lower_factor
 
-    if (is.null(optim_bounds$upper.factor)) {
-      optim_bounds$upper.factor <- rep(1.0, length(optim_bounds$upper))
+    if (is.null(optim_bounds$upper_factor)) {
+      optim_bounds$upper_factor <- rep(1.0, length(optim_bounds$upper))
     } else {
-      if (length(optim_bounds$upper.factor) == 1L &&
-        is.numeric(optim_bounds$upper.factor)) {
-        optim_bounds$upper.factor <- rep(
-          optim_bounds$upper.factor,
+      if (length(optim_bounds$upper_factor) == 1L &&
+        is.numeric(optim_bounds$upper_factor)) {
+        optim_bounds$upper_factor <- rep(
+          optim_bounds$upper_factor,
           length(optim_bounds$upper)
         )
-      } else if (length(optim_bounds$upper.factor) !=
+      } else if (length(optim_bounds$upper_factor) !=
         length(optim_bounds$upper)) {
         lav_msg_stop(
-          gettext("length(optim.bounds$lower.factor) is not equal to
+          gettext("length(optim.bounds$lower_factor) is not equal to
                   length(optim.bounds$upper)")
         )
       }
     }
-    upper_factor <- optim_bounds$upper.factor
+    upper_factor <- optim_bounds$upper_factor
   }
 
   # new in 0.6-17: check if we have theta parameterization
@@ -129,7 +129,7 @@ lav_pt_add_bounds <- function(partable = NULL,
   }
 
   # shortcut
-  rel <- optim_bounds$min.reliability.marker
+  rel <- optim_bounds$min_reliability_marker
 
   # nothing to do
   if (length(optim_bounds$lower) == 0L &&
@@ -272,10 +272,10 @@ lav_pt_add_bounds <- function(partable = NULL,
         }
       }
 
-      # min.var.ov?
-      min_idx <- which(lower_auto[par_idx] < optim_bounds$min.var.ov)
+      # min_var_ov?
+      min_idx <- which(lower_auto[par_idx] < optim_bounds$min_var_ov)
       if (length(min_idx) > 0L) {
-        lower_auto[par_idx[min_idx]] <- optim_bounds$min.var.ov
+        lower_auto[par_idx[min_idx]] <- optim_bounds$min_var_ov
       }
 
       # requested?
@@ -306,7 +306,7 @@ lav_pt_add_bounds <- function(partable = NULL,
         if (nchar(this_lv_marker) > 0L && this_lv_marker %in% ov_names) {
           marker_var <- ov_var[match(this_lv_marker, ov_names)]
           lower <- marker_var - (1 - rel) * marker_var
-          lv_var_lb[i] <- max(lower, optim_bounds$min.var.lv.exo)
+          lv_var_lb[i] <- max(lower, optim_bounds$min_var_lv_exo)
           # LV.VAR.UB[i] <- marker.var - REL*marker.var
           lv_var_ub[i] <- marker_var
 
@@ -315,7 +315,7 @@ lav_pt_add_bounds <- function(partable = NULL,
             lv_var_lb[i] <- rel
           }
         } else {
-          lv_var_lb[i] <- optim_bounds$min.var.lv.exo
+          lv_var_lb[i] <- optim_bounds$min_var_lv_exo
           lv_var_ub[i] <- max(ov_var)
         }
       }
@@ -332,15 +332,15 @@ lav_pt_add_bounds <- function(partable = NULL,
       lv_var_lb2 <- lv_var_lb
       endo_idx <- which(lv_names %in% lv_names_endo)
       if (length(endo_idx) > 0L) {
-        lv_var_lb2[endo_idx] <- optim_bounds$min.var.lv.endo
-        if (optim_bounds$max.r2.lv.endo != 1) {
+        lv_var_lb2[endo_idx] <- optim_bounds$min_var_lv_endo
+        if (optim_bounds$max_r2_lv_endo != 1) {
           lv_var_lb2[endo_idx] <-
-            (1 - optim_bounds$max.r2.lv.endo) * lv_var_ub[endo_idx]
+            (1 - optim_bounds$max_r2_lv_endo) * lv_var_ub[endo_idx]
         }
       }
       exo_idx <- which(!lv_names %in% lv_names_endo)
-      if (length(exo_idx) > 0L && optim_bounds$min.var.lv.exo != 0) {
-        lv_var_lb2[exo_idx] <- optim_bounds$min.var.lv.exo
+      if (length(exo_idx) > 0L && optim_bounds$min_var_lv_exo != 0) {
+        lv_var_lb2[exo_idx] <- optim_bounds$min_var_lv_exo
       }
 
       lower_auto[par_idx] <- lv_var_lb2[match(
@@ -362,15 +362,15 @@ lav_pt_add_bounds <- function(partable = NULL,
         std_free_idx <- which(partable$free[par_idx] > 0L)
         if (length(std_free_idx) > 0L) {
           fidx <- par_idx[std_free_idx]
-          lower_auto[fidx] <- optim_bounds$min.var.lv.exo
+          lower_auto[fidx] <- optim_bounds$min_var_lv_exo
           upper_auto[fidx] <- max(ov_var)
-          # endogenous lv: respect min.var.lv.endo / max.r2.lv.endo
+          # endogenous lv: respect min_var_lv_endo / max_r2_lv_endo
           endo_f <- which(partable$lhs[fidx] %in% lv_names_endo)
           if (length(endo_f) > 0L) {
-            lower_auto[fidx[endo_f]] <- optim_bounds$min.var.lv.endo
-            if (optim_bounds$max.r2.lv.endo != 1) {
+            lower_auto[fidx[endo_f]] <- optim_bounds$min_var_lv_endo
+            if (optim_bounds$max_r2_lv_endo != 1) {
               lower_auto[fidx[endo_f]] <-
-                (1 - optim_bounds$max.r2.lv.endo) * upper_auto[fidx[endo_f]]
+                (1 - optim_bounds$max_r2_lv_endo) * upper_auto[fidx[endo_f]]
             }
           }
         }

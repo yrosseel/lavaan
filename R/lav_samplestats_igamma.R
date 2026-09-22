@@ -11,7 +11,7 @@
 #       3) conditional_x (conditional_x = TRUE)
 #  - if conditional_x = TRUE, we ignore fixed_x (can be TRUE or FALSE)
 
-# GLS (and DLS with dls.a = 1): the normal-theory weight matrix for one
+# GLS (and DLS with dls_a = 1): the normal-theory weight matrix for one
 # group -- the inverse of the NT Gamma, in the (partial) correlation metric
 # when correlation = TRUE. Shared by lav_samp_from_data() and
 # lav_samp_from_moments().

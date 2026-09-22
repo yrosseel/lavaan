@@ -111,7 +111,7 @@ lav_model_est_rbm <- function(lavmodel = NULL,
                               lavdata = NULL,
                               lavoptions = NULL,
                               lavcache = list()) {
-  rbm_method <- lavoptions$estimator.args$rbm.method
+  rbm_method <- lavoptions$estimator.args$rbm_method
   if (is.null(rbm_method)) {
     rbm_method <- "implicit"
   }
