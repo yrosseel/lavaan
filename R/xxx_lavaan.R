@@ -292,7 +292,7 @@ lavaan <- function(
     # remember all data column names, so lav_pt_dv() can warn about bare
     # tokens in ":~" expressions that match a data column (forgotten
     # data() wrapper)
-    attr(flat_model, "dv.data.cols") <- colnames(data)
+    attr(flat_model, "dv_data_cols") <- colnames(data)
     dv_data_names <- unique(unlist(lapply(dv_rhs, function(s) {
       lav_dv_expr_datavars(
         lav_pt_con_parse(s, gettext("parameter definition(s)"))[[1L]])

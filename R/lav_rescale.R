@@ -425,7 +425,7 @@ lav_rescale_estimate <- function(lavdata = NULL, lavmodel = NULL,
   attr(x, "control") <- lavoptions$control
   attr(x, "dx") <- numeric(0L)
   attr(x, "fx") <- fx
-  attr(x, "rescale.cj") <- cj
+  attr(x, "rescale_cj") <- cj
 
   # non-plain-ML: hand the (exactly back-transformed) vcov and the
   # (invariant) test statistics of the inner fit to the outer pipeline
@@ -440,11 +440,11 @@ lav_rescale_estimate <- function(lavdata = NULL, lavmodel = NULL,
         attr(vcov_orig, "BOOT.COEF") <-
           sweep(boot_in, 2L, mono_x, "*")
       }
-      attr(x, "rescale.vcov") <- vcov_orig
+      attr(x, "rescale_vcov") <- vcov_orig
     }
     if (length(fit_in@test) > 0L &&
         !(length(lavoptions$test) == 1L && lavoptions$test == "none")) {
-      attr(x, "rescale.test") <- fit_in@test
+      attr(x, "rescale_test") <- fit_in@test
     }
 
     # missing data: the outer (raw-metric) saturated EM is unreliable
@@ -481,7 +481,7 @@ lav_rescale_estimate <- function(lavdata = NULL, lavmodel = NULL,
         }
       }
       h1_in$logl$loglik <- sum(h1_in$logl$loglik.group)
-      attr(x, "rescale.h1") <- h1_in
+      attr(x, "rescale_h1") <- h1_in
     }
   }
   x

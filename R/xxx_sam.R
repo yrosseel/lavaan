@@ -467,17 +467,6 @@ sam <- function(model = NULL,
   #          only needed for local approach!       #
   ##################################################
   if (sam_method %in% c("local", "fsr", "cfsr")) {
-    # renamed (September 2026): lambda.floor -> lambda2_floor (the floor of
-    # the SECOND-order correction; the first-order floor is lambda1_floor)
-    if (!is.null(local_options[["lambda.floor"]])) {
-      lav_msg_warn(gettext(
-        "local option lambda.floor has been renamed to lambda2_floor;
-         please use lambda2_floor instead."))
-      if (is.null(local_options[["lambda2_floor"]])) {
-        local_options[["lambda2_floor"]] <- local_options[["lambda.floor"]]
-      }
-      local_options[["lambda.floor"]] <- NULL
-    }
     # default local_options
     local_opt <- list(
       m_method = "ML",
@@ -657,7 +646,7 @@ sam <- function(model = NULL,
     }
   }
   # the (N x q) casewise contributions are no longer needed
-  step1$IVETA2 <- step1$IVETA2.idx <- NULL
+  step1$IVETA2 <- step1$iveta2_idx <- NULL
 
   if (output == "list.step1.only") {
     # stop here, return interim results

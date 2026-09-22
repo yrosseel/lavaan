@@ -118,19 +118,19 @@ lav_step11_estoptim <- function(lavdata = NULL,
         lavpartable = lavpartable, prep = rescale_prep
       )
       if (!is.null(x)) {
-        lavoptions$.rescale.cj <- attr(x, "rescale.cj")
-        attr(x, "rescale.cj") <- NULL
-        if (!is.null(attr(x, "rescale.vcov"))) {
-          lavoptions$.rescale.vcov <- attr(x, "rescale.vcov")
-          attr(x, "rescale.vcov") <- NULL
+        lavoptions$.rescale.cj <- attr(x, "rescale_cj")
+        attr(x, "rescale_cj") <- NULL
+        if (!is.null(attr(x, "rescale_vcov"))) {
+          lavoptions$.rescale.vcov <- attr(x, "rescale_vcov")
+          attr(x, "rescale_vcov") <- NULL
         }
-        if (!is.null(attr(x, "rescale.test"))) {
-          lavoptions$.rescale.test <- attr(x, "rescale.test")
-          attr(x, "rescale.test") <- NULL
+        if (!is.null(attr(x, "rescale_test"))) {
+          lavoptions$.rescale.test <- attr(x, "rescale_test")
+          attr(x, "rescale_test") <- NULL
         }
-        if (!is.null(attr(x, "rescale.h1"))) {
-          lavoptions$.rescale.h1 <- attr(x, "rescale.h1")
-          attr(x, "rescale.h1") <- NULL
+        if (!is.null(attr(x, "rescale_h1"))) {
+          lavoptions$.rescale.h1 <- attr(x, "rescale_h1")
+          attr(x, "rescale_h1") <- NULL
         }
         lav_msg_note(gettext(
           "some model variables are badly scaled; the model was fitted

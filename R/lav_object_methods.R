@@ -1369,9 +1369,9 @@ lavParameterEstimates <- function(object,                      # nolint
         # are not based on an information matrix, but on a delta-method
         # (sandwich) expression over the sample moments; the header rows
         # (assembled in lav_noniter_se_rows) replace the information block
-        se.rows <- lav_noniter_se_rows(object)
-        if (!is.null(se.rows)) {
-          attr(tmp_list, "se.rows") <- se.rows
+        se_rows <- lav_noniter_se_rows(object)
+        if (!is.null(se_rows)) {
+          attr(tmp_list, "se_rows") <- se_rows
         }
         # FIXME: add more!!
       }

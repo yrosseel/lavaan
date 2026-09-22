@@ -215,14 +215,14 @@ lav_inspect_con_info <- function(object) {
   }
 
   list(
-    ceq.jac = ceq_jac, ceq.names = ceq_names, ceq.rhs = ceq_rhs,
-    ceq.resid = ceq_resid, ceq.rank = ceq_rank, ceq.lambda = ceq_lambda,
-    cin.jac = cin_jac, cin.names = cin_names, cin.rhs = cin_rhs,
-    cin.slack = cin_slack, cin.active = cin_active,
-    cin.lambda = cin_lambda,
-    k = k, k.par.labels = k_par_labels, k0 = k0,
-    ceq.simple = absorbed,
-    labels.free = labels_free, cin.par.labels = cin_par_labels
+    ceq_jac = ceq_jac, ceq_names = ceq_names, ceq_rhs = ceq_rhs,
+    ceq_resid = ceq_resid, ceq_rank = ceq_rank, ceq_lambda = ceq_lambda,
+    cin_jac = cin_jac, cin_names = cin_names, cin_rhs = cin_rhs,
+    cin_slack = cin_slack, cin_active = cin_active,
+    cin_lambda = cin_lambda,
+    k = k, k_par_labels = k_par_labels, k0 = k0,
+    ceq_simple = absorbed,
+    labels_free = labels_free, cin_par_labels = cin_par_labels
   )
 }
 
@@ -231,28 +231,28 @@ lav_inspect_con <- function(object, add_labels = FALSE,
                                    add_class = FALSE) {
   info <- lav_inspect_con_info(object)
 
-  ceq_jac <- info$ceq.jac
-  cin_jac <- info$cin.jac
-  ceq_rhs <- info$ceq.rhs
-  ceq_resid <- info$ceq.resid
-  ceq_lambda <- info$ceq.lambda
-  cin_rhs <- info$cin.rhs
-  cin_slack <- info$cin.slack
-  cin_active <- info$cin.active
-  cin_lambda <- info$cin.lambda
+  ceq_jac <- info$ceq_jac
+  cin_jac <- info$cin_jac
+  ceq_rhs <- info$ceq_rhs
+  ceq_resid <- info$ceq_resid
+  ceq_lambda <- info$ceq_lambda
+  cin_rhs <- info$cin_rhs
+  cin_slack <- info$cin_slack
+  cin_active <- info$cin_active
+  cin_lambda <- info$cin_lambda
   k <- info$k
   k0 <- info$k0
 
   if (add_labels) {
-    dimnames(ceq_jac) <- list(info$ceq.names, info$labels.free)
-    dimnames(cin_jac) <- list(info$cin.names, info$cin.par.labels)
-    names(ceq_rhs) <- names(ceq_resid) <- info$ceq.names
-    names(ceq_lambda) <- info$ceq.names
-    names(cin_rhs) <- names(cin_slack) <- info$cin.names
-    names(cin_active) <- names(cin_lambda) <- info$cin.names
-    rownames(k) <- info$k.par.labels
+    dimnames(ceq_jac) <- list(info$ceq_names, info$labels_free)
+    dimnames(cin_jac) <- list(info$cin_names, info$cin_par_labels)
+    names(ceq_rhs) <- names(ceq_resid) <- info$ceq_names
+    names(ceq_lambda) <- info$ceq_names
+    names(cin_rhs) <- names(cin_slack) <- info$cin_names
+    names(cin_active) <- names(cin_lambda) <- info$cin_names
+    rownames(k) <- info$k_par_labels
     if (!is.null(k0)) {
-      names(k0) <- info$labels.free
+      names(k0) <- info$labels_free
     }
   }
 
@@ -273,7 +273,7 @@ lav_inspect_con <- function(object, add_labels = FALSE,
     ceq.jac = ceq_jac,
     ceq.rhs = ceq_rhs,
     ceq.resid = ceq_resid,
-    ceq.rank = info$ceq.rank,
+    ceq.rank = info$ceq_rank,
     ceq.lambda = ceq_lambda,
     cin.jac = cin_jac,
     cin.rhs = cin_rhs,
@@ -282,7 +282,7 @@ lav_inspect_con <- function(object, add_labels = FALSE,
     cin.lambda = cin_lambda,
     k = k,
     k0 = k0,
-    ceq.simple = info$ceq.simple
+    ceq.simple = info$ceq_simple
   )
 }
 
@@ -293,34 +293,34 @@ lav_inspect_con_jac <- function(object, add_labels = FALSE,
                                        add_class = FALSE) {
   info <- lav_inspect_con_info(object)
 
-  n_ceq <- nrow(info$ceq.jac)
-  n_cin <- nrow(info$cin.jac)
+  n_ceq <- nrow(info$ceq_jac)
+  n_cin <- nrow(info$cin_jac)
   if (n_cin == 0L) {
-    out <- info$ceq.jac
-    par_labels <- info$labels.free
+    out <- info$ceq_jac
+    par_labels <- info$labels_free
   } else if (n_ceq == 0L) {
-    out <- info$cin.jac
-    par_labels <- info$cin.par.labels
-  } else if (ncol(info$ceq.jac) == ncol(info$cin.jac)) {
-    out <- rbind(info$ceq.jac, info$cin.jac)
-    par_labels <- info$labels.free
+    out <- info$cin_jac
+    par_labels <- info$cin_par_labels
+  } else if (ncol(info$ceq_jac) == ncol(info$cin_jac)) {
+    out <- rbind(info$ceq_jac, info$cin_jac)
+    par_labels <- info$labels_free
   } else {
     # different parameter spaces (simple equalities absorbed + bounds in
     # the expanded space); return the equality part only
     lav_msg_warn(gettext(
       "equality and inequality constraints live in different parameter spaces for this model; returning the equality constraints only (use what = \"constraints\" to see both)."))
-    out <- info$ceq.jac
-    par_labels <- info$labels.free
+    out <- info$ceq_jac
+    par_labels <- info$labels_free
     n_cin <- 0L
   }
 
-  active <- c(rep(TRUE, n_ceq), if (n_cin > 0L) info$cin.active)
+  active <- c(rep(TRUE, n_ceq), if (n_cin > 0L) info$cin_active)
   ceq_idx <- seq_len(n_ceq)
   cin_idx <- n_ceq + seq_len(n_cin)
 
   if (add_labels) {
-    row_names <- c(if (n_ceq > 0L) info$ceq.names,
-      if (n_cin > 0L) info$cin.names)
+    row_names <- c(if (n_ceq > 0L) info$ceq_names,
+      if (n_cin > 0L) info$cin_names)
     dimnames(out) <- list(row_names, par_labels)
   }
   if (add_class) {
@@ -343,7 +343,7 @@ lav_inspect_con_nullspace <- function(object, add_labels = FALSE,
 
   k <- info$k
   if (add_labels) {
-    rownames(k) <- info$k.par.labels
+    rownames(k) <- info$k_par_labels
   }
   if (add_class) {
     class(k) <- c("lavaan.matrix", "matrix")

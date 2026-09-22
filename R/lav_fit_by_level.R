@@ -588,7 +588,7 @@ lav_fit_by_level_fm <- function(object) {
         object = fit_l,
         fit_measures = list(fit.measures = c(measures, srmr_names[i])),
         output = "vector",
-        rmsea.n = lav_fit_by_level_rmsea_n(object, level_names[i])
+        rmsea_n = lav_fit_by_level_rmsea_n(object, level_names[i])
       ),
       silent = TRUE
     )

@@ -318,7 +318,7 @@ lav_options_set <- function(opt = NULL) {
 
   # did the user explicitly request meanstructure = FALSE? (needed further
   # below, as opt$meanstructure may be forced to TRUE along the way)
-  meanstructure.false <- is.logical(opt$meanstructure) && !opt$meanstructure
+  meanstructure_false <- is.logical(opt$meanstructure) && !opt$meanstructure
 
   # marker.int.fixed ####
   if (opt$marker.int.zero) {
@@ -1304,7 +1304,7 @@ lav_options_set <- function(opt = NULL) {
   }
   if (any(c("intercepts", "means") %in% opt$group.equal)) {
     # warn if this overrides an explicit meanstructure = FALSE request
-    if (meanstructure.false && !opt$meanstructure) {
+    if (meanstructure_false && !opt$meanstructure) {
       lav_msg_warn(gettextf(
         "group.equal= contains %1$s or %2$s: forcing meanstructure = TRUE.",
         dQuote("intercepts"), dQuote("means")))

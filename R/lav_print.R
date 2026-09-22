@@ -217,13 +217,13 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       c1 <- c2 <- character(0L)
 
       # which type of standard errors?
-      if (!is.null(attr(x, "se.rows"))) {
+      if (!is.null(attr(x, "se_rows"))) {
         # noniterative estimators (MGM, JS/JSA, IV): delta-method standard
         # errors over the sample moments; print the pre-assembled rows
         # (see lav_noniter_se_rows) instead of the information block
-        se.rows <- attr(x, "se.rows")
-        c1 <- c(c1, names(se.rows))
-        c2 <- c(c2, unname(se.rows))
+        se_rows <- attr(x, "se_rows")
+        c1 <- c(c1, names(se_rows))
+        c2 <- c(c2, unname(se_rows))
       } else {
         c1 <- c(c1, "Standard errors")
         if (attr(x, "se") == "robust.huber.white") {
@@ -317,7 +317,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
             ))
           }
         } # no bootstrap
-      } # no se.rows
+      } # no se_rows
 
       #TDJ: Pooling options for lavaan.mi-class objects (which NEVER bootstrap)
       if (isTRUE(attr(x, "pooled"))) {
@@ -1306,11 +1306,11 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       # engaged lambda truncation: the structural estimates are shrunken
       # (see the lambda1_floor/lambda2_floor entries in ?sam); the full
       # per-coefficient bias approximation is stored in
-      # object@internal$sam.trunc$bias
-      sam_trunc <- y$sam$sam.trunc
+      # object@internal$sam_trunc$bias
+      sam_trunc <- y$sam$sam_trunc
       if (!is.null(sam_trunc)) {
         ls_txt <- paste(sprintf("%.3f",
-                                sam_trunc$lambda.star[sam_trunc$engaged]),
+                                sam_trunc$lambda_star[sam_trunc$engaged]),
                         collapse = " ")
         # the note is proportional (see lav_sam_trunc_bias_se()): if both
         # the approximate shrinkage bias and the exact shift away from the
@@ -1327,18 +1327,18 @@ lav_summary_print <- function(x, ..., nd = 3L) {
           }
           out
         }
-        bias_max <- sam_trunc$bias.max
+        bias_max <- sam_trunc$bias_max
         if (is.null(bias_max) && !is.null(sam_trunc$bias)) {
-          # summary object without the bias.max entry
+          # summary object without the bias_max entry
           bias_max <- max(abs(sam_trunc$bias))
         }
-        bias_txt <- fmt(bias_max, sam_trunc$bias.se.max)
-        move_txt <- fmt(sam_trunc$move.max, sam_trunc$move.se.max)
+        bias_txt <- fmt(bias_max, sam_trunc$bias_se_max)
+        move_txt <- fmt(sam_trunc$move_max, sam_trunc$move_se_max)
         is_minor <- function(v_se) {
           !is.null(v_se) && is.finite(v_se) && v_se <= 0.5
         }
-        minor_flag <- is_minor(sam_trunc$bias.se.max) &&
-          is_minor(sam_trunc$move.se.max)
+        minor_flag <- is_minor(sam_trunc$bias_se_max) &&
+          is_minor(sam_trunc$move_se_max)
         cat("\n")
         if (minor_flag) {
           cat("  Note: the lambda truncation engaged (lambda.star = ",

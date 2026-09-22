@@ -1022,7 +1022,7 @@ lav_model_pt  <- function(
   # assign labels, flag + fix the host rows ($dv column), and append
   # free scalar rows (op = "dp") for the new component parameters
   tmp_list <- lav_pt_dv(tmp_list, var_table = var_table,
-                        data_names = attr(flat, "dv.data.cols"))
+                        data_names = attr(flat, "dv_data_cols"))
 
 
   # handle effect_coding related equality constraints

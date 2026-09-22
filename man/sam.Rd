@@ -140,7 +140,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      maximal (exact) shift away from the estimates that the historical
      rule would have produced; the per-coefficient values are
      stored in the fitted object
-     (\code{object@internal$sam.trunc$bias} and \code{$move}). As long
+     (\code{object@internal$sam_trunc$bias} and \code{$move}). As long
      as neither of them exceeds half a standard error, the
      truncation is of little practical consequence, and the note is
      merely informative. This is the typical situation when the

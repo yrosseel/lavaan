@@ -225,7 +225,7 @@ lav_fit <- function(object, fit_measures = "all",
                                robust = TRUE,
                                cat_nonpd = "na"
                              ),
-                             output = "vector", level = NULL, rmsea.n = NULL) {
+                             output = "vector", level = NULL, rmsea_n = NULL) {
   # check object
   object <- lav_object_check_version(object)
 
@@ -234,20 +234,20 @@ lav_fit <- function(object, fit_measures = "all",
   if (!is.null(level)) {
     target <- lav_fit_by_level_target(object, level = level)
     fit_l <- lav_fit_by_level_get(object, level = level)
-    if (is.null(rmsea.n)) {
-      rmsea.n <- lav_fit_by_level_rmsea_n(object, target)
+    if (is.null(rmsea_n)) {
+      rmsea_n <- lav_fit_by_level_rmsea_n(object, target)
     }
     if (missing(fm_args)) {
       out <- lav_fit(
         object = fit_l, fit_measures = fit_measures,
         baseline_model = baseline_model, h1_model = h1_model,
-        output = output, rmsea.n = rmsea.n
+        output = output, rmsea_n = rmsea_n
       )
     } else {
       out <- lav_fit(
         object = fit_l, fit_measures = fit_measures,
         baseline_model = baseline_model, h1_model = h1_model,
-        fm_args = fm_args, output = output, rmsea.n = rmsea.n
+        fm_args = fm_args, output = output, rmsea_n = rmsea_n
       )
     }
     if (output %in% c("vector", "text")) {
@@ -845,7 +845,7 @@ lav_fit <- function(object, fit_measures = "all",
         notclose_h0 = rmsea_notclose_h0,
         robust = fm_args$robust,
         cat_nonpd = fm_args$cat_nonpd,
-        n_override = rmsea.n
+        n_override = rmsea_n
       )
     )
   }

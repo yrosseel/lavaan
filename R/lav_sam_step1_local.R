@@ -23,11 +23,6 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   # lambda correction; "default" = historical p2/(n-1) rule, "debias" =
   # gated bootstrap-debiased margin, or a single nonnegative number
   local_lambda2_floor <- local_options[["lambda2_floor"]]
-  if (is.null(local_lambda2_floor)) {
-    # silently accept the pre-rename name (eg stored local.options of
-    # objects fitted before the rename; sam() itself warns + remaps)
-    local_lambda2_floor <- local_options[["lambda.floor"]]
-  }
   if (is.null(local_lambda2_floor)) { # eg stored local.options of old objects
     local_lambda2_floor <- "debias"
   }
@@ -66,10 +61,10 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   # re-runs of the numeric jacobian channels do not re-estimate the
   # (gated, bootstrap-based) debias floor -- the gate is a step function,
   # and a finite difference across a gate flip produces a garbage column
-  local_lambda1_frozen_floor <- local_options[["lambda1.floor.frozen"]]
-  local_lambda1_frozen_star <- local_options[["lambda1.star.frozen"]]
-  local_lambda2_frozen_floor <- local_options[["lambda2.floor.frozen"]]
-  local_lambda2_frozen_star <- local_options[["lambda2.star.frozen"]]
+  local_lambda1_frozen_floor <- local_options[["lambda1_floor_frozen"]]
+  local_lambda1_frozen_star <- local_options[["lambda1_star_frozen"]]
+  local_lambda2_frozen_floor <- local_options[["lambda2_floor_frozen"]]
+  local_lambda2_frozen_star <- local_options[["lambda2_star_frozen"]]
 
   lavoptions <- fit@Options
   lavpta <- fit@pta
@@ -412,7 +407,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     }
 
     # frozen truncation state for this block (numeric jacobian re-runs
-    # only): a finite frozen lambda.star (kappa = 0 truncation) pins the
+    # only): a finite frozen lambda_star (kappa = 0 truncation) pins the
     # effective multiplier; otherwise a finite frozen floor replaces the
     # data-driven ("debias") floor by its at-the-estimates value
     lambda_floor_b <- local_lambda1_floor
@@ -440,22 +435,22 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         )
         veta[[b]] <- tmp[, , drop = FALSE] # drop attributes
         alpha[[b]]  <- attr(tmp, "alpha")
-        lambda[[b]] <- attr(tmp, "lambda.star")
+        lambda[[b]] <- attr(tmp, "lambda_star")
         msm_list[[b]] <- attr(tmp, "MSM")
         mtm_list[[b]] <- attr(tmp, "MTM")
-        lambda1_kappa[[b]]      <- attr(tmp, "lambda.kappa")
+        lambda1_kappa[[b]]      <- attr(tmp, "lambda_kappa")
         # note: [b] <- list(...), because the attribute may be NULL (a
         # [[b]] <- NULL assignment would *delete* the list element)
-        lambda1_w[b]            <- list(attr(tmp, "lambda.w"))
-        lambda1_floor_used[[b]] <- attr(tmp, "lambda.floor.used")
-        lambda1_star_used[[b]]  <- attr(tmp, "lambda.star")
+        lambda1_w[b]            <- list(attr(tmp, "lambda_w"))
+        lambda1_floor_used[[b]] <- attr(tmp, "lambda_floor_used")
+        lambda1_star_used[[b]]  <- attr(tmp, "lambda_star")
         # effective first-order coefficient on the (pd-forced) MTM matrix,
         # so that VETA = MSM - lambda1 * MTM; this absorbs both the
-        # lambda.star correction (1 if the correction was not needed) and
+        # lambda_star correction (1 if the correction was not needed) and
         # the alpha correction (lav_sam_veta() rescales MTM by
         # (1 - alpha/(n-1)) *before* the lambda step); when lv interactions
         # are present, lambda[[b]] will be overwritten by the second-order
-        # lambda.star, but the casewise decomposition of EETA2/VETA2 (see
+        # lambda_star, but the casewise decomposition of EETA2/VETA2 (see
         # lav_sam_veta2() and lav_sam_gamma_add()) needs this first-order
         # value
         nobs_b <- fit@SampleStats@nobs[[this_group]]
@@ -667,13 +662,13 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         )
         veta[[b]] <- tmp[, , drop = FALSE] # drop attributes
         alpha[[b]] <- attr(tmp, "alpha")
-        lambda[[b]] <- attr(tmp, "lambda.star")
+        lambda[[b]] <- attr(tmp, "lambda_star")
         msm_list[[b]] <- attr(tmp, "MSM")
         mtm_list[[b]] <- attr(tmp, "MTM")
         fs_mean[[b]] <- attr(tmp, "FS.mean")
-        lambda2_kappa[[b]]      <- attr(tmp, "lambda.kappa")
-        lambda2_floor_used[[b]] <- attr(tmp, "lambda.floor.used")
-        lambda2_star_used[[b]]  <- attr(tmp, "lambda.star")
+        lambda2_kappa[[b]]      <- attr(tmp, "lambda_kappa")
+        lambda2_floor_used[[b]] <- attr(tmp, "lambda_floor_used")
+        lambda2_star_used[[b]]  <- attr(tmp, "lambda_star")
         if (return_fs) {
           fs[[b]] <- attr(tmp, "FS")
         }
@@ -775,20 +770,20 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$lambda   <- lambda
   step1$lambda1  <- lambda1
   # first-order truncation state for the SE machinery (kappa = d
-  # lambda.star / d lambda of the branch taken; w = the pencil direction
+  # lambda_star / d lambda of the branch taken; w = the pencil direction
   # for the analytic rank-1 jacobian term; floor/star.used = the frozen
   # values for the numeric jacobian re-runs). Note: step1$lambda gets
-  # overwritten by the second-order lambda.star when lv interactions are
+  # overwritten by the second-order lambda_star when lv interactions are
   # present, so the first-order star is kept separately here.
-  step1$lambda1.kappa      <- lambda1_kappa
-  step1$lambda1.w          <- lambda1_w
-  step1$lambda1.floor.used <- lambda1_floor_used
-  step1$lambda1.star.used  <- lambda1_star_used
+  step1$lambda1_kappa      <- lambda1_kappa
+  step1$lambda1_w          <- lambda1_w
+  step1$lambda1_floor_used <- lambda1_floor_used
+  step1$lambda1_star_used  <- lambda1_star_used
   # idem for the second-order (VETA2) truncation; empty unless the model
   # contains latent quadratic/interaction terms
-  step1$lambda2.kappa      <- lambda2_kappa
-  step1$lambda2.floor.used <- lambda2_floor_used
-  step1$lambda2.star.used  <- lambda2_star_used
+  step1$lambda2_kappa      <- lambda2_kappa
+  step1$lambda2_floor_used <- lambda2_floor_used
+  step1$lambda2_star_used  <- lambda2_star_used
   step1$alpha    <- alpha
   step1$MSM      <- msm_list
   step1$MTM      <- mtm_list
@@ -796,7 +791,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$FS       <- fs
   step1$COV.IVETA2 <- cov_iveta2
   step1$IVETA2 <- iveta2 # temporary; removed once Gamma.eta is available
-  step1$IVETA2.idx <- iveta2_idx
+  step1$iveta2_idx <- iveta2_idx
   step1$LV.NAMES <- lv_names_1
   # store also sam.method and local.options
   step1$sam.method <- sam_method
@@ -978,7 +973,7 @@ lav_sam_veta_vec <- function(step1_obj, groups, meanstructure,
 # Local options for the numeric-jacobian re-runs of lav_sam_step1_local():
 # freeze the first-order truncation state at its at-the-estimates values.
 # A kappa = 0 truncation (lambda-tracking debias margin, or a clamp at
-# zero) pins the effective multiplier lambda.star; any other block gets
+# zero) pins the effective multiplier lambda_star; any other block gets
 # its floor as a fixed number (the data-driven "debias" floor must not be
 # re-estimated at perturbed inputs: its gate is a step function, and a
 # finite difference across a gate flip produces a garbage column -- on
@@ -1006,24 +1001,24 @@ lav_sam_local_options_frozen <- function(step1) {
       }
     }, numeric(1L))
     if (any(is.finite(floors))) {
-      lo[[paste0(tag, ".floor.frozen")]] <<- floors
+      lo[[paste0(tag, "_floor_frozen")]] <<- floors
     }
     if (any(is.finite(stars))) {
-      lo[[paste0(tag, ".star.frozen")]] <<- stars
+      lo[[paste0(tag, "_star_frozen")]] <<- stars
     }
     invisible(NULL)
   }
-  freeze_order(step1$lambda1.kappa, step1$lambda1.floor.used,
-               step1$lambda1.star.used, "lambda1")
-  freeze_order(step1$lambda2.kappa, step1$lambda2.floor.used,
-               step1$lambda2.star.used, "lambda2")
+  freeze_order(step1$lambda1_kappa, step1$lambda1_floor_used,
+               step1$lambda1_star_used, "lambda1")
+  freeze_order(step1$lambda2_kappa, step1$lambda2_floor_used,
+               step1$lambda2_star_used, "lambda2")
   lo
 }
 
 # First-order lambda-truncation term for the analytic (continuous) JACb:
-# when the truncation binds with lambda.star tracking lambda (kappa = 1),
-# vech(VETA) = vech(MSM) - lambda.star * vech(MTM) with
-# lambda.star = lambda - floor, so d vech(VETA) / d vech(S) carries the
+# when the truncation binds with lambda_star tracking lambda (kappa = 1),
+# vech(VETA) = vech(MSM) - lambda_star * vech(MTM) with
+# lambda_star = lambda - floor, so d vech(VETA) / d vech(S) carries the
 # extra rank-1 term
 #   - vech(MTM) %*% (d lambda / d vech(S))'
 # with d lambda = t(w) dS w, w = t(M) v (v the smallest-root pencil
@@ -1035,8 +1030,8 @@ lav_sam_local_options_frozen <- function(step1) {
 # -- rows do not involve lambda), so when nothing binds the jacobian is
 # returned unchanged.
 lav_sam_jacb_lambda1_g <- function(jacb, step1, g) {
-  kappa <- step1$lambda1.kappa[[g]]
-  w <- step1$lambda1.w[[g]]
+  kappa <- step1$lambda1_kappa[[g]]
+  w <- step1$lambda1_w[[g]]
   if (is.null(kappa) || !isTRUE(kappa == 1) || is.null(w)) {
     return(jacb)
   }
@@ -2456,9 +2451,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   i1k <- tmp$idx1[keep_idx]
   i2k <- tmp$idx2[keep_idx]
 
-  # the second-order lambda.star, and the effective first-order lambda1,
+  # the second-order lambda_star, and the effective first-order lambda1,
   # are treated as fixed constants (not differentiated) -- EXCEPT when a
-  # kappa = 1 truncation bound at the estimates (lambda.star tracking
+  # kappa = 1 truncation bound at the estimates (lambda_star tracking
   # lambda-hat through a lambda-independent floor): the step-1-parameter
   # channel must then differentiate through lambda-hat as well, so
   # lbar() recomputes the pencil root at the perturbed parameters, with
@@ -2469,11 +2464,11 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   if (is.null(lambda1) || !is.finite(lambda1)) {
     lambda1 <- 1
   }
-  kappa1 <- step1$lambda1.kappa[[1]]
-  floor1 <- step1$lambda1.floor.used[[1]]
+  kappa1 <- step1$lambda1_kappa[[1]]
+  floor1 <- step1$lambda1_floor_used[[1]]
   track1 <- isTRUE(kappa1 == 1) && is.numeric(floor1) && is.finite(floor1)
-  kappa2 <- step1$lambda2.kappa[[1]]
-  floor2 <- step1$lambda2.floor.used[[1]]
+  kappa2 <- step1$lambda2_kappa[[1]]
+  floor2 <- step1$lambda2_floor_used[[1]]
   track2 <- isTRUE(kappa2 == 1) && is.numeric(floor2) && is.finite(floor2)
   # effective second-order multiplier of the unscaled var.error term,
   # absorbing the alpha correction (see lav_sam_veta2())
@@ -2524,7 +2519,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # the average casewise contribution to the augmented summary statistics
   #   Lbar = [ E(eta* %x% eta*)[keep], vech(Var(eta* %x% eta*)[keep, keep]) ]
   # as a function of the step 1 free parameters (holding the data, and
-  # lambda.star/lambda1, fixed); see the casewise contributions (iveta2_1)
+  # lambda_star/lambda1, fixed); see the casewise contributions (iveta2_1)
   # in lav_sam_veta2(); the averages equal the EETA2/VETA2 statistics that
   # are actually used in step 2:
   # with f_i = (1, M (y_i - nu)), B = bdiag(0, M THETA t(M)),
@@ -2535,7 +2530,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   #     Lbar1[a] = (1/N) \sum_i (f_i %x% f_i)[a] - lambda1 * vec(B)[a]
   # - second-order part (before taking vech):
   #     Lbar2[a, b] = Var(fs2)[a, b] - lambda2.eff * tmpbar[a, b]
-  #   with lambda2.eff = lambda.star * (1 - alpha/(n-1))
+  #   with lambda2.eff = lambda_star * (1 - alpha/(n-1))
   #   where fs2_i = f_i %x% f_i, and tmpbar is the average of
   #     tmp_i = ((F_i - lambda1 * B) %x% B) + (B %x% (F_i - lambda1 * B)) +
   #             ((F_i - lambda1 * B) %x% B) %*% K +
@@ -2726,7 +2721,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
   # n unless unscoreable cases were removed above)
   if (method == "casewise") {
     l_i <- step1$IVETA2[[g]]
-    l_idx <- step1$IVETA2.idx[[g]]
+    l_idx <- step1$iveta2_idx[[g]]
     psi <- NULL
     if (!is.null(l_i) && ncol(l_i) == nrow(cveta)) {
       psi <- lav_sam_step1_casewise(step1 = step1, fit = fit, group = g)
@@ -2739,7 +2734,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
       a_i[l_idx, ] <- a_i[l_idx, , drop = FALSE] + (n_full / nrow(l_c)) * l_c
       gamma_full <- crossprod(a_i) / n_full
       # parameters without casewise influence: additive form
-      add_idx <- attr(psi, "additive.idx")
+      add_idx <- attr(psi, "additive_idx")
       if (length(add_idx) > 0L) {
         c_add <- cveta[, add_idx, drop = FALSE]
         gamma_full <- gamma_full + n_full * (c_add %*%
@@ -2762,7 +2757,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
 # casewise scores and I_b the unit information of the block (the same
 # construction as in lav_sam_step2_se_hw_v() and lav_sam_gamma_eta_pml()).
 # Blocks for which this is not possible get zero columns; their column
-# indices are returned in the attribute "additive.idx". Returns NULL if no
+# indices are returned in the attribute "additive_idx". Returns NULL if no
 # block could be handled.
 lav_sam_step1_casewise <- function(step1 = NULL, fit = NULL, group = 1L) {
   ntot <- nrow(fit@Data@X[[group]])
@@ -2824,7 +2819,7 @@ lav_sam_step1_casewise <- function(step1 = NULL, fit = NULL, group = 1L) {
   }
   psi <- psi_full[, step1$step1.free.idx, drop = FALSE]
   psi <- t(t(psi) - colMeans(psi))
-  attr(psi, "additive.idx") <- which(!step1$step1.free.idx %in% done_idx)
+  attr(psi, "additive_idx") <- which(!step1$step1.free.idx %in% done_idx)
   psi
 }
 

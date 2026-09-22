@@ -386,7 +386,7 @@ lav_sam_lambda_floor_debias <- function(score = NULL, err = NULL,
   # danger zone: casewise bootstrap for bias and noise of lambda
   # (B = 200: with fewer resamples, the Monte Carlo error of se_boot -- and
   # hence of the floor, which is a deterministic but arbitrary function of
-  # the internal seed -- is not negligible: with B = 40, lambda.star varied
+  # the internal seed -- is not negligible: with B = 40, lambda_star varied
   # by about +/- 0.1 across seeds in small samples; the cost remains
   # negligible, and the floor is frozen in the numerical jacobians)
   b_reps <- 200L
@@ -410,9 +410,9 @@ lav_sam_lambda_floor_debias <- function(score = NULL, err = NULL,
   margin <- min(lambda - 1 + bias_hat, lambda - 1 + 3 * se_boot)
   out <- max(margin, 2 * se_boot, floor_default)
   # branch bookkeeping for the SE machinery: when the lambda-tracking
-  # margin binds, lambda.star = lambda - floor is locally constant in
+  # margin binds, lambda_star = lambda - floor is locally constant in
   # lambda (kappa = 0); when a lambda-independent guard binds (2*se_boot
-  # or floor_default), lambda.star tracks lambda one-for-one (kappa = 1)
+  # or floor_default), lambda_star tracks lambda one-for-one (kappa = 1)
   attr(out, "kappa") <- if (margin >= max(2 * se_boot, floor_default)) {
     0
   } else {
@@ -485,7 +485,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
     # internal (SE machinery only): frozen effective multiplier -- the
     # numeric-jacobian channels re-run this function at perturbed inputs,
     # and a kappa = 0 truncation (lambda-tracking debias margin) must keep
-    # lambda.star fixed at its at-the-estimates value there
+    # lambda_star fixed at its at-the-estimates value there
     lambda_star <- lambda_floor[["star"]]
     veta <- msm - lambda_star * mtm
   } else if (lambda_correction) {
@@ -501,7 +501,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
       #   NULL     -> historical rule (cutoff 1 + 1/(n-1), floor 1/(n-1))
       #   a number -> coherent rule: truncate iff lambda < 1 + floor
       floor_1 <- NULL
-      kappa_1 <- 1 # a fixed (numeric) floor: lambda.star tracks lambda
+      kappa_1 <- 1 # a fixed (numeric) floor: lambda_star tracks lambda
       if (identical(lambda_floor, "debias") &&
           length(empty_idx) == 0L && length(dummy_lv_idx) == 0L) {
         # gated bootstrap-debiased floor; NULL when the sample margin is
@@ -541,7 +541,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
         }
       }
       # eigenvector for the SE machinery: when the truncation binds with
-      # lambda.star tracking lambda (kappa = 1), the jacobian of
+      # lambda_star tracking lambda (kappa = 1), the jacobian of
       # vech(VETA) w.r.t. vech(S) carries the extra rank-1 term
       # -vech(MTM) . (d lambda / d vech(S))' with
       # d lambda = t(w) dS w, w = t(M) v (v the smallest-root pencil
@@ -557,7 +557,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
             all(is.finite(vv))) {
           lambda_w <- drop(t(m) %*% vv)
         }
-        # no usable direction -> lambda.w stays NULL and the analytic
+        # no usable direction -> lambda_w stays NULL and the analytic
         # rank-1 term is simply skipped (old, conservative behavior);
         # kappa is kept, so the frozen re-runs still track lambda
       }
@@ -583,14 +583,14 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   if (extra) {
     attr(veta, "lambda") <- lambda
     attr(veta, "alpha") <- alpha
-    attr(veta, "lambda.star") <- lambda_star
+    attr(veta, "lambda_star") <- lambda_star
     attr(veta, "MSM") <- msm
     attr(veta, "MTM") <- mtm
     # SE machinery (see lav_sam_jacb_lambda1_g() and the frozen-floor
     # re-runs in the numeric jacobian channels)
-    attr(veta, "lambda.kappa") <- lambda_kappa
-    attr(veta, "lambda.w") <- lambda_w
-    attr(veta, "lambda.floor.used") <- lambda_floor_used
+    attr(veta, "lambda_kappa") <- lambda_kappa
+    attr(veta, "lambda_w") <- lambda_w
+    attr(veta, "lambda_floor_used") <- lambda_floor_used
   }
 
   veta
@@ -852,7 +852,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     # internal (SE machinery only): frozen effective multiplier -- the
     # numeric-jacobian channels re-run this function at perturbed inputs,
     # and a kappa = 0 truncation (lambda-tracking debias margin, or a
-    # clamp at zero) must keep lambda.star fixed at its at-the-estimates
+    # clamp at zero) must keep lambda_star fixed at its at-the-estimates
     # value there
     lambda_star <- lambda_floor[["star"]]
     veta2 <- var_fs2 - lambda_star * var_error
@@ -870,7 +870,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
       #   NULL     -> historical rule (cutoff 1 + 2/n, floor p2/(n-1))
       #   a number -> coherent rule: truncate iff lambda < 1 + floor
       floor_2 <- NULL
-      kappa_2 <- 1 # a fixed (numeric) floor: lambda.star tracks lambda
+      kappa_2 <- 1 # a fixed (numeric) floor: lambda_star tracks lambda
       if (identical(lambda_floor, "debias")) {
         # gated bootstrap-debiased floor; NULL when the sample margin is
         # comfortably positive (then lambda >= 1 + 2/n by the gate
@@ -918,7 +918,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
         }
       }
       # pencil eigenvector for the SE machinery: when the truncation
-      # binds with lambda.star tracking lambda (kappa = 1), the casewise
+      # binds with lambda_star tracking lambda (kappa = 1), the casewise
       # contributions below gain the influence of lambda-hat itself
       # (recompute of the same pencil: suppress its duplicate warnings)
       if ((return_cov_iveta2 || extra) && lambda_kappa == 1) {
@@ -944,13 +944,13 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   # (EETA2, VETA2) that are used in the second step; this requires the
   # effective *first-order* lambda1 inside the decomposition (because
   # EETA2 and var.error are built from the lambda1-corrected first-order
-  # VETA), while the *second-order* lambda.star multiplies the whole
+  # VETA), while the *second-order* lambda_star multiplies the whole
   # correction term:
   #   ieeta2_i = fs2[i, ] - lambda1 * vec(MTM)
   #   (the terms involving the mean factor scores cancel out exactly)
   # and
   #   iveta2_i = tcrossprod(fs2[i, ] - fs2.mean) - lambda2.eff * tmp_i
-  # where lambda2.eff = lambda.star * (1 - alpha/(n-1)) is the effective
+  # where lambda2.eff = lambda_star * (1 - alpha/(n-1)) is the effective
   # multiplier of the *unscaled* var.error (the alpha correction rescales
   # var.error before the lambda step), and
   #       tmp_i = ((F_i - lambda1 * MTM) %x% MTM) +
@@ -1088,14 +1088,14 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   if (extra) {
     attr(veta2, "lambda") <- lambda
     attr(veta2, "alpha") <- alpha
-    attr(veta2, "lambda.star") <- lambda_star
+    attr(veta2, "lambda_star") <- lambda_star
     attr(veta2, "MSM") <- var_fs2
     attr(veta2, "MTM") <- var_error
     attr(veta2, "FS.mean") <- fs_mean
     # SE machinery (see lav_sam_gamma_add() and the frozen-floor re-runs
     # in the numeric jacobian channels)
-    attr(veta2, "lambda.kappa") <- lambda_kappa
-    attr(veta2, "lambda.floor.used") <- lambda_floor_used
+    attr(veta2, "lambda_kappa") <- lambda_kappa
+    attr(veta2, "lambda_floor_used") <- lambda_floor_used
   }
   if (return_fs) {
     attr(veta2, "FS") <- fs2[, lv_keep, drop = FALSE]
@@ -1623,12 +1623,12 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
 }
 
 # Truncation-bias report: when the (first- or second-order) lambda
-# truncation engaged (lambda.star < 1), the structural summary statistics
-# retain (1 - lambda.star) * MTM (resp. var.error) of extra error
+# truncation engaged (lambda_star < 1), the structural summary statistics
+# retain (1 - lambda_star) * MTM (resp. var.error) of extra error
 # (co)variance, and the step-2 estimates are shrunken toward zero. This
 # helper collects the engaged state, plus a first-order (delta-method)
 # approximation of the per-coefficient shrinkage bias
-#   bias = d theta / d stats . (1 - lambda.star) vech(MTM)
+#   bias = d theta / d stats . (1 - lambda_star) vech(MTM)
 # i.e. theta at the truncated statistics minus theta at the
 # (estimand-consistent) multiplier-1 statistics, linearized at the
 # truncated fit. The result is stored in the @internal slot and reported
@@ -1647,7 +1647,7 @@ lav_sam_trunc_bias <- function(step1 = NULL, fit_pa = NULL) {
   }
   vn1 <- colnames(step1$VETA[[1]])
   out <- list(
-    lambda.star = lam, engaged = engaged,
+    lambda_star = lam, engaged = engaged,
     order = if (any(grepl(":", vn1, fixed = TRUE))) 2L else 1L,
     bias = NULL
   )
@@ -1712,8 +1712,8 @@ lav_sam_trunc_bias <- function(step1 = NULL, fit_pa = NULL) {
   # only; one extra (point estimates only) fit of the structural part.
   out$move <- tryCatch({
     if (out$order != 1L) lav_msg_stop(gettext("First-order only."))
-    star_used <- unlist(step1$lambda1.star.used)
-    floor_used <- unlist(step1$lambda1.floor.used)
+    star_used <- unlist(step1$lambda1_star_used)
+    floor_used <- unlist(step1$lambda1_floor_used)
     nobs <- unlist(fit_pa@SampleStats@nobs)
     ng <- length(step1$VETA)
     veta_h <- vector("list", ng)
@@ -1794,19 +1794,19 @@ lav_sam_trunc_bias <- function(step1 = NULL, fit_pa = NULL) {
 # Truncation report, part 2 (used by summary()): put the approximate
 # shrinkage bias, and the exact shift away from the historical-rule
 # estimates, on the scale of the standard errors (which are only available
-# in the final object). Adds to the stored sam.trunc list:
-#   bias.max    = max |bias| among the regression coefficients (or among all
+# in the final object). Adds to the stored sam_trunc list:
+#   bias_max    = max |bias| among the regression coefficients (or among all
 #                 structural parameters if there are no regressions)
-#   bias.se.max = max |bias| / se among the same parameters
-#   move.max, move.se.max = idem, for the shift ('move')
+#   bias_se_max = max |bias| / se among the same parameters
+#   move_max, move_se_max = idem, for the shift ('move')
 # (NA if not available). The note printed by summary() is proportional: it
-# is merely informative if BOTH bias.se.max and move.se.max are available
+# is merely informative if BOTH bias_se_max and move_se_max are available
 # and at most 0.5 (a bias of half a standard error lowers the coverage of a
 # 95% confidence interval to about 92%); in all other cases -- including
 # the settings where the shift cannot be computed -- the full warning is
 # printed.
 lav_sam_trunc_bias_se <- function(object = NULL) {
-  sam_trunc <- object@internal$sam.trunc
+  sam_trunc <- object@internal$sam_trunc
   if (is.null(sam_trunc) || is.null(sam_trunc$bias)) {
     return(sam_trunc)
   }
@@ -1849,11 +1849,11 @@ lav_sam_trunc_bias_se <- function(object = NULL) {
     out
   }
   tmp <- max_abs(sam_trunc$bias)
-  sam_trunc$bias.max <- tmp[1]
-  sam_trunc$bias.se.max <- tmp[2]
+  sam_trunc$bias_max <- tmp[1]
+  sam_trunc$bias_se_max <- tmp[2]
   tmp <- max_abs(sam_trunc$move)
-  sam_trunc$move.max <- tmp[1]
-  sam_trunc$move.se.max <- tmp[2]
+  sam_trunc$move_max <- tmp[1]
+  sam_trunc$move_se_max <- tmp[2]
   sam_trunc
 }
 
@@ -1931,7 +1931,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     }),
     sam.mm.table = sam_mm_table,
     sam.mm.rel = sam_mm_rel,
-    sam.trunc = sam_trunc,
+    sam_trunc = sam_trunc,
     sam.struc.estimator = fit_pa@Model@estimator,
     sam.struc.args = struc_args,
     sam.struc.fit = sam_struc_fit,
