@@ -203,7 +203,7 @@ lav_options_set <- function(opt = NULL) {
       # (eg geomin.epsilon) and its default (geomin_epsilon) would coexist
       # and lav_snake_case() would flag a duplicate.
       if (length(new_args) &&
-        optname %in% c("rotation", "em", "em.h1")) {
+        optname %in% c("rotation", "em", "em.h1", "gn")) {
         new_args <- lav_snake_case(new_args)
       }
       # merge the user-supplied arguments into the (default) OPT.args, so
@@ -227,6 +227,14 @@ lav_options_set <- function(opt = NULL) {
   }
   if (is.list(opt$em.h1.args)) {
     opt$em.h1.args <- lav_snake_case(opt$em.h1.args)
+  }
+  if (is.list(opt$gn.args)) {
+    opt$gn.args <- lav_snake_case(opt$gn.args)
+  }
+  # optim.bounds uses dot.case element names; accept snake_case too
+  if (is.list(opt$optim.bounds) && length(opt$optim.bounds) > 0L) {
+    opt$optim.bounds <- lav_args_canonical(opt$optim.bounds,
+      lav_options_optim_bounds_names())
   }
 
   # 'correlation' may be a character vector of (observed) variable names:
@@ -1009,6 +1017,14 @@ lav_options_set <- function(opt = NULL) {
     if (length(opt$information) > 1L && opt$information[2] == "default") {
       opt$information[2] <- "observed"
     }
+  }
+
+  # estimator.args: accept both the dot.case and the snake_case spelling of
+  # the element names (the canonical spelling is estimator-specific, see
+  # lav_options_estimator_args_names())
+  if (is.list(opt$estimator.args) && length(opt$estimator.args) > 0L) {
+    opt$estimator.args <- lav_args_canonical(opt$estimator.args,
+      lav_options_estimator_args_names())
   }
 
   # specific per estimator (group) ####

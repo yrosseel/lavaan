@@ -38,7 +38,9 @@ fit of a latent variable model.}
   If additional options for certain fit measures are needed, fit_measures
   should be a list whose \code{fit.measures} (or \code{fit_measures}) element
   holds the measures
-  wanted, with the options supplied as further named elements of the list. The
+  wanted, with the options supplied as further named elements of the list
+  (both the dot.case and the snake_case spelling of the option names are
+  accepted, e.g., \code{rmsea.ci.level} or \code{rmsea_ci_level}). The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
   test statistic. Usually this is \code{"standard"}. FMG p-value tests can be

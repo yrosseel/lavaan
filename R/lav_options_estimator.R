@@ -1,5 +1,45 @@
 # lav_options specific per estimator in separate functions LDW 06/04/2024
 
+# canonical names of the elements of estimator.args, for all estimators.
+# lavOptions() passes the user-supplied estimator.args through
+# lav_args_canonical() with these names, so that both the dot.case and the
+# snake_case spelling of an element are accepted; the canonical spelling is
+# what the estimator-specific code below reads, and what is stored in
+# @Options$estimator.args. Add new elements here.
+lav_options_estimator_args_names <- function() {
+  c(
+    # GLS
+    "gls.v11.mplus",
+    # DLS
+    "dls.a", "dls.GammaNT", "dls.FtimesNminus1",
+    # FABIN2/FABIN3, BENTLER1982
+    "thetapsi.method", "GLS", "quadprog",
+    # MGM
+    "zero.after.efa", "psi.mapping",
+    "crossload.detect", "crossload.epc", "crossload.z", "crossload.max",
+    "mgm.varcov", "mgm.gamma", "mgm.jacobian",
+    # JS/JSA
+    "js_small_sample", "js_theta", "js_theta_bounds", "js_theta_values",
+    "js_varcov_method", "js_gamma", "js_jacobian", "js_mean_structure",
+    "js_vcov_gamma_modelbased",
+    # IV
+    "iv_method", "iv_fuller_c", "iv_samplestats", "iv_varcov_method",
+    "iv_sargan", "iv_sargan_adjust", "iv_weak", "iv_weak_threshold",
+    "iv_mean_structure", "iv_mimic_ml", "iv_vcov_stage1", "iv_vcov_stage2",
+    "iv_vcov_gamma_modelbased", "iv_vcov_jaca_numerical",
+    "iv_vcov_jacb_numerical", "iv_vcov_jack_numerical",
+    # RBM
+    "rbm.method"
+  )
+}
+
+# canonical (dot.case) names of the elements of optim.bounds
+lav_options_optim_bounds_names <- function() {
+  c("lower", "upper", "lower.factor", "upper.factor",
+    "min.reliability.marker", "min.var.ov", "min.var.lv.exo",
+    "min.var.lv.endo", "max.r2.lv.endo")
+}
+
 lav_options_est_ml <- function(opt) {
   # ML and friends: MLF, MLM, MLMV, MLMVS, MLR                     ####
   # se
@@ -290,7 +330,7 @@ lav_options_est_dls <- function(opt) {
   if (is.null(opt$estimator.args)) {
     opt$estimator.args <- list(
       dls.a = 1.0, dls.GammaNT = "model",
-      dls.FtimesNmin1 = FALSE
+      dls.FtimesNminus1 = FALSE
     )
   } else {
     if (is.null(opt$estimator.args$dls.a)) {
@@ -765,25 +805,22 @@ lav_options_est_fabin <- function(opt) {
     # crossload.epc = minimum |EPC| (the freed loading must be this far from
     # zero), crossload.z = minimum |z| (n-aware significance screen),
     # crossload.max = maximum number of cross-loadings to free.
+    # (snake_case spellings were mapped to these names by
+    # lav_args_canonical() in lavOptions())
     if (is.null(opt$estimator.args[["crossload.detect"]])) {
-      cd <- opt$estimator.args[["crossload_detect"]] # snake_case alias
-      opt$estimator.args$crossload.detect <- if (is.null(cd)) FALSE else cd
-      opt$estimator.args$crossload_detect <- NULL
+      opt$estimator.args$crossload.detect <- FALSE
     }
     if (is.null(opt$estimator.args[["crossload.epc"]])) {
-      ce <- opt$estimator.args[["crossload_epc"]]
-      opt$estimator.args$crossload.epc <- if (is.null(ce)) 0.10 else ce
-      opt$estimator.args$crossload_epc <- NULL
+      opt$estimator.args$crossload.epc <- 0.10
     }
     if (is.null(opt$estimator.args[["crossload.z"]])) {
-      cz <- opt$estimator.args[["crossload_z"]]
-      opt$estimator.args$crossload.z <- if (is.null(cz)) 3 else cz
-      opt$estimator.args$crossload_z <- NULL
+      opt$estimator.args$crossload.z <- 3
     }
     if (is.null(opt$estimator.args[["crossload.max"]])) {
-      cm <- opt$estimator.args[["crossload_max"]]
-      opt$estimator.args$crossload.max <- if (is.null(cm)) 5L else as.integer(cm)
-      opt$estimator.args$crossload_max <- NULL
+      opt$estimator.args$crossload.max <- 5L
+    } else {
+      opt$estimator.args$crossload.max <-
+        as.integer(opt$estimator.args[["crossload.max"]])
     }
     # second stage for the variances/covariances (as in the IV/JS
     # estimators): "none" (classic MGM), or one of "ULS"/"GLS"/"RLS"/"2RLS";
@@ -791,9 +828,7 @@ lav_options_est_fabin <- function(opt) {
     # residual covariances (which the classic computation cannot handle),
     # and "none" otherwise
     if (is.null(opt$estimator.args[["mgm.varcov"]])) {
-      mv <- opt$estimator.args[["mgm_varcov"]] # snake_case alias
-      opt$estimator.args$mgm.varcov <- if (is.null(mv)) "default" else mv
-      opt$estimator.args$mgm_varcov <- NULL
+      opt$estimator.args$mgm.varcov <- "default"
     }
     opt$estimator.args$mgm.varcov <-
       toupper(opt$estimator.args[["mgm.varcov"]])
@@ -806,12 +841,9 @@ lav_options_est_fabin <- function(opt) {
     # moment covariance (Gamma) flavor for the delta-method standard
     # errors: "nt" (normal-theory, default) or "adf" (distribution-free;
     # equals the infinitesimal-jackknife covariance of the estimator)
-    mgm_gamma_user <- !is.null(opt$estimator.args[["mgm.gamma"]]) ||
-                      !is.null(opt$estimator.args[["mgm_gamma"]])
-    if (is.null(opt$estimator.args[["mgm.gamma"]])) {
-      mg <- opt$estimator.args[["mgm_gamma"]] # snake_case alias
-      opt$estimator.args$mgm.gamma <- if (is.null(mg)) "nt" else mg
-      opt$estimator.args$mgm_gamma <- NULL
+    mgm_gamma_user <- !is.null(opt$estimator.args[["mgm.gamma"]])
+    if (!mgm_gamma_user) {
+      opt$estimator.args$mgm.gamma <- "nt"
     }
     opt$estimator.args$mgm.gamma <-
       tolower(opt$estimator.args[["mgm.gamma"]])
@@ -836,9 +868,7 @@ lav_options_est_fabin <- function(opt) {
     # errors: "analytic" (default; classic branch, with an automatic
     # numerical fallback for the other branches) or "numeric"
     if (is.null(opt$estimator.args[["mgm.jacobian"]])) {
-      mj <- opt$estimator.args[["mgm_jacobian"]] # snake_case alias
-      opt$estimator.args$mgm.jacobian <- if (is.null(mj)) "analytic" else mj
-      opt$estimator.args$mgm_jacobian <- NULL
+      opt$estimator.args$mgm.jacobian <- "analytic"
     }
     opt$estimator.args$mgm.jacobian <-
       tolower(opt$estimator.args[["mgm.jacobian"]])
@@ -872,10 +902,8 @@ lav_options_est_js <- function(opt) {
       "estimator %s does not support multilevel data (yet).", label))
   }
 
-  # the JS estimator.args use snake_case names
-  if (is.list(opt$estimator.args) && length(opt$estimator.args) > 0L) {
-    opt$estimator.args <- lav_snake_case(opt$estimator.args)
-  }
+  # the JS estimator.args use snake_case names (dot.case spellings were
+  # mapped to them by lav_args_canonical() in lavOptions())
 
   # brute-force override
   opt$optim.method <- "noniter"
@@ -1065,10 +1093,8 @@ lav_options_est_js <- function(opt) {
 lav_options_est_iv <- function(opt) {
   # (MI)IV-2SLS and friends                                          ####
 
-  # the IV estimator.args use snake_case names
-  if (is.list(opt$estimator.args) && length(opt$estimator.args) > 0L) {
-    opt$estimator.args <- lav_snake_case(opt$estimator.args)
-  }
+  # the IV estimator.args use snake_case names (dot.case spellings were
+  # mapped to them by lav_args_canonical() in lavOptions())
 
   # brute-force override
   opt$optim.method <- "noniter"

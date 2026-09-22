@@ -144,8 +144,8 @@ the independence model) (if available).}
      cov_std = TRUE, rsquare = FALSE,
      baseline_model = NULL, h1_model = NULL,
      fm_args = list(standard.test = "default", scaled.test = "default",
-     rmsea.ci.level = 0.90, rmsea.h0.closefit = 0.05,
-     rmsea.h0.notclosefit = 0.08, robust = TRUE, cat.nonpd = "na"),
+     rmsea.ci.level = 0.90, rmsea.close.h0 = 0.05,
+     rmsea.notclose.h0 = 0.08, robust = TRUE, cat.nonpd = "na"),
      modindices = FALSE, srmr_close_h0 = NULL,
      nd = 3L, cutoff = 0.3, dot_cutoff = 0.1)}:
       Print a nice summary of the model estimates.

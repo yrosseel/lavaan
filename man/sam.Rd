@@ -96,7 +96,10 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     See \code{\link{lavOptions}} for a complete list. These options affect
     both the measurement blocks and the structural part.}
 \item{local_options}{List. Options specific for local SAM method (these
-     options may change over time). If \code{lambda.correction = TRUE},
+     options may change over time; both the dot.case and the snake_case
+     spelling of the element names are accepted, e.g.,
+     \code{lambda.correction} or \code{lambda_correction}).
+     If \code{lambda.correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
      is positive definite. When the lambda correction must truncate, the
      truncation margin (floor) is controlled by \code{lambda1.floor} for

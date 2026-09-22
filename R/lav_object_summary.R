@@ -59,8 +59,8 @@ lav_object_summary <- function(object, header = TRUE,
                                    standard.test = "default",
                                    scaled.test = "default",
                                    rmsea.ci.level = 0.90,
-                                   rmsea.h0.closefit = 0.05,
-                                   rmsea.h0.notclosefit = 0.08
+                                   rmsea.close.h0 = 0.05,
+                                   rmsea.notclose.h0 = 0.08
                                  ),
                                residuals = FALSE,
                                estimates = TRUE,
@@ -119,12 +119,14 @@ lav_object_summary <- function(object, header = TRUE,
   }
   if (!missing(fm_args)) {
     lav_deprecated_args("fit.measures", "fm.args")
+    fm_args <- lav_fit_measures_args_canonical(fm_args)
     fm_args <- modifyList(default_fm_args, fm_args)
   } else {
     fm_args <- default_fm_args
   }
   if (is.list(fit_measures)) {
     fit_measures <- lav_fit_measures_list_alias(fit_measures)
+    fit_measures <- lav_fit_measures_args_canonical(fit_measures)
     if (is.null(names(fit_measures)) ||
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(

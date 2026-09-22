@@ -16,6 +16,7 @@ lav_sam_step2_se_bootstrap <- function(sam_object = NULL, bootstrap = list()) {
   default_args <- list(R = 1000L, type = "ordinary",
                        show.progress = FALSE,
                        check.post = TRUE, keep.idx = FALSE)
+  bootstrap <- lav_args_canonical(bootstrap, names(default_args))
   this_args <- modifyList(default_args, bootstrap)
   coef_1 <- lav_bootstrap_internal(object = sam_object,
     r = this_args$R, show_progress = this_args$show.progress,

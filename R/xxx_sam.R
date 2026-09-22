@@ -488,6 +488,8 @@ sam <- function(model = NULL,
       twolevel.method = "h1",
       gamma.eta = "casewise"
     )
+    # accept the snake_case spelling of the (dot.case) option names
+    local_options <- lav_args_canonical(local_options, names(local_opt))
     local_options <- modifyList(local_opt, local_options,
       keep.null = FALSE
     )

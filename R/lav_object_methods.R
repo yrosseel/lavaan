@@ -71,8 +71,8 @@ setMethod(
              standard.test = "default",
              scaled.test = "default",
              rmsea.ci.level = 0.90,
-             rmsea.h0.closefit = 0.05,
-             rmsea.h0.notclosefit = 0.08,
+             rmsea.close.h0 = 0.05,
+             rmsea.notclose.h0 = 0.08,
              robust = TRUE,
              cat.nonpd = "na"
            ),

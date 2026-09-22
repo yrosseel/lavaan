@@ -194,6 +194,26 @@ lav_fit_measures_list_alias <- function(fit_measures) {
   fit_measures
 }
 
+# the fit-measure options (rmsea.ci.level, ...) use dot.case names; accept
+# the snake_case spelling too (rmsea_ci_level), as well as the names that
+# summary() used for the close-fit cutoffs before 0.7-2
+lav_fit_measures_args_canonical <- function(x) {
+  if (!is.list(x) || is.null(names(x))) {
+    return(x)
+  }
+  alias <- c(rmsea.h0.closefit = "rmsea.close.h0",
+             rmsea_h0_closefit = "rmsea.close.h0",
+             rmsea.h0.notclosefit = "rmsea.notclose.h0",
+             rmsea_h0_notclosefit = "rmsea.notclose.h0")
+  idx <- which(names(x) %in% names(alias))
+  if (length(idx) > 0L) {
+    names(x)[idx] <- alias[names(x)[idx]]
+  }
+  lav_args_canonical(x, c("fit.measures", "standard.test", "scaled.test",
+    "rmsea.ci.level", "rmsea.close.h0", "rmsea.notclose.h0", "robust",
+    "cat.nonpd", "cat.check.pd", "gfi.ci.level"))
+}
+
 lav_fit <- function(object, fit_measures = "all",
                              baseline_model = NULL, h1_model = NULL,
                              fm_args = list(
@@ -293,12 +313,14 @@ lav_fit <- function(object, fit_measures = "all",
   )
   if (!missing(fm_args)) {
     lav_deprecated_args("fit_measures", "fm_args")
+    fm_args <- lav_fit_measures_args_canonical(fm_args)
     fm_args <- modifyList(default_fm_args, fm_args)
   } else {
     fm_args <- default_fm_args
   }
   if (is.list(fit_measures)) {
     fit_measures <- lav_fit_measures_list_alias(fit_measures)
+    fit_measures <- lav_fit_measures_args_canonical(fit_measures)
     if (is.null(names(fit_measures)) ||
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(

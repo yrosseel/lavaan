@@ -783,7 +783,8 @@ Optimization options:
       reliability of the marker indicator (if any) of each factor 
       (default is 0.1). Finally, the \code{min.var.lv.endo} element indicates
       the lower bound of the variance of any endogenous latent variable
-      (default is 0.0).}
+      (default is 0.0). The snake_case spelling of these element names
+      (e.g., \code{lower_factor}) is accepted too.}
     \item{\code{em.args}:}{List. Options related to the EM algorithm that
       is used to estimate the model parameters when
       \code{optim.method = "em"} (currently only available for multilevel

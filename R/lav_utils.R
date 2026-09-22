@@ -540,6 +540,41 @@ lav_snake_case <- function(old) {
     varnames_new
   }
 }
+# ----------------------- lav_args_canonical ------------------------------ #
+# normalize the element names of a list of (sub)options to a set of known
+# 'canonical' names: a user-supplied name that differs from a canonical name
+# only in case, or in the use of dots versus underscores (eg rmsea_ci_level
+# versus rmsea.ci.level, or dls_a versus dls.a) is renamed to the canonical
+# spelling. Names that do not match any canonical name are left untouched
+# (they may be meant for another consumer, or trigger an 'unknown option'
+# error downstream). Unlike lav_snake_case(), this accepts both the dot.case
+# and the snake_case spelling whatever the canonical spelling happens to be,
+# so the stored names always match what the internal code reads.
+lav_args_canonical <- function(x, canonical) {
+  if (!is.list(x) || length(x) == 0L || is.null(names(x)) ||
+      length(canonical) == 0L) {
+    return(x)
+  }
+  key <- function(s) {
+    tolower(gsub("([a-z0-9])([A-Z])", "\\1_\\2", chartr(".", "_", s)))
+  }
+  nms <- names(x)
+  idx <- which(nzchar(nms) & !nms %in% canonical)
+  if (length(idx) == 0L) {
+    return(x)
+  }
+  m <- match(key(nms[idx]), key(canonical))
+  ok <- !is.na(m)
+  nms[idx[ok]] <- canonical[m[ok]]
+  named <- nms[nzchar(nms)]
+  if (anyDuplicated(named)) {
+    lav_msg_stop(gettextf(
+      "option(s) %s specified more than once (in different spellings).",
+      lav_msg_view(unique(named[duplicated(named)]), "none", FALSE)))
+  }
+  names(x) <- nms
+  x
+}
 # ----------------------- lav_option_names -------------------------------- #
 # function to transform specified names of options to valid option names
 # this function is used to accept uppercase and dots or underscores in
