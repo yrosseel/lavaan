@@ -132,8 +132,10 @@ the model for both observed and latent variables.}
     with \code{op = "=="}).}
 \item{auto}{If \code{TRUE}, the default values are used for the auto.*
     arguments, depending on the value of \code{model_type}.}
-\item{model_type}{Either \code{"sem"} or \code{"growth"}; only used if
-    \code{auto=TRUE}.}
+\item{model_type}{Either \code{"sem"}, \code{"cfa"} or \code{"growth"};
+    only used if \code{auto=TRUE}. The auto.* arguments are then set to the
+    defaults used by \code{sem()}, \code{cfa()} or \code{growth()}
+    respectively.}
 \item{auto_fix_first}{If \code{TRUE}, the factor loading of the first indicator
     is set to 1.0 for every latent variable.}
 \item{marker}{Optional named character vector mapping a latent variable

@@ -154,8 +154,21 @@ lav_model_pt  <- function(
 
   # auto=TRUE?
   auto_cov_x_explicit <- auto_cov_x # was auto.cov.x requested explicitly?
-  if (auto) { # mimic sem/cfa auto behavior
+  if (auto) { # mimic sem/cfa/growth auto behavior
     if (model_type == "sem") {
+      int_ov_free <- TRUE
+      int_lv_free <- FALSE
+      auto_fix_first <- !std_lv
+      auto_fix_single <- TRUE
+      auto_var <- TRUE
+      auto_cov_lv_x <- TRUE
+      auto_cov_y <- TRUE
+      auto_th <- TRUE
+      auto_delta <- TRUE
+      auto_efa <- TRUE
+    } else if (model_type == "cfa") {
+      # currently identical to the sem() defaults, but kept separate so
+      # that the cfa() defaults can diverge in the future
       int_ov_free <- TRUE
       int_lv_free <- FALSE
       auto_fix_first <- !std_lv
