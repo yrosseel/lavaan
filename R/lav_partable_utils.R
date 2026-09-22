@@ -174,6 +174,24 @@ lav_pt_ndat <- function(partable) {
           pstar_x <- pstar_x + nvar_x
         }
       }
+      # only the x-covariances that are actually in the parameter table
+      # are fixed to their sample values; x-covariances that are absent
+      # (eg the independence model when baseline.fixed.x.free.cov =
+      # FALSE) are constrained to zero, and hence remain (testable)
+      # sample statistics
+      if (nvar_x > 1L) {
+        x_cov_idx <- which(partable$block == b &
+          partable$op == "~~" &
+          partable$lhs %in% ov_names_x &
+          partable$rhs %in% ov_names_x &
+          partable$lhs != partable$rhs)
+        x_cov_pairs <- unique(paste(
+          pmin(partable$lhs[x_cov_idx], partable$rhs[x_cov_idx]),
+          pmax(partable$lhs[x_cov_idx], partable$rhs[x_cov_idx])
+        ))
+        n_absent <- nvar_x * (nvar_x - 1) / 2 - length(x_cov_pairs)
+        pstar_x <- pstar_x - n_absent
+      }
       ndat[b] <- ndat[b] - pstar_x
     }
 
