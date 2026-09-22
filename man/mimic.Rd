@@ -118,13 +118,21 @@ treated as an alias for \code{"EQS"}):
     likelihood is used. The sample covariance matrix is divided by
     \code{N-1} (instead of \code{N}), which affects the chi-square test
     statistic, the loglikelihood and the standard errors.}
-  \item{\code{baseline.fixed.x.free.cov = FALSE}:}{when \code{fixed.x = TRUE},
-    the baseline (independence) model does not free the (co)variances of the
-    exogenous covariates.}
+  \item{\code{fixed.x = FALSE}:}{the exogenous \code{x} covariates are
+    treated as random variables: their means, variances and covariances
+    are freely estimated (rather than fixed to their sample values).}
+  \item{\code{baseline.fixed.x.free.cov = FALSE}:}{the covariances among
+    the exogenous covariates are constrained to zero in the baseline
+    (independence) model, just like all other covariances. By default,
+    they are retained (freely estimated if \code{fixed.x = FALSE}, fixed
+    to their sample values if \code{fixed.x = TRUE}), which yields a
+    smaller baseline chi-square statistic.}
 }
 In addition, for the MLR estimator, the robust test statistic defaults to
 \code{"yuan.bentler"} (instead of the \code{"yuan.bentler.mplus"} variant
 that is used for \code{mimic = "lavaan"} and \code{mimic = "Mplus"}).
+The \code{conditional.x} and \code{zero.keep.margins} defaults are the same
+as for \code{mimic = "lavaan"}.
 
 Note that the \code{mimic=} argument only sets \emph{defaults}: any option
 that is set explicitly in the \code{\link{lavaan}} call takes precedence. The

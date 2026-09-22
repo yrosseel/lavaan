@@ -74,15 +74,23 @@ lav_options_mimic <- function(opt) {
       opt$zero.keep.margins <- TRUE
     }
     opt$baseline.conditional.x.free.slopes <- FALSE
-  } else if (opt$mimic == "EQS") {
-    opt$baseline.fixed.x.free.cov <- FALSE
-    if (opt$estimator == "mlr") mlr_test <- "yuan.bentler"
-    if (any(lav_options_estimatorgroup(opt$estimator) ==
-            c("ML", "REML", "NTRLS", "catML"))) {
-      if (opt$likelihood == "default") opt$likelihood <- "wishart"
+  } else if (any(opt$mimic == c("EQS", "LISREL"))) {
+    # EQS/LISREL treat the exogenous covariates as random variables;
+    # but conditional.x = TRUE (the default for categorical data, see
+    # lav_options_set()) requires fixed.x = TRUE, so leave it alone then
+    conditional_x <- opt$conditional.x
+    if (is.character(conditional_x)) { # = "default"
+      conditional_x <- opt$.categorical
     }
-  } else if (opt$mimic == "LISREL") {
+    if (opt$fixed.x == "default" && !conditional_x) {
+      opt$fixed.x <- FALSE
+    }
+    # EQS/LISREL-style independence model: ALL variables uncorrelated,
+    # including the exogenous covariates
     opt$baseline.fixed.x.free.cov <- FALSE
+    if (opt$mimic == "EQS" && opt$estimator == "mlr") {
+      mlr_test <- "yuan.bentler"
+    }
     if (any(lav_options_estimatorgroup(opt$estimator) ==
             c("ML", "REML", "NTRLS", "catML"))) {
       if (opt$likelihood == "default") opt$likelihood <- "wishart"

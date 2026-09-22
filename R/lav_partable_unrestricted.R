@@ -497,6 +497,16 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
 
 
       # fixed.x exogenous variables?
+      # NOTE: ov_names_x is populated from the model syntax, so this block
+      #       also runs when fixed.x = FALSE. The baseline.fixed.x.free.cov
+      #       option decides whether the covariances among the exogenous
+      #       covariates are part of the baseline model at all (TRUE) or
+      #       constrained to zero (FALSE); the fixed_x block below then
+      #       decides, for all x-moments alike (variances, covariances,
+      #       means), whether they are free (fixed.x = FALSE) or fixed to
+      #       their sample values (fixed.x = TRUE). Both choices yield the
+      #       same baseline chi-square: in an independence model, the ML
+      #       estimate of the saturated x-block is the sample covariance.
       if (!conditional_x && (nx <- length(ov_names_x)) > 0L) {
         if (independent && lavoptions$baseline.fixed.x.free.cov) {
           # add covariances for eXo

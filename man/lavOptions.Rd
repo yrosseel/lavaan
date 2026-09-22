@@ -985,6 +985,17 @@ Miscellaneous:
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
       allow the slope structure to be unrestricted.}
+    \item{\code{baseline.fixed.x.free.cov}:}{Logical. If \code{TRUE} (the
+      default), and the model contains exogenous covariates (and
+      \code{conditional.x = FALSE}), the covariances among the exogenous
+      covariates are retained in the baseline (independence) model: they
+      are freely estimated if \code{fixed.x = FALSE}, and fixed to their
+      sample values if \code{fixed.x = TRUE} (which yields the same
+      baseline chi-square statistic). If \code{FALSE}, these covariances
+      are constrained to zero in the baseline model, just like all other
+      covariances, which leads to a larger baseline chi-square statistic
+      (and hence higher values for incremental fit indices like the CFI).
+      The variances of the exogenous covariates are always retained.}
     \item{\code{fit.by.level}:}{Logical. Only used for multilevel models.
       If \code{TRUE}, fit (and store) the partially saturated models that
       are needed to compute level-specific fit measures: for each level,
