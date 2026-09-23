@@ -314,7 +314,7 @@ lav_residuals_largest_block <- function(block_list, cov_diagonal = TRUE,
 
 # section title for the largest-residuals tables, reflecting the residual type
 lav_residuals_largest_title <- function(type) {
-  t <- tolower(type)[1]
+  t <- lav_keyword_canonical(type)[1]
   if (t %in% c("raw", "rmr")) {
     return("Largest Raw Residuals")
   }
@@ -337,7 +337,7 @@ lav_residuals_largest_title <- function(type) {
 
 
 # user-visible function
-lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint
+lavResiduals <- function(object, type = "cor_bentler", h1 = NULL,         # nolint
                          se = FALSE, zstat = TRUE,
                          summary = TRUE, elementwise = TRUE,
                          combine = FALSE,
@@ -350,6 +350,9 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
                         ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
+  # type: dots and underscores are interchangeable; the internal (and
+  # stored) spelling is the dotted one
+  type <- lav_keyword_canonical(type)
 
   # sam objects (issue #517)
   if (!is.null(object@internal$sam.method)) {
@@ -417,7 +420,7 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     # variance (diagonal) residuals are informative for the raw-style metrics
     # but structurally zero in the correlation metrics, so we only list them
     # for the former
-    cov_diagonal <- tolower(type)[1] %in%
+    cov_diagonal <- lav_keyword_canonical(type)[1] %in%
       c("raw", "rmr", "normalized", "standardized", "standardized.mplus")
 
     # one table per block (single block -> the list is not nested)
@@ -527,7 +530,7 @@ lav_residuals_list_to_text <- function(out, type, nblocks, drop_single = TRUE,
   # largest residuals per block (variances only for raw-style metrics)
   largest <- NULL
   if (do_largest) {
-    cov_diagonal <- tolower(type)[1] %in%
+    cov_diagonal <- lav_keyword_canonical(type)[1] %in%
       c("raw", "rmr", "normalized", "standardized", "standardized.mplus")
     largest <- lapply(block_lists, function(b) {
       lav_residuals_largest_block(b, cov_diagonal = cov_diagonal,

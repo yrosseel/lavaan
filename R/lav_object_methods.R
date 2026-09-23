@@ -233,7 +233,7 @@ lav_partable_check_std_def <- function(partable, est.std = NULL,
 }
 
 standardizedSolution <- function(object,                     # nolint
-                                 type = "std.all",
+                                 type = "std_all",
                                  se = TRUE,
                                  zstat = TRUE,
                                  pvalue = TRUE,
