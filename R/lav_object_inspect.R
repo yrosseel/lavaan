@@ -222,6 +222,53 @@ lav_lavaan_lavinspect <- function(object,
     lav_inspect_wls_v(object,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
+  } else if (what == "wls.vd") {
+    lav_inspect_wls_vd(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+
+    #### sample variances, inverse covariance, log-determinant ####
+  } else if (what == "var" || what == "sampstat.var") {
+    lav_inspect_sampstat_var(object, res = FALSE,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "res.var" || what == "sampstat.res.var") {
+    lav_inspect_sampstat_var(object, res = TRUE,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "icov" || what == "sampstat.icov") {
+    lav_inspect_sampstat_icov(object, res = FALSE, icov = TRUE,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "res.icov" || what == "sampstat.res.icov") {
+    lav_inspect_sampstat_icov(object, res = TRUE, icov = TRUE,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "cov.log.det" || what == "sampstat.cov.log.det") {
+    lav_inspect_sampstat_icov(object, res = FALSE, icov = FALSE,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "res.cov.log.det" ||
+             what == "sampstat.res.cov.log.det") {
+    lav_inspect_sampstat_icov(object, res = TRUE, icov = FALSE,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "res.th.nox" || what == "th.nox") {
+    lav_inspect_sampstat_th_nox(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+
+    #### group weights, loglikelihoods ####
+  } else if (what == "group.w" || what == "group.weights") {
+    lav_inspect_group_w(object,
+      add_labels = add_labels, add_class = add_class)
+  } else if (what == "logl" || what == "loglik" || what == "logl.group") {
+    lav_inspect_logl_group(object, h1 = FALSE,
+      add_labels = add_labels, add_class = add_class)
+  } else if (what == "h1.logl" || what == "h1.loglik" ||
+             what == "logl.h1" || what == "h1.logl.group") {
+    lav_inspect_logl_group(object, h1 = TRUE,
+      add_labels = add_labels, add_class = add_class)
 
 
 
@@ -295,6 +342,24 @@ lav_lavaan_lavinspect <- function(object,
       drop_list_single_group = drop_list_single_group)
   } else if (what %in% c("patterns", "pattern")) {
     lav_inspect_mi_patterns(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what %in% c("patterns.freq", "pattern.freq")) {
+    lav_inspect_mi_patterns_freq(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what %in% c("patterns.stats", "pattern.stats",
+                         "missing.stats")) {
+    lav_inspect_mi_patterns_stats(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what %in% c("response.patterns", "resp.patterns",
+                         "response.pattern", "resp.pattern")) {
+    lav_inspect_resp_patterns(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what %in% c("sampling.weights", "weights")) {
+    lav_inspect_sampling_weights(object,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
   } else if (what == "empty.idx") {
@@ -663,6 +728,11 @@ lav_lavaan_lavinspect <- function(object,
       drop_list_single_group = drop_list_single_group)
   } else if (what == "ranef") {
     lav_inspect_ranef(object,
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what %in% c("sampstat.2l", "sampstat.twolevel",
+                         "sampstat.cluster")) {
+    lav_inspect_sampstat_2l(object,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
 

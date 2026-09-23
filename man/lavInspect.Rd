@@ -160,10 +160,54 @@ Information about the data:
         If the data is complete (no missing values), there will be only
         a single pattern. In the case of multiple groups: a list of
         pattern matrices.}
+    \item{\code{"patterns.freq"}:}{Integer vector. The number of cases
+        (rows in the data) per missing data pattern, in the same order as
+        the rows of the \code{"patterns"} matrix. If the data is complete,
+        a single number (the number of observations). In the case of
+        multiple groups: a list of integer vectors.
+        Alias: \code{"pattern.freq"}.}
+    \item{\code{"patterns.stats"}:}{The sample statistics per missing data
+        pattern, as used by the full information maximum likelihood (FIML)
+        and two-stage estimation methods. Only available if
+        \code{missing = "ml"}, \code{"ml.x"}, \code{"two.stage"} or
+        \code{"robust.two.stage"}. A list with one element per missing
+        data pattern; each element is a list with the following
+        components: \code{cov} (the covariance matrix of the observed
+        variables in this pattern, divided by the number of cases),
+        \code{mean} (the mean vector of the observed variables in this
+        pattern), \code{freq} (the number of cases in this pattern; if
+        sampling weights were used, the sum of the weights), and
+        \code{var_idx} (a logical vector indicating which observed
+        variables are observed in this pattern). In the case of multiple
+        groups: a list of such lists. Aliases: \code{"pattern.stats"},
+        \code{"missing.stats"}.}
+    \item{\code{"response.patterns"}:}{The response patterns of the
+        ordered (categorical) variables. A list with the following
+        components: \code{pat} (a matrix with one row per observed
+        response pattern, sorted from the most to the least frequent
+        pattern; the columns correspond to the ordered variables),
+        \code{freq} (the number of cases per response pattern),
+        \code{npatterns} (the number of observed response patterns),
+        \code{total_patterns} (the number of possible response patterns),
+        and \code{empty_patterns} (the number of possible response
+        patterns that were not observed). Only available if the model
+        contains ordered variables and raw data was used. In the case of
+        multiple groups: a list of such lists. Alias:
+        \code{"resp.patterns"}.}
     \item{\code{"coverage"}:}{A symmetric matrix in which each element
         contains the proportion of jointly observed data points for the
         corresponding pair of observed variables.
         In the case of multiple groups: a list of coverage matrices.}
+    \item{\code{"sampling.weights"}:}{Numeric vector. The (normalized)
+        sampling weights that were used in the analysis, one per case
+        (in the order of \code{"case.idx"}). Depending on the
+        \code{sampling.weights.normalization} option, the weights are
+        rescaled so that they sum to the total number of observations
+        (\code{"total"}, the default), to the number of observations
+        within each group (\code{"group"}), or not at all
+        (\code{"none"}). Only available if sampling weights were provided.
+        In the case of multiple groups: a list of numeric vectors.
+        Alias: \code{"weights"}.}
     \item{\code{"group"}:}{A character string. The group variable in
         the data.frame (if any).}
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
@@ -224,12 +268,71 @@ Observed sample statistics:
          \code{"obs.std"}, \code{"observed.std"}, \code{"samp.std"},
          \code{"sample.std"}, \code{"samplestatistics.std"}.}
     \item{\code{"sampstat.h1"}:}{Deprecated. Do not use any longer.}
+    \item{\code{"var"}:}{Numeric vector. The observed variances of the
+        observed variables: the diagonal of the covariance matrix returned
+        by \code{"sampstat"} (that is, the h1-based estimates if the h1
+        slot is available). If \code{conditional_x = TRUE}, the variances
+        of the joint (y, x) sample covariance matrix are returned; use
+        \code{"res.var"} to obtain the residual variances. In the case
+        of multiple groups (or levels): a list of vectors.
+        Alias: \code{"sampstat.var"}.}
+    \item{\code{"res.var"}:}{Numeric vector. The residual variances of the
+        (non-exogenous) observed variables, after conditioning on the
+        exogenous covariates: the diagonal of the \code{res.cov} matrix
+        returned by \code{"sampstat"}. Only available if
+        \code{conditional_x = TRUE}.}
+    \item{\code{"icov"}:}{The inverse of the observed sample covariance
+        matrix (as returned by \code{"sampstat"}). In the case of
+        multiple groups: a list of matrices. Not available for multilevel
+        models. Alias: \code{"sampstat.icov"}.}
+    \item{\code{"res.icov"}:}{The inverse of the residual sample covariance
+        matrix (the \code{res.cov} matrix returned by \code{"sampstat"}).
+        Only available if \code{conditional_x = TRUE}.}
+    \item{\code{"cov.log.det"}:}{Numeric. The logarithm of the determinant
+        of the observed sample covariance matrix (as returned by
+        \code{"sampstat"}). In the case of multiple groups: a numeric
+        vector with one value per group. Not available for multilevel
+        models. Alias: \code{"sampstat.cov.log.det"}.}
+    \item{\code{"res.cov.log.det"}:}{Numeric. The logarithm of the
+        determinant of the residual sample covariance matrix. Only
+        available if \code{conditional_x = TRUE}.}
+    \item{\code{"res.th.nox"}:}{Numeric vector. For categorical data, the
+        sample thresholds of the ordered variables, ignoring the
+        exogenous covariates (that is, the thresholds of the marginal
+        distribution of each ordered variable). If
+        \code{conditional_x = TRUE}, these differ from the (residual)
+        thresholds returned by \code{"sampstat"}; if no covariates are
+        used, they are identical to the \code{th} element of
+        \code{"sampstat"}. In the case of multiple groups: a list of
+        vectors. Alias: \code{"th.nox"}.}
     \item{\code{"wls.obs"}:}{The observed sample statistics (covariance
         elements, intercepts/thresholds, etc.) in a single vector.}
-    \item{\code{"wls.v"}:}{The weight vector as used in weighted least
-        squares estimation.}
+    \item{\code{"wls.v"}:}{The weight matrix as used in weighted least
+        squares estimation. If the estimator is \code{"DWLS"} or
+        \code{"ULS"}, only the diagonal is used, but a full (diagonal)
+        matrix is returned.}
+    \item{\code{"wls.vd"}:}{Numeric vector. The diagonal of the
+        \code{"wls.v"} weight matrix. For the \code{"DWLS"} and
+        \code{"ULS"} estimators, this vector contains the (only) weights
+        that are used in the estimation. In the case of multiple groups:
+        a list of vectors.}
     \item{\code{"gamma"}:}{N times the asymptotic variance matrix of the
         sample statistics. Alias: \code{"sampstat.nacov"}.}
+    \item{\code{"group.w"}:}{Numeric vector. The observed group weights:
+        the logarithm of the (effective) number of observations in each
+        group. This is the same metric as the \code{group.w} element
+        of the \code{"implied"} and \code{"sampstat"} output (which is
+        only shown if \code{group.w.free = TRUE}). Alias:
+        \code{"group.weights"}.}
+    \item{\code{"logl"}:}{Numeric vector. The loglikelihood of the fitted
+        model, per group (\code{NA} if the estimator does not provide a
+        loglikelihood). The sum over the groups is the value returned by
+        \code{logLik()}. Alias: \code{"loglik"}.}
+    \item{\code{"h1.logl"}:}{Numeric vector. The loglikelihood of the
+        unrestricted (h1) model, per group. The sum over the groups is the
+        \code{unrestricted.logl} fit measure. Only available if the h1 slot
+        is available (\code{h1 = TRUE}, the default). Alias:
+        \code{"h1.loglik"}.}
 }
 
 Model features:
@@ -303,6 +406,25 @@ Model-implied sample statistics:
     \item{\code{"ranef"}:}{The random effects (empirical Bayes predictions of
        the cluster-level latent variables). Only available for clustered data
        (in the long format) with multiple levels.}
+    \item{\code{"sampstat.2l"}:}{The intermediate (sufficient) sample
+       statistics of the two-level data, as used by the multilevel
+       estimation routines. A list with the following components:
+       \code{sigma_w} and \code{mu_w} (the pooled within-cluster covariance
+       matrix, divided by the number of observations minus the number of
+       clusters, and the within-level means), \code{sigma_b} and
+       \code{mu_b} (the moment-based between-level covariance matrix and
+       means, as used for starting values), \code{s_b} (the between
+       covariance matrix of the cluster means), \code{s} (the average
+       cluster size, see \code{"average.cluster.size"}), \code{y1y1} (the
+       crossproduct matrix of the level-1 data), \code{y2} (the cluster
+       means, one row per cluster), \code{mean_d} and \code{cov_d} (the
+       mean vectors and covariance matrices of the cluster means, per
+       cluster size, in the order of \code{"cluster.sizes"}; the
+       between-only variables come first), and \code{loglik_x} (the
+       loglikelihood contribution of the fixed exogenous covariates).
+       Only available for multilevel models. In the case of multiple
+       groups: a list of such lists. Aliases: \code{"sampstat.twolevel"},
+       \code{"sampstat.cluster"}.}
 }
 
 Diagnostics:
