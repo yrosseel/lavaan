@@ -685,20 +685,52 @@ lav_h1_moments <- function(lavobject,
   # the structural model, so it can be precomputed here.
   if (!is.null(two_stage_se)) {
     ss <- lavobject@SampleStats
+    lavdata <- lavobject@Data
+    h1_implied <- lavobject@h1$implied
     omega_list <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      omega_g <- lav_mvnorm_h1_omega_2stage(
-        y = lavobject@Data@X[[g]],
-        mp = lavobject@Data@Mp[[g]],
-        yp = ss@missing[[g]],
-        wt = lavobject@Data@weights[[g]],
-        cluster_idx = NULL,
-        mu = lavobject@h1$implied$mean[[g]],
-        sigma_1 = lavobject@h1$implied$cov[[g]],
-        x_idx = ss@x.idx[[g]],
-        se = two_stage_se,
-        information = "observed"
-      )
+      if (conditional_x) {
+        # conditional.x: the stage-1 saturated parameters live in the
+        # conditional metric (vec(Beta), vech(res.cov)); use the
+        # lav_mvreg_mi_* kernels (x is complete), exactly as
+        # lav_model_nvcov_two_stage() does for a raw-data fit
+        res_int_g <- h1_implied$res.int[[g]]
+        res_slopes_g <- h1_implied$res.slopes[[g]]
+        res_cov_g <- h1_implied$res.cov[[g]]
+        if (two_stage_se == "two.stage") {
+          info <- lav_mvreg_mi_information_observed_samplestats(
+            yp = ss@missing[[g]],
+            res_int = res_int_g, res_slopes = res_slopes_g,
+            res_cov = res_cov_g
+          )
+          omega_g <- lav_mat_sym_inverse(info)
+        } else { # robust.two.stage
+          omega_g <- lav_mvreg_mi_h1_omega_sw(
+            y = lavdata@X[[g]],
+            exo = lavdata@eXo[[g]],
+            mp = lavdata@Mp[[g]],
+            yp = ss@missing[[g]],
+            wt = lavdata@weights[[g]],
+            cluster_idx = NULL,
+            res_int = res_int_g, res_slopes = res_slopes_g,
+            res_cov = res_cov_g,
+            information = "observed"
+          )
+        }
+      } else {
+        omega_g <- lav_mvnorm_h1_omega_2stage(
+          y = lavdata@X[[g]],
+          mp = lavdata@Mp[[g]],
+          yp = ss@missing[[g]],
+          wt = lavdata@weights[[g]],
+          cluster_idx = NULL,
+          mu = h1_implied$mean[[g]],
+          sigma_1 = h1_implied$cov[[g]],
+          x_idx = ss@x.idx[[g]],
+          se = two_stage_se,
+          information = "observed"
+        )
+      }
       if (add_class) {
         class(omega_g) <- c("lavaan.matrix.symmetric", "matrix")
       }
