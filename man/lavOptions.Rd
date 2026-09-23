@@ -358,7 +358,7 @@ Data options:
       provided and the estimator relies on a weight matrix or sandwich variance:
       the least-squares family (GLS/WLS/DWLS/ULS/DLS, both continuous and
       categorical) and PML. Determines how the sampling weights enter the
-      asymptotic variance (the Gamma / NACOV matrix, or the PML first-order
+      asymptotic variance (the Gamma / \code{nacov} matrix, or the PML first-order
       information), and hence the (robust) standard errors and the scaled test
       statistic. For GLS and ULS only the standard errors are affected; for
       WLS/DWLS/DLS the Gamma also feeds the weight matrix, so the point
