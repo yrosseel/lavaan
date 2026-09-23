@@ -80,21 +80,21 @@ lavH1(model = NULL, data = NULL, ordered = NULL, sampling_weights = NULL,
 \item{test}{Only used if \code{output = "lavaan"}. See
     \code{\link{lavOptions}} for possible options.}
 \item{...}{Optional parameters that are passed to the
-    \code{\link{lavaan}} function (for example \code{fixed.x},
-    \code{conditional.x}, \code{h1.missing.method}, \ldots).}
+    \code{\link{lavaan}} function (for example \code{fixed_x},
+    \code{conditional_x}, \code{h1_missing_method}, \ldots).}
 \item{output}{Character. If \code{"list"} (the default), a list with the
     h1 summary statistics per group (and per level in the two-level
     setting): the (residual) variance-covariance matrix (\code{$cov}),
     the mean vector (\code{$mean}, if a meanstructure was used), the
     thresholds (\code{$th}, if some variables are ordered), and the
     regression slopes of the exogenous covariates (\code{$slopes}, if
-    \code{conditional.x = TRUE}). If \code{"lavaan"}, the unrestricted
+    \code{conditional_x = TRUE}). If \code{"lavaan"}, the unrestricted
     model itself is returned as a fitted lavaan object. If
     \code{"lavMoments"} (alias \code{"moments"}), an object of class
     \code{lavMoments}: a list of summary statistics (including the
     \code{th.idx} attribute for ordered variables, and the residual
     slopes and exogenous-covariate moments when
-    \code{conditional.x = TRUE}) structured so that it can be passed
+    \code{conditional_x = TRUE}) structured so that it can be passed
     \emph{directly} as the \code{data=} argument of
     \code{lavaan}/\code{cfa}/\code{sem} to (re)fit a model from summary
     statistics only. For categorical data, the \code{WLS.V} (weight) and

@@ -62,8 +62,8 @@ unstandardized estimates. Use \code{\link{standardizedSolution}} to obtain
 \emph{SE}s and test statistics for standardized estimates. If a character
 vector is passed with any of \code{c("std.lv","std.all","std.nox")}, only the
 selected standardization methods are added. Note that \code{"std.nox"} only
-differs from \code{"std.all"} if \code{fixed.x = TRUE}; if
-\code{fixed.x = FALSE}, the exogenous covariates are treated as random
+differs from \code{"std.all"} if \code{fixed_x = TRUE}; if
+\code{fixed_x = FALSE}, the exogenous covariates are treated as random
 variables (and standardized) just like any other variable, and a warning
 is issued. Alternatively, a character vector
 of (observed) variable names may be passed (for example

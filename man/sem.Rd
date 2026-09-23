@@ -36,7 +36,7 @@ sem(model = NULL, data = NULL, ordered = NULL, aux = NULL, sampling_weights = NU
     first-stage EM moments. See the \code{lavaan} function for more details.}
 \item{sampling_weights}{A variable name in the data frame containing 
     sampling weight information. Currently only available for non-clustered
-    data. Depending on the \code{sampling.weights.normalization} option, these
+    data. Depending on the \code{sampling_weights_normalization} option, these
     weights may be rescaled (or not) so that their sum equals the number of
     observations (total or per group).}
 \item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
@@ -85,12 +85,12 @@ in a multiple group analysis.}
 \details{
     The \code{sem} function is a wrapper for the more general
     \code{\link{lavaan}} function, using the following default arguments:
-    \code{int.ov.free = TRUE}, \code{int.lv.free = FALSE},
-    \code{auto.fix.first = TRUE} (unless \code{std.lv = TRUE}),
-    \code{auto.fix.single = TRUE}, \code{auto.var = TRUE},
-    \code{auto.cov.lv.x = TRUE}, \code{auto.efa = TRUE},
-    \code{auto.th = TRUE}, \code{auto.delta = TRUE},
-    and \code{auto.cov.y = TRUE}.
+    \code{int_ov_free = TRUE}, \code{int_lv_free = FALSE},
+    \code{auto_fix_first = TRUE} (unless \code{std_lv = TRUE}),
+    \code{auto_fix_single = TRUE}, \code{auto_var = TRUE},
+    \code{auto_cov_lv_x = TRUE}, \code{auto_efa = TRUE},
+    \code{auto_th = TRUE}, \code{auto_delta = TRUE},
+    and \code{auto_cov_y = TRUE}.
 }
 \value{
   An object of class \code{\linkS4class{lavaan}}, for which several methods

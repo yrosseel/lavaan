@@ -118,7 +118,7 @@ is a list of elements. If \code{output = "table"}, the residuals are shown in
 a single data.frame, one row per residual element, sorted from high (in
 absolute value) to low. All residual elements are included: the (co)variances
 (\code{lhs~~rhs}), the means/intercepts (\code{lhs~1}), the thresholds
-(\code{lhs|t1}) and, when \code{conditional.x = TRUE}, the regression slopes
+(\code{lhs|t1}) and, when \code{conditional_x = TRUE}, the regression slopes
 (\code{lhs~rhs}). Variances (the diagonal) are only shown for the raw-style
 metrics (\code{type = "raw"}, \code{"normalized"} or \code{"standardized"}),
 not for the correlation metrics where they are structurally zero. Structurally

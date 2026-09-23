@@ -62,7 +62,7 @@ covariances) are estimated by a weighted least-squares step applied to the
 residual moments, exactly as for the IV estimator (see
 \code{js_varcov_method}). When \code{meanstructure = TRUE}, the
 marker-intercepts-zero parameterization is used
-(\code{marker.int.zero = TRUE}: the latent means are free and equal the
+(\code{marker_int_zero = TRUE}: the latent means are free and equal the
 population means of their scaling indicators), and all free mean
 parameters are re-estimated by a joint GLS solve (see
 \code{js_mean_structure}).
@@ -71,7 +71,7 @@ Simple equality constraints (e.g. equal factor loadings) and general
 linear equality constraints (e.g. \code{a == 2*b}) among the directed
 coefficients are honored by a pooled (system) solve. Multiple groups are
 supported, including cross-group equality constraints for measurement
-invariance testing (e.g. \code{group.equal = c("loadings",
+invariance testing (e.g. \code{group_equal = c("loadings",
 "intercepts")}). Without cross-group constraints, the per-group estimates
 and standard errors are identical to those of separate single-group fits.
 
@@ -208,12 +208,12 @@ otherwise.
 
 The JS/JSA estimators currently require: continuous data (no ordered
 categorical variables), single-level models, a marker/scaling indicator
-for every latent variable (\code{std.lv = TRUE} is not supported), a
+for every latent variable (\code{std_lv = TRUE} is not supported), a
 recursive structural part (no feedback loops), and no higher-order
 factors. The disturbance of a dependent variable may not be correlated
 with (an ancestor of) one of its regressors. Exogenous observed
 covariates are supported (they are part of the conditioning set of each
-equation; note that \code{fixed.x} is set to \code{FALSE}).
+equation; note that \code{fixed_x} is set to \code{FALSE}).
 }
 }
 \references{
@@ -280,7 +280,7 @@ fit3 <- sem(model, data = PoliticalDemocracy,
 ## multiple groups: metric measurement invariance (equal loadings)
 fit.metric <- cfa(HS.model, data = HolzingerSwineford1939,
                   estimator = "JS",
-                  group = "school", group.equal = "loadings")
+                  group = "school", group_equal = "loadings")
 summary(fit.metric)
 }
 }

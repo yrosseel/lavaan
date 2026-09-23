@@ -75,9 +75,9 @@ lavEffects(object, effects = c("total", "indirect"),
 \item{standardized}{Logical, character vector, or vector of (observed) variable
     names, behaving as in \code{\link{parameterEstimates}}. If \code{TRUE},
     standardized effects are added as extra columns (point estimates only):
-    \code{std.lv} (only the latent variables are standardized), \code{std.all}
+    \code{std_lv} (only the latent variables are standardized), \code{std.all}
     (both observed and latent variables are standardized) and, if there are
-    exogenous observed variables and \code{fixed.x = TRUE}, \code{std.nox}
+    exogenous observed variables and \code{fixed_x = TRUE}, \code{std.nox}
     (like \code{std.all}, but the exogenous observed variables are not
     standardized). A character vector selects specific types (a subset of
     \code{"std.lv"}, \code{"std.all"}, \code{"std.nox"}); a vector of observed
@@ -127,7 +127,7 @@ in particular in smaller samples. When the model was fitted with
 standard errors and bootstrap percentile confidence intervals (this requires
 no additional model fitting).
 
-Models fitted with \code{conditional.x = TRUE} are also supported: in that
+Models fitted with \code{conditional_x = TRUE} are also supported: in that
 case the structural model is \eqn{eta = B eta + Gamma x + zeta}, where the
 exogenous covariates \eqn{x} are stored in the \code{gamma} matrix. The effects
 of these covariates on the endogenous variables are then computed as
@@ -143,7 +143,7 @@ effect: total, indirect or direct), \code{lhs} (the outcome variable),
 depending on the arguments, \code{group}/\code{level}/\code{block},
 \code{est}, \code{se}, \code{z}, \code{pvalue}, \code{ci.lower},
 \code{ci.upper} and (if \code{standardized} is requested) one or more of
-\code{std.lv}, \code{std.all}, \code{std.nox} and \code{std.user}. The effect
+\code{std_lv}, \code{std.all}, \code{std.nox} and \code{std.user}. The effect
 in a given row is the effect of \code{rhs} on \code{lhs}.
 
 If \code{output = "list"}, a (possibly nested) list of matrices, where element

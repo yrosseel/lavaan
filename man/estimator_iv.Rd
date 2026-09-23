@@ -54,7 +54,7 @@ equality constraints (e.g. \code{a == 2*b}) are honored. Multiple groups are
 supported, with standard errors (for continuous, two-stage-missing and
 categorical data), including the mean structure and cross-group equality
 constraints for measurement invariance testing (configural, metric and scalar,
-e.g. via \code{group.equal = c("loadings", "intercepts")}). For scalar
+e.g. via \code{group_equal = c("loadings", "intercepts")}). For scalar
 invariance the latent-mean (and intercept) estimates are obtained by a joint
 GLS solve over the mean structure (see \code{iv_mean_structure}), which matches
 the maximum likelihood mean estimates given the model-implied covariance
@@ -181,7 +181,7 @@ The option names use snake_case. For backward compatibility, dot.case names
     are mainly intended for checking the analytic derivatives.}
   \item{\code{iv_mimic_ml}:}{Logical. If \code{FALSE} (the default), the IV
     estimator uses unbiased divisors: the sample covariance matrix is divided
-    by \eqn{N-1} (\code{sample.cov.rescale = FALSE}) and the per-equation
+    by \eqn{N-1} (\code{sample_cov_rescale = FALSE}) and the per-equation
     residual variances (the RSS terms entering the standard errors and the
     Sargan test) use the \eqn{N-P} divisor. If \code{TRUE}, the maximum
     likelihood divisor \eqn{N} is used throughout: the sample covariance is
@@ -269,10 +269,10 @@ available for multiple-group models.
 Multiple-group models are supported, with point estimates and standard errors
 for continuous, two-stage-missing and categorical data. Cross-group equality
 constraints are imposed in the usual way, either through shared parameter
-labels in the model syntax or through the \code{group.equal} argument, so the
+labels in the model syntax or through the \code{group_equal} argument, so the
 standard measurement-invariance sequence is available: configural
-(\code{group.equal = NULL}), metric (\code{group.equal = "loadings"}) and
-scalar (\code{group.equal = c("loadings", "intercepts")}).
+(\code{group_equal = NULL}), metric (\code{group_equal = "loadings"}) and
+scalar (\code{group_equal = c("loadings", "intercepts")}).
 
 A parameter that is constrained equal across groups is estimated by pooling the
 information from all groups; for a configural model the per-group estimates (and
@@ -421,7 +421,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 fit.metric <- sem(HS.model, data = HolzingerSwineford1939, estimator = "IV",
-                  group = "school", group.equal = "loadings")
+                  group = "school", group_equal = "loadings")
 summary(fit.metric)
 }
 }

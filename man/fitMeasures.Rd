@@ -113,7 +113,7 @@ fit of a latent variable model.}
   respect to a level-specific baseline model: the independence model at
   the target level, again combined with a saturated model at the other
   level. By default, these partially saturated models are fitted (and
-  stored) along with the original model; see the \code{fit.by.level}
+  stored) along with the original model; see the \code{fit_by_level}
   option in \code{\link{lavOptions}}. If they were not stored, they are
   re-fitted on the fly.}
 \item{...}{Further arguments passed to or from other methods. Not currently
@@ -159,11 +159,11 @@ mechanism, for example
 \code{fitMeasures(fit, "pvalue", fm_args = list(standard_test = "peba4"))}.
 No separate FMG-specific fit-measure names are needed.
 
-For models fitted with \code{\link{sam}} using a local \code{sam.method}
+For models fitted with \code{\link{sam}} using a local \code{sam_method}
 (\code{"local"}, \code{"fsr"} or \code{"cfsr"}), the fit measures are
 computed for the step-2 structural model only, conditional on the (fixed)
 measurement model of step 1; loglikelihood-based measures (aic, bic, ...)
-are not available. If \code{sam.method = "global"}, the fit measures are
+are not available. If \code{sam_method = "global"}, the fit measures are
 based on the joint model; since the parameters were estimated using a
 two-step procedure, they should be interpreted with caution.
 }

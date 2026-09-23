@@ -473,7 +473,7 @@ columns to free parameters:
         vector can be written as \code{theta = k0 + K \%*\% theta.reduced}),
         and \code{$ceq.simple} (logical; \code{TRUE} when simple equality
         constraints (\code{a == b}) were absorbed into the parameter
-        vector (see the \code{ceq.simple} option), so that the free
+        vector (see the \code{ceq_simple} option), so that the free
         parameter vector already satisfies them and \code{$ceq.jac} is
         empty). The inequality rows appear in this order: finite upper
         bounds, finite lower bounds, explicit \code{"<"}/\code{">"}
@@ -499,7 +499,7 @@ columns to free parameters:
         contains no equality constraints, the identity matrix is returned.
         The row names indicate the parameter space: they correspond to the
         free parameters, with one row per parameter-table row when simple
-        equality constraints were absorbed (\code{ceq.simple = TRUE}).
+        equality constraints were absorbed (\code{ceq_simple = TRUE}).
         Aliases: \code{"constraints.k"}, \code{"eq.constraints.k"},
         \code{"con.k"}.}
 }

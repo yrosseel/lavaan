@@ -41,7 +41,7 @@ Casewise scores are available for the ML, GLS, ULS and WLS estimators, and
 the scores are the casewise derivatives of the pairwise log-likelihood
 (including the weighted univariate part when
 \code{missing = "available.cases"}); \code{missing = "doubly.robust"} is not
-supported (yet). Exogenous covariates (\code{conditional.x = TRUE}) are
+supported (yet). Exogenous covariates (\code{conditional_x = TRUE}) are
 supported for PML only.
 }
 \author{Ed Merkle for the ML case; the \code{remove.duplicated},

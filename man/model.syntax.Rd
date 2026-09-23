@@ -80,7 +80,7 @@ the model for both observed and latent variables.}
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0. If there are multiple
       groups, \code{std_lv = TRUE} and \code{"loadings"} is included in
-      the \code{group.label} argument, then only the latent variances
+      the \code{group_label} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of the other groups are freely estimated.}
 \item{correlation}{If \code{TRUE}, a correlation structure is fitted. For
@@ -143,7 +143,7 @@ the model for both observed and latent variables.}
     1.0 (instead of the first indicator) when \code{auto_fix_first = TRUE}.
     Latent variables that are not named in this vector keep the first
     indicator as their marker. This is used internally by the
-    \code{bad.marker.crit} mechanism.}
+    \code{bad_marker_crit} mechanism.}
 \item{auto_fix_single}{If \code{TRUE}, the residual variance (if included)
     of an observed indicator is set to zero if it is the only indicator of a
     latent variable.}
@@ -509,7 +509,7 @@ loglikelihood is no longer available in closed form: it is computed by
 (Gauss-Hermite) quadrature over the latent-covariate slopes only,
 while all other random effects are still integrated out analytically
 (Rockwood, 2020). The number of quadrature points (per dimension) can
-be set via the \code{integration.ngh} option (default: 21).
+be set via the \code{integration_ngh} option (default: 21).
 
 The same route is taken when the covariate is a `split' both-level
 observed variable (an observed variable that appears in both the
@@ -530,7 +530,7 @@ variable that does \emph{not} appear in the level-2 part): there, the
 slope multiplies the observed values, which are conditioned upon.
 
 The current implementation is limited to: two-level models, a single
-group, continuous data, \code{estimator = "ML"} and \code{fixed.x =
+group, continuous data, \code{estimator = "ML"} and \code{fixed_x =
 TRUE}; the observed covariates that carry a random slope must be
 within-only (level-1) variables. Missing data can be handled by
 full-information maximum likelihood (\code{missing = "ml"}); the
@@ -554,8 +554,8 @@ loglikelihood-based measures only (\code{npar}, \code{ntotal},
 (loglikelihood) difference tests. Standard errors can be
 \code{"standard"} (observed
 information) or \code{"robust.huber.white"} (sandwich; this is also
-what \code{estimator = "MLR"} implies). Both \code{optim.method =
-"nlminb"} and \code{optim.method = "em"} are supported; with complete
+what \code{estimator = "MLR"} implies). Both \code{optim_method =
+"nlminb"} and \code{optim_method = "em"} are supported; with complete
 data, \code{"nlminb"} is the default, while with \code{missing =
 "ml"}, the EM algorithm is the default optimizer.
 \code{lavPredict()} provides empirical Bayes (posterior mean)
@@ -683,7 +683,7 @@ other parameters only, a \code{":~"} definition involves the data, and
 therefore changes the model itself: estimation requires a casewise
 likelihood. lavaan itself can not (yet) estimate such models; calling
 \code{lavaan()} (or \code{sem()}, \code{cfa()}, ...) with
-\code{do.fit = FALSE} returns an (unfitted) object holding the complete
+\code{do_fit = FALSE} returns an (unfitted) object holding the complete
 model specification (parameter table, starting values, and the
 \code{dv.function} in the \code{@Model} slot) that external packages can
 use to estimate the model with a suitable backend.

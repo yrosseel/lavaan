@@ -95,7 +95,7 @@ anova(object, ...)
     directly with a multiple-group model: their test statistics are
     computed relative to different (saturated) models. Instead, refit the
     pooled model as a multiple-group model in which all parameters are
-    constrained to be equal across groups (\code{group.equal = "all"}),
+    constrained to be equal across groups (\code{group_equal = "all"}),
     and compare that model with the unrestricted multiple-group model.
     See the Examples section for an illustration.
 
@@ -202,7 +202,7 @@ lavTestLRT(fit.pooled, fit.groups) # invalid comparison (warning)
 ## A valid alternative: refit the pooled model as a multiple-group model
 ## with all parameters constrained to be equal across groups
 fit.pooled2 <- cfa(HS, data = HolzingerSwineford1939, group = "school",
-                   group.equal = "all")
+                   group_equal = "all")
 lavTestLRT(fit.pooled2, fit.groups) # valid comparison
 
 

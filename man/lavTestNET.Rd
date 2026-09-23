@@ -58,7 +58,7 @@ variate: if the nesting only holds on the boundary of the parameter space
 conditions fail.
 
 The procedure is not available for multilevel models, and (currently) not
-for categorical models with \code{conditional.x = TRUE}, correlation
+for categorical models with \code{conditional_x = TRUE}, correlation
 structures, or models involving auxiliary variables.
 }
 \value{
@@ -94,7 +94,7 @@ fit1 <- cfa(HS.model, data = HolzingerSwineford1939)
 # nested: the same model with orthogonal factors
 fit0 <- cfa(HS.model, data = HolzingerSwineford1939, orthogonal = TRUE)
 # equivalent: the same model with a different scaling of the factors
-fit1b <- cfa(HS.model, data = HolzingerSwineford1939, std.lv = TRUE)
+fit1b <- cfa(HS.model, data = HolzingerSwineford1939, std_lv = TRUE)
 # not nested
 model2 <- ' f1 =~ x1 + x2 + x3 + x4
             f2 =~ x5 + x6 + x7 + x8 + x9 '

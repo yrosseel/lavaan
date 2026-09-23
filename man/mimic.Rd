@@ -48,37 +48,37 @@ following defaults are used:
   \item{\code{likelihood = "normal"}:}{the sample covariance matrix is
     rescaled by a factor \code{(N-1)/N}, so the loglikelihood and standard
     errors are based on a division by \code{N} (rather than \code{N-1}).}
-  \item{\code{conditional.x = FALSE}:}{the exogenous \code{x} covariates are
+  \item{\code{conditional_x = FALSE}:}{the exogenous \code{x} covariates are
     regressed out first, and a conditional (on x) model is fitted.}
-  \item{\code{fixed.x = TRUE}:}{the means, variances and covariances of the
+  \item{\code{fixed_x = TRUE}:}{the means, variances and covariances of the
     exogenous \code{x} covariates are fixed to their sample values (for the
     ML, MML and IV estimator groups, unless \code{start = "simple"}).}
-  \item{\code{zero.keep.margins = TRUE}:}{for categorical data, the (one-way)
+  \item{\code{zero_keep_margins = TRUE}:}{for categorical data, the (one-way)
     margins are preserved when adding a small constant to empty cells.}
 }
 In addition, the various Mplus-specific technical options
-(\code{information.expected.mplus}, \code{gamma.vcov.mplus},
-\code{gamma.wls.mplus}, \code{gls.v11.mplus} and
-\code{rmsea.scaled.mplus}) are all set to \code{FALSE}.
+(\code{information_expected_mplus}, \code{gamma_vcov_mplus},
+\code{gamma_wls_mplus}, \code{gls_v11_mplus} and
+\code{rmsea_scaled_mplus}) are all set to \code{FALSE}.
 
 \strong{mimic = "Mplus"}
 
 Starting from the lavaan defaults, the following options are changed in an
 attempt to reproduce the output of \code{Mplus}:
 \describe{
-  \item{\code{information.expected.mplus = TRUE}:}{use the Mplus variant of
+  \item{\code{information_expected_mplus = TRUE}:}{use the Mplus variant of
     the expected information matrix. This affects the standard errors (when
     \code{information = "expected"}) and the scaled (Satorra-Bentler and
     Yuan-Bentler) test statistics.}
-  \item{\code{gamma.vcov.mplus = TRUE}:}{use the Mplus way of computing the
+  \item{\code{gamma_vcov_mplus = TRUE}:}{use the Mplus way of computing the
     \eqn{\Gamma} matrix (the asymptotic covariance matrix of the sample
     statistics) that enters the robust (sandwich) standard errors.}
-  \item{\code{gamma.wls.mplus = TRUE}:}{use the Mplus way of computing the
+  \item{\code{gamma_wls_mplus = TRUE}:}{use the Mplus way of computing the
     \eqn{\Gamma} matrix used as the weight matrix in (D)WLS estimation.}
-  \item{\code{gls.v11.mplus = TRUE}:}{use the Mplus variant of the weight
+  \item{\code{gls_v11_mplus = TRUE}:}{use the Mplus variant of the weight
     matrix used in GLS estimation (when there is a meanstructure and
-    \code{conditional.x = FALSE}).}
-  \item{\code{rmsea.scaled.mplus = TRUE}:}{use the Mplus reference
+    \code{conditional_x = FALSE}).}
+  \item{\code{rmsea_scaled_mplus = TRUE}:}{use the Mplus reference
     distribution for the \emph{scaled} RMSEA confidence interval and
     p-values. lavaan refers the \emph{unscaled} test statistic to a
     chi-square distribution with \eqn{tr[U\Gamma]} degrees of freedom, while
@@ -94,18 +94,18 @@ attempt to reproduce the output of \code{Mplus}:
     maximum likelihood (FIML), rather than listwise deletion.}
   \item{\code{meanstructure = TRUE}:}{a meanstructure is added by default
     (unless the estimator is PML).}
-  \item{\code{group.equal}:}{in a multiple-group analysis, if no equality
+  \item{\code{group_equal}:}{in a multiple-group analysis, if no equality
     constraints are requested, a default set is imposed: \code{"loadings"}
     and \code{"thresholds"} for categorical data;
     \code{"loadings"} for continuous data without a meanstructure; and
     \code{"loadings"} and \code{"intercepts"} for continuous data with a
     meanstructure.}
-  \item{\code{baseline.conditional.x.free.slopes = FALSE}:}{when
-    \code{conditional.x = TRUE}, the baseline (independence) model does not
+  \item{\code{baseline_conditional_x_free_slopes = FALSE}:}{when
+    \code{conditional_x = TRUE}, the baseline (independence) model does not
     free the slope structure.}
 }
-The \code{likelihood}, \code{conditional.x}, \code{fixed.x} and
-\code{zero.keep.margins} defaults are the same as for
+The \code{likelihood}, \code{conditional_x}, \code{fixed_x} and
+\code{zero_keep_margins} defaults are the same as for
 \code{mimic = "lavaan"}.
 
 \strong{mimic = "EQS"}
@@ -118,20 +118,20 @@ treated as an alias for \code{"EQS"}):
     likelihood is used. The sample covariance matrix is divided by
     \code{N-1} (instead of \code{N}), which affects the chi-square test
     statistic, the loglikelihood and the standard errors.}
-  \item{\code{fixed.x = FALSE}:}{the exogenous \code{x} covariates are
+  \item{\code{fixed_x = FALSE}:}{the exogenous \code{x} covariates are
     treated as random variables: their means, variances and covariances
     are freely estimated (rather than fixed to their sample values).}
-  \item{\code{baseline.fixed.x.free.cov = FALSE}:}{the covariances among
+  \item{\code{baseline_fixed_x_free_cov = FALSE}:}{the covariances among
     the exogenous covariates are constrained to zero in the baseline
     (independence) model, just like all other covariances. By default,
-    they are retained (freely estimated if \code{fixed.x = FALSE}, fixed
-    to their sample values if \code{fixed.x = TRUE}), which yields a
+    they are retained (freely estimated if \code{fixed_x = FALSE}, fixed
+    to their sample values if \code{fixed_x = TRUE}), which yields a
     smaller baseline chi-square statistic.}
 }
 In addition, for the MLR estimator, the robust test statistic defaults to
 \code{"yuan.bentler"} (instead of the \code{"yuan.bentler.mplus"} variant
 that is used for \code{mimic = "lavaan"} and \code{mimic = "Mplus"}).
-The \code{conditional.x} and \code{zero.keep.margins} defaults are the same
+The \code{conditional_x} and \code{zero_keep_margins} defaults are the same
 as for \code{mimic = "lavaan"}.
 
 Note that the \code{mimic=} argument only sets \emph{defaults}: any option

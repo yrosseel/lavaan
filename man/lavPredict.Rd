@@ -58,7 +58,7 @@ but not exactly equal to, the model-implied values. If, for some missing data
 patterns, all the indicators of a factor are missing, the transformation for
 these patterns is based on a pseudo-inverse, and the model-implied
 (co)variances involving these factors are only partially restored (a warning
-is issued). When \code{conditional.x = TRUE}, the transformation restores the
+is issued). When \code{conditional_x = TRUE}, the transformation restores the
 conditional variance-covariance matrix of the factors given the exogenous
 covariates; the total (marginal) variance-covariance matrix of the
 transformed factor scores then matches the unconditional model-implied
@@ -284,7 +284,7 @@ head(HolzingerSwineford1939)
 
 ## multigroup models return a list of factor scores (one per group)
 data(HolzingerSwineford1939)
-mgfit <- update(fit, group = "school", group.equal = c("loadings","intercepts"))
+mgfit <- update(fit, group = "school", group_equal = c("loadings","intercepts"))
 
 idx <- lavInspect(mgfit, "case.idx") # list: 1 vector per group
 fscores <- lavPredict(mgfit)         # list: 1 matrix per group

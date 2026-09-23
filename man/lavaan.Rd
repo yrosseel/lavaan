@@ -64,7 +64,7 @@ lavaan(model = NULL, data = NULL, ordered = NULL, aux = NULL,
 \item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
-    for each group. If \code{conditional.x = TRUE}, this is the
+    for each group. If \code{conditional_x = TRUE}, this is the
     \emph{residual} variance-covariance matrix (given the exogenous
     covariates), and the regression intercepts, slopes and covariate moments
     are provided through the attributes \code{res.slopes}, \code{cov.x} and
@@ -144,7 +144,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- lavaan(HS.model, data=HolzingerSwineford1939,
-              auto.var=TRUE, auto.fix.first=TRUE,
-              auto.cov.lv.x=TRUE)
+              auto_var=TRUE, auto_fix_first=TRUE,
+              auto_cov_lv_x=TRUE)
 summary(fit, fit.measures=TRUE)
 }

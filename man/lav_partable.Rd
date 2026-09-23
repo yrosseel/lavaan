@@ -89,7 +89,7 @@ Each list element contains a sample mean vector for this group.
 If provided, these values will be used as starting values.}
 \item{sample_slopes}{Optional list of numeric matrices.
 Each list element contains the sample slopes for this group (only used
-when \code{conditional.x = TRUE}).
+when \code{conditional_x = TRUE}).
 If provided, these values will be used as starting values.}
 \item{sample_th}{Optional list of numeric vectors. 
 Each list element contains a vector of sample thresholds for this group.
@@ -99,11 +99,11 @@ these values will be used as starting values.}
 threshold indices for this group.}
 \item{sample_cov_x}{Optional list of numeric matrices.  Each list element
 contains a sample variance-covariance matrix for the exogenous variables
-for this group (only used when \code{conditional.x = TRUE}).  If provided,
+for this group (only used when \code{conditional_x = TRUE}).  If provided,
 these values will be used as starting values.}
 \item{sample_mean_x}{Optional list of numeric vectors.
 Each list element contains a sample mean vector for the exogenous variables
-for this group (only used when \code{conditional.x = TRUE}).
+for this group (only used when \code{conditional_x = TRUE}).
 If provided, these values will be used as starting values.}
 \item{est}{Logical. If TRUE, include the fitted estimates in the parameter table.}
 \item{label}{Logical. If TRUE, include parameter labels in the parameter table.}

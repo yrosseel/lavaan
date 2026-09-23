@@ -71,7 +71,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     for a complete list. The measurement blocks may also be estimated by the
     noniterative MGM estimator (\code{mm.args = list(estimator = "MGM")};
     continuous, single-level data only): the two-step corrected standard
-    errors (for both \code{sam.method = "local"} and \code{"global"}) then
+    errors (for both \code{sam_method = "local"} and \code{"global"}) then
     use the robust (Yuan-Chan) correction with the MGM influence matrix,
     and \code{se = "twostep"} is silently upgraded to
     \code{"twostep.robust"}; \code{se = "local"} is available as well.}
@@ -87,7 +87,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     are exogenous), both versions are identical. The summary header shows
     an additional \code{Information bread} line. The classic
     (expected-information) bread can be requested by adding
-    \code{struc_args = list(information.bread = "default")} (or
+    \code{struc_args = list(information_bread = "default")} (or
     \code{"expected"}).}
 \item{sam_method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
@@ -121,7 +121,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      accuracy of the structural estimates deteriorate with increasing N.
      A single nonnegative number fixes the margin at that value. The
      gated rules require raw, complete, single-level continuous data (no
-     \code{conditional.x}); in all other settings they automatically
+     \code{conditional_x}); in all other settings they automatically
      fall back to \code{"default"}. (Before September 2026,
      \code{lambda2_floor} was briefly called \code{lambda.floor} -- with
      \code{"default"} as its default -- and the old name is still
@@ -201,7 +201,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     variables must be observed. As a result, second-order factor structures
     are not yet supported.
 
-    If \code{sam.method} is \code{"local"}, \code{"fsr"} or \code{"cfsr"},
+    If \code{sam_method} is \code{"local"}, \code{"fsr"} or \code{"cfsr"},
     the structural part of the model is fitted to the estimated latent
     (co)variances (and means) from step 1. This step-2 structural model is
     stored in the \code{@internal} slot of the returned object, and can be
@@ -223,23 +223,23 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     this setting has not been studied, and they should be interpreted with
     caution.
 }
-\section{Exogenous covariates and conditional.x}{
+\section{Exogenous covariates and conditional_x}{
     Observed exogenous covariates may enter the structural part of the
     model. With continuous data, they are simply treated as (pseudo) latent
-    variables (the default \code{conditional.x = FALSE}), but
-    \code{conditional.x = TRUE} is supported as well (single-group,
+    variables (the default \code{conditional_x = FALSE}), but
+    \code{conditional_x = TRUE} is supported as well (single-group,
     single-level models): the structural part is then fitted to the latent
     intercepts, the latent-on-covariate slopes, and the residual latent
     (co)variances, all conditional on the covariates.
 
-    With categorical (ordered) data, \code{conditional.x = TRUE} is the
+    With categorical (ordered) data, \code{conditional_x = TRUE} is the
     lavaan default (when exogenous covariates are present), and this is also
     the recommended setting: the covariates are conditioned on (as in a
     probit regression), rather than being absorbed into the joint polychoric
     correlation matrix -- which would (wrongly) treat them as jointly normal,
     a real concern for binary/dummy covariates. In this setting, the
     measurement blocks of step 1 are estimated with
-    \code{conditional.x = TRUE} as well (each block latent variable is
+    \code{conditional_x = TRUE} as well (each block latent variable is
     regressed on all exogenous covariates, MIMIC style), so that the
     measurement parameters live on the same conditional latent-response
     scale (\code{Var(y*|x) = 1}, delta parameterization) as the joint model.
@@ -248,7 +248,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     model on its latent-response scale, while its thresholds are fixed at
     their sample-based values.
 
-    When \code{conditional.x = TRUE} is combined with a local
+    When \code{conditional_x = TRUE} is combined with a local
     \code{sam.method}, the default \code{se = "twostep"} is automatically
     replaced by \code{se = "twostep.robust"}: the classic two-step formula is
     built on the joint information matrix, which does not describe the local
@@ -268,7 +268,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     interaction moments (with a warning), although they still contribute to
     the first-order moments.
 
-    Not (yet) available in combination with \code{conditional.x = TRUE}:
+    Not (yet) available in combination with \code{conditional_x = TRUE}:
     multiple groups (for the local standard errors and the corrected test
     statistic), multilevel models, latent interactions, and the Yuan-Chan
     scaled global test statistic of \code{sam_method = "global"} (the
