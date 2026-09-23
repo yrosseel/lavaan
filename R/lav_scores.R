@@ -44,7 +44,7 @@ lav_sc <- function(object, scaling = FALSE,
         (object@Options$estimator == "ML" &&
          !object@Model@categorical &&
          object@Data@nlevels == 1L))) {
-    lav_msg_stop(gettext("scores not available (yet) if conditional.x = TRUE"))
+    lav_msg_stop(gettext("scores not available (yet) if conditional_x = TRUE"))
   }
 
   # shortcuts

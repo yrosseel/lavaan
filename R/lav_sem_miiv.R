@@ -605,7 +605,7 @@ lav_sem_miiv_weak <- function(eqs = NULL, lavpta = NULL, lavh1 = NULL,
     lav_msg_warn(gettextf(
       "[IV] weak instruments (first-stage F < %g) for:\n%s\nConsider supplying
        stronger instruments via the |~ operator, or set
-       estimator.args = list(..., iv_weak = \"prune\") to drop weak ones.",
+       estimator_args = list(..., iv_weak = \"prune\") to drop weak ones.",
       threshold, paste(" -", weak_msgs, collapse = "\n")))
   }
 

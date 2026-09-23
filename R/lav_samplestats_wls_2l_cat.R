@@ -66,7 +66,7 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
 
     if (!conditional_x && length(lavsamplestats@x.idx[[g]]) > 0L) {
       lav_msg_stop(gettext(
-        "fixed.x = TRUE with conditional.x = FALSE is not supported (yet)
+        "fixed_x = TRUE with conditional_x = FALSE is not supported (yet)
         for two-level (D)WLS estimation."))
     }
 
@@ -102,7 +102,7 @@ lav_samp_wls_2l_cat <- function(lavsamplestats = NULL,
           "two-level (D)WLS estimation does not support exogenous
           covariates that appear at both levels (yet): %s. Each covariate
           should be used at a single level only (cfr. within/between
-          covariates); alternatively, use fixed.x = FALSE.",
+          covariates); alternatively, use fixed_x = FALSE.",
           lav_msg_view(split_x, "none")))
       }
     } else {

@@ -306,7 +306,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           if (!is.null(msg)) {
             if (non_pd_action == "stop") {
               lav_msg_stop(paste(msg, gettext(
-                "Set the non_pd_action element of the em.h1.args= argument
+                "Set the non_pd_action element of the em_h1_args= argument
                  to \"warn\" or \"none\" to continue anyway.")))
             } else {
               lav_msg_warn(msg)

@@ -47,7 +47,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       # check if we can find all lv names in LV.names
       if (!all(unlist(mm_list[[b]]) %in% lv_names)) {
         tmp <- unlist(mm_list[[b]])
-        lav_msg_stop(gettext("mm.list contains unknown latent variable(s):"),
+        lav_msg_stop(gettext("mm_list contains unknown latent variable(s):"),
           lav_msg_view(tmp[!tmp %in% lv_names], "none"))
       }
       # make list per block
@@ -56,7 +56,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       } else {
         if (length(mm_list[[b]]) != nblocks) {
           lav_msg_stop(gettextf(
-            "mm.list block %1$s has length %2$s but nblocks = %3$s",
+            "mm_list block %1$s has length %2$s but nblocks = %3$s",
             b, length(mm_list[[b]]), nblocks))
         }
       }

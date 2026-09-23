@@ -275,7 +275,7 @@ lav_test_net_pair_check <- function(m1 = NULL, m0 = NULL) {
       return(gettext("multilevel models are not supported"))
     }
     if (m@Model@group.w.free) {
-      return(gettext("group.w.free models are not supported"))
+      return(gettext("group_w_free models are not supported"))
     }
     if (.hasSlot(m@Model, "correlation") && m@Model@correlation) {
       return(gettext("correlation structures are not supported"))
@@ -310,7 +310,7 @@ lav_test_net_pair_check <- function(m1 = NULL, m0 = NULL) {
   if (m0@Model@categorical) {
     if (m0@Model@conditional.x || m1@Model@conditional.x) {
       return(gettext(
-        "categorical models with conditional.x are not supported"))
+        "categorical models with conditional_x are not supported"))
     }
     if (!identical(m1@Data@ov.names, m0@Data@ov.names)) {
       return(gettext(

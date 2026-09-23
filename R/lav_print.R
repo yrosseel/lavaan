@@ -1003,7 +1003,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
           cat("** WARNING ** Estimates below are most likely unreliable\n")
         }
       } else {
-        cat("did not run (perhaps do.fit = FALSE)?\n")
+        cat("did not run (perhaps do_fit = FALSE)?\n")
         cat("** WARNING ** Estimates below are simply the starting values\n")
       }
     }
@@ -1586,7 +1586,7 @@ R2 regression factor scores (= squared correlations):\n\n")
       lav_msg_note(gettext(
         "Standard errors and confidence intervals of the (nonlinear) defined
          (:=) parameters are based on the first-order delta method; for
-         strongly nonlinear definitions, se.def = \"mc\" (Monte Carlo) or
+         strongly nonlinear definitions, se_def = \"mc\" (Monte Carlo) or
          se = \"bootstrap\" may be more accurate."))
     }
   }

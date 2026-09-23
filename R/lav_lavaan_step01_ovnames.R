@@ -392,7 +392,7 @@ lav_step01_ovnames_checklv <- function(
         lav_msg_warn(gettextf(
           "Some latent variable names collide with observed variable names in
            the dataset: %s. Please provide alternative names for the latent
-           variables, or switch off this check using check.lv.names = FALSE",
+           variables, or switch off this check using check_lv_names = FALSE",
            paste(lv_lv_names[bad_idx], collapse = " "))
         )
       }

@@ -369,7 +369,7 @@ lav_object_gamma <- function(lavobject = NULL,
   }
   if (adf && model_based && conditional_x) {
     lav_msg_stop(gettext(
-      "ADF + model.based + conditional.x is not supported yet."))
+      "ADF + model.based + conditional_x is not supported yet."))
   }
   if (adf && model_based && recipe$correlation) {
     lav_msg_stop(gettext(
@@ -723,7 +723,7 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
     if (conditional_x) {
       lav_msg_stop(gettext(
         "Gamma with sampling weights is not available (yet) if
-         conditional.x = TRUE."))
+         conditional_x = TRUE."))
     }
     if (length(cluster_idx) > 0L) {
       lav_msg_stop(gettext(

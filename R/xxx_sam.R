@@ -337,7 +337,7 @@ sam <- function(model = NULL,
     }
     if (fit@Model@conditional.x) {
       lav_msg_stop(gettext("sam() needs the raw data (data= argument) if
-        conditional.x = TRUE."))
+        conditional_x = TRUE."))
     }
     if (se == "bootstrap") {
       lav_msg_stop(gettext("se = \"bootstrap\" needs the raw data (data=
@@ -378,7 +378,7 @@ sam <- function(model = NULL,
   if (fit@Model@conditional.x && sam_method != "global" &&
       identical(toupper(struc_args[["estimator"]]), "GLS")) {
     lav_msg_stop(gettext("estimator GLS is not available (yet) for the
-      structural part (struc.args) if conditional.x = TRUE; use ML or ULS
+      structural part (struc_args) if conditional_x = TRUE; use ML or ULS
       instead."))
   }
 
@@ -744,7 +744,7 @@ sam <- function(model = NULL,
       if (se %in% c("local", "local.nt")) {
         lav_msg_stop(gettextf(
           "Gamma.eta (needed for se = %s) could not be aligned with the
-          structural model under conditional.x = TRUE.",
+          structural model under conditional_x = TRUE.",
           dQuote(se, q = FALSE)))
       }
       step1$Gamma.eta <- NULL # no corrected structural test

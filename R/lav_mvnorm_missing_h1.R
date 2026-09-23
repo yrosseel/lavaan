@@ -247,7 +247,7 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
     lav_msg_warn(
       gettext("Maximum number of iterations reached when computing the sample
               moments using EM; increase the max_iter element of the
-              em.h1.args= argument to increase the number of iterations")
+              em_h1_args= argument to increase the number of iterations")
     )
   }
 
@@ -273,7 +273,7 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
       }
       if (non_pd_action == "stop") {
         lav_msg_stop(paste(msg, gettext(
-          "Set the non_pd_action element of the em.h1.args= argument to
+          "Set the non_pd_action element of the em_h1_args= argument to
            \"warn\" or \"none\" to continue anyway.")))
       } else {
         lav_msg_warn(paste(msg, gettext(

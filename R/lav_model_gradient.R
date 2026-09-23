@@ -728,8 +728,8 @@ lav_model_grad <- function(lavmodel = NULL,
       } else {
         # missing data
         if (lavmodel@conditional.x) {
-          lav_msg_stop(gettext("gradient for twolevel + conditional.x + fiml
-                  is not ready; use optim.gradient = \"numerical\""))
+          lav_msg_stop(gettext("gradient for twolevel + conditional_x + fiml
+                  is not ready; use optim_gradient = \"numerical\""))
         } else {
           dx_1 <- lav_mvn_cl_mi_dlogl_2l_samp(
             y1 = lavdata@X[[g]],
@@ -793,7 +793,7 @@ lav_model_grad <- function(lavmodel = NULL,
         if (lavdata@nlevels > 1L) {
           lav_msg_stop(gettext(
             "PL gradient + multilevel not implemented;
-            try optim.gradient = \"numerical\""))
+            try optim_gradient = \"numerical\""))
         } else if (conditional_x) {
           d1 <- lav_pml_dploglik_dimplied(
             sigma_hat = sigma_hat[[g]],
@@ -1117,7 +1117,7 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
         lavmodel@correlation   || lavmodel@composites) {
       lav_msg_stop(gettext(
         "lav_model_delta(): RAM representation does not support
-         conditional.x, categorical, correlation, or composites."))
+         conditional_x, categorical, correlation, or composites."))
     }
   } else if (representation != "LISREL") {
     lav_msg_stop(gettextf(

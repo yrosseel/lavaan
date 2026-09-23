@@ -231,8 +231,8 @@ lav_sam_step0_se <- function(fit = NULL, se = "twostep",
   if (identical(fit@Options$estimator.orig, "PML")) {
     if (sam_method == "global") {
       lav_msg_stop(gettext(
-        "sam(sam.method = \"global\") does not support estimator PML (yet);
-         use sam.method = \"local\" or sem() instead."))
+        "sam(sam_method = \"global\") does not support estimator PML (yet);
+         use sam_method = \"local\" or sem() instead."))
     }
     # notes:
     # - se = "local" IS available for PML: it uses the casewise

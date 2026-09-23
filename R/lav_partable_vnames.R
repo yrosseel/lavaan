@@ -542,7 +542,7 @@ lav_pt_vnames <- function(partable, type = NULL, ...,
                 now be treated as random introducing additional free parameters.
                 If you wish to treat those variables as fixed, remove these
                 formulas from the model syntax. Otherwise, consider adding the
-                fixed.x = FALSE option.", lav_msg_view(ov_x[idx_no_x], "none")))
+                fixed_x = FALSE option.", lav_msg_view(ov_x[idx_no_x], "none")))
             ov_x <- ov_x[-idx_no_x]
           }
           ov_tmp_x <- ov_x
@@ -1103,7 +1103,7 @@ lav_pt_vnames <- function(partable, type = NULL, ...,
                 now be treated as random introducing additional free parameters.
                 If you wish to treat those variables as fixed, remove these
                 formulas from the model syntax. Otherwise, consider adding the
-                fixed.x = FALSE option.", lav_msg_view(ov_x[idx_no_x], "none")))
+                fixed_x = FALSE option.", lav_msg_view(ov_x[idx_no_x], "none")))
             ov_x <- ov_x[-idx_no_x]
           }
           ov_tmp_x <- ov_x

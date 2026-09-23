@@ -59,7 +59,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
       lav_msg_stop(gettext(
         "models with data-defined (:~) parameters require a casewise
         likelihood, and can not (yet) be estimated by lavaan itself;
-        use do.fit = FALSE to obtain the model specification (parameter
+        use do_fit = FALSE to obtain the model specification (parameter
         table, starting values, dv.function) for an external backend."))
     }
     if (lav_verbose()) {
@@ -81,8 +81,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
          length(lavmodel@cin.nonlinear.idx) > 0L)) {
       if (!isTRUE(lavoptions$.optim.em.fallback)) {
         lav_msg_warn(gettext(
-          "optim.method = \"em\" is not available for this model;
-           using optim.method = \"nlminb\" instead."))
+          "optim_method = \"em\" is not available for this model;
+           using optim_method = \"nlminb\" instead."))
       }
       lavoptions$optim.method <- "nlminb"
     }
@@ -94,8 +94,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
       if (length(em_reason) > 0L) {
         if (!isTRUE(lavoptions$.optim.em.fallback)) {
           lav_msg_warn(gettextf(
-            "optim.method = \"em\" is not available for this random-slope
-             model (%s); using optim.method = \"nlminb\" instead.",
+            "optim_method = \"em\" is not available for this random-slope
+             model (%s); using optim_method = \"nlminb\" instead.",
             paste(em_reason, collapse = "; ")))
         }
         lavoptions$optim.method <- "nlminb"
@@ -135,7 +135,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
         lav_msg_note(gettext(
           "some model variables are badly scaled; the model was fitted
           in an internally rescaled metric, and the solution was mapped
-          back to the original metric (see the rescale.data option)."))
+          back to the original metric (see the rescale_data option)."))
       }
     }
 
@@ -400,7 +400,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
         lavoptions2$optim.parscale <- "standardized"
         if (lav_verbose()) {
           str(x)
-          cat("attempt 2 -- optim.parscale = \"standardized\"\n")
+          cat("attempt 2 -- optim_parscale = \"standardized\"\n")
         }
         x <- try(
           lav_model_est(
@@ -448,7 +448,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
         if (lav_verbose()) {
           str(x)
           cat(
-            "attempt 4 -- optim.parscale = \"standardized\" + ",
+            "attempt 4 -- optim_parscale = \"standardized\" + ",
             "start = \"simple\"\n"
           )
         }

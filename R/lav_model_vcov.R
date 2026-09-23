@@ -463,7 +463,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     lavoptions$observed.information[1] != "h1") {
     lav_msg_stop(
       gettext("two.stage + observed information currently only works
-              with observed.information = 'h1'"))
+              with observed_information = 'h1'"))
   }
   # no weights (yet)
   if (!is.null(lavdata@weights[[1]])) {
@@ -501,7 +501,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
 
   # check WLS.V = A1
   if (is.null(wls_v)) {
-    lav_msg_stop(gettext("WLS.V/H/A1 is NULL, observed.information = hessian?"))
+    lav_msg_stop(gettext("WLS.V/H/A1 is NULL, observed_information = hessian?"))
   }
 
   # gamma
@@ -551,7 +551,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       if (!is.null(aux_g2) && NCOL(aux_g2) > 0L) {
         lav_msg_stop(gettext(
           "auxiliary variables (aux =) are not supported (yet) for
-          two-stage standard errors when conditional.x = TRUE."))
+          two-stage standard errors when conditional_x = TRUE."))
       }
       if (lavoptions$h1.information[1] == "unstructured") {
         res_int_g <- lavh1$implied$res.int[[g]]

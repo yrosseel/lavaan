@@ -191,7 +191,7 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     bad <- x_rv[!x_rv %in% ov_x_1]
     if (length(bad) > 0L) {
       lav_msg_stop(gettextf(
-        "covariate(s) with a random slope must be exogenous (fixed.x)
+        "covariate(s) with a random slope must be exogenous (fixed_x)
          variables: %s.", paste(bad, collapse = " ")))
     }
 
@@ -418,7 +418,7 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
   if (anyNA(xx)) {
     lav_msg_stop(gettext(
       "unexpected missing values in the covariate(s) with a random
-       slope; such cases should have been removed (fixed.x = TRUE)."))
+       slope; such cases should have been removed (fixed_x = TRUE)."))
   }
 
   # between-level exogenous covariates: one row per cluster
@@ -431,7 +431,7 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
       lav_msg_stop(gettext(
         "unexpected missing values in the between-level exogenous
          covariate(s); such cases should have been removed
-         (fixed.x = TRUE)."))
+         (fixed_x = TRUE)."))
     }
   } else {
     exo_b <- matrix(0, nclusters, 0L)
@@ -2409,7 +2409,7 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
   if (length(reason) > 0L) {
     lav_msg_stop(gettextf(
       "the EM algorithm is not available for this random-slope model
-       (%s); use optim.method = \"nlminb\" instead.",
+       (%s); use optim_method = \"nlminb\" instead.",
       paste(reason, collapse = "; ")))
   }
 

@@ -1461,7 +1461,7 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   if (joint@Model@conditional.x) {
     lav_msg_warn(gettext(
       "the Yuan & Chan (2002) scaled test statistic (test = \"yuan.chan\") is
-       not available (yet) when conditional.x = TRUE; the standard (unscaled)
+       not available (yet) when conditional_x = TRUE; the standard (unscaled)
        test is reported instead."))
     return(fallback)
   }

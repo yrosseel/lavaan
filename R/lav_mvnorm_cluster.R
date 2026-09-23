@@ -904,7 +904,7 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
     lav_msg_warn(gettext(
       "Maximum number of iterations reached when computing the sample
        moments of the saturated (H1) model using EM; increase the max_iter
-       element of the em.h1.args= argument to increase the number of
+       element of the em_h1_args= argument to increase the number of
        iterations"))
   }
 

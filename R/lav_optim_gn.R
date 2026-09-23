@@ -159,7 +159,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   )
   if (length(nonlinear_idx) > 0L) {
     lav_msg_stop(gettext(
-      "nonlinear constraints not supported (yet) with optim.method = \"GN\"."))
+      "nonlinear constraints not supported (yet) with optim_method = \"GN\"."))
   }
 
   # no support (yet) for general inequality constraints. Simple ones are
@@ -169,7 +169,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   # projected Gauss-Newton iterations below honor natively.
   if (!is.null(body(lavmodel@cin.function)) && !lavmodel@cin.simple.only) {
     lav_msg_stop(gettext(
-      "inequality constraints not supported (yet) with optim.method = \"GN\"."))
+      "inequality constraints not supported (yet) with optim_method = \"GN\"."))
   }
 
   # only for estimators with an analytic (scoring) gradient and an
@@ -178,7 +178,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     "ML", "GLS", "WLS", "DWLS", "ULS", "DLS", "NTRLS", "catML"
   )) {
     lav_msg_stop(gettextf(
-      "optim.method = \"GN\" is not available for estimator %s.",
+      "optim_method = \"GN\" is not available for estimator %s.",
       dQuote(lavmodel@estimator)))
   }
 

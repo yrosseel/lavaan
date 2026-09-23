@@ -69,7 +69,7 @@ lav_test_hayakawa_check <- function(lavoptions = NULL, lavdata = NULL,
     }
     if (isTRUE(lavoptions$conditional.x)) {
       lav_msg_stop(gettextf(
-        "%s are not available if conditional.x = TRUE.", context))
+        "%s are not available if conditional_x = TRUE.", context))
     }
   }
 

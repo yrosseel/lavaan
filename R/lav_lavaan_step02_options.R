@@ -281,7 +281,7 @@ lav_step02_options <- function(slot_options = NULL,
       # if explicitly set to TRUE, give warning
       if (is.logical(dotdotdot$conditional.x) && dotdotdot$conditional.x) {
         lav_msg_warn(gettext(
-          "no exogenous covariates; conditional.x will be set to FALSE"))
+          "no exogenous covariates; conditional_x will be set to FALSE"))
       }
       opt$conditional.x <- FALSE
     }
@@ -301,7 +301,7 @@ lav_step02_options <- function(slot_options = NULL,
     # allow.empty.cell
     if (opt$allow.empty.cell && opt$do.fit && toupper(estimator) != "BAYES") {
       lav_msg_warn(gettext(
-        "allow.empty.cell is not intended to salvage estimation of this model,",
+        "allow_empty_cell is not intended to salvage estimation of this model,",
         " see ?lavOptions"))
     }
 
@@ -316,9 +316,9 @@ lav_step02_options <- function(slot_options = NULL,
     # regressions in step01, and this check does not apply.)
     if (isTRUE(lavoptions$conditional.x) && any(flat_model$op == "<~")) {
       lav_msg_stop(gettext(
-        "conditional.x = TRUE is not supported (yet) for models with
+        "conditional_x = TRUE is not supported (yet) for models with
          composites (the \"<~\" operator); please use
-         conditional.x = FALSE."))
+         conditional_x = FALSE."))
     }
 
     # composites + parameterization = "theta": the implicit-Delta chain

@@ -287,7 +287,7 @@ standardizedSolution <- function(object,                     # nolint
         } else if (!object@Options$fixed.x) {
           lav_msg_warn(gettext(
             "`std.nox' values are identical to `std.all' values when
-             fixed.x = FALSE."))
+             fixed_x = FALSE."))
         }
       }
     }
@@ -1042,7 +1042,7 @@ lavParameterEstimates <- function(object,                      # nolint
           } else if (!object@Options$fixed.x) {
             lav_msg_warn(gettext(
               "`std.nox' values are identical to `std.all' values when
-               fixed.x = FALSE."))
+               fixed_x = FALSE."))
           }
         }
       }

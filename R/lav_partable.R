@@ -204,7 +204,7 @@ lav_model_pt  <- function(
       auto_cov_x <- FALSE
       if (auto_cov_x_explicit) {
         lav_msg_warn(gettext(
-          "auto.cov.x = TRUE has no effect if conditional.x = TRUE;
+          "auto_cov_x = TRUE has no effect if conditional_x = TRUE;
           covariances between exogenous latent variables and observed
           exogenous covariates will not be added."))
       }
@@ -400,7 +400,7 @@ lav_model_pt  <- function(
               "the variable(s) [%s] are exogenous at one level, but endogenous
               at another level. These variables will be treated as endogenous,
               and their variances/intercepts will be freely estimated.
-              To remove this warning, use fixed.x = FALSE.",
+              To remove this warning, use fixed_x = FALSE.",
               lav_msg_view(ov_names_x_block[idx], "none")))
             ov_names_x_block <- ov_names_x_block[-idx]
           }
@@ -1042,7 +1042,7 @@ lav_model_pt  <- function(
   if (is.logical(effect_coding) && effect_coding) {
     effect_coding <- c("loadings", "intercepts")
   } else if (!is.character(effect_coding)) {
-    lav_msg_stop(gettext("effect.coding argument must be a character string"))
+    lav_msg_stop(gettext("effect_coding argument must be a character string"))
   }
   # in ordinal models, do integer coding
   if (all_ord) effect_coding <- c(effect_coding, "thresholds")

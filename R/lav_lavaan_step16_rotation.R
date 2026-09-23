@@ -189,7 +189,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
       if (lav_verbose()) {
         cat(
           "computing VCOV for se =", lavoptions$se,
-          "and rotation.se =", lavoptions$rotation.se, "..."
+          "and rotation_se =", lavoptions$rotation.se, "..."
         )
       }
 

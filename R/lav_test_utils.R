@@ -311,7 +311,7 @@ lav_test_scaled_base <- function(test_1 = NULL, lavoptions = NULL,
       unscaled_test <- test_1[[idx[1]]]
     } else {
       lav_msg_warn(gettextf(
-        "scaled.test [%1$s] not found among available (non scaled) tests:
+        "scaled_test [%1$s] not found among available (non scaled) tests:
         %2$s. Using standard test instead.",
         lavoptions$scaled.test, lav_msg_view(test)))
     }

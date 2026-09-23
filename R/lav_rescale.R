@@ -45,7 +45,7 @@ lav_rescale_prep <- function(lavoptions = NULL, lavdata = NULL,
   skip <- function(reason) {
     if (forced) {
       lav_msg_warn(gettextf(
-        "rescale.data = TRUE is not available for this model (%s);
+        "rescale_data = TRUE is not available for this model (%s);
         continuing without rescaling.", reason))
     }
     NULL
@@ -88,7 +88,7 @@ lav_rescale_prep <- function(lavoptions = NULL, lavdata = NULL,
   }
   if (!lavoptions$optim.method %in% c("nlminb", "nlminb0", "nlminb1",
                                       "gn")) {
-    return(skip(gettextf("optim.method %s", lavoptions$optim.method)))
+    return(skip(gettextf("optim_method %s", lavoptions$optim.method)))
   }
   if (!lavoptions$missing %in% c("listwise", "ml", "ml.x")) {
     return(skip(gettextf("missing = %s", lavoptions$missing)))

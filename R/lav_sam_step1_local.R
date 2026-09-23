@@ -568,7 +568,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         if (fit@Model@conditional.x) {
           lav_msg_stop(gettext(
             "SAM with lv interactions and missing = \"ml\" does not support
-             conditional.x = TRUE (yet); please use missing = \"listwise\""))
+             conditional_x = TRUE (yet); please use missing = \"listwise\""))
         }
         out_mi <- lav_sam_fs_missing(
           y = yb, mm_lambda = this_lambda,
@@ -718,7 +718,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     if (lv_interaction_flag) {
       lav_msg_stop(gettext(
         "sam() does not support latent interactions in combination with
-        conditional.x = TRUE (yet)."))
+        conditional_x = TRUE (yet)."))
     }
     res_slopes <- vector("list", length = nblocks)
     cov_x  <- fit@h1$implied$cov.x
@@ -1207,7 +1207,7 @@ lav_sam_condx_t_g <- function(fit, g, ov_block, meanstructure) {
   if (anyNA(y_idx)) {
     lav_msg_stop(gettext(
       "internal error: unable to map the measurement-block variables into
-      the joint conditional statistics vector (conditional.x JACa)"))
+      the joint conditional statistics vector (conditional_x JACa)"))
   }
   nb <- length(y_idx)
   ncol_t <- ny * (1L + q) + ny * (ny + 1L) / 2L
@@ -1293,7 +1293,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     if (lavmodel@conditional.x) {
       lav_msg_stop(gettext(
         "local SEs: not available with multiple groups in combination with
-         conditional.x = TRUE (yet)!"))
+         conditional_x = TRUE (yet)!"))
     }
     if (length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
       lav_msg_stop(gettext(
@@ -1656,7 +1656,7 @@ lav_sam_gamma_eta_pml <- function(step1 = NULL, fit = NULL) {
   if (lavmodel@conditional.x) {
     lav_msg_stop(gettext(
       "PML Gamma.eta: not available with exogenous covariates
-       (conditional.x = TRUE) (yet)!"))
+       (conditional_x = TRUE) (yet)!"))
   }
   if (anyNA(lavdata@X[[g]])) {
     lav_msg_stop(gettext(

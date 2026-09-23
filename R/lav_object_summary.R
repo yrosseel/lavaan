@@ -397,7 +397,7 @@ lav_object_summary <- function(object, header = TRUE,
       residuals <- FALSE
     } else if (!lav_sam_local_flag(object)) {
       lav_msg_warn(gettext(
-        "residual summary statistics are not available if sam.method =
+        "residual summary statistics are not available if sam_method =
         \"global\"; use residuals() to inspect the raw residuals"))
       residuals <- FALSE
     }

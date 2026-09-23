@@ -245,7 +245,7 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {
     lav_msg_stop(gettext(
-      "bentler1982 estimator not available if std.lv = TRUE"))
+      "bentler1982 estimator not available if std_lv = TRUE"))
   }
 
   nblocks <- lav_pt_nblocks(lavpartable)

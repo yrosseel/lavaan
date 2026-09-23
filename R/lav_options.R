@@ -327,12 +327,12 @@ lav_options_set <- function(opt = NULL) {
     if ((is.logical(opt$effect.coding) && opt$effect.coding) ||
       (is.character(opt$effect.coding) && nchar(opt$effect.coding) > 0L)) {
       lav_msg_stop(gettext(
-        "effect coding cannot be combined with marker.int.zero = TRUE option"
+        "effect coding cannot be combined with marker_int_zero = TRUE option"
       ))
     }
     if (opt$std.lv) {
       lav_msg_stop(gettext(
-        "std.lv = TRUE cannot be combined with marker.int.zero = TRUE"
+        "std_lv = TRUE cannot be combined with marker_int_zero = TRUE"
       ))
     }
   }
@@ -521,7 +521,7 @@ lav_options_set <- function(opt = NULL) {
     if (isTRUE(opt$conditional.x) && any(opt$information == "expected")) {
       lav_msg_stop(gettext(
         "information = \"expected\" is not supported (yet) for two-level
-         models with conditional.x = TRUE; use \"observed\" (the default)
+         models with conditional_x = TRUE; use \"observed\" (the default)
          or \"first.order\"."))
     }
 
@@ -534,8 +534,8 @@ lav_options_set <- function(opt = NULL) {
     if (isTRUE(opt$conditional.x) &&
         any(opt$h1.information == "unstructured")) {
       lav_msg_stop(gettext(
-        "h1.information = \"unstructured\" is not supported (yet) for
-         two-level models with conditional.x = TRUE."))
+        "h1_information = \"unstructured\" is not supported (yet) for
+         two-level models with conditional_x = TRUE."))
     }
 
     # two-level least-squares estimation? (WLS/WLSM(V)/ULS(M,MV)/DWLS)
@@ -552,7 +552,7 @@ lav_options_set <- function(opt = NULL) {
       }
       if (isTRUE(opt$conditional.x) && !opt$.categorical) {
         lav_msg_stop(gettext(
-          "conditional.x = TRUE is not supported for two-level (D)WLS
+          "conditional_x = TRUE is not supported for two-level (D)WLS
           estimation with continuous-only data (yet)."))
       }
       if (opt$.categorical) {
@@ -699,7 +699,7 @@ lav_options_set <- function(opt = NULL) {
     if (isTRUE(opt$conditional.x)) {
       lav_msg_stop(gettext(
         "random slopes (rv() modifier) are not supported in combination
-         with conditional.x = TRUE."))
+         with conditional_x = TRUE."))
     }
     # note: fixed.x = FALSE may simply mean that the model contains no
     # observed exogenous covariates at all (e.g., all random slopes
@@ -746,7 +746,7 @@ lav_options_set <- function(opt = NULL) {
     # optimizer: nlminb (default) or em
     if (opt$optim.method == "gn") {
       lav_msg_warn(gettext(
-        "optim.method = \"gn\" is not available for models with random
+        "optim_method = \"gn\" is not available for models with random
          slopes; switching to nlminb."))
       opt$optim.method <- "nlminb"
     }
@@ -1201,7 +1201,7 @@ lav_options_set <- function(opt = NULL) {
           opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
           if (any(opt$test == "yuan.bentler.mplus")) {
             lav_msg_warn(gettext(
-              "observed.information for ALL test statistics is set to h1."
+              "observed_information for ALL test statistics is set to h1."
             ))
           }
         } else {
@@ -1281,12 +1281,12 @@ lav_options_set <- function(opt = NULL) {
     # if(opt$conditional.x && opt$fixed.x == FALSE && !opt$.multilevel) {
     if (opt$conditional.x && opt$fixed.x == FALSE) {
       lav_msg_stop(gettext(
-        "fixed.x = FALSE is not supported when conditional.x = TRUE."
+        "fixed_x = FALSE is not supported when conditional_x = TRUE."
       ))
     }
     if (opt$fixed.x && is.character(opt$start) && opt$start == "simple") {
       lav_msg_warn(gettextf(
-        "start = %s implies fixed.x = FALSE", dQuote(opt$start)
+        "start = %s implies fixed_x = FALSE", dQuote(opt$start)
       ))
       opt$fixed.x <- FALSE
     }
@@ -1306,7 +1306,7 @@ lav_options_set <- function(opt = NULL) {
     # warn if this overrides an explicit meanstructure = FALSE request
     if (meanstructure_false && !opt$meanstructure) {
       lav_msg_warn(gettextf(
-        "group.equal= contains %1$s or %2$s: forcing meanstructure = TRUE.",
+        "group_equal= contains %1$s or %2$s: forcing meanstructure = TRUE.",
         dQuote("intercepts"), dQuote("means")))
     }
     opt$meanstructure <- TRUE
@@ -1363,7 +1363,7 @@ lav_options_set <- function(opt = NULL) {
   if (any("loadings" == opt$effect.coding)) {
     if (opt$std.lv) {
       lav_msg_stop(gettextf(
-        "std.lv is set to FALSE but effect.coding contains %s",
+        "std_lv is set to FALSE but effect_coding contains %s",
         dQuote("loadings")
       ))
     }
@@ -1470,7 +1470,7 @@ lav_options_set <- function(opt = NULL) {
       opt$bounds <- "user"
     } else {
       lav_msg_stop(
-        gettext("bounds and optim.bounds arguments can not be used together;
+        gettext("bounds and optim_bounds arguments can not be used together;
                 remove the bounds= argument or set it to \"user\".")
       )
     }
@@ -1485,7 +1485,7 @@ lav_options_set <- function(opt = NULL) {
   } else if (opt$bounds == "user") {
     if (length(opt$optim.bounds) == 0L) {
       lav_msg_stop(gettextf(
-        "bounds= is %s but optim.bounds= argument is empty", dQuote("user")
+        "bounds= is %s but optim_bounds= argument is empty", dQuote("user")
       ))
     }
   } else if (opt$bounds == "default" || opt$bounds == "wide") {
@@ -1540,7 +1540,7 @@ lav_options_set <- function(opt = NULL) {
 
   # rotations.args
   if (!is.list(opt$rotation.args)) {
-    lav_msg_stop(gettext("rotation.args should be a list."))
+    lav_msg_stop(gettext("rotation_args should be a list."))
   }
 
   # transform names rotation.args to snake_case
@@ -1792,27 +1792,27 @@ lav_options_set <- function(opt = NULL) {
   if (opt$sample.cov.robust) {
     if (opt$missing != "listwise") {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if data is missing."
+        "sample_cov_robust = TRUE does not work (yet) if data is missing."
       ))
     }
     if (opt$.categorical) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if data is categorical"
+        "sample_cov_robust = TRUE does not work (yet) if data is categorical"
       ))
     }
     if (opt$.clustered || opt$.multilevel) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if data is clustered"
+        "sample_cov_robust = TRUE does not work (yet) if data is clustered"
       ))
     }
     if (opt$conditional.x) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if conditional.x = TRUE"
+        "sample_cov_robust = TRUE does not work (yet) if conditional_x = TRUE"
       ))
     }
     if (all(lav_options_estimatorgroup(opt$estimator) != c("ML", "GLS"))) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet)
+        "sample_cov_robust = TRUE does not work (yet)
         if estimator is not GLS or ML"
       ))
     }

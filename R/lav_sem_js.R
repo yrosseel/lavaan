@@ -426,11 +426,11 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
   if (lavoptions$std.lv) {
     lav_msg_stop(gettextf(
       "estimator %s requires marker/scaling indicators;
-       std.lv = TRUE is not supported.", label))
+       std_lv = TRUE is not supported.", label))
   }
   if (lavmodel@conditional.x) {
     lav_msg_stop(gettextf(
-      "estimator %s does not support conditional.x = TRUE (yet).", label))
+      "estimator %s does not support conditional_x = TRUE (yet).", label))
   }
   if (lavmodel@correlation) {
     lav_msg_stop(gettextf(
@@ -450,7 +450,7 @@ lav_sem_js_check <- function(lavmodel = NULL, lavpartable = NULL,
   }
   if (lavmodel@group.w.free) {
     lav_msg_stop(gettextf(
-      "estimator %s does not support group.w.free = TRUE (yet).", label))
+      "estimator %s does not support group_w_free = TRUE (yet).", label))
   }
 
   # the structural part must be recursive: the conditional expectations are
@@ -1003,7 +1003,7 @@ lav_sem_js_eq_plans <- function(eqs_b = NULL, aggregated = FALSE,
            estimable reliability is available (too few indicators without
            a fixed residual variance, or too many residual covariances).
            Consider providing the residual variances directly via
-           estimator.args = list(js_theta = \"user\",
+           estimator_args = list(js_theta = \"user\",
            js_theta_values = ...).",
           label, eq$rhs[i], eq$lhs_new))
       }

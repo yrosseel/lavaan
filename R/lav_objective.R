@@ -857,8 +857,8 @@ lav_model_objective_2l <- function(lavmodel = NULL,
 
   if (lavsamplestats@missing.flag) {
     if (lavmodel@conditional.x) {
-      lav_msg_stop(gettext("multilevel + conditional.x is not ready yet for
-                           fiml; rerun with conditional.x = FALSE"))
+      lav_msg_stop(gettext("multilevel + conditional_x is not ready yet for
+                           fiml; rerun with conditional_x = FALSE"))
     }
     y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
     # yp <- lavsamplestats@missing[[group]]

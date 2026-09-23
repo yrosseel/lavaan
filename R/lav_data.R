@@ -239,7 +239,7 @@ lav_lavdata <- function(data = NULL, # data.frame
         if (is.null(label)) {
           if (length(group_label) != ngroups) {
             lav_msg_stop(gettextf(
-              "length(group.label) = %1$s but sample.cov implies
+              "length(group_label) = %1$s but sample_cov implies
               ngroups = %2$s.", length(group_label), ngroups))
           }
         } else {
@@ -261,7 +261,7 @@ lav_lavdata <- function(data = NULL, # data.frame
     sample_nobs <- as.list(sample_nobs)
     if (length(sample_nobs) != ngroups) {
       lav_msg_stop(gettextf(
-        "length(sample.nobs) = %1$s but sample.cov implies ngroups = %2$s;
+        "length(sample_nobs) = %1$s but sample_cov implies ngroups = %2$s;
         please provide the number of observations for each group.",
         length(sample_nobs), ngroups))
     }
@@ -321,7 +321,7 @@ lav_lavdata <- function(data = NULL, # data.frame
     # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
     if (std_ov && !lavoptions$correlation) {
       lav_msg_warn(gettext(
-        "std.ov argument is ignored if only sample statistics are provided."))
+        "std_ov argument is ignored if only sample statistics are provided."))
     }
 
     # check variances (new in 0.6-7)
@@ -416,7 +416,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       } else {
         # check if length(level.label) = 1 + length(cluster)
         if (length(level_label) != length(cluster) + 1L) {
-          lav_msg_stop(gettext("length(level.label) != length(cluster) + 1L"))
+          lav_msg_stop(gettext("length(level_label) != length(cluster) + 1L"))
         }
         # nothing to do
       }
@@ -680,14 +680,14 @@ lav_data_full <- function(data = NULL, # data.frame
       # any groups left?
       if (length(group_label) == 0L) {
         lav_msg_stop(gettext(
-          "no group levels left; check the group.label argument"))
+          "no group levels left; check the group_label argument"))
       }
     }
     ngroups <- length(group_label)
   } else {
     if (length(group_label) > 0L) {
       lav_msg_warn(gettext(
-       "`group.label' argument will be ignored if `group' argument is missing"))
+       "`group_label' argument will be ignored if `group' argument is missing"))
     }
     ngroups <- 1L
     group_label <- character(0L)
@@ -758,7 +758,7 @@ lav_data_full <- function(data = NULL, # data.frame
       } else {
         # check if length(level.label) = 1 + length(cluster)
         if (length(level_label) != length(cluster) + 1L) {
-          lav_msg_stop(gettext("length(level.label) != length(cluster) + 1L"))
+          lav_msg_stop(gettext("length(level_label) != length(cluster) + 1L"))
         }
         # nothing to do
       }
@@ -771,7 +771,7 @@ lav_data_full <- function(data = NULL, # data.frame
   } else {
     if (length(level_label) > 0L) {
       lav_msg_warn(gettext(
-       "`level.label' argument will be ignored if `cluster' argument is missing"
+       "`level_label' argument will be ignored if `cluster' argument is missing"
       ))
     }
     nlevels <- 1L
@@ -1086,7 +1086,7 @@ lav_data_full <- function(data = NULL, # data.frame
         if ((nobs[[g]] < norig[[g]])) {
           lav_msg_warn(gettextf(
               "%1$s cases were deleted in group %2$s  due to missing values
-              in  exogenous variable(s), while fixed.x = TRUE.",
+              in  exogenous variable(s), while fixed_x = TRUE.",
               (norig[[g]] - nobs[[g]]), group_label[g]))
         }
       } else {
@@ -1116,7 +1116,7 @@ lav_data_full <- function(data = NULL, # data.frame
         if ((nobs[[g]] < norig[[g]])) {
           lav_msg_warn(
             gettextf("%s cases were deleted due to missing values in
-                     exogenous variable(s), while fixed.x = TRUE.",
+                     exogenous variable(s), while fixed_x = TRUE.",
                      (norig[[g]] - nobs[[g]])))
         }
       } else {
@@ -1490,7 +1490,7 @@ lav_data_full <- function(data = NULL, # data.frame
       }
     } else {
       lav_msg_stop(gettext(
-        "sampling.weights.normalization should be total, group or none."))
+        "sampling_weights_normalization should be total, group or none."))
     }
   }
 

@@ -685,7 +685,7 @@ lav_lavaan_lavinspect <- function(object,
     fit_pa <- lav_sam_struc_object(object)
     if (is.null(fit_pa)) {
       lav_msg_stop(gettext(
-        "no stored structural fit found: either sam.method = \"global\" was
+        "no stored structural fit found: either sam_method = \"global\" was
          used, or this sam object was created by an older version of lavaan."))
     }
     fit_pa
@@ -881,7 +881,7 @@ lav_inspect_modelmatrices <- function(object, what = "free",
     if (object@Model@multilevel || object@Model@categorical ||
         object@Model@conditional.x) {
       lav_msg_stop(gettext("dx.all is not available for multilevel,
-        categorical or conditional.x models"))
+        categorical or conditional_x models"))
     }
     if (lav_verbose(FALSE)) on.exit(lav_verbose(current_verbose), TRUE)
     glist <- lav_model_grad(

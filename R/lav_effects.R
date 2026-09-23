@@ -487,7 +487,7 @@ lav_effects_std_types <- function(object, standardized) {
         } else if (!object@Options$fixed.x) {
           lav_msg_warn(gettext(
             "`std.nox' values are identical to `std.all' values when
-             fixed.x = FALSE."))
+             fixed_x = FALSE."))
         }
       }
     }

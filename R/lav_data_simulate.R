@@ -244,7 +244,7 @@ lav_data_simulate_ml <- function(model = NULL,
   # generate data per BLOCK
   for (b in seq_len(nblocks)) {
     if (lavoptions$conditional.x) {
-      lav_msg_stop(gettext("conditional.x = TRUE is not supported (yet) by the
+      lav_msg_stop(gettext("conditional_x = TRUE is not supported (yet) by the
                             multilevel data simulation"))
     } else {
       COV <- lavimplied$cov[[b]]

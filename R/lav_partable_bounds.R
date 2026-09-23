@@ -27,7 +27,7 @@ lav_pt_add_bounds <- function(partable = NULL,
     if (!is.null(lavoptions$effect.coding) &&
       nchar(lavoptions$effect.coding[1L]) > 0L) {
       lav_msg_warn(gettext(
-        "automatic bounds not available (yet) if effect.coding is used"
+        "automatic bounds not available (yet) if effect_coding is used"
         ))
       return(partable)
     }
@@ -52,7 +52,7 @@ lav_pt_add_bounds <- function(partable = NULL,
       if (optim_bounds$min_reliability_marker < 0 ||
         optim_bounds$min_reliability_marker > 1.0) {
         lav_msg_stop(gettextf(
-          "optim.bounds$min_reliability_marker is out of range: %s",
+          "optim_bounds$min_reliability_marker is out of range: %s",
           optim_bounds$min_reliability_marker
         ))
       }
@@ -86,8 +86,8 @@ lav_pt_add_bounds <- function(partable = NULL,
       } else if (length(optim_bounds$lower_factor) !=
         length(optim_bounds$lower)) {
         lav_msg_stop(
-          gettext("length(optim.bounds$lower_factor) is not equal to
-                  length(optim.bounds$lower)")
+          gettext("length(optim_bounds$lower_factor) is not equal to
+                  length(optim_bounds$lower)")
         )
       }
     }
@@ -105,8 +105,8 @@ lav_pt_add_bounds <- function(partable = NULL,
       } else if (length(optim_bounds$upper_factor) !=
         length(optim_bounds$upper)) {
         lav_msg_stop(
-          gettext("length(optim.bounds$lower_factor) is not equal to
-                  length(optim.bounds$upper)")
+          gettext("length(optim_bounds$lower_factor) is not equal to
+                  length(optim_bounds$upper)")
         )
       }
     }

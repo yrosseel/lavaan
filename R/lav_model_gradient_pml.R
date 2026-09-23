@@ -175,7 +175,7 @@ lav_pml_dploglik_dimplied <- function(
         if (nexo > 1L) {
           lav_msg_stop(gettext(
             "mixed + exo in PML not implemented;
-            try optim.gradient = \"numerical\""))
+            try optim_gradient = \"numerical\""))
         }
 
         sc <- lav_mvn_sc_mu_sigma(
@@ -223,7 +223,7 @@ lav_pml_dploglik_dimplied <- function(
         if (nexo > 1L) {
           lav_msg_stop(gettext(
             "mixed + exo in PML not implemented;
-            try optim.gradient = \"numerical\""))
+            try optim_gradient = \"numerical\""))
         }
 
         sc_cor_uni <- lav_bvmix_cor_sc(
@@ -269,7 +269,7 @@ lav_pml_dploglik_dimplied <- function(
         if (nexo > 1L) {
           lav_msg_stop(gettext(
             "mixed + exo in PML not implemented;
-            try optim.gradient = \"numerical\""))
+            try optim_gradient = \"numerical\""))
         }
 
         sc_cor_uni <- lav_bvmix_cor_sc(

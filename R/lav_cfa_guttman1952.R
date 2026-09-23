@@ -1000,7 +1000,7 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       if (!anchored) {
         lav_msg_stop(gettextf(
           "the scale of factor %s is not identified: fix a loading
-           (marker), fix the factor variance (std.lv), or tie its
+           (marker), fix the factor variance (std_lv), or tie its
            loadings to those of a group where the scale is fixed", fn))
       }
     }

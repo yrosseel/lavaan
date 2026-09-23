@@ -74,7 +74,7 @@ lavSimulate <- function(model = NULL, # user model
       d_one <- as.data.frame(do.call(orig_data_function, orig_args))
       if (!all(c(ov_x, ov_y) %in% names(d_one))) {
         lav_msg_stop(gettext(
-          "fixed.x = TRUE: the data_function output must contain all observed
+          "fixed_x = TRUE: the data_function output must contain all observed
            variables of the model (as named columns)."))
       }
       n_one <- nrow(d_one)
@@ -112,7 +112,7 @@ lavSimulate <- function(model = NULL, # user model
         d <- as.data.frame(do.call(orig_data_function, orig_args))
         if (nrow(d) != nrow(x_fixed)) {
           lav_msg_stop(gettext(
-            "fixed.x = TRUE: the data_function must return a constant number
+            "fixed_x = TRUE: the data_function must return a constant number
              of observations across replications."))
         }
         x_r <- as.matrix(d[, ov_x, drop = FALSE])

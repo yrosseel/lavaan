@@ -583,7 +583,7 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       # step-2 estimator under conditional.x -> plain twostep
       lav_msg_warn(gettext(
         "robust standard errors (se = \"twostep.robust\") need Gamma.eta
-         under conditional.x = TRUE, which could not be computed; twostep
+         under conditional_x = TRUE, which could not be computed; twostep
          standard errors are reported instead."))
       robust <- FALSE
       lavoptions$se <- "twostep"

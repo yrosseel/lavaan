@@ -516,7 +516,7 @@ lavaan <- function(
           lav_msg_warn(gettextf(
             "the first indicator of the following latent variable(s) is a
              poor item; switching to another marker item (to set the metric)
-             to avoid convergence problems; use bad.marker.switch = FALSE to
+             to avoid convergence problems; use bad_marker_switch = FALSE to
              only warn about this: %s",
             paste0(info_fac$lv, " (", info_fac$old, ", r = ",
                    sprintf("%.2f", info_fac$r.old), " -> ",
@@ -528,7 +528,7 @@ lavaan <- function(
             "the first indicator of the following composite(s) has a (near)
              zero implied weight; switching to another marker indicator (to
              set the metric) to avoid convergence problems; use
-             bad.marker.switch = FALSE to only warn about this: %s",
+             bad_marker_switch = FALSE to only warn about this: %s",
             paste0(info_comp$lv, " (", info_comp$old, ", w = ",
                    sprintf("%.2f", info_comp$r.old), " -> ",
                    info_comp$new, ", w = ",
@@ -554,8 +554,8 @@ lavaan <- function(
              variable(s) is a poor item (low corrected item-total
              correlation); this may lead to convergence problems; consider
              using a better indicator to set the metric, or set
-             bad.marker.switch = TRUE to let lavaan switch the marker
-             automatically (bad.marker.crit = 0 disables this check): %s",
+             bad_marker_switch = TRUE to let lavaan switch the marker
+             automatically (bad_marker_crit = 0 disables this check): %s",
             paste0(info_fac$lv, " (", info_fac$old, ", r = ",
                    sprintf("%.2f", info_fac$r.old), ")", collapse = ", ")))
         }
@@ -564,8 +564,8 @@ lavaan <- function(
             "the first indicator (the marker) of the following composite(s)
              has a (near) zero implied weight; this may lead to convergence
              problems; consider using another indicator to set the metric, or
-             set bad.marker.switch = TRUE to let lavaan switch the marker
-             automatically (bad.marker.crit = 0 disables this check): %s",
+             set bad_marker_switch = TRUE to let lavaan switch the marker
+             automatically (bad_marker_crit = 0 disables this check): %s",
             paste0(info_comp$lv, " (", info_comp$old, ", w = ",
                    sprintf("%.2f", info_comp$r.old), ")", collapse = ", ")))
         }

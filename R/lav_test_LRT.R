@@ -183,7 +183,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       lav_msg_warn(gettextf(
         "the number of groups differs across models (%s): the chi-squared
          difference test is invalid. See the Details section of ?lavTestLRT
-         for an example using the group.equal= argument.",
+         for an example using the group_equal= argument.",
         lav_msg_view(ngroups_all, "none", qd = FALSE)))
     } else if (!all(sapply(glabel_all, identical, glabel_all[[1L]]))) {
       lav_msg_warn(gettext(

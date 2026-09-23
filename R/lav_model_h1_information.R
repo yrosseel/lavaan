@@ -644,7 +644,7 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
       if (lavmodel@conditional.x && structured) {
       if (lavdata@missing %in% c("ml", "ml.x")) {
       lav_msg_stop(gettext("firstorder information matrix not available
-                                (yet) if conditional.x + fiml"))
+                                (yet) if conditional_x + fiml"))
     }
         res_sigma_w <- implied$res.cov[[(g - 1) * lavdata@nlevels + 1L]]
         res_int_w <- implied$res.int[[(g - 1) * lavdata@nlevels + 1L]]

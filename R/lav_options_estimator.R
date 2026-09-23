@@ -340,7 +340,7 @@ lav_options_est_dls <- function(opt) {
       if (opt$estimator.args$dls_a < 0.0 ||
           opt$estimator.args$dls_a > 1.0) {
         lav_msg_stop(gettext(
-          "dls_a value in estimator.args must be between 0 and 1."))
+          "dls_a value in estimator_args must be between 0 and 1."))
       }
     }
     if (is.null(opt$estimator.args$dls_gamma_nt)) {
@@ -351,7 +351,7 @@ lav_options_est_dls <- function(opt) {
         tolower(opt$estimator.args$dls_gamma_nt)
       if (!opt$estimator.args$dls_gamma_nt %in% c("sample", "model")) {
         lav_msg_stop(gettextf(
-          "dls_gamma_nt value in estimator.args must be either %s.",
+          "dls_gamma_nt value in estimator_args must be either %s.",
           lav_msg_view(c("sample", "model"), log_sep = "or")))
       }
     }
@@ -368,7 +368,7 @@ lav_options_est_dls <- function(opt) {
       opt$optim.method <- "gn"
     } else {
       lav_msg_stop(gettext(
-        "optim.method must be either nlminb or gn if estimator is DLS."))
+        "optim_method must be either nlminb or gn if estimator is DLS."))
     }
   } else {
     if (opt$optim.method %in% c("gn")) {
@@ -379,7 +379,7 @@ lav_options_est_dls <- function(opt) {
       opt$optim.gradient <- "numerical"
     } else {
       lav_msg_stop(gettext(
-        "optim.method must be either nlminb or gn if estimator is DLS."))
+        "optim_method must be either nlminb or gn if estimator is DLS."))
     }
   }
   opt
@@ -764,7 +764,7 @@ lav_options_est_fabin <- function(opt) {
           }
         } else {
           lav_msg_stop(gettextf(
-            "unknown value for estimator.args$thetapsi_method option: %s.",
+            "unknown value for estimator_args$thetapsi_method option: %s.",
             opt$estimator.args$thetapsi_method))
         }
       }
@@ -835,7 +835,7 @@ lav_options_est_fabin <- function(opt) {
     if (!opt$estimator.args[["mgm_varcov"]] %in%
           c("DEFAULT", "NONE", "ULS", "GLS", "RLS", "2RLS")) {
       lav_msg_stop(gettextf(
-        "unknown value for estimator.args$mgm_varcov option: %s.",
+        "unknown value for estimator_args$mgm_varcov option: %s.",
         opt$estimator.args[["mgm_varcov"]]))
     }
     # moment covariance (Gamma) flavor for the delta-method standard
@@ -849,7 +849,7 @@ lav_options_est_fabin <- function(opt) {
       tolower(opt$estimator.args[["mgm_gamma"]])
     if (!opt$estimator.args[["mgm_gamma"]] %in% c("nt", "adf")) {
       lav_msg_stop(gettextf(
-        "unknown value for estimator.args$mgm_gamma option: %s.",
+        "unknown value for estimator_args$mgm_gamma option: %s.",
         opt$estimator.args[["mgm_gamma"]]))
     }
     # se = "robust": the delta-method standard errors with the ADF
@@ -859,7 +859,7 @@ lav_options_est_fabin <- function(opt) {
       if (mgm_gamma_user &&
           opt$estimator.args[["mgm_gamma"]] == "nt") {
         lav_msg_warn(gettext(
-          "se = \"robust\" overrides estimator.args$mgm_gamma = \"nt\";
+          "se = \"robust\" overrides estimator_args$mgm_gamma = \"nt\";
            using the ADF moment covariance."))
       }
       opt$estimator.args$mgm_gamma <- "adf"
@@ -875,7 +875,7 @@ lav_options_est_fabin <- function(opt) {
     if (!opt$estimator.args[["mgm_jacobian"]] %in%
           c("analytic", "numeric")) {
       lav_msg_stop(gettextf(
-        "unknown value for estimator.args$mgm_jacobian option: %s.",
+        "unknown value for estimator_args$mgm_jacobian option: %s.",
         opt$estimator.args[["mgm_jacobian"]]))
     }
     # simple (a == b) equality constraints (e.g., group.equal = "loadings")
@@ -991,7 +991,7 @@ lav_options_est_js <- function(opt) {
     ea$js_small_sample <- TRUE
   } else if (!is.logical(ea[["js_small_sample"]])) {
     lav_msg_stop(gettext(
-      "js_small_sample in estimator.args must be TRUE or FALSE."))
+      "js_small_sample in estimator_args must be TRUE or FALSE."))
   }
   if (is.null(ea[["js_theta"]])) {
     ea$js_theta <- "spearman"
@@ -999,7 +999,7 @@ lav_options_est_js <- function(opt) {
     ea$js_theta <- tolower(ea[["js_theta"]])
     if (!ea[["js_theta"]] %in% c("spearman", "user")) {
       lav_msg_stop(gettextf(
-        "js_theta value in estimator.args must be either %s.",
+        "js_theta value in estimator_args must be either %s.",
         lav_msg_view(c("spearman", "user"), log_sep = "or")))
     }
   }
@@ -1007,7 +1007,7 @@ lav_options_est_js <- function(opt) {
     values <- ea[["js_theta_values"]]
     if (is.null(values) || !is.numeric(values) || is.null(names(values))) {
       lav_msg_stop(gettext(
-        "js_theta = \"user\" requires js_theta_values in estimator.args: a
+        "js_theta = \"user\" requires js_theta_values in estimator_args: a
          named numeric vector with the residual variances of the
          indicators."))
     }
@@ -1018,7 +1018,7 @@ lav_options_est_js <- function(opt) {
     ea$js_theta_bounds <- tolower(ea[["js_theta_bounds"]])
     if (!ea[["js_theta_bounds"]] %in% c("wide", "standard", "none")) {
       lav_msg_stop(gettextf(
-        "js_theta_bounds value in estimator.args must be either %s.",
+        "js_theta_bounds value in estimator_args must be either %s.",
         lav_msg_view(c("wide", "standard", "none"), log_sep = "or")))
     }
   }
@@ -1029,7 +1029,7 @@ lav_options_est_js <- function(opt) {
     ea$js_gamma <- tolower(ea[["js_gamma"]])
     if (!ea[["js_gamma"]] %in% c("nt", "adf")) {
       lav_msg_stop(gettextf(
-        "js_gamma value in estimator.args must be either %s.",
+        "js_gamma value in estimator_args must be either %s.",
         lav_msg_view(c("nt", "adf"), log_sep = "or")))
     }
   }
@@ -1039,7 +1039,7 @@ lav_options_est_js <- function(opt) {
   if (opt$se == "robust") {
     if (js_gamma_user && ea[["js_gamma"]] == "nt") {
       lav_msg_warn(gettext(
-        "se = \"robust\" overrides estimator.args$js_gamma = \"nt\";
+        "se = \"robust\" overrides estimator_args$js_gamma = \"nt\";
          using the ADF moment covariance."))
     }
     ea$js_gamma <- "adf"
@@ -1048,7 +1048,7 @@ lav_options_est_js <- function(opt) {
     ea$js_vcov_gamma_modelbased <- TRUE
   } else if (!is.logical(ea[["js_vcov_gamma_modelbased"]])) {
     lav_msg_stop(gettext(
-      "js_vcov_gamma_modelbased in estimator.args must be TRUE or FALSE."))
+      "js_vcov_gamma_modelbased in estimator_args must be TRUE or FALSE."))
   }
   if (is.null(ea[["js_varcov_method"]])) {
     ea$js_varcov_method <- "RLS"
@@ -1057,7 +1057,7 @@ lav_options_est_js <- function(opt) {
     if (!ea[["js_varcov_method"]] %in%
           c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
       lav_msg_stop(gettextf(
-        "js_varcov_method value in estimator.args must be either %s.",
+        "js_varcov_method value in estimator_args must be either %s.",
         lav_msg_view(c("ULS", "GLS", "2RLS", "RLS", "NONE"), log_sep = "or")))
     }
   }
@@ -1067,7 +1067,7 @@ lav_options_est_js <- function(opt) {
     ea$js_mean_structure <- tolower(ea[["js_mean_structure"]])
     if (!ea[["js_mean_structure"]] %in% c("wls", "moments")) {
       lav_msg_stop(gettextf(
-        "js_mean_structure value in estimator.args must be either %s.",
+        "js_mean_structure value in estimator_args must be either %s.",
         lav_msg_view(c("wls", "moments"), log_sep = "or")))
     }
   }
@@ -1081,7 +1081,7 @@ lav_options_est_js <- function(opt) {
     }
     if (!ea[["js_jacobian"]] %in% c("analytic", "numeric")) {
       lav_msg_stop(gettextf(
-        "js_jacobian value in estimator.args must be either %s.",
+        "js_jacobian value in estimator_args must be either %s.",
         lav_msg_view(c("analytic", "numeric"), log_sep = "or")))
     }
   }
@@ -1350,7 +1350,7 @@ lav_options_est_rbm_method <- function(x) {
     "implicit" # implicit, irbm, i
   } else {
     lav_msg_stop(gettextf(
-      "estimator.args$rbm_method must be one of %s.",
+      "estimator_args$rbm_method must be one of %s.",
       lav_msg_view(c("implicit", "explicit"), log_sep = "or")))
   }
 }

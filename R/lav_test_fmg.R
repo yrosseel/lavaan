@@ -173,7 +173,7 @@ lav_test_fmg_resolve_chisq <- function(parsed, lavoptions = NULL) {
   }
 
   lav_msg_stop(gettextf(
-    "FMG tests require scaled.test= %1$s or %2$s; found %3$s.",
+    "FMG tests require scaled_test= %1$s or %2$s; found %3$s.",
     dQuote("standard"), dQuote("browne.residual.nt.model"),
     dQuote(scaled_test)
   ))

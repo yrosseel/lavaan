@@ -43,7 +43,7 @@ modindices <- function(object,
       object <- fit_pa
     } else {
       lav_msg_stop(gettext(
-        "modification indices are not available if sam.method = \"global\"."))
+        "modification indices are not available if sam_method = \"global\"."))
     }
   }
 

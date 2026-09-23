@@ -1576,8 +1576,8 @@ lav_noniter_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       lavmodel@correlation || lavmodel@group.w.free) {
     lav_msg_stop(gettextf(
       "delta-method standard errors for estimator %s require continuous,
-       unconditional sample moments (no categorical, conditional.x,
-       correlation or group.w.free structures).", lavoptions$estimator))
+       unconditional sample moments (no categorical, conditional_x,
+       correlation or group_w_free structures).", lavoptions$estimator))
   }
 
   # Gamma flavor; NOTE: read with [[ ]] -- $ would partially match

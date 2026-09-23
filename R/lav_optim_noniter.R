@@ -15,12 +15,12 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   if (lavmodel@ngroups > 1L &&
       !lavoptions$estimator %in% c("IV", "JS", "JSA", "MGM")) {
     lav_msg_stop(gettext(
-      "multiple groups not supported (yet) with optim.method = 'NONITER'."))
+      "multiple groups not supported (yet) with optim_method = 'NONITER'."))
   }
 
   if (lavdata@nlevels > 1L) {
     lav_msg_stop(gettext(
-      "multilevel not supported (yet) with optim.method = 'NONITER'."))
+      "multilevel not supported (yet) with optim_method = 'NONITER'."))
   }
 
   # no support (yet) for nonlinear constraints
@@ -30,14 +30,14 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   )
   if (length(nonlinear_idx) > 0L) {
     lav_msg_stop(gettext(
-      "nonlinear constraints not supported (yet) with optim.method = 'NONITER'."
+      "nonlinear constraints not supported (yet) with optim_method = 'NONITER'."
       ))
   }
 
   # no support (yet) for inequality constraints
   if (!lavmodel@cin.simple.only && !is.null(body(lavmodel@cin.function))) {
     lav_msg_stop(gettext(
-    "inequality constraints not supported (yet) with optim.method = 'NONITER'."
+    "inequality constraints not supported (yet) with optim_method = 'NONITER'."
     ))
   }
 
@@ -50,7 +50,7 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   if (length(lavmodel@ceq.linear.idx) > 0L &&
       !lavoptions$estimator %in% c("IV", "JS", "JSA", "MGM")) {
     lav_msg_stop(gettext(
-      "equality constraints not supported (yet) with optim.method = 'NONITER'."
+      "equality constraints not supported (yet) with optim_method = 'NONITER'."
       ))
   }
 

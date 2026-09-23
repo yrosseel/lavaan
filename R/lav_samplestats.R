@@ -147,7 +147,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   if (lavoptions$sample.cov.robust) {
     if (!is.null(wt[[1]])) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet)
+        "sample_cov_robust = TRUE does not work (yet)
         if sampling weights are provided."))
     }
   }
@@ -546,7 +546,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           "two.stage", "robust.two.stage"
         )) {
           lav_msg_stop(gettextf(
-            "missing = %s + conditional.x + two.level not supported yet",
+            "missing = %s + conditional_x + two.level not supported yet",
             missing))
         }
 
@@ -630,10 +630,10 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         # when we condition on x
         if (missing == "ml.x") {
           lav_msg_stop(gettext(
-            "missing = \"ml.x\" is not supported when conditional.x = TRUE
+            "missing = \"ml.x\" is not supported when conditional_x = TRUE
             (missing values in the exogenous variables); use missing = \"ml\"
             (listwise deletion of cases with missing x values), or
-            conditional.x = FALSE."))
+            conditional_x = FALSE."))
         }
 
         # residual covariances!
@@ -689,9 +689,9 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             missing_flag <- FALSE
             if (estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
               lav_msg_stop(gettextf(
-                "missing = %1$s + conditional.x is not supported (yet) for
+                "missing = %1$s + conditional_x is not supported (yet) for
                 estimator %2$s; use estimator = \"ML\", or
-                conditional.x = FALSE.", dQuote(missing), dQuote(estimator)))
+                conditional_x = FALSE.", dQuote(missing), dQuote(estimator)))
             }
           }
 
@@ -2247,7 +2247,7 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         # precomputed residual statistics: we cannot recover the joint
         # correlation metric from the residual moments alone
         lav_msg_stop(gettext(
-          "correlation = TRUE with conditional.x = TRUE requires the joint
+          "correlation = TRUE with conditional_x = TRUE requires the joint
           sample.cov (a correlation matrix including the exogenous
           x-variables), not precomputed residual statistics."))
       }
@@ -2301,7 +2301,7 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         # the normal-theory weight matrix needs the joint (y, x) moments
         if (conditional_x && is.null(cov[[g]])) {
           lav_msg_stop(gettext("estimator GLS is not available if
-            conditional.x = TRUE and only the residual (y | x) sample
+            conditional_x = TRUE and only the residual (y | x) sample
             statistics are provided; provide the joint sample statistics,
             or use another estimator."))
         }

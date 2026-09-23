@@ -64,13 +64,13 @@ lav_model_efa_target_set <- function(x = NULL, set_name = NULL,
   }
   if (length(set_name) == 0L || is.na(set_name)) {
     lav_msg_stop(gettextf(
-      "rotation.args$%s is a named list, but the efa block labels could not be found in the model.",
+      "rotation_args$%s is a named list, but the efa block labels could not be found in the model.",
       what))
   }
   idx <- match(set_name, x_names)
   if (is.na(idx)) {
     lav_msg_stop(gettextf(
-      "rotation.args$%1$s is a named list, but contains no element for efa block \"%2$s\".",
+      "rotation_args$%1$s is a named list, but contains no element for efa block \"%2$s\".",
       what, set_name))
   }
   x[[idx]]
@@ -95,7 +95,7 @@ lav_model_efa_check_target <- function(ropts = NULL, lavpartable = NULL,
     unknown <- setdiff(x_names, efa_values)
     if (length(unknown) > 0L) {
       lav_msg_stop(gettextf(
-        "some names of the rotation.args$%1$s list (%2$s) do not match any efa block label in the model (%3$s).",
+        "some names of the rotation_args$%1$s list (%2$s) do not match any efa block label in the model (%3$s).",
         what, lav_msg_view(unknown, log_sep = "none"),
         lav_msg_view(efa_values, log_sep = "none")))
     }
@@ -104,7 +104,7 @@ lav_model_efa_check_target <- function(ropts = NULL, lavpartable = NULL,
         lavpartable$efa == set]))
       if (nfac > 1L && !set %in% x_names) {
         lav_msg_stop(gettextf(
-          "the rotation.args$%1$s list contains no element for efa block \"%2$s\".",
+          "the rotation_args$%1$s list contains no element for efa block \"%2$s\".",
           what, set))
       }
     }

@@ -81,7 +81,7 @@ lavBootstrap <- function(object,                                   # nolint
   # check for conditional.x = TRUE
   if (object@Model@conditional.x) {
     lav_msg_stop(gettext(
-      "this function is not (yet) available if conditional.x = TRUE"))
+      "this function is not (yet) available if conditional_x = TRUE"))
   }
 
   lavoptions <- list(
