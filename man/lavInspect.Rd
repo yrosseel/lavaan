@@ -201,11 +201,11 @@ Information about the data:
     \item{\code{"sampling.weights"}:}{Numeric vector. The (normalized)
         sampling weights that were used in the analysis, one per case
         (in the order of \code{"case.idx"}). Depending on the
-        \code{sampling.weights.normalization} option, the weights are
-        rescaled so that they sum to the total number of observations
-        (\code{"total"}, the default), to the number of observations
-        within each group (\code{"group"}), or not at all
-        (\code{"none"}). Only available if sampling weights were provided.
+        \code{sampling_weights_normalization} option, the weights are
+        rescaled so that they sum to the number of observations within
+        each group (\code{"group"}, the default), to the total number of
+        observations (\code{"total"}), or not at all (\code{"none"}).
+        Only available if sampling weights were provided.
         In the case of multiple groups: a list of numeric vectors.
         Alias: \code{"weights"}.}
     \item{\code{"group"}:}{A character string. The group variable in
@@ -322,7 +322,7 @@ Observed sample statistics:
         the logarithm of the (effective) number of observations in each
         group. This is the same metric as the \code{group.w} element
         of the \code{"implied"} and \code{"sampstat"} output (which is
-        only shown if \code{group.w.free = TRUE}). Alias:
+        only shown if \code{group_w_free = TRUE}). Alias:
         \code{"group.weights"}.}
     \item{\code{"logl"}:}{Numeric vector. The loglikelihood of the fitted
         model, per group (\code{NA} if the estimator does not provide a
