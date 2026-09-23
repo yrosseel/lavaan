@@ -439,7 +439,7 @@ lav_h1_output <- function(lavobject,
         if (add_class) {
           class(logl_group) <- c("lavaan.vector", "numeric")
         }
-        out$logl.group <- logl_group
+        out$logl_group <- logl_group
       }
     }
 
@@ -467,11 +467,11 @@ lav_h1_output <- function(lavobject,
     }
   }
 
-  # optionally: the WLS.V (weight) and gamma (NACOV) matrices, so that the
+  # optionally: the wls_v (weight) and gamma (nacov) matrices, so that the
   # model can be refitted from summary statistics only (see also
   # output = "lavMoments")
   if (wls_v) {
-    out$WLS.V <- lav_inspect_wls_v(lavobject,
+    out$wls_v <- lav_inspect_wls_v(lavobject,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group
     )
@@ -486,13 +486,29 @@ lav_h1_output <- function(lavobject,
   out
 }
 
+# the canonical component names of a 'lavMoments' object: they mirror the
+# corresponding lavaan() arguments (sample_cov, sample_nobs, ...); the
+# lav_options element holds the options a moments-only refit must use
+lav_moments_names <- function() {
+  c("sample_cov", "sample_nobs", "sample_mean", "sample_th",
+    "wls_v", "nacov", "lav_options", "ov_order")
+}
+
+# normalize the component names of a (user- or package-supplied)
+# lavMoments object to the canonical snake_case spelling; the older
+# dotted spelling (sample.cov, sample.nobs, WLS.V, NACOV, lavOptions,
+# as produced by lavaan.mi::poolSat()) is accepted too
+lav_moments_canonical <- function(x) {
+  lav_args_canonical(x, lav_moments_names())
+}
+
 # build a 'lavMoments' object: a list of summary statistics -- structured
-# exactly as the sample.cov/sample.mean/sample.th/sample.nobs (and,
-# optionally, WLS.V/NACOV) arguments of lavaan() -- that can be passed
+# exactly as the sample_cov/sample_mean/sample_th/sample_nobs (and,
+# optionally, wls_v/nacov) arguments of lavaan() -- that can be passed
 # directly as the data= argument to refit a model from summary statistics
 # only. Handles multiple groups and conditional.x (where the residual
 # moments and the exogenous-covariate statistics travel as attributes of
-# sample.cov, following the lavaan() convention).
+# sample_cov, following the lavaan() convention).
 lav_h1_moments <- function(lavobject,
                            wls_v = TRUE,
                            gamma = TRUE,
@@ -626,35 +642,35 @@ lav_h1_moments <- function(lavobject,
   # covariance (see above) and leave sample.cov.rescale at its
   # estimator-specific default, so both ML and least-squares estimators
   # are reproduced.
-  lav_options <- list(conditional.x = conditional_x)
+  lav_options <- list(conditional_x = conditional_x)
   if (!rescale_unbiased) {
-    lav_options$sample.cov.rescale <- FALSE
+    lav_options$sample_cov_rescale <- FALSE
   }
   if (conditional_x) {
-    lav_options$fixed.x <- lavmodel@fixed.x
+    lav_options$fixed_x <- lavmodel@fixed.x
   }
   if (isTRUE(lavobject@Options$correlation)) {
     lav_options$correlation <- TRUE
   }
   if (ngroups > 1L && length(lavobject@Data@group.label) == ngroups) {
-    lav_options$group.label <- lavobject@Data@group.label
+    lav_options$group_label <- lavobject@Data@group.label
   }
 
-  out <- list(sample.cov = sample_cov, sample.nobs = sample_nobs)
+  out <- list(sample_cov = sample_cov, sample_nobs = sample_nobs)
   if (!is.null(sample_mean)) {
-    out$sample.mean <- sample_mean
+    out$sample_mean <- sample_mean
   }
   if (!is.null(sample_th)) {
-    out$sample.th <- sample_th
+    out$sample_th <- sample_th
   }
   if (wls_v) {
-    out$WLS.V <- lav_inspect_wls_v(lavobject,
+    out$wls_v <- lav_inspect_wls_v(lavobject,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = TRUE
     )
   }
   if (gamma) {
-    out$NACOV <- lav_inspect_sampstat_gamma(lavobject,
+    out$nacov <- lav_inspect_sampstat_gamma(lavobject,
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = TRUE
     )
@@ -688,15 +704,15 @@ lav_h1_moments <- function(lavobject,
       }
       omega_list[[g]] <- omega_g
     }
-    out$NACOV <- if (ngroups == 1L) omega_list[[1]] else omega_list
+    out$nacov <- if (ngroups == 1L) omega_list[[1]] else omega_list
     lav_options$se <- two_stage_se
     lav_options$test <- "satorra.bentler"
     lav_options$information <- "observed"
-    lav_options$observed.information <- "h1"
-    lav_options$h1.information <- "unstructured"
+    lav_options$observed_information <- "h1"
+    lav_options$h1_information <- "unstructured"
   }
 
-  out$lavOptions <- lav_options
+  out$lav_options <- lav_options
 
   class(out) <- c("lavMoments", "list")
   out
@@ -705,39 +721,43 @@ lav_h1_moments <- function(lavobject,
 # compact print method for a 'lavMoments' object: describe what it holds
 # (the full matrices are usually large) and how to use it
 lav_moments_print <- function(x, ...) {
+  # accept the dotted spelling of the component names too
+  x <- lav_moments_canonical(x)
+
   # fall back to a plain list print if this is not the structure we expect
-  if (!("sample.cov" %in% names(x))) {
+  if (!("sample_cov" %in% names(x))) {
     y <- x
     class(y) <- "list"
     print(y, ...)
     return(invisible(x))
   }
 
-  cov1 <- if (is.list(x$sample.cov)) x$sample.cov[[1]] else x$sample.cov
-  ngroups <- if (is.list(x$sample.cov)) length(x$sample.cov) else 1L
+  cov1 <- if (is.list(x$sample_cov)) x$sample_cov[[1]] else x$sample_cov
+  ngroups <- if (is.list(x$sample_cov)) length(x$sample_cov) else 1L
   nvar <- NROW(cov1)
-  th_idx <- attr(x$sample.th, "th.idx")
+  th_idx <- attr(x$sample_th, "th.idx")
   ncat <- 0L
   if (!is.null(th_idx)) {
     ti <- if (is.list(th_idx)) th_idx[[1]] else th_idx
     ncat <- length(unique(ti[ti > 0L])) # distinct ordered variables
   }
   components <- intersect(
-    c("sample.cov", "sample.mean", "sample.th", "WLS.V", "NACOV"),
+    c("sample_cov", "sample_mean", "sample_th", "wls_v", "nacov"),
     names(x)
   )
 
   cat("lavaan summary statistics (class 'lavMoments')\n\n")
   cat(sprintf("  %-32s %s\n", "Number of groups", ngroups))
   cat(sprintf("  %-32s %s\n", "Number of observations",
-    paste(x$sample.nobs, collapse = " ")))
+    paste(x$sample_nobs, collapse = " ")))
   cat(sprintf("  %-32s %d\n", "Number of variables", nvar))
   if (ncat > 0L) {
     cat(sprintf("  %-32s %s\n", "Ordered (categorical) variables",
       paste0("yes (", ncat, ")")))
   }
-  if (isTRUE(x$lavOptions$conditional.x)) {
-    cat(sprintf("  %-32s %s\n", "Conditional.x", "yes"))
+  lav_opts <- lav_args_canonical(x$lav_options, "conditional_x")
+  if (isTRUE(lav_opts$conditional_x)) {
+    cat(sprintf("  %-32s %s\n", "Conditional x", "yes"))
   }
   cat(sprintf("  %-32s %s\n", "Components", paste(components, collapse = " ")))
   cat("\n")

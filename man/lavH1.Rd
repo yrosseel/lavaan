@@ -52,7 +52,7 @@ lavH1(model = NULL, data = NULL, ordered = NULL, sampling_weights = NULL,
     (h1) summary statistics using all available information. If
     \code{"two.stage"} or \code{"robust.two.stage"} (continuous data
     only), the EM saturated summary statistics are returned together with
-    the stage-1 \code{NACOV} (the asymptotic covariance matrix of those
+    the stage-1 \code{nacov} (the asymptotic covariance matrix of those
     statistics) when \code{output = "lavMoments"}, so that a follow-up
     analysis based on the summary statistics only reproduces the same
     (two-stage) estimates, standard errors and test statistics as when
@@ -91,28 +91,39 @@ lavH1(model = NULL, data = NULL, ordered = NULL, sampling_weights = NULL,
     \code{conditional_x = TRUE}). If \code{"lavaan"}, the unrestricted
     model itself is returned as a fitted lavaan object. If
     \code{"lavMoments"} (alias \code{"moments"}), an object of class
-    \code{lavMoments}: a list of summary statistics (including the
-    \code{th.idx} attribute for ordered variables, and the residual
-    slopes and exogenous-covariate moments when
-    \code{conditional_x = TRUE}) structured so that it can be passed
-    \emph{directly} as the \code{data=} argument of
+    \code{lavMoments}: a list of summary statistics whose components are
+    named after the corresponding arguments of \code{\link{lavaan}}:
+    \code{$sample_cov}, \code{$sample_nobs}, \code{$sample_mean} (if a
+    meanstructure was used), \code{$sample_th} (if some variables are
+    ordered; including the \code{th.idx} attribute), \code{$wls_v} and
+    \code{$nacov} (if requested, see below), and \code{$lav_options}
+    (the options a refit from these summary statistics must use, such as
+    \code{conditional_x}). For \code{conditional_x = TRUE}, the residual
+    slopes and the exogenous-covariate moments travel as attributes of
+    \code{$sample_cov} (following the \code{sample_cov} argument
+    convention of \code{\link{lavaan}}). The object is structured so that
+    it can be passed \emph{directly} as the \code{data=} argument of
     \code{lavaan}/\code{cfa}/\code{sem} to (re)fit a model from summary
-    statistics only. For categorical data, the \code{WLS.V} (weight) and
-    \code{NACOV} (\code{gamma}) matrices are included by default, so that
+    statistics only. For categorical data, the \code{wls_v} (weight) and
+    \code{nacov} (\code{gamma}) matrices are included by default, so that
     the refit reproduces the estimates, standard errors and test
-    statistics exactly.}
-\item{wls_v}{Logical. If \code{TRUE}, the \code{WLS.V} weight matrix (the
+    statistics exactly. (When reading a \code{lavMoments} object, the
+    fitting functions also accept the dotted component names
+    \code{sample.cov}, \code{sample.nobs}, \code{WLS.V}, \code{NACOV}
+    and \code{lavOptions}, as produced by older code.)}
+\item{wls_v}{Logical. If \code{TRUE}, the \code{wls_v} weight matrix (the
     h1 expected information; full or diagonal, depending on the
     estimator) is also computed and returned. If \code{NULL} (the
     default), it is set to \code{TRUE} for categorical data when
     \code{output = "lavMoments"}, and to \code{FALSE} otherwise.}
-\item{gamma}{Logical. If \code{TRUE}, the \code{gamma} (\code{NACOV})
+\item{gamma}{Logical. If \code{TRUE}, the \code{gamma} (\code{nacov})
     matrix (the asymptotic variance matrix of the summary statistics) is
     also computed and returned. If \code{NULL} (the default), it is set
     to \code{TRUE} for categorical data when
     \code{output = "lavMoments"}, and to \code{FALSE} otherwise.}
 \item{add_extra}{Logical. If \code{TRUE}, the list output also contains
-    the h1 loglikelihood (\code{$logl}, if available), the number of
+    the h1 loglikelihood (\code{$logl}, if available, and
+    \code{$logl_group} for multiple groups), the number of
     observations (\code{$nobs}), the coverage proportions
     (\code{$coverage}, only if the missing data were handled), and the
     intraclass correlations (\code{$icc}, only in the two-level
@@ -143,10 +154,10 @@ test statistics are functions of the summary statistics only. This
 includes maximum likelihood (\code{"ML"}) and generalized least squares
 (\code{"GLS"}); the robust variants (\code{"MLM"}, \code{"MLMV"},
 \code{"MLMVS"}, \ldots and the Satorra-Bentler / scaled-shifted /
-mean-variance-adjusted tests), provided the \code{gamma} (\code{NACOV})
+mean-variance-adjusted tests), provided the \code{gamma} (\code{nacov})
 matrix is requested (\code{gamma = TRUE}); the diagonally weighted least
 squares estimators for ordered data (\code{"WLSMV"}, \code{"WLSM"},
-\code{"DWLS"}, \ldots, which include \code{WLS.V} and \code{NACOV} by
+\code{"DWLS"}, \ldots, which include \code{wls_v} and \code{nacov} by
 default); and two-stage maximum likelihood for incomplete continuous data
 (\code{missing = "two.stage"} or \code{"robust.two.stage"}).
 
@@ -154,7 +165,7 @@ For the estimators whose \emph{weight matrix} is estimator-specific (for
 example the identity weight of the \code{"ULS"} family, or the ADF weight
 of continuous \code{"WLS"}), pass the SAME \code{estimator} to
 \code{lavH1()} as will be used in the refit, so that the matching
-\code{WLS.V} is returned.
+\code{wls_v} is returned.
 
 A raw-data fit cannot be reproduced from summary statistics when the
 standard errors or test statistic depend on the individual cases: the
@@ -198,8 +209,8 @@ fit.cor <- lavH1(HolzingerSwineford1939[, paste0("x", 1:9)],
                  output = "lavaan", correlation = TRUE)
 summary(fit.cor)
 
-# categorical data: extract all summary statistics (including WLS.V and
-# NACOV), then (re)fit a model from the summary statistics only
+# categorical data: extract all summary statistics (including wls_v and
+# nacov), then (re)fit a model from the summary statistics only
 Data <- HolzingerSwineford1939[, paste0("x", 1:9)]
 Data[] <- lapply(Data, cut, breaks = 3, labels = FALSE)
 Data[] <- lapply(Data, ordered)
@@ -211,7 +222,7 @@ moments
 fit <- cfa(model, data = moments)   # identical to cfa(model, data = Data)
 
 # two-stage ML for incomplete (continuous) data: the EM saturated moments
-# plus the stage-1 NACOV allow a moments-only refit to reproduce the exact
+# plus the stage-1 nacov allow a moments-only refit to reproduce the exact
 # two-stage estimates, standard errors and (scaled) test statistics
 HS.incomplete <- HolzingerSwineford1939[, paste0("x", 1:9)]
 HS.incomplete$x1[1:20] <- HS.incomplete$x5[15:40] <- NA

@@ -48,14 +48,15 @@ efa <- function(data = NULL,
 
   # handle ov_names
   if (!is.null(data) && inherits(data, "lavMoments")) {
-    if ("sample.cov" %in% names(data)) {
-      ov_names <- rownames(data$sample.cov)
+    data <- lav_moments_canonical(data)
+    if ("sample_cov" %in% names(data)) {
+      ov_names <- rownames(data$sample_cov)
       if (is.null(ov_names)) {
-        ov_names <- colnames(data$sample.cov)
+        ov_names <- colnames(data$sample_cov)
       }
     } else {
       lav_msg_stop(gettext(
-        "When data= is of class lavMoments, it must contain sample.cov"))
+        "When data= is of class lavMoments, it must contain sample_cov"))
     }
 
   } else if (!is.null(data) && inherits(data, "data.frame")) {

@@ -107,35 +107,48 @@ lav_step00_checkdata <- function(data = NULL,
       # just in case it is not a traditional data.frame
       data <- as.data.frame(data)
     } else if (inherits(data, "lavMoments")) {
-      # This object must contain summary statistics
-      # e.g., created by lavaan.mi::poolSat
+      # This object must contain summary statistics, e.g., created by
+      # lavH1(output = "lavMoments") or lavaan.mi::poolSat(). The
+      # component names mirror the lavaan() arguments (sample_cov,
+      # sample_nobs, sample_mean, sample_th, wls_v, nacov, lav_options);
+      # the older dotted spelling (sample.cov, ..., WLS.V, NACOV,
+      # lavOptions) is accepted too
+      data <- lav_moments_canonical(data)
 
       # set required-data arguments
-      if ("sample.cov" %in% names(data)) {
-        sample_cov <- data$sample.cov
+      if ("sample_cov" %in% names(data)) {
+        sample_cov <- data$sample_cov
       } else {
         lav_msg_stop(gettext(
-          "When data= is of class lavMoments, it must contain sample.cov"))
+          "When data= is of class lavMoments, it must contain sample_cov"))
       }
 
-      if ("sample.nobs" %in% names(data)) {
-        sample_nobs <- data$sample.nobs
+      if ("sample_nobs" %in% names(data)) {
+        sample_nobs <- data$sample_nobs
       } else {
         lav_msg_stop(gettext(
-          "When data= is of class lavMoments, it must contain sample.nobs"))
+          "When data= is of class lavMoments, it must contain sample_nobs"))
       }
 
       # check for optional-data arguments
-      if ("sample.mean" %in% names(data)) sample_mean <- data$sample.mean
-      if ("sample.th" %in% names(data)) sample_th <- data$sample.th
-      if ("NACOV" %in% names(data)) nacov <- data$NACOV
-      if ("WLS.V" %in% names(data)) wls_v <- data$WLS.V
+      if ("sample_mean" %in% names(data)) sample_mean <- data$sample_mean
+      if ("sample_th" %in% names(data)) sample_th <- data$sample_th
+      if ("nacov" %in% names(data)) nacov <- data$nacov
+      if ("wls_v" %in% names(data)) wls_v <- data$wls_v
 
-      # set other args not included in dotdotdot
-      if (length(data$lavOptions)) {
-        newdots <- setdiff(names(data$lavOptions), names(dotdotdot))
-        if (length(newdots)) {
-          for (dd in newdots) dotdotdot[[dd]] <- data$lavOptions[[dd]]
+      # set other args not included in dotdotdot. The names in dotdotdot
+      # were already converted to the canonical (dotted) option spelling
+      # by lav_adapt_func() in lavaan(); do the same for the stored
+      # options, so that a user-supplied std_lv= overrides a stored
+      # std.lv= (and vice versa)
+      lav_opts <- data$lav_options
+      if (length(lav_opts)) {
+        have <- lav_option_names(names(dotdotdot))
+        for (dd in names(lav_opts)) {
+          dd_canonical <- lav_option_names(dd)
+          if (!dd_canonical %in% have) {
+            dotdotdot[[dd_canonical]] <- lav_opts[[dd]]
+          }
         }
       }
 
