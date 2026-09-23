@@ -1526,7 +1526,7 @@ setMethod(
     }
 
     if (!is.null(standardized)) {
-      standardized <- tolower(standardized[1])
+      standardized <- lav_keyword_canonical(standardized[1])
       stopifnot(standardized %in% c("std.lv", "std.all", "std.nox"))
     }
 

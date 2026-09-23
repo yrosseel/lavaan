@@ -94,7 +94,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
   # - level = 1: within factor scores, conditional on the posterior
   #   means of the cluster-level random effects (exact posterior means)
   if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
-    if (tolower(type) != "lv") {
+    if (!lav_keyword_canonical(type) %in%
+        c("latent", "lv", "factor", "factor.score", "factorscore")) {
       lav_msg_stop(gettext(
         "for models with random slopes, only type = \"lv\" is
          supported (for now)."))
@@ -195,8 +196,8 @@ lav_predict_internal <- function(lavmodel = NULL,
   # otherwise)
   lavmodel <- lav_model_delta_absorb(lavmodel)
 
-  # type
-  type <- tolower(type)
+  # type (case-insensitive; dots and underscores are interchangeable)
+  type <- lav_keyword_canonical(type)
   lavpta <- lav_pt_attributes(lavpartable)
   if (type %in% c("latent", "lv", "factor", "factor.score", "factorscore")) {
     type <- "lv"
@@ -873,7 +874,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
   }
 
   # method
-  method <- tolower(method)
+  method <- lav_keyword_canonical(method)
 
   # alias
   if (method == "regression") {

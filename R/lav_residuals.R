@@ -1095,9 +1095,15 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     } else {
       NULL
     }
+    # the normalized/standardized residuals are z-statistics of the raw
+    # residuals: their summary is the summary of the raw residuals (RMR)
+    summary_type <- type
+    if (type %in% c("normalized", "standardized", "standardized.mplus")) {
+      summary_type <- "raw"
+    }
     args <- c(
       list(
-        object = object, type = type, h1_acov = h1_acov,
+        object = object, type = summary_type, h1_acov = h1_acov,
         add_class = add_class,
         summary_blocks_combined = summary_blocks_combined,
         acov_obs = summary_acov_obs

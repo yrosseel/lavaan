@@ -320,8 +320,8 @@ lavPredictY <- function(object,                                    # nolint
     ynames = ynames, xnames = xnames
   )
 
-  # prediction method
-  method <- tolower(method)
+  # prediction method (dots and underscores are interchangeable)
+  method <- lav_keyword_canonical(method)
   if (method == "conditional.mean") {
     out <- lav_predict_y_conditional_mean(
       lavobject = NULL,
@@ -376,8 +376,8 @@ lavResidualsY <- function(object,                                  # nolint
     ynames = ynames, xnames = xnames
   )
 
-  # prediction method
-  method <- tolower(method)
+  # prediction method (dots and underscores are interchangeable)
+  method <- lav_keyword_canonical(method)
   if (method == "conditional.mean") {
     ypred <- lav_predict_y_conditional_mean(
       lavobject = NULL,

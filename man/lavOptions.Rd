@@ -139,7 +139,7 @@ Model features:
      latter affects the way the standard errors are computed), and (since
      0.7-2) also \code{conditional_x = TRUE}: the exogenous covariates are
      then standardized along with the outcomes, the input
-     \code{sample.cov} (if used) must be the joint (correlation or
+     \code{sample_cov} (if used) must be the joint (correlation or
      covariance) matrix including the x-variables (it is standardized
      internally), and the unit-variance constraint applies to the
      marginal (not the residual) variances of the outcomes.
@@ -494,7 +494,7 @@ Estimation options:
       \code{"observed"}, the observed information matrix is used. 
       If \code{"first.order"}, the information matrix is based on the
       outer product of the casewise scores. See also the options
-      \code{"h1.information"} and \code{"observed.information"} for
+      \code{h1_information} and \code{observed_information} for
       further control. If \code{"default"}, the value is set depending 
       on the estimator, the missing argument, and the mimic option. If
       the argument is a vector with two elements, the first element

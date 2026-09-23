@@ -62,7 +62,7 @@ lav_predict_mdist_cat <- function(lavobject = NULL, # for convenience
       multilevel data with categorical variables."))
   }
 
-  type <- tolower(type)
+  type <- lav_keyword_canonical(type)
   stopifnot(type %in% c("lv", "resid", "yhat"))
 
   # Bartlett (ML) or regression (EB/EBM) factor-score mapping?
