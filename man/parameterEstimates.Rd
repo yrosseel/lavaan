@@ -50,9 +50,9 @@ normal distribution.}
   parameter table in the output.}
 \item{boot_ci_type}{If bootstrapping was used, the type of interval required.
   The value should be one of \code{"norm"}, \code{"basic"}, \code{"perc"},
-  or \code{"bca.simple"}. For the first three options, see the help page of
+  or \code{"bca_simple"}. For the first three options, see the help page of
   the \code{boot.ci} function in the boot package. The
-  \code{"bca.simple"} option produces intervals using the adjusted bootstrap
+  \code{"bca_simple"} option produces intervals using the adjusted bootstrap
   percentile (BCa) method, but with no correction for acceleration (only for
   bias). Note that the p-value is still computed assuming that the z-statistic
   follows a standard normal distribution.}
@@ -60,9 +60,9 @@ normal distribution.}
 are added to the output. Note that \emph{SE}s and tests are still based on
 unstandardized estimates. Use \code{\link{standardizedSolution}} to obtain
 \emph{SE}s and test statistics for standardized estimates. If a character
-vector is passed with any of \code{c("std.lv","std.all","std.nox")}, only the
-selected standardization methods are added. Note that \code{"std.nox"} only
-differs from \code{"std.all"} if \code{fixed_x = TRUE}; if
+vector is passed with any of \code{c("std_lv","std_all","std_nox")}, only the
+selected standardization methods are added. Note that \code{"std_nox"} only
+differs from \code{"std_all"} if \code{fixed_x = TRUE}; if
 \code{fixed_x = FALSE}, the exogenous covariates are treated as random
 variables (and standardized) just like any other variable, and a warning
 is issued. Alternatively, a character vector
@@ -70,7 +70,7 @@ of (observed) variable names may be passed (for example
 \code{standardized = c("x1", "x2")}); in that case only the parameters
 involving these variables are standardized (the other observed variables are
 left unstandardized), and the result is added in a \code{std.user} column.
-This is a generalization of \code{"std.nox"}, where the (observed) exogenous
+This is a generalization of \code{"std_nox"}, where the (observed) exogenous
 \code{x} variables are the ones left unstandardized.}
 \item{cov_std}{Logical. If TRUE, the (residual) observed
 covariances are scaled by the square root of the `Theta' diagonal elements, and
@@ -140,7 +140,7 @@ shown in the output.}
   compute the acceleration constant is stored as the \code{"design"}
   attribute of the returned data.frame (retrieve with
   \code{attr(x, "design")}). The parameter estimates in the bootstrap samples
-  themselves are available via \code{lavInspect(object, "coef.boot")}.
+  themselves are available via \code{lavInspect(object, "coef_boot")}.
 }
 \references{
 Savalei, V. & Rhemtulla, M. (2012). On obtaining estimates of the fraction of

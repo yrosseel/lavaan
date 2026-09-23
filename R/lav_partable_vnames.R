@@ -105,6 +105,8 @@ lav_pt_vnames <- function(partable, type = NULL, ...,
     "eqs.y", # y's in regression
     "eqs.x" # x's in regression
   )
+  # dots and underscores are interchangeable in type= (ov_nox == ov.nox)
+  type <- lav_keyword_canonical(type)
   if (type[1L] != "all" && type[1L] != "*" && !all(type %in% type_list)) {
     wrongtypes <- type[!(type %in% type_list)]
     lav_msg_stop(sprintf(

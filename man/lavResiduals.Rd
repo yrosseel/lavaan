@@ -10,7 +10,7 @@ The \sQuote{residuals()} (and \sQuote{resid()}) methods are just shortcuts to
 this function with a limited set of arguments.
 }
 \usage{
-lavResiduals(object, type = "cor.bentler", h1 = NULL,
+lavResiduals(object, type = "cor_bentler", h1 = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, elementwise = TRUE,
     combine = FALSE, usrmr_ci_level = 0.90, usrmr_close_h0 = 0.05,
     h1_acov = "unstructured",
@@ -20,14 +20,15 @@ lavResiduals(object, type = "cor.bentler", h1 = NULL,
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{type}{Character.
+\item{type}{Character. Dots and underscores are interchangeable
+(\code{"cor_bentler"} and \code{"cor.bentler"} are the same type).
 If \code{type = "raw"}, this function returns the raw (= unscaled)
 difference between the observed and the expected (model-implied) summary
 statistics, as well as the standardized version of these residuals.
-If \code{type = "cor"}, or \code{type = "cor.bollen"}, the observed and model
+If \code{type = "cor"}, or \code{type = "cor_bollen"}, the observed and model
 implied covariance matrices are first transformed to a correlation matrix
 (using \code{cov2cor()}), before the residuals are computed.
-If \code{type = "cor.bentler"}, both the observed and model implied covariance
+If \code{type = "cor_bentler"}, both the observed and model implied covariance
 matrices are rescaled by dividing the elements by the square roots of the
 corresponding variances of the observed covariance matrix.}
 \item{h1}{Optional. A user-provided saturated (unrestricted) model supplying
@@ -45,8 +46,8 @@ are the raw residuals divided by the corresponding (estimated) standard
 errors.}
 \item{summary}{Logical. If \code{TRUE}, show various summaries of the
 (possibly scaled) residuals. When \code{type = "raw"}, we compute the
-RMR. When \code{type = "cor.bentler"},
-we compute the SRMR. When \code{type = "cor.bollen"}, we compute the CRMR.
+RMR. When \code{type = "cor_bentler"},
+we compute the SRMR. When \code{type = "cor_bollen"}, we compute the CRMR.
 An unbiased version of these summaries (the URMR, USRMR and UCRMR) is also
 computed (Maydeu-Olivares, 2017).
 

@@ -260,7 +260,9 @@ standardizedSolution <- function(object,                     # nolint
     # variables are standardized (a generalization of "std.nox")
     ov_std_user <- NULL
     std_types <- c("std.all", "std.lv", "std.nox")
-    if (length(type) > 1L || !any(tolower(type) %in% std_types)) {
+    # std_all/std.all are interchangeable; but do not touch variable names
+    type_key <- lav_keyword_canonical(type)
+    if (length(type) > 1L || !any(type_key %in% std_types)) {
       ov_all <- lav_object_vnames(object, "ov")
       bad <- type[!(type %in% ov_all)]
       if (length(bad) > 0L) {
@@ -276,7 +278,7 @@ standardizedSolution <- function(object,                     # nolint
       }
       type <- "std.user"
     } else {
-      type <- tolower(type)
+      type <- type_key
       stopifnot(type %in% std_types)
       if (type == "std.nox") {
         # sanity checks (same as in parameterEstimates())
@@ -375,6 +377,7 @@ standardizedSolution <- function(object,                     # nolint
     tmp_fun_x <- NULL
     if (object@Options$se == "bootstrap" && se &&
         !is.null(object@boot$coef) && NROW(object@boot$coef) > 0L) {
+      boot_ci_type <- lav_keyword_canonical(boot_ci_type)
       stopifnot(boot_ci_type %in%
         c("norm", "basic", "perc", "bca.simple", "bca"))
       # standardization as a function of the free parameter vector
@@ -890,6 +893,7 @@ lavParameterEstimates <- function(object,                      # nolint
         # (boot package 'norm.inter') is shared with lavEffects() via
         # lav_bootstrap_norm_inter() (see lav_bootstrap.R)
         stopifnot(!is.null(tmp_boot))
+        boot_ci_type <- lav_keyword_canonical(boot_ci_type)
         stopifnot(boot_ci_type %in% c(
           "norm", "basic", "perc",
           "bca.simple", "bca"
@@ -1012,8 +1016,10 @@ lavParameterEstimates <- function(object,                      # nolint
       # !is.logical(standardized)
       standardized <- as.character(standardized)
       std_types <- c("std.lv", "std.all", "std.nox")
+      # std_all/std.all are interchangeable; but do not touch variable names
+      std_key <- lav_keyword_canonical(standardized)
       if (length(standardized) > 0L &&
-          !any(tolower(standardized) %in% std_types)) {
+          !any(std_key %in% std_types)) {
         # interpret 'standardized' as a vector of observed variable names:
         # standardize ONLY the parameters involving these variables (a
         # generalization of "std.nox", where the exogenous 'x' are the ones
@@ -1032,7 +1038,7 @@ lavParameterEstimates <- function(object,                      # nolint
           standardized <- c("std.lv", "std.user")
         }
       } else {
-        standardized <- tolower(standardized)
+        standardized <- std_key
         if ("std.nox" %in% standardized) {
           # sanity checks
           if (length(lav_object_vnames(object, "ov.x")) == 0) {

@@ -5,7 +5,7 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
+standardizedSolution(object, type = "std_all", se = TRUE, zstat = TRUE,
                      pvalue = TRUE, ci = TRUE, level = 0.95,
                      boot_ci_type = "perc", cov_std = TRUE,
                      remove_eq = TRUE, remove_ineq = TRUE, remove_def = FALSE,
@@ -15,21 +15,23 @@ standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{type}{If \code{"std.lv"}, the standardized estimates are based
+\item{type}{Character (dots and underscores are interchangeable:
+\code{"std.all"} and \code{"std_all"} are the same type).
+If \code{"std_lv"}, the standardized estimates are based
 on the variances of the (continuous) latent variables only.
-If \code{"std.all"}, the standardized estimates are based
+If \code{"std_all"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables.
-If \code{"std.nox"}, the standardized estimates are based
+If \code{"std_nox"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables,
-but not the variances of exogenous covariates. Note that \code{"std.nox"}
-only differs from \code{"std.all"} if \code{fixed_x = TRUE}; if
+but not the variances of exogenous covariates. Note that \code{"std_nox"}
+only differs from \code{"std_all"} if \code{fixed_x = TRUE}; if
 \code{fixed_x = FALSE}, the exogenous covariates are treated as random
 variables (and standardized) just like any other variable, and a warning
 is issued.
 Alternatively, \code{type} may be a vector of (observed) variable names
 (for example \code{type = c("x1", "x2")}); in that case only the parameters
 involving these variables are standardized (the other observed variables are
-left unstandardized). This is a generalization of \code{"std.nox"}, where the
+left unstandardized). This is a generalization of \code{"std_nox"}, where the
 (observed) exogenous \code{x} variables are the ones left unstandardized.}
 \item{se}{Logical. If TRUE, standard errors for the standardized parameters
 will be computed, together with a z-statistic and a p-value.}
@@ -48,7 +50,7 @@ confidence intervals are computed for the standardized parameters (by
 re-standardizing each bootstrap draw), and this argument selects the type of
 bootstrap confidence interval, exactly as in
 \code{\link{parameterEstimates}}: \code{"norm"}, \code{"basic"},
-\code{"perc"} (the default), \code{"bca.simple"} or \code{"bca"}.}
+\code{"perc"} (the default), \code{"bca_simple"} or \code{"bca"}.}
 \item{cov_std}{Logical. If TRUE, the (residual) observed
 covariances are scaled by the square root of the `Theta' diagonal elements, and
 the (residual) latent covariances are scaled by the square root of the `Psi'
@@ -135,7 +137,7 @@ everyday users, but for authors of external R packages that depend on
   matrix with one row per bootstrap draw and one column per row of the
   returned solution). These can be retrieved with
   \code{attr(x, "boot_std")}, analogous to
-  \code{lavInspect(object, "coef.boot")} for the unstandardized solution.
+  \code{lavInspect(object, "coef_boot")} for the unstandardized solution.
 
   In addition, if \code{boot_ci_type = "bca"}, the empirical-influence design
   matrix used to compute the acceleration constant is stored as the

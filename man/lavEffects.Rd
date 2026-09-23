@@ -60,7 +60,7 @@ lavEffects(object, effects = c("total", "indirect"),
     type of bootstrap confidence interval, as in \code{\link{parameterEstimates}}:
     \code{"norm"} (normal-theory using the bootstrap bias and standard error),
     \code{"basic"} (basic bootstrap), \code{"perc"} (the default; percentile
-    method), \code{"bca.simple"} (bias-corrected percentile method, without the
+    method), \code{"bca_simple"} (bias-corrected percentile method, without the
     acceleration term) or \code{"bca"} (the adjusted bootstrap percentile
     method, with both bias and acceleration correction).}
 \item{zstat}{Logical. If \code{TRUE}, an extra column is added with the
@@ -75,12 +75,12 @@ lavEffects(object, effects = c("total", "indirect"),
 \item{standardized}{Logical, character vector, or vector of (observed) variable
     names, behaving as in \code{\link{parameterEstimates}}. If \code{TRUE},
     standardized effects are added as extra columns (point estimates only):
-    \code{std_lv} (only the latent variables are standardized), \code{std.all}
+    \code{std.lv} (only the latent variables are standardized), \code{std.all}
     (both observed and latent variables are standardized) and, if there are
     exogenous observed variables and \code{fixed_x = TRUE}, \code{std.nox}
     (like \code{std.all}, but the exogenous observed variables are not
     standardized). A character vector selects specific types (a subset of
-    \code{"std.lv"}, \code{"std.all"}, \code{"std.nox"}); a vector of observed
+    \code{"std_lv"}, \code{"std_all"}, \code{"std_nox"}); a vector of observed
     variable names standardizes only those observed variables (plus the latent
     variables), and the result is reported in a \code{std.user} column. The
     standardized effect of \eqn{j} on \eqn{i} equals the unstandardized effect
@@ -143,7 +143,7 @@ effect: total, indirect or direct), \code{lhs} (the outcome variable),
 depending on the arguments, \code{group}/\code{level}/\code{block},
 \code{est}, \code{se}, \code{z}, \code{pvalue}, \code{ci.lower},
 \code{ci.upper} and (if \code{standardized} is requested) one or more of
-\code{std_lv}, \code{std.all}, \code{std.nox} and \code{std.user}. The effect
+\code{std.lv}, \code{std.all}, \code{std.nox} and \code{std.user}. The effect
 in a given row is the effect of \code{rhs} on \code{lhs}.
 
 If \code{output = "list"}, a (possibly nested) list of matrices, where element

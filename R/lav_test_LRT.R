@@ -28,8 +28,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
                        type = "Chisq", model_names = NULL) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
-  type <- tolower(type[1])
-  test <- tolower(test[1])
+  type <- lav_keyword_canonical(type[1])
+  test <- lav_keyword_canonical(test[1])
   method_orig <- method[1]
   method <- tolower(gsub("[-_\\.]", "", method[1]))
   if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt",

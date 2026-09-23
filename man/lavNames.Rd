@@ -9,8 +9,9 @@ lavNames(object, type = "ov", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{type}{Character. The type of variables whose names should be extracted. 
-See details for a complete list.}
+\item{type}{Character. The type of variables whose names should be extracted.
+See details for a complete list. Dots and underscores are interchangeable
+(\code{"ov_nox"} and \code{"ov.nox"} select the same variables).}
 \item{...}{Additional selection criteria. For example, \code{"group = 2L"}
 (in a multiple-group analysis) restricts the selection to the variables
 included in the model for the second group.}
@@ -25,49 +26,49 @@ The following variable types are available:
 \itemize{
   \item \code{"ov"}: observed variables
 
-  \item \code{"ov.x"}: (pure) exogenous observed variables (no mediators)
+  \item \code{"ov_x"}: (pure) exogenous observed variables (no mediators)
 
-  \item \code{"ov.nox"}: non-exogenous observed variables
+  \item \code{"ov_nox"}: non-exogenous observed variables
 
-  \item \code{"ov.model"}: modeled observed variables (joint vs conditional)
+  \item \code{"ov_model"}: modeled observed variables (joint vs conditional)
 
-  \item \code{"ov.y"}: (pure) endogenous variables (dependent only) (no mediators)
+  \item \code{"ov_y"}: (pure) endogenous variables (dependent only) (no mediators)
 
-  \item \code{"ov.num"}: numeric observed variables
+  \item \code{"ov_num"}: numeric observed variables
 
-  \item \code{"ov.ord"}: ordinal observed variables
+  \item \code{"ov_ord"}: ordinal observed variables
 
-  \item \code{"ov.ind"}: observed indicators of latent variables
+  \item \code{"ov_ind"}: observed indicators of latent variables
 
-  \item \code{"ov.orphan"}: isolated observed variables (only their intercepts or variances appear in the model syntax)
+  \item \code{"ov_orphan"}: isolated observed variables (only their intercepts or variances appear in the model syntax)
 
-  \item \code{"ov.interaction"}: interaction terms (defined by the colon operator)
+  \item \code{"ov_interaction"}: interaction terms (defined by the colon operator)
 
   \item \code{"th"}: threshold names (ordinal variables only)
 
-  \item \code{"th.mean"}: threshold names (ordinal and numeric variables, if any)
+  \item \code{"th_mean"}: threshold names (ordinal and numeric variables, if any)
 
   \item \code{"lv"}: latent variables
 
-  \item \code{"lv.regular"}: measured latent variables (defined by =~ only)
+  \item \code{"lv_regular"}: measured latent variables (defined by =~ only)
 
-  \item \code{"lv.composite"}: composites (defined by <~ only)
+  \item \code{"lv_composite"}: composites (defined by <~ only)
 
-  \item \code{"lv.x"}: (pure) exogenous variables
+  \item \code{"lv_x"}: (pure) exogenous variables
 
-  \item \code{"lv.y"}: (pure) endogenous variables
+  \item \code{"lv_y"}: (pure) endogenous variables
 
-  \item \code{"lv.nox"}: non-exogenous latent variables
+  \item \code{"lv_nox"}: non-exogenous latent variables
 
-  \item \code{"lv.nonnormal"}: latent variables with non-normal indicators
+  \item \code{"lv_nonnormal"}: latent variables with non-normal indicators
 
-  \item \code{"lv.interaction"}:  interaction terms at the latent level
+  \item \code{"lv_interaction"}:  interaction terms at the latent level
 
-  \item \code{"eqs.y"}: variables that appear as dependent variables in a
+  \item \code{"eqs_y"}: variables that appear as dependent variables in a
                         regression formula (but not indicators of latent
                         variables)
  
-  \item \code{"eqs.x"}: variables that appear as independent variables in
+  \item \code{"eqs_x"}: variables that appear as independent variables in
                         a regression formula
 }
 }

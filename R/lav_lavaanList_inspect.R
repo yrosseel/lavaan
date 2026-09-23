@@ -77,8 +77,8 @@ lavListInspect <- function(object,
       "`what' argument contains multiple arguments; only one is allowed"))
   }
 
-  # be case insensitive
-  what <- tolower(what)
+  # be case insensitive; dots and underscores are interchangeable
+  what <- lav_keyword_canonical(what)
 
 
   #### model matrices, with different contents ####

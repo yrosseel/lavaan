@@ -59,8 +59,9 @@ lav_lavaan_lavinspect <- function(object,
                           "what"))
   }
 
-  # be case insensitive
-  what <- tolower(what)
+  # be case insensitive; dots and underscores are interchangeable
+  # ("cov_lv" == "cov.lv"); the internal matching uses the dotted spelling
+  what <- lav_keyword_canonical(what)
 
   #### model matrices, with different contents ####
   if (what == "free") {
@@ -440,31 +441,21 @@ lav_lavaan_lavinspect <- function(object,
       fs_method = "regression",
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
-  } else if (what %in% c("fs_determinacy", "fs.det", "fs.determin",
+  } else if (what %in% c("fs.determinacy", "fs.det", "fs.determin",
                          "fs.determinacies")) {
     lav_inspect_fs_determinacy(object, squared = FALSE,
       fs_method = "regression",
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
-  } else if (what %in% c("fs_reliability_bartlett",
-                         "fs_reliability_Bartlett",
-                         "fs.reliability.Bartlett",
-                         "fs.reliability.bartlett",
-                         "fs.rel.bartlett", "fs.rel.Bartlett",
-                         "fs.reliabilities.bartlett",
-                         "fs.reliabilities.Bartlett")) {
+  } else if (what %in% c("fs.reliability.bartlett", "fs.rel.bartlett",
+                         "fs.reliabilities.bartlett")) {
     lav_inspect_fs_determinacy(object, squared = TRUE,
       fs_method = "Bartlett",
       add_labels = add_labels, add_class = add_class,
       drop_list_single_group = drop_list_single_group)
-  } else if (what %in% c("fs_determinacy_bartlett",
-                         "fs_determinacy_Bartlett",
-                         "fs.determinacy.Bartlett",
-                         "fs.determinacy.bartlett",
-                         "fs.det.bartlett", "fs.det.Bartlett",
-                         "fs.determin.bartlett", "fs.determin.Bartlett",
-                         "fs.determinacies.bartlett",
-                         "fs.determinacies.Bartlett")) {
+  } else if (what %in% c("fs.determinacy.bartlett", "fs.det.bartlett",
+                         "fs.determin.bartlett",
+                         "fs.determinacies.bartlett")) {
     lav_inspect_fs_determinacy(object, squared = FALSE,
       fs_method = "Bartlett",
       add_labels = add_labels, add_class = add_class,

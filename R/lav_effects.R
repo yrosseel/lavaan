@@ -101,7 +101,7 @@ lavEffects <- function(object,
   }
 
   # check 'boot_ci_type' argument (only relevant when se_def = "bootstrap")
-  boot_ci_type <- as.character(boot_ci_type)[1L]
+  boot_ci_type <- lav_keyword_canonical(as.character(boot_ci_type)[1L])
   if (!boot_ci_type %in% c("norm", "basic", "perc", "bca.simple", "bca")) {
     lav_msg_stop(gettextf(
       "Unknown \"boot_ci_type\" argument: %s; valid choices are \"norm\",
@@ -461,8 +461,10 @@ lav_effects_std_types <- function(object, standardized) {
   } else {
     standardized <- as.character(standardized)
     std_set <- c("std.lv", "std.all", "std.nox")
+    # std_all/std.all are interchangeable; but do not touch variable names
+    std_key <- lav_keyword_canonical(standardized)
     if (length(standardized) > 0L &&
-        !any(tolower(standardized) %in% std_set)) {
+        !any(std_key %in% std_set)) {
       # interpret 'standardized' as a vector of observed variable names
       ov_all <- lavNames(object, "ov")
       bad <- standardized[!(standardized %in% ov_all)]
@@ -478,7 +480,7 @@ lav_effects_std_types <- function(object, standardized) {
         types <- c("std.lv", "std.user")
       }
     } else {
-      types <- tolower(standardized)
+      types <- std_key
       if ("std.nox" %in% types) {
         if (length(lavNames(object, "ov.x")) == 0L) {
           lav_msg_warn(gettext(

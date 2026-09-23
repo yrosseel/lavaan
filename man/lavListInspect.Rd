@@ -20,7 +20,9 @@ lavListTech(object, what = "free", add_labels = FALSE,
 \item{object}{An object of class \code{\linkS4class{lavaanList}}.}
 \item{what}{Character. What needs to be inspected/extracted? See Details for a
 full list. Note: the \code{what} argument is not case-sensitive
-(everything is converted to lower case.)}
+(everything is converted to lower case), and dots and underscores are
+interchangeable (\code{"group_label"} and \code{"group.label"} are the same
+keyword).}
 \item{add_labels}{If \code{TRUE}, variable names are added to the vectors
 and/or matrices.}
 \item{add_class}{If \code{TRUE}, vectors are given the `lavaan.vector' class;
@@ -61,7 +63,7 @@ Model matrices:
         in the parameter table. See \code{\link{parTable}}.}
     \item{\code{"start"}:}{A list of model matrices. The values represent
         the starting values for all model parameters.
-        Alias: \code{"starting.values"}.}
+        Alias: \code{"starting_values"}.}
 }
 
 Information about the data (including missing patterns):
@@ -70,8 +72,8 @@ Information about the data (including missing patterns):
     \item{\code{"group"}:}{A character string. The group variable in
         the data.frame (if any).}
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
-    \item{\code{"group.label"}:}{A character vector. The group labels.}
-    \item{\code{"level.label"}:}{A character vector. The level labels.}
+    \item{\code{"group_label"}:}{A character vector. The group labels.}
+    \item{\code{"level_label"}:}{A character vector. The level labels.}
     \item{\code{"cluster"}:}{A character vector. The cluster variable(s)
        in the data.frame (if any).}
     \item{\code{"nlevels"}:}{Integer. The number of levels.}
@@ -94,7 +96,7 @@ Model features:
         was included in the model.}
     \item{\code{"categorical"}:}{Logical. \code{TRUE} if categorical endogenous
         variables were part of the model.}
-    \item{\code{"fixed.x"}:}{Logical. \code{TRUE} if the exogenous x-covariates
+    \item{\code{"fixed_x"}:}{Logical. \code{TRUE} if the exogenous x-covariates
         are treated as fixed.}
     \item{\code{"parameterization"}:}{Character. Either \code{"delta"} or
         \code{"theta"}.}

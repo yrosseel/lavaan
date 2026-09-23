@@ -162,7 +162,7 @@ lav_test_synonyms <- list(
 # 0.6-13: if multiple names, order them in such a way
 #         that the 'scaled' variants appear after the others
 lav_test_rename <- function(test, check = FALSE) {
-  test <- tolower(test)
+  test <- lav_keyword_canonical(test)
 
   for (canonical in names(lav_test_synonyms)) {
     target_idx <- which(test %in% lav_test_synonyms[[canonical]])

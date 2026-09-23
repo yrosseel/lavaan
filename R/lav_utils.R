@@ -575,6 +575,20 @@ lav_args_canonical <- function(x, canonical) {
   names(x) <- nms
   x
 }
+# ----------------------- lav_keyword_canonical --------------------------- #
+# normalize a user-supplied keyword -- the what= argument of lavInspect()/
+# lavTech(), the type= argument of lavNames(), lavResiduals() and
+# standardizedSolution(), the fit.measures= names, the test= names, ... --
+# to the spelling the internal code matches against: lowercase, with dots.
+# The snake_case spelling is the documented one, but the dotted (and any
+# mixed-case) spelling must be accepted too, always: "cov_lv", "cov.lv" and
+# "Cov_LV" all select the same output. Non-character input is returned as is.
+lav_keyword_canonical <- function(x) {
+  if (!is.character(x) || length(x) == 0L) {
+    return(x)
+  }
+  chartr("_", ".", tolower(x))
+}
 # ----------------------- lav_option_names -------------------------------- #
 # function to transform specified names of options to valid option names
 # this function is used to accept uppercase and dots or underscores in

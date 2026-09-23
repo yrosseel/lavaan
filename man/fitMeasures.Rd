@@ -34,7 +34,10 @@ fit of a latent variable model.}
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{fit_measures}{If \code{"all"}, all fit measures available will be
   returned. If only a single or a few fit measures are specified by name,
-  only those are computed and returned.
+  only those are computed and returned. The names are case-insensitive,
+  and dots and underscores are interchangeable (\code{"rmsea_ci_lower"}
+  and \code{"rmsea.ci.lower"} select the same measure); the names of the
+  returned vector always use the dotted spelling.
   If additional options for certain fit measures are needed, fit_measures
   should be a list whose \code{fit_measures} (or \code{fit.measures}) element
   holds the measures

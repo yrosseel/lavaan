@@ -122,8 +122,8 @@ setMethod(
         )
       }
     }
-    # lowercase type
-    type <- tolower(type)
+    # lowercase type; dots and underscores are interchangeable
+    type <- lav_keyword_canonical(type)
 
     # type = "casewise"
     if (type %in% c("casewise", "case", "obs", "observations", "ov")) {
@@ -861,8 +861,8 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
   # working version summary options
   summary_options_1 <- summary_options
 
-  # type
-  type <- tolower(type)[1]
+  # type (dots and underscores are interchangeable)
+  type <- lav_keyword_canonical(type)[1]
 
   # check type
   if (!type %in% c(

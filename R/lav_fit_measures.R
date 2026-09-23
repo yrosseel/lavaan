@@ -682,8 +682,9 @@ lav_fit <- function(object, fit_measures = "all",
     }
   }
 
-  # lower case
-  fit_measures <- fit_measures_orig <- tolower(fit_measures)
+  # lower case; dots and underscores are interchangeable (rmsea_ci_lower ==
+  # rmsea.ci.lower); the returned names use the dotted spelling
+  fit_measures <- fit_measures_orig <- lav_keyword_canonical(fit_measures)
 
   # select 'default' fit measures
   if (length(fit_measures) == 1L) {
@@ -991,7 +992,7 @@ lav_fit_rv <- function(object, fit_measures = "all",
       fit_measures <- c(fit_measures, "scaling.factor.h0")
     }
   } else {
-    fit_measures <- tolower(fit_measures)
+    fit_measures <- lav_keyword_canonical(fit_measures)
     bad <- fit_measures[!fit_measures %in% available]
     if (length(bad) > 0L) {
       lav_msg_stop(gettextf(
