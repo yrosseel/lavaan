@@ -151,8 +151,8 @@ the independence model) (if available).}
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.
-      If \code{fit.measures = TRUE}, additional fit measures are added to the
-      header section. \code{fit.measures} can also be a list, which allows one to set options
+      If \code{fit_measures = TRUE}, additional fit measures are added to the
+      header section. \code{fit_measures} can also be a list, which allows one to set options
       related to the fit measures. See \code{\link{fitMeasures}}
       for more details.
       If \code{residuals = TRUE}, a residuals section is added (the largest
@@ -162,7 +162,7 @@ the independence model) (if available).}
       \code{residuals} element of the summary object. \code{residuals} can also
       be a list of arguments passed on to \code{\link{lavResiduals}} (for
       example \code{residuals = list(type = "raw", n.largest = 10)}).
-      If both \code{fit.measures = TRUE} and \code{residuals = TRUE} and the
+      If both \code{fit_measures = TRUE} and \code{residuals = TRUE} and the
       residual summary is the SRMR (the default), the SRMR is removed from the
       fit measures section to avoid printing it twice.
       If \code{estimates = TRUE}, print the parameter estimates section.
@@ -238,7 +238,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 
 fit <- cfa(HS.model, data = HolzingerSwineford1939)
 
-summary(fit, standardized = TRUE, fit.measures = TRUE, rsquare = TRUE)
+summary(fit, standardized = TRUE, fit_measures = TRUE, rsquare = TRUE)
 fitted(fit)
 coef(fit)
 resid(fit, type = "normalized")

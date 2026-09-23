@@ -125,5 +125,5 @@ model <- '
 '
 
 fit <- sem(model, data = PoliticalDemocracy)
-summary(fit, fit.measures = TRUE)
+summary(fit, fit_measures = TRUE)
 }

@@ -136,7 +136,7 @@ fit <- efa(data = HolzingerSwineford1939,
            nfactors = 1:3,
            rotation = list("geomin", geomin_epsilon = 0.01, rstarts = 1))
 summary(fit, nd = 3L, cutoff = 0.2, dot.cutoff = 0.05)
-fitMeasures(fit, fit.measures = "all")
+fitMeasures(fit, fit_measures = "all")
 
 # target rotation
 target <- matrix(0, 9, 3)

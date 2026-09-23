@@ -136,7 +136,7 @@ T.orig <- fitMeasures(fit, "chisq")
 # we only generate 10 bootstrap samples in this example; in practice
 # you may wish to use a much higher number
 T.boot <- lavBootstrap(fit, r=10, type="bollen.stine",
-                          fun=fitMeasures, fit.measures="chisq")
+                          fun = fitMeasures, fit_measures = "chisq")
 
 # compute a bootstrap based p-value
 pvalue.boot <- length(which(T.boot > T.orig))/length(T.boot)

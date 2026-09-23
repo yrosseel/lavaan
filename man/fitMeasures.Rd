@@ -36,7 +36,7 @@ fit of a latent variable model.}
   returned. If only a single or a few fit measures are specified by name,
   only those are computed and returned.
   If additional options for certain fit measures are needed, fit_measures
-  should be a list whose \code{fit.measures} (or \code{fit_measures}) element
+  should be a list whose \code{fit_measures} (or \code{fit.measures}) element
   holds the measures
   wanted, with the options supplied as further named elements of the list
   (both the dot.case and the snake_case spelling of the option names are
@@ -224,7 +224,7 @@ fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
 fitMeasures(fit, "pvalue", fm_args = list(standard_test = "peba4"))
 ## specify another threshold for RMSEA confidence interval
 fitMeasures(fit, list(
-  fit.measures = c("cfi", "rmsea"),
+  fit_measures = c("cfi", "rmsea"),
   rmsea_ci_level = 0.95))
 
 ## fit a more restricted model

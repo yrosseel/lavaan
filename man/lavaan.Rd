@@ -146,5 +146,5 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 fit <- lavaan(HS.model, data=HolzingerSwineford1939,
               auto_var=TRUE, auto_fix_first=TRUE,
               auto_cov_lv_x=TRUE)
-summary(fit, fit.measures=TRUE)
+summary(fit, fit_measures = TRUE)
 }

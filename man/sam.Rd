@@ -207,7 +207,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     stored in the \code{@internal} slot of the returned object, and can be
     retrieved by \code{lavInspect(fit, "sam.struc.fit.object")}. The
     functions \code{\link{fitMeasures}} (and
-    \code{summary(fit, fit.measures = TRUE)}), \code{\link{lavResiduals}}
+    \code{summary(fit, fit_measures = TRUE)}), \code{\link{lavResiduals}}
     (and \code{summary(fit, residuals = TRUE)}), \code{\link{modindices}}
     and \code{\link{lavTestLRT}} (when all compared models are local SAM
     models) operate on this structural model: the reported quantities
