@@ -774,6 +774,9 @@ lav_lavaan_lavinspect <- function(object,
     # optim
   } else if (what == "optim") {
     object@optim
+  } else if (what %in% c("rstarts", "random.starts", "x.rstarts")) {
+    lav_inspect_rstarts(object,
+      add_labels = add_labels, add_class = add_class)
 
     # test
   } else if (what == "test") {
@@ -3940,6 +3943,59 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
     if (length(lavdata@group.label) > 0L) {
       names(return_value) <- unlist(lavdata@group.label)
     }
+  }
+
+  return_value
+}
+
+# the results of the random-start runs (rstarts > 0): one element per run,
+# holding the final free parameter vector of that run, with the attributes
+# "converged", "fx" (the discrepancy function value at the solution),
+# "start" (the random starting values that were used) and "iterations";
+# a run that failed with an error becomes an all-NA vector with
+# converged = FALSE and the error message in the "error" attribute
+lav_inspect_rstarts <- function(object, add_labels = FALSE,
+                                add_class = FALSE) {
+
+  x_rstarts <- object@optim$x.rstarts
+  if (is.null(x_rstarts)) {
+    lav_msg_stop(gettext(
+      "no random-start results are available; refit with rstarts > 0."))
+  }
+
+  # free parameter labels
+  if (add_labels) {
+    par_names <- lav_pt_labels(object@ParTable, type = "free")
+  }
+
+  npar <- length(object@optim$x)
+  return_value <- vector("list", length(x_rstarts))
+  for (i in seq_along(x_rstarts)) {
+    x_i <- x_rstarts[[i]]
+    if (inherits(x_i, "try-error")) {
+      out <- rep(as.numeric(NA), npar)
+      attr(out, "converged") <- FALSE
+      attr(out, "fx") <- as.numeric(NA)
+      attr(out, "start") <- rep(as.numeric(NA), npar)
+      attr(out, "iterations") <- 0L
+      attr(out, "error") <- as.character(x_i)
+    } else {
+      out <- as.numeric(x_i)
+      attr(out, "converged") <- isTRUE(attr(x_i, "converged"))
+      attr(out, "fx") <- as.numeric(attr(x_i, "fx"))[1]
+      attr(out, "start") <- as.numeric(attr(x_i, "start"))
+      attr(out, "iterations") <- as.integer(attr(x_i, "iterations"))
+    }
+    if (add_labels && length(out) == length(par_names)) {
+      names(out) <- par_names
+      if (length(attr(out, "start")) == length(par_names)) {
+        names(attr(out, "start")) <- par_names
+      }
+    }
+    if (add_class) {
+      class(out) <- c("lavaan.vector", "numeric")
+    }
+    return_value[[i]] <- out
   }
 
   return_value

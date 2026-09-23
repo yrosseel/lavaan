@@ -466,6 +466,18 @@ Optimizer information:
         optimizer.}
     \item{\code{"optim"}:}{List. All available information regarding the
         optimization results.}
+    \item{\code{"rstarts"}:}{List. The results of the random-start runs
+        (only available if the model was fitted with \code{rstarts > 0}).
+        One element per run, containing the free parameter vector at the
+        end of that run, with the attributes \code{converged} (logical),
+        \code{fx} (the value of the discrepancy function at the solution),
+        \code{start} (the random starting values that were used) and
+        \code{iterations}. A run that failed with an error is an all-NA
+        vector with \code{converged = FALSE} and the error message in the
+        \code{error} attribute. Among the converged runs, the run with the
+        smallest \code{fx} value is the one that provided the final
+        solution (unless the initial run did better).
+        Alias: \code{"random_starts"}.}
     \item{\code{"npar"}:}{Integer. Number of free parameters (ignoring constraints).}
 }
 
