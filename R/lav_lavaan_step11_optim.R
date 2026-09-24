@@ -375,6 +375,15 @@ lav_step11_estoptim <- function(lavdata = NULL,
         lavoptions$optim.attempts <- 1L
       }
 
+      # an attempt is unusable if it failed, did not converge, or ran
+      # away (see lav_model_est_runaway()); the first runaway solution is
+      # kept aside as a last resort
+      unusable <- function(x) {
+        inherits(x, "try-error") || !attr(x, "converged") ||
+          isTRUE(attr(x, "runaway"))
+      }
+      x_runaway <- NULL
+
       # try 1
       if (lav_verbose()) {
         cat("attempt 1 -- default options\n")
@@ -391,11 +400,13 @@ lav_step11_estoptim <- function(lavdata = NULL,
         ),
         silent = TRUE
       )
+      if (!inherits(x, "try-error") && isTRUE(attr(x, "runaway"))) {
+        x_runaway <- x
+      }
 
       # try 2: optim.parscale = "standardize" (new in 0.6-7)
       if (lavoptions$optim.attempts > 1L &&
-        lavoptions$rstarts == 0L &&
-        (inherits(x, "try-error") || !attr(x, "converged"))) {
+        lavoptions$rstarts == 0L && unusable(x)) {
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"
         if (lav_verbose()) {
@@ -414,12 +425,15 @@ lav_step11_estoptim <- function(lavdata = NULL,
           ),
           silent = TRUE
         )
+        if (is.null(x_runaway) && !inherits(x, "try-error") &&
+            isTRUE(attr(x, "runaway"))) {
+          x_runaway <- x
+        }
       }
 
       # try 3: start = "simple"
       if (lavoptions$optim.attempts > 2L &&
-        lavoptions$rstarts == 0L &&
-        (inherits(x, "try-error") || !attr(x, "converged"))) {
+        lavoptions$rstarts == 0L && unusable(x)) {
         if (lav_verbose()) {
           str(x)
           cat("attempt 3 -- start = \"simple\"\n")
@@ -437,12 +451,15 @@ lav_step11_estoptim <- function(lavdata = NULL,
           ),
           silent = TRUE
         )
+        if (is.null(x_runaway) && !inherits(x, "try-error") &&
+            isTRUE(attr(x, "runaway"))) {
+          x_runaway <- x
+        }
       }
 
       # try 4: start = "simple" + optim.parscale = "standardize"
       if (lavoptions$optim.attempts > 3L &&
-        lavoptions$rstarts == 0L &&
-        (inherits(x, "try-error") || !attr(x, "converged"))) {
+        lavoptions$rstarts == 0L && unusable(x)) {
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"
         if (lav_verbose()) {
@@ -465,6 +482,10 @@ lav_step11_estoptim <- function(lavdata = NULL,
           ),
           silent = TRUE
         )
+        if (is.null(x_runaway) && !inherits(x, "try-error") &&
+            isTRUE(attr(x, "runaway"))) {
+          x_runaway <- x
+        }
       }
 
 
@@ -503,13 +524,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
         # pick best solution (if any)
         x_converged <- vector("list", length = 0L)
         fx_rstarts <- numeric(0L)
-        ok_flag <- sapply(x_rstarts, function(x) {
-            if (inherits(x, "try-error")) {
-              FALSE
-            } else {
-              attr(x, "converged")
-            }
-          })
+        ok_flag <- sapply(x_rstarts, function(x) !unusable(x))
         if (sum(ok_flag) > 0L) {
           x_converged <- x_rstarts[ok_flag]
         }
@@ -518,8 +533,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
           x_best <- x_converged[[which.min(fx_rstarts)]]
           fx_best <- attr(x_best, "fx")[1]
 
-          # if we did not find a converged solution, use x.best
-          if (inherits(x, "try-error") || !attr(x, "converged")) {
+          # if we did not find a usable solution, use x.best
+          if (unusable(x)) {
             x <- x_best
 
 
@@ -534,6 +549,14 @@ lav_step11_estoptim <- function(lavdata = NULL,
 
         attr(x, "x.rstarts") <- x_rstarts
       } # random starts
+
+      # last resort: nothing usable, but we did see a converged (runaway)
+      # solution; return that one (with its warning) rather than a
+      # non-converged one
+      if (!is.null(x_runaway) &&
+          (inherits(x, "try-error") || !attr(x, "converged"))) {
+        x <- x_runaway
+      }
     }
 
     # optimization failed with error

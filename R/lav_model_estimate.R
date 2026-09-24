@@ -1228,7 +1228,31 @@ lav_model_est <- function(lavmodel = NULL,
   # 1. unscale
   x <- x / parscale
 
+  # runaway solution? (residual variance far more negative than the
+  # observed variance: a drift towards an infimum at infinity, not a
+  # stationary point); the caller may decide to try again
+  runaway <- NULL
+  if (converged && lavoptions$estimator != "PML") {
+    runaway <- lav_model_est_runaway(
+      x = x, lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+      lavh1 = lavh1, lavdata = lavdata, lavoptions = lavoptions
+    )
+    if (!is.null(runaway)) {
+      warn_txt <- paste0(
+        gettextf("the optimizer (%s) claimed the model converged,\n", optimizer),
+        gettext("       but the solution seems to have run away:\n"),
+        paste0("       ", gettextf(
+          "the estimated residual variance of %1$s is %2$s, while its observed variance is only %3$s",
+          runaway$name, formatC(runaway$est, digits = 4, format = "g"),
+          formatC(runaway$obs, digits = 4, format = "g")
+        ), collapse = ";\n"),
+        gettext(";\n       the objective function may not have a minimum (an over-factored or otherwise unidentified model?); consider adding bounds (e.g., bounds = \"pos.var\").")
+      )
+    }
+  }
+
   attr(x, "converged") <- converged
+  attr(x, "runaway") <- !is.null(runaway)
   attr(x, "start") <- start_x
   attr(x, "warn.txt") <- warn_txt
   attr(x, "iterations") <- iterations
@@ -1385,4 +1409,95 @@ lav_model_est_h1_saturated <- function(lavmodel = NULL,
   } # groups
 
   list(x.idx = x_idx, value = value)
+}
+
+
+# detect a 'runaway' solution
+#
+# the optimizer may report convergence at a point that is not a stationary
+# point at all, but lies on a path towards an infimum at infinity; the
+# classic case is an over-factored (efa) block where a factor collapses
+# onto a single indicator: its loading grows without bound, the residual
+# variance of that indicator goes to minus infinity (so that the implied
+# variance stays put), and the objective creeps towards a limit it never
+# reaches; because the drift is so slow, nlminb eventually satisfies its
+# relative tolerance, and at a rather arbitrary point
+#
+# we flag a solution as 'runaway' when a free residual variance of a
+# (continuous) observed variable is more negative than the observed
+# variance of that variable itself (ratio < -tol); a proper local minimum
+# with a mild Heywood case (a slightly negative residual variance) is not
+# affected
+#
+# returns NULL if nothing is wrong, otherwise a data.frame with the
+# offending variables, their estimated residual variances, and their
+# observed variances
+lav_model_est_runaway <- function(x = NULL, lavpartable = NULL,
+                                  lavsamplestats = NULL, lavh1 = NULL,
+                                  lavdata = NULL, lavoptions = NULL,
+                                  tol = 1) {
+  # only single-level (multilevel: TODO)
+  if (is.null(lavdata) || lavdata@nlevels > 1L || is.null(lavsamplestats) ||
+      is.null(lavpartable$free)) {
+    return(NULL)
+  }
+
+  if (is.null(lavpartable$group)) {
+    lavpartable$group <- rep(1L, length(lavpartable$lhs))
+  }
+  group_values <- lav_pt_group_values(lavpartable)
+  ngroups <- length(group_values)
+  if (ngroups != lavsamplestats@ngroups) {
+    return(NULL)
+  }
+
+  # continuous observed variables only
+  ov_cont <- lavdata@ov$name[lavdata@ov$type == "numeric"]
+
+  out <- NULL
+  for (g in seq_len(ngroups)) {
+    ov_names <- lavdata@ov.names[[g]]
+
+    # observed variances for this group (same ordering as ov.names)
+    ov_var <- NULL
+    if (lavsamplestats@missing.flag) {
+      if (!is.null(lavh1$implied$cov[[g]])) {
+        ov_var <- diag(lavh1$implied$cov[[g]])
+      } else if (!is.null(lavsamplestats@missing.h1[[g]]$sigma)) {
+        ov_var <- diag(lavsamplestats@missing.h1[[g]]$sigma)
+      }
+    } else if (isTRUE(lavoptions$conditional.x)) {
+      ov_var <- diag(lavsamplestats@res.cov[[g]])
+    } else {
+      ov_var <- diag(lavsamplestats@cov[[g]])
+    }
+    if (is.null(ov_var) || length(ov_var) != length(ov_names)) {
+      next
+    }
+
+    # free residual variances of continuous observed variables
+    row_idx <- which(lavpartable$op == "~~" &
+                     lavpartable$lhs == lavpartable$rhs &
+                     lavpartable$free > 0L &
+                     lavpartable$group == group_values[g] &
+                     lavpartable$lhs %in% ov_names &
+                     lavpartable$lhs %in% ov_cont)
+    if (length(row_idx) == 0L) {
+      next
+    }
+    est <- x[lavpartable$free[row_idx]]
+    obs <- ov_var[match(lavpartable$lhs[row_idx], ov_names)]
+    bad <- which(is.finite(est) & is.finite(obs) & obs > 0 & est < -tol * obs)
+    if (length(bad) > 0L) {
+      out <- rbind(out, data.frame(
+        name = lavpartable$lhs[row_idx[bad]],
+        group = rep(g, length(bad)),
+        est = est[bad],
+        obs = obs[bad],
+        stringsAsFactors = FALSE
+      ))
+    }
+  }
+
+  out
 }
