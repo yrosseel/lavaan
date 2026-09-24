@@ -182,6 +182,29 @@ lav_fit_measures_names <- function() {
   )
 }
 
+# map user-supplied fit-measure names onto the spelling used by the catalog
+# (which is also the spelling of the elements of the 'indices' container):
+# case is ignored, and dots and underscores are interchangeable, but the
+# catalog spelling is what comes out. We can not simply replace the request
+# by its canonical (lowercase, dotted) form: 24 catalog names do contain an
+# underscore (gfi_lrt.ci.lower, srmr_bentler, cn_05, ...), and the canonical
+# form of those names matches nothing at all.
+# Names that are not in the catalog are returned in canonical form (they are
+# dropped, with a warning, by the caller).
+lav_fit_measures_canonical <- function(fit_measures) {
+  if (!is.character(fit_measures) || length(fit_measures) == 0L) {
+    return(fit_measures)
+  }
+  catalog <- lav_fit_measures_names()
+  out <- lav_keyword_canonical(fit_measures)
+  idx <- match(out, lav_keyword_canonical(catalog))
+  found_idx <- which(!is.na(idx))
+  if (length(found_idx) > 0L) {
+    out[found_idx] <- catalog[idx[found_idx]]
+  }
+  out
+}
+
 # if fit_measures is a list, the element holding the measures is classically
 # named "fit.measures"; accept the snake_case spelling "fit_measures" as an
 # alias, matching the name of the formal argument
@@ -683,8 +706,12 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # lower case; dots and underscores are interchangeable (rmsea_ci_lower ==
-  # rmsea.ci.lower); the returned names use the dotted spelling
-  fit_measures <- fit_measures_orig <- lav_keyword_canonical(fit_measures)
+  # rmsea.ci.lower); known measures are mapped onto the spelling of the
+  # catalog, which is the spelling of the returned names (and which is not
+  # always the dotted one: srmr_bentler, gfi_lrt.ci.lower, cn_05, ...)
+  # fit_measures_input keeps what the user asked for, for the warning below
+  fit_measures_input <- fit_measures
+  fit_measures <- fit_measures_orig <- lav_fit_measures_canonical(fit_measures)
 
   # select 'default' fit measures
   if (length(fit_measures) == 1L) {
@@ -734,7 +761,7 @@ lav_fit <- function(object, fit_measures = "all",
     if (length(bad_idx) > 0L) {
       lav_msg_warn(ngettext(length(bad_idx),
         "unknown fit measure:", "unknown fit measures:"),
-        lav_msg_view(fit_measures_orig[bad_idx], "none", FALSE)
+        lav_msg_view(fit_measures_input[bad_idx], "none", FALSE)
       )
       fit_measures <- fit_measures[-bad_idx]
     }
@@ -985,6 +1012,8 @@ lav_fit_rv <- function(object, fit_measures = "all",
 
   available <- c(names(indices), "scaling.factor.h0")
 
+  fit_measures <- lav_fit_measures_canonical(fit_measures)
+
   if (length(fit_measures) == 1L &&
       fit_measures %in% c("all", "default")) {
     fit_measures <- names(indices)
@@ -992,7 +1021,6 @@ lav_fit_rv <- function(object, fit_measures = "all",
       fit_measures <- c(fit_measures, "scaling.factor.h0")
     }
   } else {
-    fit_measures <- lav_keyword_canonical(fit_measures)
     bad <- fit_measures[!fit_measures %in% available]
     if (length(bad) > 0L) {
       lav_msg_stop(gettextf(

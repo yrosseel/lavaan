@@ -583,6 +583,10 @@ lav_args_canonical <- function(x, canonical) {
 # The snake_case spelling is the documented one, but the dotted (and any
 # mixed-case) spelling must be accepted too, always: "cov_lv", "cov.lv" and
 # "Cov_LV" all select the same output. Non-character input is returned as is.
+# NOTE: this is a matching key, not a replacement for what the user typed.
+# Where the internal spelling itself may contain an underscore (the fit
+# measures: srmr_bentler, gfi_lrt, cn_05, ...), the key must be mapped back
+# onto the internal name -- see lav_fit_measures_canonical().
 lav_keyword_canonical <- function(x) {
   if (!is.character(x) || length(x) == 0L) {
     return(x)
