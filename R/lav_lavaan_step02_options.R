@@ -101,7 +101,7 @@ lav_step02_options <- function(slot_options = NULL,
       # stop or warning?? stop for now (there could be more)
       lav_msg_stop(ngettext(length(wrong_idx),
         "unknown argument:", "unknown arguments:"),
-        lav_msg_view(dot_names[wrong_idx], "none", FALSE)
+        lav_msg_view(lav_msg_optnames(dot_names[wrong_idx]), "none", FALSE)
       )
     }
 

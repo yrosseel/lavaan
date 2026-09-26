@@ -651,7 +651,8 @@ lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") { # nolint
       not_ok <- which(!x %in% names(lavoptions))
       if (length(not_ok) > 0L) {
         lav_msg_warn(gettextf(
-          "option(s) %s not available", lav_msg_view(x[not_ok]))
+          "option(s) %s not available",
+          lav_msg_view(lav_msg_optnames(x[not_ok])))
         )
         x <- x[-not_ok]
       }

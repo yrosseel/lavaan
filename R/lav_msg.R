@@ -126,6 +126,18 @@ lav_msg <- function(wat, txt_width = getOption("width", 80L),
   paste(chunks, collapse = " ")
 }
 
+# ----------------------- lav_msg_optnames -------------------------------- #
+# Display spelling of option names in messages: the options are stored
+# under their dotted (canonical) names, but the man pages document them in
+# snake_case, and that is also the spelling the literal message strings
+# use. Messages that build the option name programmatically (from the
+# stored name) must go through this helper, so that a user who typed
+# information_meat_hc = "hc4" is not told about 'information.meat.hc'.
+# A sub-option prefix such as "rotation.args$" is converted as well.
+lav_msg_optnames <- function(x) {
+  chartr(".", "_", x)
+}
+
 # Transforms a value to a character representation for use in messages
 # if logsep = "array" (default), letters[1:3] is transformed to ("a", "b", "c")
 # if logsep = "none", c("x", "y", "z") is transformed to "x", "y", "z"

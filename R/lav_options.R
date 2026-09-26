@@ -50,7 +50,7 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
         "invalid value in %1$s option: %2$s.",
         "invalid values in %1$s option: %2$s."
       ),
-      optname,
+      lav_msg_optnames(optname),
       lav_msg_view(optvalue[is.na(optvalsok)], log_sep = "none")
     ))
   }
@@ -69,7 +69,8 @@ lav_options_check <- function(opts, opt_check, subname) {
   if (any(is.na(match_opt))) {
     lav_msg_stop(gettextf(
       "Some option(s) unknown: %s !",
-      lav_msg_view(opt_names[is.na(match_opt)], log_sep = "none")
+      lav_msg_view(lav_msg_optnames(opt_names[is.na(match_opt)]),
+        log_sep = "none")
     ))
   }
   for (j in seq_along(opts)) {
@@ -87,20 +88,20 @@ lav_options_check <- function(opts, opt_check, subname) {
     if (length(opt_value) < opt_check1$oklen[1]) {
       lav_msg_stop(gettextf(
         "Length of option '%1$s' value must be at least %2$s.",
-        paste0(subname, opt_name), opt_check1$oklen[1]
+        lav_msg_optnames(paste0(subname, opt_name)), opt_check1$oklen[1]
       ))
     }
     if (length(opt_value) > abs(opt_check1$oklen[2])) {
       if (opt_check1$oklen[2] > 0L) {
         lav_msg_stop(gettextf(
           "Length of option '%1$s' value must be maximum %2$s.",
-          paste0(subname, opt_name), opt_check1$oklen[2]
+          lav_msg_optnames(paste0(subname, opt_name)), opt_check1$oklen[2]
         ))
       } else {
         lav_msg_warn(gettextf(
           "Length of option '%1$s' value should be maximum %2$s.
           Only first %3$s elements used.",
-          paste0(subname, opt_name), -opt_check1$oklen[2],
+          lav_msg_optnames(paste0(subname, opt_name)), -opt_check1$oklen[2],
           -opt_check1$oklen[2]
         ))
       }
@@ -115,7 +116,7 @@ lav_options_check <- function(opts, opt_check, subname) {
           if (!lav_options_checkinterval(opt_value, opt_check1$nm, num2int)) {
             lav_msg_stop(gettextf(
               "Value(s) of option %1$s out of range (%2$s)!",
-              paste0(subname, opt_name),
+              lav_msg_optnames(paste0(subname, opt_name)),
               paste0(
                 opt_check1$nm$bounds[1],
                 if (opt_check1$nm$first.in) " <= " else " < ",
