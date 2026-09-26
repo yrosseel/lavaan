@@ -653,7 +653,13 @@ Estimation options:
       a \code{\link{sam}} model. Point estimates and test statistics are
       not affected. The summary header shows an additional
       \code{Information meat small-sample correction} line whenever the
-      correction is not \code{"HC0"}.}
+      correction is not \code{"HC0"}. For the local standard errors of
+      \code{\link{sam}}, the correction is not applied (\code{"HC0"} is
+      used, and the summary says so) whenever a lambda truncation engaged
+      in one of the measurement blocks (see the \code{lambda1_floor} and
+      \code{lambda2_floor} local options in \code{\link{sam}}): the
+      local standard errors are already conservative in that regime, and
+      the correction would only stack on top of that.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust

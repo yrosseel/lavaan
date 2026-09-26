@@ -538,7 +538,20 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       hc <- "HC0"
     }
     if (lavoptions$se %in% c("local", "local.nt") && hc != "HC0") {
-      if (lav_hc_leverage_flag(hc)) {
+      # gate: when a lambda truncation engaged in any measurement block
+      # (lambda_star < 1, first or second order), the local sandwich is
+      # already conservative -- it conditions on the data-dependent
+      # lambda_star, which is correlated with the sampling noise in the
+      # weak directions -- and the small-sample correction would only
+      # stack on top of that (Type I .035 -> .022 with HC2 at N = 200 in
+      # the reliability-.40 benchmark). The requested correction is then
+      # NOT applied (HC0), and summary() says so (hc_gated below)
+      lam <- unlist(step1$lambda)
+      trunc_engaged <- !is.null(lam) && is.numeric(lam) &&
+        any(is.finite(lam) & lam < 1)
+      if (trunc_engaged) {
+        out$hc_gated <- TRUE
+      } else if (lav_hc_leverage_flag(hc)) {
         if (lavoptions$se == "local.nt") {
           lav_msg_stop(gettextf(
             "information_meat_hc = %s is not available for se = \"local.nt\"

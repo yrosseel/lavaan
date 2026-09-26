@@ -1370,6 +1370,18 @@ lav_summary_print <- function(x, ..., nd = 3L) {
           cat("    max. shift from historical rule : ", move_txt, "\n",
               sep = "")
         }
+        # information.meat.hc requested but not applied (see
+        # lav_sam_step2_se()): the local standard errors are already
+        # conservative under an engaged truncation
+        if (isTRUE(sam_trunc$hc_gated)) {
+          cat("  The small-sample correction information_meat_hc = \"",
+              sam_trunc$hc_requested, "\" was not applied\n", sep = "")
+          cat("  to the structural standard errors (HC0 used): under an",
+              "engaged lambda\n")
+          cat("  truncation the local standard errors are already",
+              "conservative, and the\n")
+          cat("  correction would stack on top of that.\n")
+        }
       }
 
       # skipped if fit.measures were requested: the (structural) test

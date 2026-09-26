@@ -1344,6 +1344,15 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "information.meat") <- object@Options$information.meat
         attr(tmp_list, "information.meat.hc") <-
           object@Options$information.meat.hc # NULL for old objects
+        # sam(): the correction was not applied because a lambda
+        # truncation engaged (see lav_sam_step2_se()); the summary() note
+        # in the sam section explains
+        if (isTRUE(object@internal$sam_trunc$hc_gated) &&
+            !is.null(attr(tmp_list, "information.meat.hc"))) {
+          attr(tmp_list, "information.meat.hc") <-
+            paste0(attr(tmp_list, "information.meat.hc"),
+                   " (not applied, see note)")
+        }
         # information.bread (bread-only override; "default" = information[1]);
         # for sam() with se = "local"/"local.nt" the reported SEs come from
         # the structural fit (FIT.PA), so the (resolved) bread option in

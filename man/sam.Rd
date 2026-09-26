@@ -91,7 +91,10 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{"expected"}). A small-sample (leverage) correction of the local
     (and \code{twostep.huber.white}) standard errors can be requested with
     the global \code{information_meat_hc} option (\code{"HC2"} is a good
-    choice for \eqn{N < 500}); see \code{\link{lavOptions}}.}
+    choice for \eqn{N < 500}); see \code{\link{lavOptions}}. The
+    correction is not applied whenever a lambda truncation engaged (see
+    \code{lambda1_floor} and \code{lambda2_floor} above); the summary
+    then says so.}
 \item{sam_method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
     Bartlett factor scores were used, without any bias correction.}

@@ -925,6 +925,13 @@ sam <- function(model = NULL,
       fit = fit, joint = joint, step1 = step1,
       step2 = step2, local_options = local_options
     )
+    # information.meat.hc not applied because a lambda truncation engaged
+    # (see lav_sam_step2_se()): record it for the summary() note
+    if (output == "lavaan" && isTRUE(vcov_1$hc_gated) &&
+        !is.null(sam_1$sam_trunc)) {
+      sam_1$sam_trunc$hc_gated <- TRUE
+      sam_1$sam_trunc$hc_requested <- fit@Options$information.meat.hc
+    }
   }
 
   # fill in twostep standard errors
