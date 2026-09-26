@@ -52,6 +52,10 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   lavoptions_pa$.categorical <- FALSE
   lavoptions_pa$rotation <- "none"
   lavoptions_pa <- modifyList(lavoptions_pa, struc_args)
+  # information.meat.hc: the leverage adjustment of the local SEs is
+  # applied afterwards, in lav_sam_step2_se() (the structural fit has no
+  # casewise data of its own); the structural fit keeps the classic meat
+  lavoptions_pa$information.meat.hc <- "HC0"
 
   # new in 0.7-2: the bread of the structural sandwich behind the local
   # standard errors uses the OBSERVED information by default: whenever the

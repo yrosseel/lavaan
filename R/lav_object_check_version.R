@@ -567,6 +567,11 @@ lav_object_check_version <- function(object = NULL) {
   new_options$h1.information.meat <- "structured"
   new_options$mega.h1.information <- "unstructured"
 
+  # 0.7-3
+  if (is.null(new_options$information.meat.hc)) {
+    new_options$information.meat.hc <- "HC0"
+  }
+
   # 0.7-1
   if (is.null(new_options$rotation.args$mg_agreement)) {
     new_options$rotation.args$mg_agreement <- FALSE

@@ -497,6 +497,219 @@ lav_object_gamma <- function(lavobject = NULL,
 
 
 
+# the casewise (centered) moment contributions zc: the rows whose
+# crossproduct (divided by n) is the ADF Gamma of the three (plain /
+# fixed.x / conditional.x) settings; shared by lav_samp_gamma() and the
+# leverage-corrected (HC2/HC3) sandwich, which needs the rows themselves
+# (see lav_vcov_hc.R). n_xi is the denominator used for the xi block of
+# the conditional.x contributions (n, or n - 1 with gamma.n.minus.one).
+lav_samp_gamma_zc <- function(m_y,
+                              m_mu = NULL,
+                              m_sigma = NULL,
+                              x_idx = integer(0L),
+                              fixed_x = FALSE,
+                              conditional_x = FALSE,
+                              meanstructure = FALSE,
+                              slopestructure = FALSE,
+                              n_xi = nrow(m_y)) {
+  m_y <- unname(as.matrix(m_y))
+  p <- ncol(m_y)
+  model_based <- !is.null(m_sigma)
+  if (model_based) {
+    stopifnot(!conditional_x)
+    if (meanstructure) {
+      stopifnot(!is.null(m_mu))
+      sigma <- c(as.numeric(m_mu), lav_mat_vech(m_sigma))
+    } else {
+      m_mu <- colMeans(m_y, na.rm = TRUE) # for centering!
+      sigma <- lav_mat_vech(m_sigma)
+    }
+  }
+  if (length(x_idx) == 0L) {
+    conditional_x <- FALSE
+    fixed_x <- FALSE
+  }
+
+  if (!conditional_x && !fixed_x) {
+    # center, so we can use crossprod instead of cov
+    if (model_based) {
+      m_yc <- t(t(m_y) - as.numeric(m_mu))
+    } else {
+      m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
+    }
+
+    # create z where the rows_i contain the following elements:
+    #  - Y_i (if meanstructure is TRUE)
+    #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
+    idx1 <- lav_mat_vech_col_idx(p)
+    idx2 <- lav_mat_vech_row_idx(p)
+    if (meanstructure) {
+      z <- cbind(m_y, m_yc[, idx1, drop = FALSE] *
+        m_yc[, idx2, drop = FALSE])
+    } else {
+      z <- (m_yc[, idx1, drop = FALSE] *
+        m_yc[, idx2, drop = FALSE])
+    }
+
+    if (model_based) {
+      if (meanstructure) {
+        stopifnot(!is.null(m_mu))
+        sigma <- c(as.numeric(m_mu), lav_mat_vech(m_sigma))
+      } else {
+        sigma <- lav_mat_vech(m_sigma)
+      }
+      zc <- t(t(z) - sigma)
+    } else {
+      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
+    }
+
+  } else if (!conditional_x && fixed_x) {
+    if (model_based) {
+      m_yc <- t(t(m_y) - as.numeric(m_mu))
+      y_bar <- colMeans(m_y, na.rm = TRUE)
+      res_cov <- (m_sigma[-x_idx, -x_idx, drop = FALSE] -
+        m_sigma[-x_idx, x_idx, drop = FALSE] %*%
+        solve(m_sigma[x_idx, x_idx, drop = FALSE]) %*%
+        m_sigma[x_idx, -x_idx, drop = FALSE])
+      res_slopes <- (solve(m_sigma[x_idx, x_idx, drop = FALSE]) %*%
+        m_sigma[x_idx, -x_idx, drop = FALSE])
+      res_int <- (y_bar[-x_idx] -
+        as.numeric(colMeans(m_y[, x_idx, drop = FALSE],
+          na.rm = TRUE
+        ) %*% res_slopes))
+      x_bar <- y_bar[x_idx]
+      yhat__bar <- as.numeric(res_int + as.numeric(x_bar) %*% res_slopes)
+      yhat_bar <- numeric(p)
+      yhat_bar[-x_idx] <- yhat__bar
+      yhat_bar[x_idx] <- x_bar
+      yhat_cov <- m_sigma
+      yhat_cov[-x_idx, -x_idx] <- m_sigma[-x_idx, -x_idx] - res_cov
+
+
+      yhat <- cbind(1, m_y[, x_idx]) %*% rbind(res_int, res_slopes)
+      y_hat <- m_y
+      y_hat[, -x_idx] <- yhat
+      # y_hat <- cbind(yhat, m_y[,x_idx])
+      y_hatc <- t(t(y_hat) - yhat_bar)
+      idx1 <- lav_mat_vech_col_idx(p)
+      idx2 <- lav_mat_vech_row_idx(p)
+      if (meanstructure) {
+        z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE]) -
+          cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE]))
+        sigma1 <- c(m_mu, lav_mat_vech(m_sigma))
+        sigma2 <- c(yhat_bar, lav_mat_vech(yhat_cov))
+      } else {
+        z <- (m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE] -
+          y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE])
+        sigma1 <- lav_mat_vech(m_sigma)
+        sigma2 <- lav_mat_vech(yhat_cov)
+      }
+      zc <- t(t(z) - (sigma1 - sigma2))
+    } else {
+      m_qr <- qr(cbind(1, m_y[, x_idx, drop = FALSE]))
+      yhat <- qr.fitted(m_qr, m_y[, -x_idx, drop = FALSE])
+      # y_hat <- cbind(yhat, m_y[,x_idx])
+      y_hat <- m_y
+      y_hat[, -x_idx] <- yhat
+
+      m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
+      y_hatc <- t(t(y_hat) - colMeans(y_hat, na.rm = TRUE))
+      idx1 <- lav_mat_vech_col_idx(p)
+      idx2 <- lav_mat_vech_row_idx(p)
+      if (meanstructure) {
+        z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE]) -
+          cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE]))
+      } else {
+        z <- (m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE] -
+          y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE])
+      }
+      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
+    }
+
+  } else {
+    # conditional_x
+
+    # 4 possibilities:
+    # - no meanstructure, no slopes
+    # -    meanstructure, no slopes
+    # - no meanstructure, slopes
+    # -    meanstructure, slopes
+
+    # regress m_y on m_x, and compute residuals
+    m_x <- cbind(1, m_y[, x_idx, drop = FALSE])
+    m_qr <- qr(m_x)
+    m_res <- qr.resid(m_qr, m_y[, -x_idx, drop = FALSE])
+    p <- ncol(m_res)
+
+    idx1 <- lav_mat_vech_col_idx(p)
+    idx2 <- lav_mat_vech_row_idx(p)
+
+    if (meanstructure || slopestructure) {
+      xtx_inv <- unname(solve(crossprod(m_x)))
+      xi <- (m_x %*% xtx_inv) * n_xi ## FIXME, shorter way?
+      nc_x <- NCOL(m_x)
+      nc_y <- NCOL(m_res)
+    }
+
+    if (meanstructure) {
+      if (slopestructure) {
+        # xi_idx <- rep(seq_len(nc_x), each  = nc_y)
+        # res_idx <- rep(seq_len(nc_y), times = nc_x)
+        xi_idx <- rep(seq_len(nc_x), times = nc_y)
+        res_idx <- rep(seq_len(nc_y), each = nc_x)
+        z <- cbind(
+          xi[, xi_idx, drop = FALSE] *
+            m_res[, res_idx, drop = FALSE],
+          m_res[, idx1, drop = FALSE] *
+            m_res[, idx2, drop = FALSE]
+        )
+      } else {
+        xi_idx <- rep(1L, each = nc_y)
+        z <- cbind(
+          xi[, xi_idx, drop = FALSE] *
+            m_res,
+          m_res[, idx1, drop = FALSE] *
+            m_res[, idx2, drop = FALSE]
+        )
+      }
+    } else {
+      if (slopestructure) {
+        # xi_idx <- rep(seq_len(nc_x), each  = nc_y)
+        # xi_idx <- xi_idx[ -seq_len(nc_y) ]
+        xi_idx <- rep(seq(2, nc_x), times = nc_y)
+        # res_idx <- rep(seq_len(nc_y), times = (nc_x - 1L))
+        res_idx <- rep(seq_len(nc_y), each = (nc_x - 1L))
+        z <- cbind(
+          xi[, xi_idx, drop = FALSE] *
+            m_res[, res_idx, drop = FALSE],
+          m_res[, idx1, drop = FALSE] *
+            m_res[, idx2, drop = FALSE]
+        )
+      } else {
+        z <- m_res[, idx1, drop = FALSE] * m_res[, idx2, drop = FALSE]
+      }
+    }
+
+    if (model_based) {
+      zc <- t(t(z) - sigma)
+    } else {
+      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
+    }
+
+  }
+
+
+  zc
+}
+
 # NOTE:
 #  - three types:
 #       1) plain         (conditional.x = FALSE, fixed.x = FALSE)
@@ -808,188 +1021,14 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
     stopifnot(!conditional_x, !fixed_x)
   }
 
-  if (!conditional_x && !fixed_x) {
-    # center, so we can use crossprod instead of cov
-    if (model_based) {
-      m_yc <- t(t(m_y) - as.numeric(m_mu))
-    } else {
-      m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
-    }
-
-    # create z where the rows_i contain the following elements:
-    #  - Y_i (if meanstructure is TRUE)
-    #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
-    idx1 <- lav_mat_vech_col_idx(p)
-    idx2 <- lav_mat_vech_row_idx(p)
-    if (meanstructure) {
-      z <- cbind(m_y, m_yc[, idx1, drop = FALSE] *
-        m_yc[, idx2, drop = FALSE])
-    } else {
-      z <- (m_yc[, idx1, drop = FALSE] *
-        m_yc[, idx2, drop = FALSE])
-    }
-
-    if (model_based) {
-      if (meanstructure) {
-        stopifnot(!is.null(m_mu))
-        sigma <- c(as.numeric(m_mu), lav_mat_vech(m_sigma))
-      } else {
-        sigma <- lav_mat_vech(m_sigma)
-      }
-      zc <- t(t(z) - sigma)
-    } else {
-      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
-    }
-
-    # meat (aggregated within clusters first, if clustered)
-    m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
-  } else if (!conditional_x && fixed_x) {
-    if (model_based) {
-      m_yc <- t(t(m_y) - as.numeric(m_mu))
-      y_bar <- colMeans(m_y, na.rm = TRUE)
-      res_cov <- (m_sigma[-x_idx, -x_idx, drop = FALSE] -
-        m_sigma[-x_idx, x_idx, drop = FALSE] %*%
-        solve(m_sigma[x_idx, x_idx, drop = FALSE]) %*%
-        m_sigma[x_idx, -x_idx, drop = FALSE])
-      res_slopes <- (solve(m_sigma[x_idx, x_idx, drop = FALSE]) %*%
-        m_sigma[x_idx, -x_idx, drop = FALSE])
-      res_int <- (y_bar[-x_idx] -
-        as.numeric(colMeans(m_y[, x_idx, drop = FALSE],
-          na.rm = TRUE
-        ) %*% res_slopes))
-      x_bar <- y_bar[x_idx]
-      yhat__bar <- as.numeric(res_int + as.numeric(x_bar) %*% res_slopes)
-      yhat_bar <- numeric(p)
-      yhat_bar[-x_idx] <- yhat__bar
-      yhat_bar[x_idx] <- x_bar
-      yhat_cov <- m_sigma
-      yhat_cov[-x_idx, -x_idx] <- m_sigma[-x_idx, -x_idx] - res_cov
-
-
-      yhat <- cbind(1, m_y[, x_idx]) %*% rbind(res_int, res_slopes)
-      y_hat <- m_y
-      y_hat[, -x_idx] <- yhat
-      # y_hat <- cbind(yhat, m_y[,x_idx])
-      y_hatc <- t(t(y_hat) - yhat_bar)
-      idx1 <- lav_mat_vech_col_idx(p)
-      idx2 <- lav_mat_vech_row_idx(p)
-      if (meanstructure) {
-        z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
-          m_yc[, idx2, drop = FALSE]) -
-          cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
-            y_hatc[, idx2, drop = FALSE]))
-        sigma1 <- c(m_mu, lav_mat_vech(m_sigma))
-        sigma2 <- c(yhat_bar, lav_mat_vech(yhat_cov))
-      } else {
-        z <- (m_yc[, idx1, drop = FALSE] *
-          m_yc[, idx2, drop = FALSE] -
-          y_hatc[, idx1, drop = FALSE] *
-            y_hatc[, idx2, drop = FALSE])
-        sigma1 <- lav_mat_vech(m_sigma)
-        sigma2 <- lav_mat_vech(yhat_cov)
-      }
-      zc <- t(t(z) - (sigma1 - sigma2))
-    } else {
-      m_qr <- qr(cbind(1, m_y[, x_idx, drop = FALSE]))
-      yhat <- qr.fitted(m_qr, m_y[, -x_idx, drop = FALSE])
-      # y_hat <- cbind(yhat, m_y[,x_idx])
-      y_hat <- m_y
-      y_hat[, -x_idx] <- yhat
-
-      m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
-      y_hatc <- t(t(y_hat) - colMeans(y_hat, na.rm = TRUE))
-      idx1 <- lav_mat_vech_col_idx(p)
-      idx2 <- lav_mat_vech_row_idx(p)
-      if (meanstructure) {
-        z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
-          m_yc[, idx2, drop = FALSE]) -
-          cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
-            y_hatc[, idx2, drop = FALSE]))
-      } else {
-        z <- (m_yc[, idx1, drop = FALSE] *
-          m_yc[, idx2, drop = FALSE] -
-          y_hatc[, idx1, drop = FALSE] *
-            y_hatc[, idx2, drop = FALSE])
-      }
-      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
-    }
-
-    # meat (aggregated within clusters first, if clustered)
-    m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
-  } else {
-    # conditional_x
-
-    # 4 possibilities:
-    # - no meanstructure, no slopes
-    # -    meanstructure, no slopes
-    # - no meanstructure, slopes
-    # -    meanstructure, slopes
-
-    # regress m_y on m_x, and compute residuals
-    m_x <- cbind(1, m_y[, x_idx, drop = FALSE])
-    m_qr <- qr(m_x)
-    m_res <- qr.resid(m_qr, m_y[, -x_idx, drop = FALSE])
-    p <- ncol(m_res)
-
-    idx1 <- lav_mat_vech_col_idx(p)
-    idx2 <- lav_mat_vech_row_idx(p)
-
-    if (meanstructure || slopestructure) {
-      xtx_inv <- unname(solve(crossprod(m_x)))
-      xi <- (m_x %*% xtx_inv) * n ## FIXME, shorter way?
-      nc_x <- NCOL(m_x)
-      nc_y <- NCOL(m_res)
-    }
-
-    if (meanstructure) {
-      if (slopestructure) {
-        # xi_idx <- rep(seq_len(nc_x), each  = nc_y)
-        # res_idx <- rep(seq_len(nc_y), times = nc_x)
-        xi_idx <- rep(seq_len(nc_x), times = nc_y)
-        res_idx <- rep(seq_len(nc_y), each = nc_x)
-        z <- cbind(
-          xi[, xi_idx, drop = FALSE] *
-            m_res[, res_idx, drop = FALSE],
-          m_res[, idx1, drop = FALSE] *
-            m_res[, idx2, drop = FALSE]
-        )
-      } else {
-        xi_idx <- rep(1L, each = nc_y)
-        z <- cbind(
-          xi[, xi_idx, drop = FALSE] *
-            m_res,
-          m_res[, idx1, drop = FALSE] *
-            m_res[, idx2, drop = FALSE]
-        )
-      }
-    } else {
-      if (slopestructure) {
-        # xi_idx <- rep(seq_len(nc_x), each  = nc_y)
-        # xi_idx <- xi_idx[ -seq_len(nc_y) ]
-        xi_idx <- rep(seq(2, nc_x), times = nc_y)
-        # res_idx <- rep(seq_len(nc_y), times = (nc_x - 1L))
-        res_idx <- rep(seq_len(nc_y), each = (nc_x - 1L))
-        z <- cbind(
-          xi[, xi_idx, drop = FALSE] *
-            m_res[, res_idx, drop = FALSE],
-          m_res[, idx1, drop = FALSE] *
-            m_res[, idx2, drop = FALSE]
-        )
-      } else {
-        z <- m_res[, idx1, drop = FALSE] * m_res[, idx2, drop = FALSE]
-      }
-    }
-
-    if (model_based) {
-      zc <- t(t(z) - sigma)
-    } else {
-      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
-    }
-
-    # meat (aggregated within clusters first, if clustered)
-    m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
-  }
-
+  zc <- lav_samp_gamma_zc(
+    m_y = m_y, m_mu = m_mu, m_sigma = m_sigma, x_idx = x_idx,
+    fixed_x = fixed_x, conditional_x = conditional_x,
+    meanstructure = meanstructure, slopestructure = slopestructure,
+    n_xi = n
+  )
+  # meat (aggregated within clusters first, if clustered)
+  m_gamma <- lav_samp_gamma_meat(zc, cluster_idx = cluster_idx, n = n)
 
   # only to mimic Mplus when estimator = "WLS"
   if (mplus_wls && !fixed_x && !conditional_x) {

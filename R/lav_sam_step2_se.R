@@ -196,6 +196,8 @@ lav_sam_step2_se_hw_v <- function(joint = NULL, step1 = NULL,
   g2c <- t(t(g2) - colMeans(g2))
   h1c <- t(t(h_full) - colMeans(h_full))
   list(
+    g2c = g2c, # the centered casewise rows (information.meat.hc)
+    h1c = h1c, # idem, cols = FULL joint numbering
     v22 = crossprod(g2c) / ntot,
     v21 = crossprod(g2c, h1c) / ntot, # cols = FULL joint numbering
     v11 = crossprod(h1c) / ntot # rows/cols = FULL joint numbering
@@ -527,6 +529,38 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     } else {
       vcov_1 <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
     }
+    # information.meat.hc (new in 0.7-3): small-sample correction of the
+    # local sandwich (see lav_vcov_hc.R); HC2/HC3 leverage-adjust the
+    # casewise part of Gamma.eta in influence space, HC1 is the global
+    # n/(n - p) factor with p the number of free structural parameters
+    hc <- lavoptions$information.meat.hc
+    if (is.null(hc)) {
+      hc <- "HC0"
+    }
+    if (lavoptions$se %in% c("local", "local.nt") && hc != "HC0") {
+      if (lav_hc_leverage_flag(hc)) {
+        if (lavoptions$se == "local.nt") {
+          lav_msg_stop(gettextf(
+            "information_meat_hc = %s is not available for se = \"local.nt\"
+             (normal-theory Gamma); use se = \"local\".",
+            dQuote(hc, q = FALSE)))
+        }
+        if (isTRUE(step1$caseB)) {
+          lav_msg_stop(gettextf(
+            "information_meat_hc = %s is not available for the local
+             standard errors with across-group equality constraints in the
+             measurement model (or two-level data).",
+            dQuote(hc, q = FALSE)))
+        }
+        vcov_1 <- lav_sam_hc_local(
+          fit_pa = fit_pa, step1 = step1, fit = fit, hc = hc,
+          step2_rm_idx = step2_rm_idx
+        )
+      } else {
+        vcov_1 <- vcov_1 * lav_hc1_factor(
+          n = n, npar = lav_hc_npar_struc(fit_pa@ParTable))
+      }
+    }
     # order rows/cols of VCOV, so that they correspond with the (step 2)
     # parameters of the JOINT model, but remove := parameters first
     pt_idx <- step2$pt.idx
@@ -558,6 +592,7 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     robust <- (lavoptions$se == "twostep.robust")
     huber_white <- (lavoptions$se == "twostep.huber.white")
     hw_v <- NULL
+    hc_adj <- NULL # information.meat.hc adjustment (twostep.huber.white)
     if (huber_white) {
       # casewise-score V pieces; on failure fall back to plain twostep
       hw_v <- tryCatch(
@@ -622,6 +657,31 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       v2 <- 1 / n * (a_inv %*% v22 %*% a_inv)
       v1 <- 1 / n * (a_inv %*%
         (m_b %*% v12 + v21 %*% t(m_b) + m_b %*% v11 %*% t(m_b)) %*% a_inv)
+      # information.meat.hc (new in 0.7-3): the casewise influence rows of
+      # the stacked sandwich are IF_i = a_inv (g2_i + M_b h_i), and
+      # V2 + V1 = crossprod(IF) / n^2; HC2/HC3 leverage-adjust the columns
+      # of the structural regression coefficients (see lav_vcov_hc.R)
+      hc <- lavoptions$information.meat.hc
+      if (is.null(hc)) {
+        hc <- "HC0"
+      }
+      if (lav_hc_leverage_flag(hc)) {
+        u <- hw_v$g2c +
+          hw_v$h1c[, step1_free_idx, drop = FALSE] %*% t(m_b)
+        if_rows <- u %*% a_inv
+        npar_joint <- max(joint@ParTable$free)
+        free_map <- match(seq_len(npar_joint), step2_free_idx)
+        w <- lav_hc_weights_all(
+          hc = hc, lavmodel = joint@Model, lavdata = joint@Data,
+          lavsamplestats = joint@SampleStats, lavimplied = joint@implied,
+          lavpartable = joint@ParTable, npar = ncol(if_rows),
+          free_map = free_map, ntot = nrow(if_rows)
+        )
+        hc_adj <- lav_hc_crossprod_diff(if_rows, w) / (n * n)
+      } else if (hc == "HC1") {
+        hc_adj <- (lav_hc1_factor(
+          n = n, npar = lav_hc_npar_struc(fit_pa@ParTable)) - 1) * (v2 + v1)
+      }
     } else if (!robust) {
       v2 <- 1 / n * i_22_inv # not the same as FIT.PA@vcov$vcov!!
       v1 <- i_22_inv %*% i_21 %*% sigma_11 %*% i_12 %*% i_22_inv
@@ -712,10 +772,16 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       alpha_n1 <- lav_sam_alpha_n1(local_options$alpha_correction, n)
       vcov_naive <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
       vcov_corrected <- v2 + v1
+      if (!is.null(hc_adj)) {
+        vcov_corrected <- vcov_corrected + hc_adj
+      }
       vcov_1 <- alpha_n1 * vcov_naive + (1 - alpha_n1) * vcov_corrected
     } else {
       # no alpha correction
       vcov_1 <- v2 + v1
+      if (!is.null(hc_adj)) {
+        vcov_1 <- vcov_1 + hc_adj
+      }
     }
 
     # store in out

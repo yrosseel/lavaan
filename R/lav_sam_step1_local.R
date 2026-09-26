@@ -822,7 +822,11 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 # where G_r is the symmetric matrix with vech G_r = (cov rows of) JAC[r, ]
 # (off-diagonals halved). The mean-mean block is unchanged and the mean-cov
 # block is scaled by n/(n-2).
-lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
+# return_rows = TRUE attaches the casewise rows u (attribute "rows"), so
+# that crossprod(u) / n_eff is the casewise part of Gamma.eta (used by the
+# information.meat.hc leverage adjustment of the local SEs)
+lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L,
+                                return_rows = FALSE) {
   lavoptions <- fit@Options
   lavmodel <- fit@Model
   unbiased <- isTRUE(lavoptions$gamma.unbiased)
@@ -856,12 +860,16 @@ lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
     jac_c <- jac_g
   }
   u_c <- zc_cov %*% t(jac_c)
+  u <- if (meanstr) u_m + u_c else u_c
 
   # biased ADF Gamma: simple casewise crossprod
   if (!unbiased) {
     n_eff <- if (isTRUE(lavoptions$gamma.n.minus.one)) n - 1L else n
-    u <- if (meanstr) u_m + u_c else u_c
-    return(crossprod(u) / n_eff)
+    out <- crossprod(u) / n_eff
+    if (return_rows) {
+      attr(out, "rows") <- u
+    }
+    return(out)
   }
 
   # unbiased (Browne): cov block needs the NT Gamma + rank-1 correction
@@ -888,11 +896,16 @@ lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
   ge_cov <- c1 * (crossprod(u_c) / n) -
     c2 * (gamma_nt - 2 / (n - 1) * tcrossprod(d_vec))
   if (!meanstr) {
-    return(ge_cov)
+    out <- ge_cov
+  } else {
+    ge_mm <- crossprod(u_m) / n
+    ge_mc <- (n / (n - 2)) * (crossprod(u_m, u_c) / n)
+    out <- ge_mm + ge_cov + ge_mc + t(ge_mc)
   }
-  ge_mm <- crossprod(u_m) / n
-  ge_mc <- (n / (n - 2)) * (crossprod(u_m, u_c) / n)
-  ge_mm + ge_cov + ge_mc + t(ge_mc)
+  if (return_rows) {
+    attr(out, "rows") <- u
+  }
+  out
 }
 
 # Shared helpers for lav_sam_step1_local_jac() (single group) and
@@ -2741,6 +2754,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
           step1$Sigma.11[add_idx, add_idx, drop = FALSE] %*% t(c_add))
       }
       gamma_addition <- gamma_full - step1$COV.IVETA2[[g]]
+      # the casewise rows a_i: crossprod(a_i) / n_full is the casewise part
+      # of Gamma.eta (used by the information.meat.hc leverage adjustment)
+      attr(gamma_addition, "rows") <- a_i
       return(gamma_addition)
     }
     # casewise route not available: fall through

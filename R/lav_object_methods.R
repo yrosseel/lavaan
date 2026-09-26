@@ -1342,6 +1342,8 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "parameterization") <- object@Model@parameterization
         attr(tmp_list, "information") <- object@Options$information[1]
         attr(tmp_list, "information.meat") <- object@Options$information.meat
+        attr(tmp_list, "information.meat.hc") <-
+          object@Options$information.meat.hc # NULL for old objects
         # information.bread (bread-only override; "default" = information[1]);
         # for sam() with se = "local"/"local.nt" the reported SEs come from
         # the structural fit (FIT.PA), so the (resolved) bread option in

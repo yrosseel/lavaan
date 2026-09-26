@@ -605,6 +605,55 @@ Estimation options:
       \code{struc_args} argument in \code{\link{sam}}. The summary header
       shows an additional \code{Information bread} line whenever the bread
       deviates from the (first element of the) \code{information} option.}
+   \item{\code{information_meat_hc}:}{Character. Small-sample correction
+      of the first-order (casewise) sandwich standard errors (new in
+      0.7-3). Only used when the standard errors are based on the
+      crossproduct of casewise contributions: \code{se =
+      "robust.huber.white"} (casewise scores), \code{se = "robust.sem"}
+      (casewise moment contributions), and the \code{se = "local"} and
+      \code{se = "twostep.huber.white"} standard errors of
+      \code{\link{sam}}. These sandwiches are the analogue of the
+      \code{"HC0"} estimator of a regression model and inherit its
+      small-sample downward bias. The possible values mirror the
+      regression corrections: \code{"HC0"} (the default; no correction),
+      \code{"HC1"} (the whole covariance matrix is multiplied by
+      \eqn{n/(n - p)}, with \eqn{p} the number of free parameters -- for
+      \code{\link{sam}}, the number of free structural parameters, not
+      counting the (co)variances of the exogenous variables),
+      \code{"HC2"} and \code{"HC3"}. For \code{"HC2"} and \code{"HC3"},
+      the casewise influence values of the regression coefficients
+      (including the intercept) of each regression equation are
+      multiplied by \eqn{(1 - h_{ij})^{-1/2}} (\code{"HC2"}) or
+      \eqn{(1 - h_{ij})^{-1}} (\code{"HC3"}), where \eqn{h_{ij}} is
+      the leverage of case \eqn{i} in the design matrix (intercept plus
+      predictors) of equation \eqn{j}; observed predictors are taken
+      from the data, latent predictors are replaced by their Bartlett
+      factor scores (in local SAM: the step-1 factor scores, with
+      products for latent interaction terms). For an observed-variable
+      regression with \code{fixed_x = TRUE}, this reproduces the
+      classical HC2/HC3 estimators (e.g., \code{sandwich::vcovHC()})
+      exactly. All other parameters (factor loadings, (residual)
+      variances, ...) keep their uncorrected (HC0) contributions; only
+      \code{"HC1"} affects them. A parameter constrained equal across
+      groups is adjusted with the leverage of each group's own equation;
+      a coefficient that appears in several equations of the same group
+      takes the leverage of the first equation. Simulation evidence
+      (see the references in the source) suggests \code{"HC2"} for
+      regressions on observed variables and for local SAM (with or
+      without latent interactions) below \eqn{N = 500}, and
+      \code{"HC3"} for latent regressions in a joint SEM with small
+      samples and heavy-tailed predictors, where it tracks the
+      delete-one jackknife; \code{"HC1"} tends to overcorrect badly for
+      latent variable models with many parameters. The corrections are
+      available for single-level, independent observations only (not
+      for clustered or multilevel data); \code{"HC2"}/\code{"HC3"} need
+      continuous data (raw data for \code{se = "robust.sem"}, which must
+      be complete), and are not available for \code{se = "local.nt"} or
+      with across-group equality constraints in the measurement part of
+      a \code{\link{sam}} model. Point estimates and test statistics are
+      not affected. The summary header shows an additional
+      \code{Information meat small-sample correction} line whenever the
+      correction is not \code{"HC0"}.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust

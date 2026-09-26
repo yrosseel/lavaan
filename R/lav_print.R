@@ -316,6 +316,16 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
               sep = ""
             ))
           }
+
+          # small-sample correction of the sandwich meat (new in 0.7-3);
+          # only shown when it deviates from HC0
+          hc <- attr(x, "information.meat.hc")
+          if (!is.null(hc) && hc != "HC0" &&
+            attr(x, "se") %in% c("robust.huber.white", "robust.sem",
+                                 "local", "twostep.huber.white")) {
+            c1 <- c(c1, "Information meat small-sample correction")
+            c2 <- c(c2, hc)
+          }
         } # no bootstrap
       } # no se_rows
 

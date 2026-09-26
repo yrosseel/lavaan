@@ -530,8 +530,13 @@ sam <- function(model = NULL,
   if (se %in% c("local", "local.nt", "twostep", "twostep.robust",
                 "twostep.huber.white", "naive")) {
     gamma_eta_required <- se %in% c("local", "local.nt")
+    # information.meat.hc = "HC2"/"HC3" with se = "local": the leverage
+    # adjustment (lav_sam_step2_se) needs the casewise rows of Gamma.eta
+    hc_rows_flag <- (se == "local" &&
+      lav_hc_leverage_flag(fit@Options$information.meat.hc))
     ge_try <- tryCatch({
       gamma_eta <- vector("list", length = fit@Data@ngroups)
+      gamma_rows <- vector("list", length = fit@Data@ngroups)
       if (lv_interaction_flag) {
         for (g in seq_len(fit@Data@ngroups)) { # group or block
           # initial Gamma.eta
@@ -539,6 +544,8 @@ sam <- function(model = NULL,
           # compute 'additional variability' due to step1
           gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit,
             group = g, method = local_options[["gamma_eta"]])
+          gamma_rows[g] <- list(attr(gamma_eta_add, "rows"))
+          attr(gamma_eta_add, "rows") <- NULL
           gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
         }
       } else if (fit@Data@nlevels > 1L) {
@@ -569,11 +576,14 @@ sam <- function(model = NULL,
         use_influence <- (se != "local.nt")
         if (use_influence) {
           for (g in seq_len(fit@Data@ngroups)) {
-            ge_g <- lav_sam_gamma_eta_g(fit = fit, jac_g = jac[[g]], g = g)
+            ge_g <- lav_sam_gamma_eta_g(fit = fit, jac_g = jac[[g]], g = g,
+                                        return_rows = hc_rows_flag)
             if (is.null(ge_g)) {
               use_influence <- FALSE
               break
             }
+            gamma_rows[g] <- list(attr(ge_g, "rows"))
+            attr(ge_g, "rows") <- NULL
             gamma_eta[[g]] <- ge_g
           }
         }
@@ -601,6 +611,16 @@ sam <- function(model = NULL,
           }
           for (g in seq_len(fit@Data@ngroups)) {
             gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
+            if (hc_rows_flag) {
+              # casewise rows of the ADF Gamma (NULL when not available)
+              zc_g <- lav_hc_gamma_rows(
+                lavdata = fit@Data, lavoptions = fit@Options,
+                lavsamplestats = fit@SampleStats, g = g
+              )
+              if (!is.null(zc_g) && ncol(zc_g) == ncol(jac[[g]])) {
+                gamma_rows[[g]] <- zc_g %*% t(jac[[g]])
+              }
+            }
           }
         }
         step1$JAC <- jac
@@ -630,9 +650,11 @@ sam <- function(model = NULL,
         }
       } # no lv-interaction
       step1$Gamma.eta <- gamma_eta
+      step1$Gamma.eta.rows <- gamma_rows
       TRUE
     }, error = function(e) e)
     if (inherits(ge_try, "error")) {
+      step1$Gamma.eta.rows <- NULL
       if (gamma_eta_required) {
         # the local / local.nt SEs cannot be computed without Gamma.eta
         lav_msg_stop(gettextf(
@@ -708,6 +730,11 @@ sam <- function(model = NULL,
           step1$Gamma.eta[[g]] <-
             step1$Gamma.eta[[g]][ge_keep, ge_keep, drop = FALSE]
         }
+        if (g <= length(step1$Gamma.eta.rows) &&
+            !is.null(step1$Gamma.eta.rows[[g]])) {
+          step1$Gamma.eta.rows[[g]] <-
+            step1$Gamma.eta.rows[[g]][, ge_keep, drop = FALSE]
+        }
       }
       if (!is.null(res_slopes_attr)) {
         attr(step1$VETA, "res.slopes") <- res_slopes_attr
@@ -737,6 +764,11 @@ sam <- function(model = NULL,
         target_x   = unique(unlist(lav_pt_vnames(struc_pt, type = "ov.x"))))
       for (g in seq_along(step1$Gamma.eta)) {
         step1$Gamma.eta[[g]] <- step1$Gamma.eta[[g]][perm, perm, drop = FALSE]
+        if (g <= length(step1$Gamma.eta.rows) &&
+            !is.null(step1$Gamma.eta.rows[[g]])) {
+          step1$Gamma.eta.rows[[g]] <-
+            step1$Gamma.eta.rows[[g]][, perm, drop = FALSE]
+        }
       }
       TRUE
     }, error = function(e) FALSE)

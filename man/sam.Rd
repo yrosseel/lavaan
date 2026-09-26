@@ -88,7 +88,10 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     an additional \code{Information bread} line. The classic
     (expected-information) bread can be requested by adding
     \code{struc_args = list(information_bread = "default")} (or
-    \code{"expected"}).}
+    \code{"expected"}). A small-sample (leverage) correction of the local
+    (and \code{twostep.huber.white}) standard errors can be requested with
+    the global \code{information_meat_hc} option (\code{"HC2"} is a good
+    choice for \eqn{N < 500}); see \code{\link{lavOptions}}.}
 \item{sam_method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
     Bartlett factor scores were used, without any bias correction.}

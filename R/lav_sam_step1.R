@@ -109,6 +109,9 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       lavoptions_mm$se <- "standard" # may be overridden later
     }
   }
+  # information.meat.hc applies to the final sam() SEs only (see
+  # lav_sam_step2_se()); the measurement blocks keep the classic meat
+  lavoptions_mm$information.meat.hc <- "HC0"
   # note: we keep the tests, as we need them for the summary info about MM
   lavoptions_mm$check.post <- FALSE # neg lv variances may be overridden
   lavoptions_mm$check.gradient <- FALSE # too sensitive in large model (global)

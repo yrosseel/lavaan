@@ -144,7 +144,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
                                        attr_delta = TRUE,
                                        attr_t_dvgvd = FALSE,
                                        attr_e_inv = FALSE,
-                                       attr_wls_v = FALSE) {
+                                       attr_wls_v = FALSE,
+                                       lavpartable = NULL) {
   # information.bread: use a different information matrix for the bread
   # (E.inv) ONLY, while the meat ingredients (Delta, WLS.V) remain based on
   # information[1]; "default" (or unset, for older option lists) means
@@ -273,6 +274,22 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
   } # g
   nvar_cov <- (e_inv %*% t_dvgvd %*% e_inv)
 
+  # information.meat.hc = "HC2"/"HC3": leverage-adjust the casewise part
+  # of the meat (see lav_vcov_hc.R); "HC1" is applied in lav_model_vcov()
+  if (lav_hc_leverage_flag(lavoptions$information.meat.hc)) {
+    if (is.null(lavpartable)) {
+      lav_msg_stop(gettext(
+        "internal error: the parameter table is needed for the
+         information_meat_hc leverage adjustment (robust.sem)."))
+    }
+    nvar_cov <- lav_hc_nvcov_robust_sem(
+      nvar_cov = nvar_cov, e_inv = e_inv, delta = delta, wls_v = wls_v,
+      lavmodel = lavmodel, lavdata = lavdata,
+      lavsamplestats = lavsamplestats, lavimplied = lavimplied,
+      lavoptions = lavoptions, lavpartable = lavpartable
+    )
+  }
+
   # to be reused by lav_test()
   if (attr_delta) {
     attr(nvar_cov, "Delta") <- delta
@@ -313,7 +330,8 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
                                             lavimplied = NULL,
                                             lavh1 = NULL,
                                             lavcache = NULL,
-                                            use_ginv = FALSE) {
+                                            use_ginv = FALSE,
+                                            lavpartable = NULL) {
   # sandwich estimator: A.inv %*% B %*% t(A.inv)
   # where A.inv == E.inv
   #       B == outer product of case-wise scores
@@ -375,6 +393,22 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
 
   # compute sandwich estimator
   nvar_cov <- e_inv %*% b0 %*% e_inv
+
+  # information.meat.hc = "HC2"/"HC3": leverage-adjust the casewise part
+  # of the meat (see lav_vcov_hc.R); "HC1" is applied in lav_model_vcov()
+  if (lav_hc_leverage_flag(lavoptions$information.meat.hc)) {
+    if (is.null(lavpartable)) {
+      lav_msg_stop(gettext(
+        "internal error: the parameter table is needed for the
+         information_meat_hc leverage adjustment (robust.huber.white)."))
+    }
+    nvar_cov <- lav_hc_nvcov_robust_sandwich(
+      nvar_cov = nvar_cov, e_inv = e_inv, lavmodel = lavmodel,
+      lavdata = lavdata, lavsamplestats = lavsamplestats,
+      lavimplied = lavimplied, lavoptions = lavoptions,
+      lavpartable = lavpartable
+    )
+  }
 
   attr(nvar_cov, "B0.group") <- attr(b0, "B0.group")
 
@@ -773,7 +807,8 @@ lav_model_vcov <- function(lavmodel = NULL,
         lavimplied = lavimplied,
         lavh1 = lavh1,
         lavoptions = lavoptions,
-        use_ginv = use_ginv
+        use_ginv = use_ginv,
+        lavpartable = lavpartable
       )
   } else if (se == "robust.huber.white" || se == "robust.cluster") {
     nvar_cov <-
@@ -785,7 +820,8 @@ lav_model_vcov <- function(lavmodel = NULL,
         lavimplied = lavimplied,
         lavh1 = lavh1,
         lavoptions = lavoptions,
-        use_ginv = use_ginv
+        use_ginv = use_ginv,
+        lavpartable = lavpartable
       )
   } else if (se %in% c("two.stage", "robust.two.stage")) {
     nvar_cov <-
@@ -842,6 +878,13 @@ lav_model_vcov <- function(lavmodel = NULL,
     }
 
     var_cov <- 1 / n * nvar_cov
+
+    # information.meat.hc = "HC1": the global n/(n - p) degrees-of-freedom
+    # factor of the first-order sandwich (see lav_vcov_hc.R)
+    if (isTRUE(lavoptions$information.meat.hc == "HC1") &&
+        se %in% c("robust.huber.white", "robust.sem")) {
+      var_cov <- var_cov * lav_hc1_factor(n = n, npar = lav_hc_npar(lavmodel))
+    }
 
     # check if VarCov is pd -- new in 0.6-2
     # mostly important if we have (in)equality constraints (MASS::ginv!)

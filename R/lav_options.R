@@ -1836,6 +1836,20 @@ lav_options_set <- function(opt = NULL) {
     opt$information.bread <- "observed"
   }
 
+  # information.meat.hc: the small-sample corrections of the casewise
+  # sandwich meat are defined for independent observations only; the
+  # cluster-robust (and two-level) meats already carry their own
+  # finite-sample (G/(G-1)) correction (new in 0.7-3)
+  if (is.null(opt$information.meat.hc)) {
+    opt$information.meat.hc <- "HC0"
+  }
+  if (opt$information.meat.hc != "HC0" &&
+      (opt$.clustered || opt$.multilevel)) {
+    lav_msg_stop(gettextf(
+      "information_meat_hc = %s is not available for clustered or
+       multilevel data.", dQuote(opt$information.meat.hc, q = FALSE)))
+  }
+
   # group.w.free
   # if(opt$group.w.free && opt$.categorical) {
   #    lav_msg_stop(gettext(

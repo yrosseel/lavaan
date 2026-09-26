@@ -437,6 +437,13 @@ lav_options_default <- function() {
       chr = c(default = "first.order", first.order = "first.order"))
   elm("h1.information.meat", "default", chr = c(
     "default", "structured", "unstructured"))
+  # small-sample (leverage) correction of the first-order (casewise)
+  # sandwich meat: "HC0" (no correction; the classic behavior), "HC1"
+  # (a global n/(n - p) degrees-of-freedom factor), "HC2" and "HC3"
+  # (equation-wise leverage adjustment of the casewise influence rows of
+  # the regression coefficients; see lav_vcov_hc.R) (new in 0.7-3)
+  elm("information.meat.hc", "HC0", chr = c(
+    hc0 = "HC0", hc1 = "HC1", hc2 = "HC2", hc3 = "HC3"))
   # information for the bread (E.inv) of the robust/sandwich vcov ONLY,
   # keeping the meat (Delta, WLS.V, Gamma) based on information[1];
   # "default" = information[1] (i.e., no change), EXCEPT for single-level
