@@ -1368,7 +1368,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       # (we reuse the same ingredients that produced the robust vcov of
       # this measurement block)
       tmp <- lav_model_nvcov_robust_sem(
-        lavmodel = fit_mm_block@Model,
+        lavmodel = lav_sam_block_unbound(fit_mm_block)@Model,
         lavsamplestats = fit_mm_block@SampleStats,
         lavcache = fit_mm_block@cache, lavdata = fit_mm_block@Data,
         lavimplied = fit_mm_block@implied, lavh1 = fit_mm_block@h1,
@@ -1410,11 +1410,11 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       #     JAC . Gamma . JAC'. So local MUST use observed (do not "unify" this
       #     with the twostep.robust choice).
       if (p_only && fit@Options$information[1] == "expected") {
-        mm_inv_observed <-
-          lavTech(fit_mm_block, "inverted.information.expected")
+        mm_inv_observed <- lavTech(lav_sam_block_unbound(fit_mm_block),
+                                   "inverted.information.expected")
       } else {
-        mm_inv_observed <-
-          lavTech(fit_mm_block, "inverted.information.observed")
+        mm_inv_observed <- lavTech(lav_sam_block_unbound(fit_mm_block),
+                                   "inverted.information.observed")
       }
       mm_jac <- t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
     }
@@ -1886,7 +1886,8 @@ lav_sam_gamma_eta_2l <- function(step1 = NULL, fit = NULL) {
     # uses the observed information; see lav_sam_step1_local_jac())
     mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
     mm_delta <- lavTech(fit_mm_block, "Delta")
-    mm_inv_observed <- lavTech(fit_mm_block, "inverted.information.observed")
+    mm_inv_observed <- lavTech(lav_sam_block_unbound(fit_mm_block),
+                               "inverted.information.observed")
     mm_jac <- t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
 
     # keep only rows that are also in FIT@ParTable
@@ -2094,7 +2095,7 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
       # lavTech(., "h1.information.expected") is not available for a continuous
       # block embedded in a categorical SAM.
       tmp <- lav_model_nvcov_robust_sem(
-        lavmodel = fit_mm_block@Model,
+        lavmodel = lav_sam_block_unbound(fit_mm_block)@Model,
         lavsamplestats = fit_mm_block@SampleStats,
         lavcache = fit_mm_block@cache, lavdata = fit_mm_block@Data,
         lavimplied = fit_mm_block@implied, lavh1 = fit_mm_block@h1,
@@ -2128,11 +2129,11 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
       # option), OBSERVED for se = "local"/"ij" (infinitesimal jackknife =
       # empirical sandwich, coherent with the observed/ADF Gamma).
       if (p_only && fit@Options$information[1] == "expected") {
-        mm_inv_observed <-
-          lavTech(fit_mm_block, "inverted.information.expected")
+        mm_inv_observed <- lavTech(lav_sam_block_unbound(fit_mm_block),
+                                   "inverted.information.expected")
       } else {
-        mm_inv_observed <-
-          lavTech(fit_mm_block, "inverted.information.observed")
+        mm_inv_observed <- lavTech(lav_sam_block_unbound(fit_mm_block),
+                                   "inverted.information.observed")
       }
     }
 
@@ -2802,10 +2803,12 @@ lav_sam_step1_casewise <- function(step1 = NULL, fit = NULL, group = 1L) {
       if (nrow(scb) != ntot) {
         lav_msg_stop(gettext("case alignment failure"))
       }
-      if (fb@Model@eq.constraints || fb@Model@ceq.simple.only) {
-        ib_inv <- lavTech(fb, "inverted.information")
+      # (active bounds are ignored here as well, see lav_sam_block_unbound())
+      fbu <- lav_sam_block_unbound(fb)
+      if (fbu@Model@eq.constraints || fbu@Model@ceq.simple.only) {
+        ib_inv <- lavTech(fbu, "inverted.information")
       } else {
-        ib_inv <- solve(lavTech(fb, "information"))
+        ib_inv <- solve(lavTech(fbu, "information"))
       }
       nb <- fb@SampleStats@ntotal
       tmp <- (ntot / nb) * scb %*% ib_inv

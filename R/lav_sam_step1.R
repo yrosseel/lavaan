@@ -1,5 +1,88 @@
 # step 1 in SAM: fitting the measurement blocks
 
+# The vcov of a measurement block, ignoring any inequality (bound)
+# constraints that are active at the solution.
+#
+# The blocks are fitted with bounds = "wide.zerovar". When a residual
+# variance is pinned at its lower bound (a Heywood case), the block's own
+# vcov treats the bound as an active constraint: the pinned parameter gets
+# a zero row/column and the other block parameters get the constrained
+# (augmented-information) variances. That is right for the block itself,
+# but it is not what step 2 needs: the pinned estimate is a truncated
+# estimator with real sampling variability, and dropping it from Sigma.11
+# makes the structural standard errors too small (Monte Carlo: coverage of
+# a structural regression coefficient fell from about .96 to .86 when a
+# residual variance was pinned). The casewise influence route
+# (lav_sam_step1_casewise()) already ignores these constraints; this keeps
+# Sigma.11 consistent with it. Equality constraints are kept.
+#
+# lav_sam_block_unbound() returns a copy of the fitted block in which the
+# active inequality rows are removed from the constraint record
+# (@Model@con.jac / @Model@con.lambda), so that the (augmented) information
+# and vcov machinery treat the block as unconstrained apart from its
+# equality constraints. It is used for Sigma.11, for the influence
+# jacobians of Gamma.eta and for the casewise influence (which already
+# ignored these constraints for the scores).
+lav_sam_block_unbound <- function(fit_block = NULL) {
+  con_jac <- fit_block@Model@con.jac
+  if (nrow(con_jac) == 0L) {
+    return(fit_block)
+  }
+  cin_idx <- attr(con_jac, "cin.idx")
+  inactive_idx <- attr(con_jac, "inactive.idx")
+  active_cin_idx <- setdiff(cin_idx, inactive_idx)
+  if (length(active_cin_idx) == 0L) {
+    return(fit_block)
+  }
+
+  # keep the equality rows only
+  ceq_idx <- attr(con_jac, "ceq.idx")
+  if (length(ceq_idx) > 0L) {
+    con_jac_eq <- con_jac[ceq_idx, , drop = FALSE]
+    attr(con_jac_eq, "ceq.idx") <- seq_along(ceq_idx)
+    attr(con_jac_eq, "cin.idx") <- integer(0L)
+    attr(con_jac_eq, "inactive.idx") <- integer(0L)
+    fit_block@Model@con.jac <- con_jac_eq
+    fit_block@Model@con.lambda <- fit_block@Model@con.lambda[ceq_idx]
+  } else {
+    fit_block@Model@con.jac <- matrix(0, 0L, 0L)
+    fit_block@Model@con.lambda <- numeric(0L)
+  }
+  fit_block
+}
+
+lav_sam_block_vcov_unbounded <- function(fit_block = NULL) {
+  vcov_con <- fit_block@vcov$vcov
+  if (is.null(vcov_con)) {
+    return(vcov_con)
+  }
+  fit_unbound <- lav_sam_block_unbound(fit_block)
+  if (identical(fit_unbound@Model@con.jac, fit_block@Model@con.jac)) {
+    return(vcov_con) # no active bound: nothing to do
+  }
+
+  # the same conditions (non-pd, singular information) were already
+  # reported when the block was fitted; do not repeat them here
+  vcov_unc <- try(suppressWarnings(lav_model_vcov(
+    lavmodel = fit_unbound@Model,
+    lavsamplestats = fit_block@SampleStats,
+    lavoptions = fit_block@Options,
+    lavdata = fit_block@Data,
+    lavpartable = fit_block@ParTable,
+    lavcache = fit_block@Cache,
+    lavimplied = fit_block@implied,
+    lavh1 = fit_block@h1
+  )), silent = TRUE)
+  if (inherits(vcov_unc, "try-error") || is.null(vcov_unc) ||
+      !all(dim(vcov_unc) == dim(vcov_con))) {
+    return(vcov_con)
+  }
+  # strip all attributes but 'dim' (as in the vcov step of lavaan())
+  tmp_attr <- attributes(vcov_unc)
+  attributes(vcov_unc) <- tmp_attr["dim"]
+  vcov_unc
+}
+
 lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
                           fit = NULL, sam_method = "local") {
   lavoptions <- fit@Options
@@ -366,8 +449,10 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       ptm_se_idx <- which((ptm$free > 0L) & ptm$user != 3L) # no :=, <, >
       pt_1$se[mm_idx[ptm_se_idx]] <- ptm$se[ptm_se_idx]
 
-      # fill in variance matrix for this measurement block
-      sigma_11 <- mm_fit[[mm]]@vcov$vcov
+      # fill in variance matrix for this measurement block; when a bound
+      # is active in the block, use the unconstrained vcov (see
+      # lav_sam_block_vcov_unbounded())
+      sigma_11 <- lav_sam_block_vcov_unbounded(mm_fit[[mm]])
       if (is.null(sigma_11)) {
         # the block vcov could not be computed (eg the block information
         # matrix could not be inverted, typically an identification issue
