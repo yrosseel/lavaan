@@ -59,7 +59,7 @@ Authors@R: c(person(given   = "Yves", family = "Rosseel",
 Description: Fit a variety of latent variable models, including confirmatory
    factor analysis, structural equation modeling and latent growth curve models.
 Depends: R(>= 3.4)
-Imports: methods, stats4, stats, utils, graphics, MASS,
+Imports: methods, parallel, stats4, stats, utils, graphics, MASS,
          mnormt, pbivnorm, numDeriv, quadprog
 BugReports: https://github.com/yrosseel/lavaan/issues
 License: GPL (>= 2)
