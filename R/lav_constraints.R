@@ -54,9 +54,9 @@ lav_con_box_bounds <- function(partable = NULL, theta = NULL,
     }
     out
   }
-  attr(cin_function, "box.bounds") <- list(
-    upper.pos = upper_pos, upper.val = upper_val,
-    lower.pos = lower_pos, lower.val = lower_val
+  attr(cin_function, "box_bounds") <- list(
+    upper_pos = upper_pos, upper_val = upper_val,
+    lower_pos = lower_pos, lower_val = lower_val
   )
 
   cin_jac <- matrix(0, nrow = n_bound, ncol = npar)
