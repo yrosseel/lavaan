@@ -106,10 +106,14 @@ lav_inspect_con_info <- function(object) {
   }
   if (!is.null(body(cin_fun))) {
     cin_slack <- as.numeric(cin_fun(x_cin))
-    cin_jac <- try(lav_func_jacobian_complex(func = cin_fun, x = x_cin),
-      silent = TRUE)
-    if (inherits(cin_jac, "try-error")) { # eg. pnorm()
-      cin_jac <- lav_func_jacobian_simple(func = cin_fun, x = x_cin)
+    if (!is.null(attr(cin_fun, "box.bounds", exact = TRUE))) {
+      cin_jac <- lavmodel@cin.JAC
+    } else {
+      cin_jac <- try(lav_func_jacobian_complex(func = cin_fun, x = x_cin),
+        silent = TRUE)
+      if (inherits(cin_jac, "try-error")) { # eg. pnorm()
+        cin_jac <- lav_func_jacobian_simple(func = cin_fun, x = x_cin)
+      }
     }
     cin_rhs <- try(-1 * as.numeric(cin_fun(numeric(length(x_cin)))),
       silent = TRUE)

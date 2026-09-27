@@ -517,6 +517,8 @@ lav_pt_con_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
   body_txt <- paste(body_txt, "\n# inequality constraints\n", sep = "")
   free <- partable$free
   free[free > 0] <- seq_along(free[free > 0])
+  # Use row position: a two-sided bound appears in both index vectors.
+  n_upper_rows <- length(upper_idx)
   for (i in seq_along(ineq_idx)) {
     lhs <- partable$lhs[ineq_idx[i]]
     op <- partable$op[ineq_idx[i]]
@@ -534,12 +536,12 @@ lav_pt_con_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
       } else if (rhs != "0" && op == "<") {
         ineq_string <- paste(rhs, " - (", lhs, ")", sep = "")
       }
-    } else if (ineq_idx[i] %in% upper_idx) {
+    } else if (i <= n_upper_rows) {
       # simple upper bound
       val <- partable$upper[ineq_idx[i]]
       xlab <- paste(".x.[", free[ineq_idx[i]], "]", sep = "")
       ineq_string <- paste(val, " - (", xlab, ")", sep = "")
-    } else if (ineq_idx[i] %in% lower_idx) {
+    } else {
       # simple lower bound
       val <- partable$lower[ineq_idx[i]]
       xlab <- paste(".x.[", free[ineq_idx[i]], "]", sep = "")

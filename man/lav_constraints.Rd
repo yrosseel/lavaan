@@ -7,7 +7,7 @@
 \description{Utility functions for equality and inequality constraints.}
 \usage{
 lav_con_parse(partable = NULL, constraints = NULL, theta = NULL,
-                     debug = FALSE)
+                      debug = FALSE, box_fast = NULL)
 lav_pt_con_ceq(partable, con = NULL, debug = FALSE,
                              txt_only = FALSE)
 lav_pt_con_ciq(partable, con = NULL, debug = FALSE,
@@ -21,6 +21,12 @@ lav_pt_con_def(partable, con = NULL, debug = FALSE,
 \item{theta}{A numeric vector. Optional vector with values for the
 model parameters in the parameter table.}
 \item{debug}{Logical. If TRUE, show debugging information.}
+\item{box_fast}{Logical. If \code{NULL} (default), a fast path is used
+when the only inequality constraints are finite per-parameter lower/upper
+bounds (eg the \code{bounds = "standard"}, \code{"wide"} or
+\code{"pos.var"} profiles): the constraint Jacobian is known exactly and
+is built directly instead of being estimated numerically. If
+\code{FALSE}, the legacy path is always used.}
 \item{con}{An optional partable where the operator is one of `==',
 `>', `<' or `:='}
 \item{txt_only}{Logical. If TRUE, only the body of the function is returned as a character string. If FALSE, a function is returned.}
