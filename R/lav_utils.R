@@ -197,6 +197,37 @@ lav_char2hash <- function(s = "") {
   as.hexmode(rval)
 }
 
+# ----------------------- parsed-syntax cache ------------------------------ #
+# The parsers store each parsed model string in lavaan_cache_env, keyed by
+# lav_char2hash() of the source text. That hash is 32 bits (and not
+# cryptographic), so distinct model strings can share a key; issue #636
+# (near-identical models fitted in a loop: about 1 in 1000 one-predictor
+# models collided, and the colliding model was silently fitted with
+# another model's parse). The key is therefore only a bucket: every entry
+# keeps its own source text, entries with the same key are chained, and a
+# lookup returns a cached parse only when the source text is identical.
+lav_syntax_cache_get <- function(key = "", modelsrc = "") {
+  bucket <- get0(key, envir = lavaan_cache_env, inherits = FALSE)
+  if (is.null(bucket)) {
+    return(NULL)
+  }
+  for (entry in bucket) {
+    if (identical(entry$src, modelsrc)) {
+      return(entry$flat)
+    }
+  }
+  NULL
+}
+lav_syntax_cache_set <- function(key = "", modelsrc = "", flat = NULL) {
+  bucket <- get0(key, envir = lavaan_cache_env, inherits = FALSE)
+  if (is.null(bucket)) {
+    bucket <- list()
+  }
+  bucket[[length(bucket) + 1L]] <- list(src = modelsrc, flat = flat)
+  assign(key, bucket, envir = lavaan_cache_env)
+  invisible(flat)
+}
+
 # vectorize all (h0 or h1) sample statistics, in the same order
 # as Gamma
 lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,

@@ -608,9 +608,13 @@ lav_parse_model_string <- function(model_syntax = "", as_data_frame = FALSE) {
       !grepl("[^[:space:];]", gsub("[#!][^\n]*", "", modelsrc))) {
     lav_msg_stop(gettext("Model syntax is empty."))
   }
-  hashstring <- paste0("mdl_", lav_char2hash(paste0(modelsrc, as_data_frame)))
-  if (exists(hashstring, envir = lavaan_cache_env)) {
-    return(get(hashstring, envir = lavaan_cache_env))
+  # parsed-syntax cache: the hash is only a bucket key, the source text is
+  # compared on retrieval (issue #636, see lav_syntax_cache_get())
+  cachesrc <- paste0(modelsrc, as_data_frame)
+  hashstring <- paste0("mdl_", lav_char2hash(cachesrc))
+  cached <- lav_syntax_cache_get(hashstring, cachesrc)
+  if (!is.null(cached)) {
+    return(cached)
   }
   modenv <- new.env()
 assign("label", function(...) {
@@ -1120,6 +1124,6 @@ assign("equal", function(...) {
   # create output
   attr(flat, "modifiers") <- mod
   attr(flat, "constraints") <- constraints
-  assign(hashstring, flat, envir = lavaan_cache_env)
+  lav_syntax_cache_set(hashstring, cachesrc, flat)
   flat
 }

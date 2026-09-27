@@ -647,9 +647,13 @@ lav_parse_model_string_open <- function(model_syntax = "",
       !grepl("[^[:space:];]", gsub("[#!][^\n]*", "", modelsrc))) {
     lav_msg_stop(gettext("Model syntax is empty."))
   }
-  hashstring <- paste0("mdl_o_", lav_char2hash(paste0(modelsrc, as_data_frame)))
-  if (exists(hashstring, envir = lavaan_cache_env)) {
-    return(get(hashstring, envir = lavaan_cache_env))
+  # parsed-syntax cache: the hash is only a bucket key, the source text is
+  # compared on retrieval (issue #636, see lav_syntax_cache_get())
+  cachesrc <- paste0(modelsrc, as_data_frame)
+  hashstring <- paste0("mdl_o_", lav_char2hash(cachesrc))
+  cached <- lav_syntax_cache_get(hashstring, cachesrc)
+  if (!is.null(cached)) {
+    return(cached)
   }
   config <- lav_parse_options()
   modenvl <- lav_parse_modenv(config, "l")
@@ -697,7 +701,7 @@ lav_parse_model_string_open <- function(model_syntax = "",
                                         modenvl, modenvr, config)
   }
   lav_parse_final_operations(tmplist$flat, tmplist$modlist, config,
-    tmplist$constraints, as_data_frame, hashstring)
+    tmplist$constraints, as_data_frame, hashstring, cachesrc)
 }
 
 lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
@@ -1069,7 +1073,8 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
 }
 
 lav_parse_final_operations <- function(flat, modlist, config,
-                        constraints, as_data_frame, hashstring) {
+                        constraints, as_data_frame, hashstring,
+                        cachesrc = "") {
   # update flat (omit items without operator)
   filled_ones <- which(flat$op != "")
   flat$lhs <- flat$lhs[filled_ones]
@@ -1159,6 +1164,6 @@ lav_parse_final_operations <- function(flat, modlist, config,
   # create output
   attr(flat, "modifiers") <- modlist
   attr(flat, "constraints") <- constraints
-  assign(hashstring, flat, envir = lavaan_cache_env)
+  lav_syntax_cache_set(hashstring, cachesrc, flat)
   flat
 }
