@@ -100,6 +100,13 @@ lav_pml_uni_lik <- function(y1, th_y1, exo = NULL, pi_y1 = NULL) {
 
   pml_uni_lik <- pnorm(th_y1_upper) - pnorm(th_y1_lower)
 
+  # a missing response contributes nothing to the (available.cases)
+  # univariate likelihood: return 1 (log(1) = 0) for these cases, so that
+  # the caller's zero-likelihood check is not triggered and the casewise
+  # weights/lik factor in lav_pml_uni_sc() stays finite (issue #635)
+  pml_uni_lik[is.na(y1)] <- 1
+
+  # any remaining NA (e.g., non-finite thresholds) is a genuine failure
   pml_uni_lik[is.na(pml_uni_lik)] <- 0
 
   pml_uni_lik

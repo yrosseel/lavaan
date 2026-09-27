@@ -610,6 +610,22 @@ lav_step11_estoptim <- function(lavdata = NULL,
     attr(x, "warn.txt") <- ""
     attr(x, "control") <- lavoptions$control
     attr(x, "dx") <- numeric(0L)
+
+    # the derived model-matrix elements (the scaling factors under
+    # parameterization = "theta", the residual variances of the ordinal
+    # indicators under parameterization = "delta", the composite
+    # variances) are only filled in by lav_model_set_parameters(); without
+    # it, the stored GLIST would be internally inconsistent with the
+    # starting values, and the objective below (and any later user call
+    # of lav_model_objective() on the @Model slot) would be wrong, or
+    # even +Inf (issue #635)
+    if (lavmodel@categorical || lavmodel@correlation ||
+        lavmodel@composites) {
+      lavmodel <- lav_model_set_parameters(lavmodel,
+        x = lav_model_get_parameters(lavmodel, type = "free")
+      )
+    }
+
     fx <- try(lav_model_objective(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
@@ -623,7 +639,18 @@ lav_step11_estoptim <- function(lavdata = NULL,
       attr(x, "fx") <- fx
     }
 
+    # store the (starting) parameters in @ParTable$est; the derived
+    # elements are taken from the (now consistent) model matrices, all
+    # other rows (including :=/==/</> rows) keep their start value
     lavpartable$est <- lavpartable$start
+    if (lavmodel@categorical || lavmodel@correlation ||
+        lavmodel@composites) {
+      est_user <- lav_model_get_parameters(
+        lavmodel = lavmodel, type = "user", extra = FALSE
+      )
+      par_idx <- which(!lavpartable$op %in% c("==", "<", ">", ":="))
+      lavpartable$est[par_idx] <- est_user[par_idx]
+    }
   }
 
   # should we fake/force convergence? (eg. to enforce the
