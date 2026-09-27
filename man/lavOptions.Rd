@@ -993,10 +993,15 @@ Check options:
     \item{\code{check_post}:}{Logical. If \code{TRUE}, and the model
       converged, a check is performed after (post) fitting, to verify if 
       the solution is admissible. This implies that all variances are
-      non-negative, and all the model-implied covariance matrices are 
-      positive (semi-)definite. For the latter test, we tolerate a tiny 
-      negative eigenvalue that is smaller than .Machine$double.eps^(3/4), 
-      treating it as being zero.}
+      non-negative, and that the model-implied covariance matrix of the
+      latent variables (\code{cov_lv}), the covariance matrix of the
+      residuals in the structural part of the model (\code{psi}, which also
+      contains the residual (co)variances of the observed endogenous
+      variables), and the covariance matrix of the residuals of the
+      (numeric) observed variables (\code{theta}) are positive
+      (semi-)definite. For the latter tests, we tolerate a tiny negative
+      eigenvalue that is smaller than .Machine$double.eps^(3/4) (relative to
+      the largest eigenvalue), treating it as being zero.}
     \item{\code{check_vcov}:}{Logical. If \code{TRUE}, and the model converged,
       we check if the variance-covariance matrix of the free parameters
       is positive definite. We take into account possible equality and

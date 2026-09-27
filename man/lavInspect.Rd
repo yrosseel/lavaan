@@ -694,8 +694,10 @@ Miscellaneous:
         the (internal) baseline model.}
     \item{\code{"post_check"}:}{Post-fitting check if the solution is
         admissible. A warning is raised if negative variances are found, or if
-        either \code{lavInspect(fit, "cov_lv")} or
-        \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
+        \code{lavInspect(fit, "cov_lv")}, the \code{psi} matrix (as returned
+        by \code{lavInspect(fit, "est")}; it also contains the residual
+        (co)variances of the observed endogenous variables), or
+        \code{lavInspect(fit, "theta")} is not positive (semi-)definite.}
     \item{\code{"zero_cell_tables"}:}{List. List of bivariate frequency tables
         where at least one cell is empty.}
     \item{\code{"iv"}:}{Data.frame. One row per (transformed) equation, with
