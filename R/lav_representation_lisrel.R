@@ -3081,7 +3081,9 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
                                    num_idx         = integer(0L),
                                    th_idx          = integer(0L),
                                    group_w_free    = FALSE,
-                                   parameterization = "delta") {
+                                   parameterization = "delta",
+                                   ov_y_dummy_ov_idx = integer(0L),
+                                   ov_y_dummy_lv_idx = integer(0L)) {
 
   # model matrices in this block
   mnames <- names(mlist)
@@ -3576,6 +3578,70 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
     jac_sigma <- jac_sigma +
                  coef_r * jac_diag_theta[r_s, , drop = FALSE] +
                  coef_s * jac_diag_theta[c_s, , drop = FALSE]
+  }
+
+  # delta parameterization (categorical / correlation): the completion
+  # (lav_lisrel_residual_variances) DERIVES the residual variances of the
+  # unit-variance variables -- PSI[y,y] for the dummy lv of an observed y
+  # with predictors, THETA[j,j] for the others -- so that diag(Sigma*) stays
+  # at its (constant) target. Up to this point jac_sigma treats these
+  # derived elements as constants. A derived THETA[j,j] only touches the
+  # diagonal row (j,j), which is dropped/zeroed below; but a derived
+  # PSI[y,y] also enters the OFF-diagonal rows (any covariance involving y
+  # or its descendants), so the implicit dependence must be added:
+  #   dSigma/dphi = J - J_d A^{-1} J[C, ]
+  # with J_d the Jacobian of vech(Sigma) wrt the derived elements, C the
+  # diagonal rows of the constrained variables and A = J_d[C, ] (the
+  # implicit function theorem applied to diag(Sigma)[C] = target). The
+  # constrained diagonal rows become exactly zero. The Delta-augmented ML
+  # delta columns are excluded (P does not depend on delta), as is the
+  # conditional.x + correlation case (marginal target, handled below).
+  if (parameterization == "delta" && (categorical || correlation) &&
+      !wmat_flag && !(correlation && conditional_x) &&
+      length(ov_y_dummy_ov_idx) > 0L) {
+    y_ov <- ov_y_dummy_ov_idx
+    y_lv <- ov_y_dummy_lv_idx
+    if (length(num_idx) > 0L) {
+      keep <- !(y_ov %in% num_idx)
+      y_ov <- y_ov[keep]
+      y_lv <- y_lv[keep]
+    }
+    # mirror the completion: only dummy y's WITH predictors get a
+    # derived psi; THETA[j,j] is derived for all non-num, non-dummy j
+    if (beta_flag) {
+      has_pred <- rowSums(abs(mlist$beta))[y_lv] != 0
+    } else {
+      has_pred <- rep(TRUE, length(y_lv))
+    }
+    d_psi_ov <- y_ov[has_pred]
+    d_psi_lv <- y_lv[has_pred]
+    cor_var <- seq_len(nvar)
+    if (length(num_idx) > 0L) {
+      cor_var <- cor_var[-num_idx]
+    }
+    d_the_ov <- cor_var[!cor_var %in% y_ov]
+    n_proj <- ncol(jac_sigma) - n_del
+    if (length(d_psi_lv) > 0L && n_proj > 0L) {
+      the_pos <- sigma_lut[cbind(d_the_ov, d_the_ov)]
+      j_d <- cbind(
+        m[r_s, d_psi_lv, drop = FALSE] * m[c_s, d_psi_lv, drop = FALSE],
+        1 * outer(seq_len(pstar), the_pos, `==`)
+      )
+      if (delta_flag) {
+        j_d <- j_d * delta_weight
+      }
+      d_ov <- c(d_psi_ov, d_the_ov)
+      c_pos <- sigma_lut[cbind(d_ov, d_ov)]
+      proj_cols <- seq_len(n_proj)
+      corr <- tryCatch(
+        solve(j_d[c_pos, , drop = FALSE],
+              jac_sigma[c_pos, proj_cols, drop = FALSE]),
+        error = function(e) NULL
+      )
+      if (!is.null(corr)) {
+        jac_sigma[, proj_cols] <- jac_sigma[, proj_cols] - j_d %*% corr
+      }
+    }
   }
 
   # row map from the full-vech layout to the final jac_sigma layout (set by

@@ -1172,7 +1172,17 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
         num_idx          = lavmodel@num.idx[[b]],
         th_idx           = lavmodel@th.idx[[b]],
         group_w_free     = lavmodel@group.w.free,
-        parameterization = lavmodel@parameterization
+        parameterization = lavmodel@parameterization,
+        ov_y_dummy_ov_idx = if (length(lavmodel@ov.y.dummy.ov.idx) >= b) {
+          lavmodel@ov.y.dummy.ov.idx[[b]]
+        } else {
+          integer(0L)
+        },
+        ov_y_dummy_lv_idx = if (length(lavmodel@ov.y.dummy.lv.idx) >= b) {
+          lavmodel@ov.y.dummy.lv.idx[[b]]
+        } else {
+          integer(0L)
+        }
       )
     } else { # RAM
       delta[[b]] <- lav_ram_dimplied_dx(
