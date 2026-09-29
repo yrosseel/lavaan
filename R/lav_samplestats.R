@@ -1932,7 +1932,38 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
     tmp_cov <- sample_cov[[g]]
 
-    # make sure that the matrix is fully symmetric (NEEDED?)
+    # is the matrix symmetric? (allow for tiny numerical noise); if not,
+    # warn -- this is often a typo in a hand-entered matrix -- and use the
+    # lower triangle. A lower-triangular input (upper triangle all zero or
+    # NA) is taken to be intentional.
+    if (is.matrix(tmp_cov) && nrow(tmp_cov) == ncol(tmp_cov) &&
+        is.numeric(tmp_cov) && nrow(tmp_cov) > 1L &&
+        !all(tmp_cov[upper.tri(tmp_cov)] %in% c(0, NA))) {
+      asym <- abs(tmp_cov - t(tmp_cov))
+      asym_tol <- sqrt(.Machine$double.eps) *
+        max(1, max(abs(diag(tmp_cov)), na.rm = TRUE))
+      if (any(asym > asym_tol, na.rm = TRUE)) {
+        rc <- which(asym == max(asym, na.rm = TRUE) & lower.tri(asym),
+                    arr.ind = TRUE)[1L, ]
+        cov_rc_names <- if (!is.null(rownames(tmp_cov))) {
+          rownames(tmp_cov)
+        } else if (!is.null(colnames(tmp_cov))) {
+          colnames(tmp_cov)
+        } else {
+          as.character(seq_len(nrow(tmp_cov)))
+        }
+        n_asym <- sum(asym > asym_tol & lower.tri(asym), na.rm = TRUE)
+        lav_msg_warn(gettextf(
+          "sample.cov (group %1$s) is not symmetric: %2$s pair(s) of
+          elements differ; only the lower triangle is used. Largest
+          difference: [%3$s, %4$s] = %5$s versus [%4$s, %3$s] = %6$s.",
+          g, n_asym, cov_rc_names[rc[1L]], cov_rc_names[rc[2L]],
+          format(tmp_cov[rc[1L], rc[2L]], digits = 4L),
+          format(tmp_cov[rc[2L], rc[1L]], digits = 4L)))
+      }
+    }
+
+    # make sure that the matrix is fully symmetric
     t_1 <- t(tmp_cov)
     tmp_cov[upper.tri(tmp_cov)] <- t_1[upper.tri(t_1)]
 
