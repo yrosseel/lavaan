@@ -166,7 +166,7 @@ lav_parse_tokens_open <- function(modelsrc, types) {
       }
     }
   }
-  modelsrcw <- gsub("\t", " ", modelsrcw)
+  modelsrcw <- gsub("\t|\r", " ", modelsrcw)
   newlines <- gregexpr("[;\n]", modelsrcw)[[1L]]
   if (newlines[1L] > -1L) {
     for (i in seq_along(newlines)) {
