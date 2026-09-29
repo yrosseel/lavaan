@@ -2198,6 +2198,20 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
         var[[g]] <- diag(cov[[g]])
 
+        # correlation structure? standardize BEFORE icov, cov.log.det and
+        # cov.x are derived from cov (as in lav_samp_from_data); which
+        # variables are scaled to unit variance? (all, or a subset for a
+        # 'partial' correlation structure)
+        if (correlation) {
+          if (length(correlation_ov) > 0L) {
+            cor_idx <- which(ov_names[[g]] %in% correlation_ov)
+          } else {
+            cor_idx <- seq_len(ncol(cov[[g]]))
+          }
+          cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
+          var[[g]] <- diag(cov[[g]])
+        }
+
         # icov and cov.log.det
         # if(lavoptions$sample.icov) {
         out <- lav_samp_icov(
@@ -2231,19 +2245,10 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         }
       }
 
-      # correlation structure? (the conditional.x + joint sample.cov case
-      # standardizes the joint matrix before partitioning, see above)
-      if (correlation && !conditional_x) {
-        # which variables are scaled to unit variance? (all, or a subset
-        # for a 'partial' correlation structure)
-        if (length(correlation_ov) > 0L) {
-          cor_idx <- which(ov_names[[g]] %in% correlation_ov)
-        } else {
-          cor_idx <- seq_len(ncol(cov[[g]]))
-        }
-        cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
-        var[[g]] <- diag(cov[[g]])
-      } else if (correlation && conditional_x && !conditional_x_joint) {
+      # correlation structure? (standardized above, before icov/cov.x are
+      # derived: the joint matrix before partitioning under conditional.x,
+      # cov itself otherwise)
+      if (correlation && conditional_x && !conditional_x_joint) {
         # precomputed residual statistics: we cannot recover the joint
         # correlation metric from the residual moments alone
         lav_msg_stop(gettext(
