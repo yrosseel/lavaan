@@ -539,6 +539,36 @@ lav_model_pt  <- function(
     }
   } # ov_ord
 
+  # correlation structure: the (residual) variances of the standardized
+  # observed variables are not free parameters (they are derived from the
+  # unit-variance constraint); 'correlation' may be TRUE (all ov) or a
+  # character vector (a partial correlation structure)
+  cor_var_flag <- FALSE
+  cor_ov <- character(0L)
+  if (!categorical && (isTRUE(correlation) || is.character(correlation))) {
+    ov_names_all <- lav_object_vnames(tmp_list, "ov")
+    cor_ov <- if (is.character(correlation)) {
+      ov_names_all[ov_names_all %in% correlation]
+    } else {
+      ov_names_all
+    }
+    cor_var_idx <- which(tmp_list$op == "~~" &
+                         tmp_list$lhs == tmp_list$rhs &
+                         tmp_list$lhs %in% cor_ov &
+                         tmp_list$user == 1L)
+    if (length(cor_var_idx) > 0L) {
+      cor_var_flag <- TRUE
+      lav_msg_warn(gettextf("(residual) variances of observed variables
+      are ignored in a correlation structure: the total variances are fixed
+      to unity, and the residual variances are derived from this
+      constraint; please remove them from the model syntax; variables
+      involved are: %s",
+      paste(unique(tmp_list$lhs[cor_var_idx]), collapse = " ")))
+      # force them to be nonfree and set ustart to 1, later, after we
+      # have processed the modifiers
+    }
+  }
+
   # handle multilevel-specific constraints
   multilevel <- FALSE
   nlevels <- 1L
@@ -760,6 +790,16 @@ lav_model_pt  <- function(
       tmp_list$ustart[ord_var_idx] <- rep(1,  length(ord_var_idx))
     }
   } # categorical
+
+  # correlation structure: idem (we already gave a warning)
+  if (cor_var_flag) {
+    cor_var_idx <- which(tmp_list$op == "~~" &
+                         tmp_list$lhs == tmp_list$rhs &
+                         tmp_list$lhs %in% cor_ov &
+                         tmp_list$user == 1L)
+    tmp_list$free[cor_var_idx]   <- rep(0L, length(cor_var_idx))
+    tmp_list$ustart[cor_var_idx] <- rep(1,  length(cor_var_idx))
+  }
 
 
   # warning about single label in multiple group setting?
