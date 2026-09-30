@@ -22,6 +22,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
   #   case else
   #     set 1 in lavoptions$optim.attempts if it wasn't specified
   #     try x <- lav_model_est(...)
+  #     (the two attempts with optim.parscale = "standardized" are skipped
+  #      if the constraints do not allow rescaling the parameters)
   #     if not successful and optim.attempts > 1L
   #       try x <- lav_optim_estimate(...) with
   #         options$optim.parscale = "standardized"
@@ -64,6 +66,27 @@ lav_step11_estoptim <- function(lavdata = NULL,
     }
     if (lav_verbose()) {
       cat("lavoptim           ... start:\n")
+    }
+
+    # stopgap: rescaling the parameters (optim.parscale) imposes the
+    # constraints on the SCALED parameters, which distorts all but the
+    # simplest constraints (see lav_con_parscale_safe()); if so, never
+    # rescale: ignore an explicit request (with a warning), and skip the
+    # rescaling attempts (2 and 4) of the retry cascade below; without
+    # this, a 'converged' solution could be returned that violates the
+    # constraints the user asked for
+    parscale_ok <- lav_con_parscale_safe(
+      lavmodel = lavmodel,
+      lavpartable = lavpartable
+    )
+    if (!parscale_ok && !is.null(lavoptions$optim.parscale) &&
+        lavoptions$optim.parscale != "none") {
+      lav_msg_warn(gettext(
+        "optim_parscale is ignored: parameter scaling is not (yet)
+        available when the model contains inequality constraints,
+        nonlinear equality constraints, or linear equality constraints
+        that are not of the form a == b."))
+      lavoptions$optim.parscale <- "none"
     }
 
     # the EM optimizer only supports two-level models with a single
@@ -384,6 +407,9 @@ lav_step11_estoptim <- function(lavdata = NULL,
       }
       x_runaway <- NULL
 
+      # note: the attempts that rescale the parameters (2 and 4) are
+      # skipped if parscale_ok is FALSE (see above)
+
       # try 1
       if (lav_verbose()) {
         cat("attempt 1 -- default options\n")
@@ -405,7 +431,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
       }
 
       # try 2: optim.parscale = "standardize" (new in 0.6-7)
-      if (lavoptions$optim.attempts > 1L &&
+      if (lavoptions$optim.attempts > 1L && parscale_ok &&
         lavoptions$rstarts == 0L && unusable(x)) {
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"
@@ -458,7 +484,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
       }
 
       # try 4: start = "simple" + optim.parscale = "standardize"
-      if (lavoptions$optim.attempts > 3L &&
+      if (lavoptions$optim.attempts > 3L && parscale_ok &&
         lavoptions$rstarts == 0L && unusable(x)) {
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"

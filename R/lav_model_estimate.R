@@ -126,6 +126,16 @@ lav_model_est <- function(lavmodel = NULL,
     lavoptions$optim.parscale <- "none"
   }
 
+  # stopgap: the scaling layer below imposes the constraints on the SCALED
+  # parameters, which is only harmless for box bounds and simple (a == b)
+  # equality constraints; refuse to rescale in all other cases
+  # (safety net only: lav_step11_estoptim() already does this, and warns)
+  if (lavoptions$optim.parscale != "none" &&
+      !lav_con_parscale_safe(lavmodel = lavmodel,
+                             lavpartable = lavpartable)) {
+    lavoptions$optim.parscale <- "none"
+  }
+
   if (lavoptions$optim.parscale == "none") {
     # do nothing, but still set SCALE, as before
 
