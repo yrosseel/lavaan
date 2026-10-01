@@ -103,6 +103,17 @@ attempt to reproduce the output of \code{Mplus}:
   \item{\code{baseline_conditional_x_free_slopes = FALSE}:}{when
     \code{conditional_x = TRUE}, the baseline (independence) model does not
     free the slope structure.}
+  \item{mixed numeric/ordinal data:}{in the three-stage (D)WLS approach,
+    the asymptotic covariance matrix of the sample statistics (and the
+    (D)WLS weight matrix) involves the matrix of derivatives of the
+    stage-1/2 estimating equations. For the numeric variables, lavaan uses
+    the analytic information (means, slopes, variances) and the observed
+    second-order derivatives of the bivariate (pearson, polyserial)
+    loglikelihoods, which remain valid if the numeric variables are not
+    normally distributed. Mplus (and lavaan before 0.7-3) replaces all
+    these derivatives by crossproducts of the scores (the information
+    identity), which is only valid under normality of the numeric
+    variables. For purely ordinal data, both approaches coincide.}
 }
 The \code{likelihood}, \code{conditional_x}, \code{fixed_x} and
 \code{zero_keep_margins} defaults are the same as for

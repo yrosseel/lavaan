@@ -445,6 +445,91 @@ lav_bvmix_cor_sc_cache <- function(cache = NULL,
   })                                        # nolint end
 }
 
+# (minus) the second-order derivatives of the total (weighted) loglikelihood
+# with respect to rho and the univariate parameters of both variables:
+# -d2 logl / d rho d (beta_y1, evar_y1, th_y2, sl_y2), where beta_y1 =
+# (intercept, slopes). The casewise rho-score (see lav_bvmix_grad_cache) is
+#   dx = g / (p r^3),  g = phi(a) (ta rho - z) - phi(b) (tb rho - z),
+# with a = (ta - rho z)/r, b = (tb - rho z)/r, p = Phi(a) - Phi(b), r =
+# sqrt(1 - rho^2), z = (y1 - eta_y1)/sd_y1 the standardized numeric variable
+# and ta/tb the upper/lower rectangle bounds of the ordinal variable
+# (threshold minus eta_y2). The derivatives go through z (beta_y1, evar_y1)
+# and through ta/tb (thresholds; slopes of y2 via eta_y2).
+# Used by muthen1984() (the A21 block) for non-normal numeric variables,
+# where the information identity (crossproduct of scores) does not hold.
+lav_bvmix_cor_hessian_uni_cache <- function(cache = NULL) {
+  with(cache, {                           # nolint start
+    rho <- theta[1L]
+    r <- sqrt(1 - rho * rho)
+    r3 <- r * r * r
+
+    a <- (fit_y2_z1 - rho * z) / r
+    b <- (fit_y2_z2 - rho * z) / r
+    pa <- dnorm(a)
+    pb <- dnorm(b)
+    p <- pnorm(a) - pnorm(b)
+    p[p < .Machine$double.eps] <- .Machine$double.eps
+
+    ga <- fit_y2_z1 * rho - z
+    gb <- fit_y2_z2 * rho - z
+    g <- pa * ga - pb * gb
+
+    # d g / d u and d p / d u, for u = z, ta, tb
+    dg_z <- (rho / r) * (a * pa * ga - b * pb * gb) - (pa - pb)
+    dp_z <- -(rho / r) * (pa - pb)
+    dg_ta <- -a * pa * ga / r + pa * rho
+    dp_ta <- pa / r
+    dg_tb <- b * pb * gb / r - pb * rho
+    dp_tb <- -pb / r
+
+    # d dx / d u = (dg p - g dp) / (p^2 r^3)
+    p2r3 <- p * p * r3
+    d_z <- (dg_z * p - g * dp_z) / p2r3
+    d_ta <- (dg_ta * p - g * dp_ta) / p2r3
+    d_tb <- (dg_tb * p - g * dp_tb) / p2r3
+
+    # to be consistent with (log)lik_cache
+    if (length(lik_toosmall_idx) > 0L) {
+      d_z[lik_toosmall_idx] <- as.numeric(NA)
+      d_ta[lik_toosmall_idx] <- as.numeric(NA)
+      d_tb[lik_toosmall_idx] <- as.numeric(NA)
+    }
+    if (!is.null(wt)) {
+      d_z <- wt * d_z
+      d_ta <- wt * d_ta
+      d_tb <- wt * d_tb
+    }
+
+    # y1: z = (y1 - x1 beta_y1) / sd_y1
+    #     d z / d beta_y1 = -x1 / sd_y1;  d z / d evar_y1 = -z / (2 evar_y1)
+    if (nexo > 0L) {
+      x1 <- cbind(1, exo, deparse.level = 0)
+    } else {
+      x1 <- matrix(1, length(z), 1L)
+    }
+    d_beta_y1 <- -1 * colSums(x1 * d_z, na.rm = TRUE) / y1_sd
+    d_evar_y1 <- -1 * sum(z * d_z, na.rm = TRUE) / (2 * y1_var)
+
+    # y2: ta = th[y2 + 1] - eta_y2, tb = th[y2] - eta_y2
+    #     (y2_y1/y2_y2: n x nth indicator matrices of the upper/lower
+    #      threshold of each case; zero for the +/- Inf pseudo-thresholds)
+    d_th_y2 <- colSums(y2_y1 * d_ta, na.rm = TRUE) +
+               colSums(y2_y2 * d_tb, na.rm = TRUE)
+    d_sl_y2 <- NULL
+    if (nexo > 0L) {
+      d_sl_y2 <- -1 * colSums(exo * (d_ta + d_tb), na.rm = TRUE)
+    }
+
+    # minus
+    list(
+      beta_y1 = -1 * d_beta_y1,
+      evar_y1 = -1 * d_evar_y1,
+      th_y2 = -1 * d_th_y2,
+      sl_y2 = if (is.null(d_sl_y2)) NULL else -1 * d_sl_y2
+    )
+  })                                        # nolint end
+}
+
 
 # casewise scores
 #

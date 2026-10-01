@@ -246,7 +246,13 @@ lav_object_gamma <- function(lavobject = NULL,
         zero_cell_warn = FALSE,
         zero_cell_tables = TRUE,
         allow_empty_cell = lavoptions$allow.empty.cell,
-        cluster_idx = cluster_idx
+        cluster_idx = cluster_idx,
+        numeric_bread = if (!is.null(lavoptions$mimic) &&
+                            lavoptions$mimic == "Mplus") {
+          "identity"
+        } else {
+          "observed"
+        }
       )
       nobs_g <- lavsamplestats@nobs[[g]]
       if (!is.null(cat_1$WLS.W.cluster)) {

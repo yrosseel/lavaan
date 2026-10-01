@@ -416,6 +416,15 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         cat("Estimating sample thresholds and correlations ... ")
       }
 
+      # mixed numeric/ordinal data: the 'bread' of the three-stage Gamma for
+      # the numeric variables is based on observed derivatives (correct for
+      # non-normal numeric variables); Mplus uses the information identity
+      # (crossproducts of scores), which we mimic if requested
+      m84_numeric_bread <- "observed"
+      if (!is.null(lavoptions$mimic) && lavoptions$mimic == "Mplus") {
+        m84_numeric_bread <- "identity"
+      }
+
       # cluster-robust SEs/test for categorical data (issue #254): pass the
       # cluster index so muthen1984() can also return a cluster-robust WLS.W
       if (length(lavdata@cluster) > 0L && nlevels == 1L) {
@@ -451,7 +460,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           zero_cell_warn = FALSE,
           zero_cell_tables = TRUE,
           allow_empty_cell = allow_empty_cell,
-          cluster_idx = cluster_idx_cat
+          cluster_idx = cluster_idx_cat,
+          numeric_bread = m84_numeric_bread
         )
       } else {
         cat_1 <- muthen1984(
@@ -470,7 +480,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           zero_cell_warn = FALSE,
           zero_cell_tables = TRUE,
           allow_empty_cell = allow_empty_cell,
-          cluster_idx = cluster_idx_cat
+          cluster_idx = cluster_idx_cat,
+          numeric_bread = m84_numeric_bread
         )
       }
       lav_verbose(current_verbose)

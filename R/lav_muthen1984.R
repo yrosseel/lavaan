@@ -48,6 +48,7 @@ muthen1984 <- function(data_1 = NULL,
                        zero_cell_tables = TRUE,
                        allow_empty_cell = TRUE,
                        cluster_idx = NULL,
+                       numeric_bread = "observed",
                        group = 1L) { # group only for error messages
 
   # just in case Data is a vector
@@ -170,7 +171,8 @@ muthen1984 <- function(data_1 = NULL,
   #      correlation scores)
   tmp <- lav_m84_a21(
     fit = fit, ov_types = ov_types, cor_1 = cor_1, var_1 = var_1,
-    wt = wt, n = n, layout = layout, th_keep = th_keep
+    wt = wt, n = n, layout = layout, th_keep = th_keep,
+    numeric_bread = numeric_bread
   )
   sc_cor <- tmp$sc_cor
   a21 <- tmp$a21
@@ -193,10 +195,13 @@ muthen1984 <- function(data_1 = NULL,
   } else {
     inner2 <- inner
   }
-  a11 <- lav_m84_a11(inner2 = inner2, layout = layout)
+  a11 <- lav_m84_a11(
+    inner2 = inner2, layout = layout, fit = fit, ov_types = ov_types,
+    numeric_bread = numeric_bread
+  )
 
   # A22 (diagonal)
-  a22 <- lav_m84_a22(sc_cor = sc_cor, wt = wt)
+  a22 <- lav_m84_a22(sc_cor = sc_cor, wt = wt, a22_diag = tmp$a22_diag)
 
   # A12 (zero)
   a12 <- matrix(0, NROW(a11), NCOL(a22))
@@ -386,19 +391,98 @@ lav_m84_pair_sc <- function(fit = NULL, ov_types = NULL,
   out
 }
 
+# (minus) the observed second-order derivatives of the total loglikelihood of
+# a pearson or polyserial pair with respect to rho, and with respect to rho
+# and the univariate parameters of both variables, in the layout of
+# lav_m84_pair_sc() (see lav_bvreg_cor_hessian_uni_cache() and
+# lav_bvmix_cor_hessian_uni_cache()). The crossproduct of the scores
+# (information identity, see lav_m84_a21) is only valid if the numeric
+# variable is normally distributed; these derivatives are not.
+lav_m84_pair_obs_deriv <- function(fit = NULL, ov_types = NULL,
+                                   i = NULL, j = NULL, rho = NULL,
+                                   wt = NULL) {
+  ord_i <- ov_types[i] == "ordered"
+  ord_j <- ov_types[j] == "ordered"
+  if (ord_i && ord_j) {
+    return(NULL)
+  }
+
+  # y1 = numeric variable (first), y2 = the other one
+  if (!ord_i) {
+    fit_y1 <- fit[[i]]
+    fit_y2 <- fit[[j]]
+  } else {
+    fit_y1 <- fit[[j]]
+    fit_y2 <- fit[[i]]
+  }
+
+  if (ord_i || ord_j) {
+    # polyserial
+    cache <- lav_bvmix_cache_from_args(
+      y1 = fit_y1$y, y2 = fit_y2$y, wt = wt, rho = rho,
+      fit_y1 = fit_y1, fit_y2 = fit_y2, scores = TRUE
+    )
+    tmp <- lav_bvmix_logl_cache(cache = cache)
+    tmp <- lav_bvmix_grad_cache(cache = cache)
+    d_rho <- -1 * drop(lav_bvmix_hessian_cache(cache = cache))
+    uni <- lav_bvmix_cor_hessian_uni_cache(cache = cache)
+    y1_out <- list(
+      th = uni$beta_y1[1L], sl = uni$beta_y1[-1L], var = uni$evar_y1
+    )
+    y2_out <- list(th = uni$th_y2, sl = uni$sl_y2, var = NULL)
+  } else {
+    # pearson
+    cache <- lav_bvreg_cache_from_args(
+      y1 = fit_y1$y, y2 = fit_y2$y, wt = wt, rho = rho,
+      fit_y1 = fit_y1, fit_y2 = fit_y2, scores = TRUE
+    )
+    tmp <- lav_bvreg_logl_cache(cache = cache)
+    tmp <- lav_bvreg_grad_cache(cache = cache)
+    d_rho <- -1 * drop(lav_bvreg_hessian_cache(cache = cache))
+    uni <- lav_bvreg_cor_hessian_uni_cache(cache = cache)
+    y1_out <- list(
+      th = uni$beta_y1[1L], sl = uni$beta_y1[-1L], var = uni$evar_y1
+    )
+    y2_out <- list(
+      th = uni$beta_y2[1L], sl = uni$beta_y2[-1L], var = uni$evar_y2
+    )
+  }
+
+  # map back to the (i, j) layout
+  if (!ord_i) {
+    out_i <- y1_out
+    out_j <- y2_out
+  } else {
+    out_i <- y2_out
+    out_j <- y1_out
+  }
+  list(
+    d_rho = d_rho,
+    d_th_i = out_i$th, d_th_j = out_j$th,
+    d_sl_i = out_i$sl, d_sl_j = out_j$sl,
+    d_var_i = out_i$var, d_var_j = out_j$var
+  )
+}
+
 # the A21 block: for each correlation (row), the crossproduct of its scores
 # with the cross-derivatives w.r.t. the univariate parameters (columns);
 # also returns the correlation scores sc_cor (unweighted) and the H21/H22
 # blocks of the delta-rule matrix (rho -> cov metric, numeric variables)
+#
+# For the pairs that involve a numeric variable (pearson, polyserial), the
+# crossproducts are replaced by the observed derivatives (see
+# lav_m84_pair_obs_deriv), and the corresponding diagonal elements of A22
+# (a22_diag; NA for the polychoric pairs) are returned as well.
 lav_m84_a21 <- function(fit = NULL, ov_types = NULL,
                         cor_1 = NULL, var_1 = NULL,
                         wt = NULL, n = NULL, layout = NULL,
-                        th_keep = NULL) {
+                        th_keep = NULL, numeric_bread = "observed") {
   nvar <- layout$nvar
   pstar <- layout$pstar
 
   sc_cor <- matrix(0, n, pstar)
   a21 <- matrix(0, pstar, layout$a11_size)
+  a22_diag <- rep(as.numeric(NA), pstar)
   h22 <- diag(pstar) # for the delta rule
   h21 <- matrix(0, pstar, layout$a11_size)
 
@@ -420,33 +504,60 @@ lav_m84_a21 <- function(fit = NULL, ov_types = NULL,
         sc_cor[, pstar_idx] <- pair$dx_rho / wt # unweight
       }
 
-      # TH
-      # (th_keep: skip the pseudo-threshold slots of empty categories --
-      #  the fit has no scores for them; their a21 entries stay zero)
-      a21[pstar_idx, layout$th_idx[[i]][th_keep[[i]]]] <-
-        lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_th_i)
-      a21[pstar_idx, layout$th_idx[[j]][th_keep[[j]]]] <-
-        lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_th_j)
-
-      # SL
-      if (layout$nexo > 0L) {
-        a21[pstar_idx, layout$sl_idx[[i]]] <-
-          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_sl_i)
-        a21[pstar_idx, layout$sl_idx[[j]]] <-
-          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_sl_j)
-      }
-
-      # VAR (numeric variables only) + H21/H22 delta-rule entries
       num_i <- !is.null(pair$dx_var_i)
       num_j <- !is.null(pair$dx_var_j)
-      if (num_i) {
-        a21[pstar_idx, layout$var_idx[[i]]] <-
-          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_var_i)
+
+      if (numeric_bread == "observed" && (num_i || num_j)) {
+        # pearson/polyserial: observed derivatives
+        obs <- lav_m84_pair_obs_deriv(
+          fit = fit, ov_types = ov_types, i = i, j = j,
+          rho = cor_1[i, j], wt = wt
+        )
+        a22_diag[pstar_idx] <- obs$d_rho
+        a21[pstar_idx, layout$th_idx[[i]][th_keep[[i]]]] <- obs$d_th_i
+        a21[pstar_idx, layout$th_idx[[j]][th_keep[[j]]]] <- obs$d_th_j
+        if (layout$nexo > 0L) {
+          a21[pstar_idx, layout$sl_idx[[i]]] <- obs$d_sl_i
+          a21[pstar_idx, layout$sl_idx[[j]]] <- obs$d_sl_j
+        }
+        if (num_i) {
+          a21[pstar_idx, layout$var_idx[[i]]] <- obs$d_var_i
+        }
+        if (num_j) {
+          a21[pstar_idx, layout$var_idx[[j]]] <- obs$d_var_j
+        }
+      } else {
+        # polychoric (or numeric_bread = "identity"): crossproducts
+        # (information identity)
+
+        # TH
+        # (th_keep: skip the pseudo-threshold slots of empty categories --
+        #  the fit has no scores for them; their a21 entries stay zero)
+        a21[pstar_idx, layout$th_idx[[i]][th_keep[[i]]]] <-
+          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_th_i)
+        a21[pstar_idx, layout$th_idx[[j]][th_keep[[j]]]] <-
+          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_th_j)
+
+        # SL
+        if (layout$nexo > 0L) {
+          a21[pstar_idx, layout$sl_idx[[i]]] <-
+            lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_sl_i)
+          a21[pstar_idx, layout$sl_idx[[j]]] <-
+            lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_sl_j)
+        }
+
+        # VAR (numeric variables only)
+        if (num_i) {
+          a21[pstar_idx, layout$var_idx[[i]]] <-
+            lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_var_i)
+        }
+        if (num_j) {
+          a21[pstar_idx, layout$var_idx[[j]]] <-
+            lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_var_j)
+        }
       }
-      if (num_j) {
-        a21[pstar_idx, layout$var_idx[[j]]] <-
-          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_var_j)
-      }
+
+      # H21/H22 delta-rule entries (numeric variables only)
       if (num_i && num_j) {
         h21[pstar_idx, layout$var_idx[[i]]] <-
           (sqrt(var_1[j]) * cor_1[i, j]) / (2 * sqrt(var_1[i]))
@@ -465,29 +576,76 @@ lav_m84_a21 <- function(fit = NULL, ov_types = NULL,
     }
   }
 
-  list(sc_cor = sc_cor, a21 = a21, h21 = h21, h22 = h22)
+  list(sc_cor = sc_cor, a21 = a21, a22_diag = a22_diag, h21 = h21, h22 = h22)
 }
 
 # the A11 block: 'sparse' (per-variable block-diagonal) version of the
 # left-upper block of INNER (crossprod of the univariate scores)
-lav_m84_a11 <- function(inner2 = NULL, layout = NULL) {
+#
+# For the ordinal variables, the crossproduct of the (threshold/probit) scores
+# is used, as before. For the numeric variables, we use the analytic
+# (expected == observed at the ML solution) information of the univariate
+# normal regression: blockdiag(X'WX / evar, sum(w) / (2 evar^2)). The
+# crossproduct of the scores only equals the information if the variable is
+# normally distributed; for a non-normal numeric variable (e.g. a 0/1 dummy
+# treated as numeric) the scores for the mean and the variance are
+# (nearly) collinear, so A11 was (nearly) singular, the x-related rows of
+# the weight matrix collapsed to zero, and the corresponding regression
+# coefficients were not estimated at all (issue #639, follow-up).
+lav_m84_a11 <- function(inner2 = NULL, layout = NULL,
+                        fit = NULL, ov_types = NULL,
+                        numeric_bread = "observed") {
   a11 <- matrix(0, layout$a11_size, layout$a11_size)
   for (i in seq_len(layout$nvar)) {
     a11_idx <- c(
       layout$th_idx[[i]], layout$sl_idx[[i]],
       layout$var_idx[[i]][!is.na(layout$var_idx[[i]])]
     )
-    a11[a11_idx, a11_idx] <- inner2[a11_idx, a11_idx]
+    if (numeric_bread == "observed" && !is.null(fit) &&
+        ov_types[i] == "numeric") {
+      a11[a11_idx, a11_idx] <- lav_m84_a11_numeric(fit_y = fit[[i]])
+    } else {
+      a11[a11_idx, a11_idx] <- inner2[a11_idx, a11_idx]
+    }
   }
   a11
 }
 
-# the A22 block: diagonal of the correlation-score crossproducts
-lav_m84_a22 <- function(sc_cor = NULL, wt = NULL) {
+# analytic information of the univariate (weighted) normal regression of a
+# numeric variable, in the (mean/intercept, slopes, variance) order of the
+# A11 block; cases with a missing y are skipped
+lav_m84_a11_numeric <- function(fit_y = NULL) {
+  y <- fit_y$y
+  x1 <- cbind(1, fit_y$x, deparse.level = 0)
+  wt <- fit_y$wt
+  if (is.null(wt)) {
+    wt <- rep(1, length(y))
+  }
+  evar <- fit_y$theta[fit_y$var_idx]
+  ok <- !is.na(y) & stats::complete.cases(x1)
+  if (!all(ok)) {
+    x1 <- x1[ok, , drop = FALSE]
+    wt <- wt[ok]
+  }
+  info_beta <- crossprod(x1 * wt, x1) / evar
+  info_var <- sum(wt) / (2 * evar * evar)
+  nbeta <- NCOL(x1)
+  out <- matrix(0, nbeta + 1L, nbeta + 1L)
+  out[seq_len(nbeta), seq_len(nbeta)] <- info_beta
+  out[nbeta + 1L, nbeta + 1L] <- info_var
+  out
+}
+
+# the A22 block: diagonal of the correlation-score crossproducts; for the
+# pairs with a non-NA entry in a22_diag (pearson/polyserial), the observed
+# second derivative is used instead
+lav_m84_a22 <- function(sc_cor = NULL, wt = NULL, a22_diag = NULL) {
   pstar <- NCOL(sc_cor)
   a22 <- matrix(0, pstar, pstar)
   for (i in seq_len(pstar)) {
-    if (is.null(wt)) {
+    if (!is.null(a22_diag) && !is.na(a22_diag[i])) {
+      a22[i, i] <- a22_diag[i]
+    } else if (is.null(wt)) {
       a22[i, i] <- sum(sc_cor[, i] * sc_cor[, i], na.rm = TRUE)
     } else {
       a22[i, i] <- sum(sc_cor[, i] * sc_cor[, i] / wt, na.rm = TRUE)

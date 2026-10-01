@@ -491,6 +491,70 @@ lav_bvreg_cor_sc_cache <- function(cache = NULL) {
   })                       # nolint end
 }
 
+# (minus) the second-order derivatives of the total (weighted) loglikelihood
+# with respect to rho and the univariate parameters of both variables:
+# -d2 logl / d rho d (beta_y1, evar_y1, beta_y2, evar_y2), where beta_y =
+# (intercept, slopes). The casewise rho-score (see lav_bvreg_grad_cache) is
+#   dx = (rho + t1 - rho * t2 / r) / r
+# with t1 = y1c * y2c / (sd_y1 * sd_y2), t2 = y1c^2/evar_y1 - 2 rho t1 +
+# y2c^2/evar_y2 and r = 1 - rho^2; the derivatives go through y1c = y1 - x1
+# beta_y1 (d y1c / d beta_y1 = -x1) and through evar_y1 (sd_y1, t1, t2).
+# Used by muthen1984() (the A21 block) for non-normal numeric variables,
+# where the information identity (crossproduct of scores) does not hold.
+lav_bvreg_cor_hessian_uni_cache <- function(cache = NULL) {
+  with(cache, {           # nolint start
+    rho <- theta[1L]
+    r <- (1 - rho * rho)
+    sd_y1_y2 <- sd_y1 * sd_y2
+    t1 <- (y1c * y2c) / sd_y1_y2
+
+    # d dx / d y1c, d dx / d y2c
+    d_y1c <- (y2c / sd_y1_y2 -
+      (rho / r) * (2 * y1c / evar_y1 - 2 * rho * y2c / sd_y1_y2)) / r
+    d_y2c <- (y1c / sd_y1_y2 -
+      (rho / r) * (2 * y2c / evar_y2 - 2 * rho * y1c / sd_y1_y2)) / r
+
+    # d dx / d evar_y1, d dx / d evar_y2
+    d_evar_y1 <- (-t1 / (2 * evar_y1) -
+      (rho / r) * (-(y1c * y1c) / (evar_y1 * evar_y1) + rho * t1 / evar_y1)
+    ) / r
+    d_evar_y2 <- (-t1 / (2 * evar_y2) -
+      (rho / r) * (-(y2c * y2c) / (evar_y2 * evar_y2) + rho * t1 / evar_y2)
+    ) / r
+
+    # to be consistent with (log)lik_cache
+    if (length(lik_toosmall_idx) > 0L) {
+      d_y1c[lik_toosmall_idx] <- as.numeric(NA)
+      d_y2c[lik_toosmall_idx] <- as.numeric(NA)
+      d_evar_y1[lik_toosmall_idx] <- as.numeric(NA)
+      d_evar_y2[lik_toosmall_idx] <- as.numeric(NA)
+    }
+    if (!is.null(wt)) {
+      d_y1c <- wt * d_y1c
+      d_y2c <- wt * d_y2c
+      d_evar_y1 <- wt * d_evar_y1
+      d_evar_y2 <- wt * d_evar_y2
+    }
+
+    # beta = (intercept, slopes): d y1c / d beta_y1 = -x1
+    if (nexo > 0L) {
+      x1 <- cbind(1, exo, deparse.level = 0)
+    } else {
+      x1 <- matrix(1, length(y1c), 1L)
+    }
+    d_beta_y1 <- -1 * colSums(x1 * d_y1c, na.rm = TRUE)
+    d_beta_y2 <- -1 * colSums(x1 * d_y2c, na.rm = TRUE)
+
+    # minus
+    list(
+      beta_y1 = -1 * d_beta_y1,
+      evar_y1 = -1 * sum(d_evar_y1, na.rm = TRUE),
+      beta_y2 = -1 * d_beta_y2,
+      evar_y2 = -1 * sum(d_evar_y2, na.rm = TRUE)
+    )
+  })                      # nolint end
+}
+
 # casewise scores
 #
 # Y1 = linear
