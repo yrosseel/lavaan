@@ -357,7 +357,7 @@ lav_parse_formula_numbers <- function(list_before_numbering, types) {
     frm_hasefa <- TRUE
   }
   if (any(elem_text[i] ==
-      c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
+      c("+", "*", "/", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
     if (frm_incremented) {
       frm_number <- frm_number - 1L
       elem_formula_number[i] <- frm_number
