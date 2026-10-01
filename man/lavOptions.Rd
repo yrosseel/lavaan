@@ -335,10 +335,13 @@ Data options:
       two variables at a time. Here we use pairwise deletion: we only keep
       those observations for which both values are observed (not missing),
       and this set may change from pair to pair.
-      By default, in the categorical case we use \code{conditional_x = TRUE}. 
+      By default, in the categorical case we use \code{conditional_x = TRUE}.
       Therefore, any cases
       with missing values on the exogenous covariates will be deleted listwise
-      from the data first.
+      from the data first. For continuous data, \code{"pairwise"} fits the
+      pairwise-complete sample moments, but no robust standard errors or
+      scaled test statistics are available (only \code{se = "standard"} and
+      \code{test = "standard"}, or bootstrapping).
       Finally, if the estimator is \code{"PML"}, the available options are
       \code{"pairwise"}, \code{"available.cases"} and
       \code{"doubly.robust"}. See the PML tutorial on the lavaan website for
