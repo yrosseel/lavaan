@@ -57,6 +57,45 @@ lav_samp_mi_aux_moments <- function(y = NULL, aux = NULL, wt = NULL,
   }
 }
 
+# helper: weighted sample mean and covariance matrix, allowing for missing
+# values (pairwise deletion). Without missing values, this is identical to
+# stats::cov.wt(y, wt = wt, method = "ML"). With missing values, the (j,k)
+# element is computed from the cases where both y_j and y_k are observed,
+# centered at the means of those same cases (like stats::cov(y, use =
+# "pairwise.complete.obs")). The weighted 'N' is the sum of the weights of
+# the complete pairs (w_sum); if unbiased = TRUE, the (j,k) element is
+# multiplied by w_sum[j,k] / (w_sum[j,k] - 1) (the 'N-1' version)
+lav_samp_cov_wt_pairwise <- function(y = NULL, wt = NULL, unbiased = FALSE) {
+  if (!anyNA(y)) {
+    out <- stats::cov.wt(y, wt = wt, method = "ML")
+    cov <- out$cov
+    center <- out$center
+    w_sum <- sum(wt)
+    if (unbiased) {
+      cov <- cov * (w_sum / (w_sum - 1))
+    }
+    return(list(cov = cov, center = center, w_sum = w_sum))
+  }
+  obs <- !is.na(y)
+  y0 <- y
+  y0[!obs] <- 0
+  w_obs <- obs * wt                    # weight if observed, 0 otherwise
+  w_sum <- crossprod(w_obs, obs)       # sum of weights of complete pairs
+  # [j,k]: weighted sum of y_j over the cases where y_j and y_k are observed
+  a_1 <- crossprod(y0 * wt, obs)
+  s_1 <- crossprod(y0 * wt, y0)        # weighted cross-products
+  m_jk <- a_1 / w_sum                  # pairwise means of y_j
+  cov <- s_1 / w_sum - m_jk * t(m_jk)
+  cov <- (cov + t(cov)) / 2
+  # missing by design (zero coverage): no information
+  cov[w_sum == 0] <- NA_real_
+  if (unbiased) {
+    cov <- cov * (w_sum / (w_sum - 1))
+  }
+  center <- colSums(y0 * wt) / colSums(w_obs)
+  list(cov = unname(cov), center = unname(center), w_sum = unname(w_sum))
+}
+
 lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                                       lavoptions = NULL,
                                       wls_v = NULL,
@@ -885,24 +924,24 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           mean[[g]] <- colMeans(x[[g]], na.rm = TRUE)
         }
       } else {
-        # LISTWISE
+        # LISTWISE (or PAIRWISE)
         if (!is.null(wt[[g]])) {
-          out <- stats::cov.wt(x[[g]],
+          # without missing values, this is cov.wt(method = "ML"), which
+          # divides by sum(wt) (the 'N' version). If rescale is FALSE (e.g.
+          # GLS/ULS/(D)WLS), the unweighted path uses the unbiased 'N-1'
+          # version; mirror that here so that supplying sampling weights does
+          # not change the covariance normalization (nobs[[g]] == sum(wt[[g]]);
+          # see top of this function). With missing values (pairwise), the
+          # moments are computed per pair of variables, like in the
+          # unweighted path (issue #639)
+          out <- lav_samp_cov_wt_pairwise(x[[g]],
             wt = wt[[g]],
-            method = "ML"
+            unbiased = !rescale
           )
-      cov_1 <- out$cov
+          cov_1 <- out$cov
           # if we have missing values (missing by design?), replace them by 0
           cov_1[is.na(cov_1)] <- 0
           cov[[g]] <- cov_1
-          # cov.wt(method = "ML") divides by sum(wt) (the 'N' version). If
-          # rescale is FALSE (e.g. GLS/ULS/(D)WLS), the unweighted path uses
-          # the unbiased 'N-1' version; mirror that here so that supplying
-          # sampling weights does not change the covariance normalization
-          # (nobs[[g]] == sum(wt[[g]]); see top of this function).
-          if (!rescale) {
-            cov[[g]] <- (nobs[[g]] / (nobs[[g]] - 1)) * cov[[g]]
-          }
           if (ridge) {
             diag(cov[[g]]) <- diag(cov[[g]]) + ridge_eps
           }
@@ -1026,16 +1065,22 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     # fill in the other slots
     if (!is.null(exo[[g]])) {
       if (!is.null(wt[[g]])) {
-        if (missing != "listwise") {
+        if (!is.null(missing_h1[[g]])) {
+          # weighted EM moments (missing = "ml"/"two.stage"): the x-part
           cov_x[[g]] <- missing_h1[[g]]$sigma[x_idx[[g]],
             x_idx[[g]],
             drop = FALSE
           ]
           mean_x[[g]] <- missing_h1[[g]]$mu[x_idx[[g]]]
         } else {
-          out <- stats::cov.wt(exo[[g]],
+          # listwise, or pairwise (e.g. categorical data; issue #639): no EM
+          # moments are available; use the weighted sample moments (the
+          # exogenous x variables are complete, as lavData removes cases
+          # with missing x values), using the same 'N' vs 'N-1' convention
+          # as the unweighted path (see the cov[[g]] listwise branch above)
+          out <- lav_samp_cov_wt_pairwise(exo[[g]],
             wt = wt[[g]],
-            method = "ML"
+            unbiased = !rescale
           )
           cov_x[[g]] <- out$cov
           mean_x[[g]] <- out$center
