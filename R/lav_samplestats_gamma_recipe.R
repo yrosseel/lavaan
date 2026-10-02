@@ -32,6 +32,22 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
   multilevel <- lavdata@nlevels > 1L
   clustered <- !multilevel && length(lavdata@cluster) > 0L
   wt <- length(lavdata@weights) > 0L && !is.null(lavdata@weights[[1]])
+  wls_family <- estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")
+
+  # continuous data + pairwise deletion: the complete-data recipe applies,
+  # where the ADF/NT Gamma is computed from the pairwise-complete sample
+  # moments and (cross)products (lav_samp_gamma handles the missing values
+  # pairwise), as it always has been for the (D)WLS/ULS family; without any
+  # missing values, pairwise deletion IS listwise deletion. For the ML/GLS
+  # estimators, however, there is no suitable Gamma of the pairwise-complete
+  # moments (the casewise scores are incomplete), and the complete-data
+  # recipe only applies when the data are complete (lav_step03_data() stops
+  # early otherwise, when robust se/test are requested)
+  if (!categorical && !multilevel &&
+      any(missing == c("pairwise", "available.cases")) &&
+      (wls_family || lav_data_complete(lavdata))) {
+    missing <- "listwise"
+  }
 
   # design vs frequency weighting of the (categorical/continuous) Gamma
   swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
@@ -92,7 +108,6 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
   #    - "twolevel" / "twolevel.cat"
   #                     two-level (D)WLS builders (cluster sandwich)
   #    - "none"         no NACOV computed at fit time
-  wls_family <- estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")
   flavor <- "none"
   if (multilevel) {
     if (estimator %in% c("WLS", "DWLS", "ULS")) {

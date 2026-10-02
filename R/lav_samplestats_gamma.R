@@ -949,6 +949,11 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
         "Gamma with sampling weights is not available (yet) for
          clustered data."))
     }
+    if (anyNA(m_y)) {
+      lav_msg_stop(gettext(
+        "Gamma with sampling weights is not available (yet) if the data
+         contain missing values; use missing = \"listwise\"."))
+    }
     out <- stats::cov.wt(m_y, wt = wt, method = "ML")
     mu_1 <- out$center
     cov_1 <- out$cov

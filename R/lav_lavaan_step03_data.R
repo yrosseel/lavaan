@@ -149,6 +149,34 @@ lav_step03_data <- function(slot_data = NULL,
       "correlation structures with mixed ordered and continuous
       (endogenous) variables are not supported (yet)."))
   }
+  # continuous data + missing = "pairwise" + ML/GLS estimators: the
+  # (pairwise-complete) sample moments can be fitted, but there is no
+  # suitable asymptotic covariance matrix (Gamma) of these moments, and the
+  # casewise scores contain missing values; the robust/sandwich standard
+  # errors and the scaled/residual-based test statistics are therefore not
+  # available (before 0.7-3, these failed deep inside with a cryptic error).
+  # Without any missing values, pairwise deletion is listwise deletion, and
+  # everything is available; the (D)WLS/ULS family uses the Gamma of the
+  # pairwise-complete moments (as it always has)
+  if (lavdata@data.type == "full" &&
+      !any(lavdata@ov$type == "ordered") && lavdata@nlevels == 1L &&
+      any(lavoptions$missing == c("pairwise", "available.cases")) &&
+      lav_options_estimatorgroup(lavoptions$estimator) %in% c("ML", "GLS") &&
+      !lav_data_complete(lavdata)) {
+    se_ok <- c("none", "standard", "bootstrap")
+    test_ok <- c(
+      "none", "standard", "bollen.stine",
+      "browne.residual.nt", "browne.residual.nt.model"
+    )
+    if (!lavoptions$se %in% se_ok || !all(lavoptions$test %in% test_ok)) {
+      lav_msg_stop(gettextf(
+        "robust standard errors and scaled or residual-based test statistics
+         are not available for the ML/GLS estimators when the (continuous)
+         data contain missing values and missing = %1$s; use missing = %2$s,
+         or request se = %3$s and test = %3$s.",
+        dQuote(lavoptions$missing), dQuote("ml"), dQuote("standard")))
+    }
+  }
   if (lav_verbose()) {
     print(lavdata)
   }

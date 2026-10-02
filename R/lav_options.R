@@ -1091,29 +1091,9 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
-  # continuous data + missing = "pairwise": the (pairwise-complete) sample
-  # moments can be fitted, but there is no suitable asymptotic covariance
-  # matrix (Gamma) of these moments, and the casewise scores contain missing
-  # values; the robust/sandwich standard errors and the scaled/residual-based
-  # test statistics are therefore not available (before 0.7-3, these failed
-  # deep inside with a cryptic error)
-  if (!opt$.categorical && !opt$.multilevel &&
-      any(opt$missing == c("pairwise", "available.cases"))) {
-    se_ok <- c("none", "standard", "bootstrap")
-    test_ok <- c(
-      "none", "standard", "bollen.stine",
-      "browne.residual.nt", "browne.residual.nt.model"
-    )
-    if (!opt$se %in% se_ok || !all(opt$test %in% test_ok)) {
-      lav_msg_stop(gettextf(
-        "robust standard errors and scaled or residual-based test statistics
-         are not available for continuous data with missing = %1$s; use
-         missing = %2$s (or %3$s for the least-squares estimators), or
-         request se = %4$s and test = %4$s.",
-        dQuote(opt$missing), dQuote("ml"), dQuote("two.stage"),
-        dQuote("standard")))
-    }
-  }
+  # note: continuous data + missing = "pairwise" + robust se/test is checked
+  # in lav_step03_data(), once we know whether the data contain any missing
+  # values at all
 
   # link
   if (opt$link == "logit") {

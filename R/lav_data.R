@@ -558,6 +558,22 @@ lav_lavdata <- function(data = NULL, # data.frame
 }
 
 
+# are the (modeled) data complete, i.e., without any missing values in the
+# observed variables (y and x) of any group? (TRUE for moment-based input)
+# note: when the data are complete, pairwise deletion is identical to
+# listwise deletion
+lav_data_complete <- function(lavdata = NULL) {
+  for (g in seq_len(lavdata@ngroups)) {
+    if (length(lavdata@X) >= g && anyNA(lavdata@X[[g]])) {
+      return(FALSE)
+    }
+    if (length(lavdata@eXo) >= g && anyNA(lavdata@eXo[[g]])) {
+      return(FALSE)
+    }
+  }
+  TRUE
+}
+
 # validate the aux= argument and return the names of the auxiliary variables
 # that can actually be used in the current configuration
 #

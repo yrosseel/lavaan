@@ -152,7 +152,9 @@ lav_fit_pgfi <- function(gfi = NULL, nel = NULL, df = NULL) {
 lav_fit_gfi <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
                         c_hat = 1.0) {
   if (length(x2) == 0L || !is.finite(x2) || !is.finite(df) ||
-    !is.finite(n) || !is.finite(p)) {
+    !is.finite(n) || !is.finite(p) ||
+    length(c_hat) == 0L || !is.finite(c_hat)) {
+    # (c_hat is NA for a saturated model with a scaled test statistic)
     return(as.numeric(NA))
   }
 
