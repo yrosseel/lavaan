@@ -969,18 +969,23 @@ lav_fit <- function(object, fit_measures = "all",
     class(out) <- c("lavaan.fitMeasures", "lavaan.vector", "numeric")
   }
 
-  # attributes?
-  # only if fit_measures == "all" or "default"
-  if (length(fit_measures_orig) == 1L &&
-      fit_measures_orig %in% c("all", "default")) {
-    x2_label <- test[[test_idx]]$label # NULL if "standard"
-    x2_baseline_label <- object@baseline$test[[test_idx]]$label
-    attr(out, "X2.label") <- x2_label
-    attr(out, "X2.baseline.label") <- x2_baseline_label
-    if (standard_test != "standard") {
-      attr(out, "standard.test") <- standard_test
+  # attributes: record which test statistic(s) the fit measures are based
+  # on, so that developers (eg semTools) do not need to re-read the call or
+  # parse labels; "standard.test" is always present (new in 0.7-3; before,
+  # only if fit_measures was "all"/"default" and the test was not
+  # "standard"), "scaled.test" only if a scaled test statistic was used
+  # the print methods (lavaan.vector/lavaan.matrix/lavaan.fitMeasures) hide
+  # these attributes; the plain-list output has no print method, so we
+  # leave it unadorned
+  if (output != "list") {
+    attr(out, "X2.label") <- test[[test_idx]]$label # NULL if "standard"
+    baseline_test <- object@baseline$test
+    baseline_idx <- which(names(baseline_test) == standard_test)
+    if (length(baseline_idx) > 0L) {
+      attr(out, "X2.baseline.label") <- baseline_test[[baseline_idx[1]]]$label
     }
-    if (scaled_flag && scaled_test != "standard") {
+    attr(out, "standard.test") <- standard_test
+    if (scaled_flag) {
       attr(out, "scaled.test") <- scaled_test
     }
   }
@@ -1199,7 +1204,9 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add_h0 = TRUE) {
 
   # print information about standard.test? (new in 0.6-21)
   # (only if "standard.test" is not "standard")
-  if (!is.null(attr(x, "standard.test"))) {
+  if (!is.null(attr(x, "standard.test")) &&
+      attr(x, "standard.test") != "standard" &&
+      !is.null(attr(x, "X2.label"))) {
     cat("\nNote: fit measures based on the chi-square test statistic\n",
         "     use", attr(x, "X2.label"), "\n")
   }

@@ -158,11 +158,28 @@ lav_test_synonyms <- list(
   )
 )
 
+# canonical spelling of test names: lowercase with dots (see
+# lav_keyword_canonical()), EXCEPT for the FMG tests, whose grammar uses the
+# underscore as separator ("pall_ug_ml", "peba4_rls", "fmg_ug", ...): there
+# the dotted spelling is mapped back onto the underscore one
+lav_test_keyword_canonical <- function(test) {
+  if (!is.character(test) || length(test) == 0L) {
+    return(test)
+  }
+  test <- lav_keyword_canonical(test)
+  test_us <- chartr(".", "_", test)
+  fmg_idx <- which(vapply(test_us, lav_test_fmg_is_fmg, logical(1L)))
+  if (length(fmg_idx) > 0L) {
+    test[fmg_idx] <- test_us[fmg_idx]
+  }
+  test
+}
+
 # allow for 'flexible' names for the test statistics
 # 0.6-13: if multiple names, order them in such a way
 #         that the 'scaled' variants appear after the others
 lav_test_rename <- function(test, check = FALSE) {
-  test <- lav_keyword_canonical(test)
+  test <- lav_test_keyword_canonical(test)
 
   for (canonical in names(lav_test_synonyms)) {
     target_idx <- which(test %in% lav_test_synonyms[[canonical]])

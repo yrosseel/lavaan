@@ -79,6 +79,18 @@ anova(object, ...)
     returns the test statistic of this model. When given a sequence of
     objects, this function tests the models against one another, after
     reordering the models according to their degrees of freedom.
+
+    The object carries a few (hidden) attributes that record which
+    difference test was computed (intended for developers; new in 0.7-3):
+    \code{"type"} (the type of test, in canonical spelling, e.g.
+    \code{"chisq"} or \code{"browne.residual.nt.model"}), \code{"method"}
+    (the method that was used for a scaled difference test, e.g.
+    \code{"satorra.bentler.2001"}; \code{"standard"} for an unscaled
+    difference test), \code{"test"} (the name of the scaled test statistic
+    the difference test was based on, e.g. \code{"satorra.bentler"};
+    \code{"standard"} if unscaled) and \code{"scaled"} (logical). For
+    scaled difference tests, the attributes \code{"scale"} (and
+    \code{"shift"}) contain the scaling factors (and shift parameters).
 }
 \details{
     The \code{anova} function for lavaan objects simply calls the

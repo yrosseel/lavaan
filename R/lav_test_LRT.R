@@ -29,7 +29,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
   type <- lav_keyword_canonical(type[1])
-  test <- lav_keyword_canonical(test[1])
+  test <- lav_test_keyword_canonical(test[1])
   method_orig <- method[1]
   method <- tolower(gsub("[-_\\.]", "", method[1]))
   if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt",
@@ -753,6 +753,18 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     colnames(val)[c(3, 4)] <- c("Cf", "Cf diff")
     attr(val, "heading") <- "\nCf Difference Test\n"
   }
+
+  # bookkeeping attributes (new in 0.7-3): which difference test was
+  # computed, so that developers (eg semTools) do not need to parse the
+  # heading; "type" is the canonical type, "method" the method that was
+  # actually used ("standard" for an unscaled difference test), "test"
+  # the (scaled) test statistic the difference test was based on
+  # ("standard" if unscaled)
+  attr(val, "type") <- type
+  attr(val, "method") <- if (scaled) method else "standard"
+  attr(val, "test") <- if (scaled) test_1 else "standard"
+  attr(val, "scaled") <- scaled
+
   class(val) <- c("anova", class(val))
 
   val
@@ -844,6 +856,20 @@ lav_test_lrt_single_model <- function(object, method = "default",
                                           yes = "\n", no = paste("\n ", label)),
                                    "\n")
   }
+
+  # bookkeeping attributes (new in 0.7-3); see lavTestLRT()
+  test_name <- object@test[[test_1]]$test
+  if (is.null(test_name)) {
+    test_name <- "standard" # for lavaan <0.6 objects
+  }
+  if (grepl(pattern = "browne", x = test_name, fixed = TRUE)) {
+    attr(val, "type") <- test_name
+  } else {
+    attr(val, "type") <- "chisq"
+  }
+  attr(val, "method") <- "standard" # no difference test
+  attr(val, "test") <- test_name
+  attr(val, "scaled") <- !is.null(object@test[[test_1]]$scaling.factor)
 
   class(val) <- c("anova", class(val))
 
@@ -999,6 +1025,13 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
     note,
     "\n"
   )
+
+  # bookkeeping attributes (new in 0.7-3); see lavTestLRT()
+  attr(val, "type") <- "chisq"
+  attr(val, "method") <- "fmg"
+  attr(val, "test") <- test
+  attr(val, "scaled") <- FALSE
+
   class(val) <- c("anova", class(val))
 
   val

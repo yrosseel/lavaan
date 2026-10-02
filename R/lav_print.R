@@ -93,8 +93,11 @@ lav_mat_sym_print <- function(x, ..., nd = 3L, shift = 0L,
 
 lav_mat_print <- function(x, ..., nd = 3L, shift = 0L) {
   x <- as.matrix(x) # just in case
+  # keep only dim/dimnames: all other attributes (header/footer, but also the
+  # bookkeeping attributes of eg fitMeasures()) are not to be printed
   y <- unclass(x)
-  attributes(y)[c("header", "footer")] <- NULL
+  y_attr <- attributes(y)
+  attributes(y) <- y_attr[intersect(c("dim", "dimnames"), names(y_attr))]
   if (!is.null(colnames(x))) {
     colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
   }
@@ -120,8 +123,12 @@ lav_mat_print <- function(x, ..., nd = 3L, shift = 0L) {
 }
 
 lav_vector_print <- function(x, ..., nd = 3L, shift = 0L) {
+  # keep only the names: all other attributes (header/footer, but also the
+  # bookkeeping attributes of eg fitMeasures()) are not to be printed
   y <- unclass(x)
-  attributes(y)[c("header", "footer")] <- NULL
+  y_names <- names(y)
+  attributes(y) <- NULL
+  names(y) <- y_names
   # if(!is.null(names(x))) {
   #    names(y) <- abbreviate(names(x), minlength = nd + 3)
   # }

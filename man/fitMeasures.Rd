@@ -126,7 +126,17 @@ fit of a latent variable model.}
   used for \code{lavaan} objects.}
 }
 \value{
-  A named numeric vector of fit measures.
+  A named numeric vector of fit measures (or a list, a matrix, or a
+  pretty-printed text version, depending on the \code{output} argument).
+
+  Unless \code{output = "list"}, the result carries two (hidden)
+  attributes that record which test statistic(s) the fit measures are
+  based on (intended for developers): \code{"standard.test"} (always
+  present; e.g. \code{"standard"} or \code{"browne.residual.nt.model"}),
+  and \code{"scaled.test"} (only present if a scaled test statistic was
+  used; e.g. \code{"satorra.bentler"}). Before 0.7-3, these attributes
+  were only set if all (default) fit measures were requested, and only if
+  the test was not \code{"standard"}.
 }
 \details{
 When a scaled (or robust) test statistic is requested (for example, by using
