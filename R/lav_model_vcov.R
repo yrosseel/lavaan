@@ -499,10 +499,9 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       gettext("two.stage + observed information currently only works
               with observed_information = 'h1'"))
   }
-  # no weights (yet)
-  if (!is.null(lavdata@weights[[1]])) {
-    lav_msg_stop(gettext("two.stage + sampling.weights is not supported yet"))
-  }
+  # sampling weights: supported since 0.7-3 (the EM moments, the pattern
+  # statistics and the stage-1 Omega are all weighted); the (weighted) scores
+  # of the robust.two.stage sandwich are handled in lav_mvn_mi_h1_omega_sw
   # no fixed.x (yet)
   # if(!is.null(lavsamplestats@x.idx) &&
   #   length(lavsamplestats@x.idx[[1]]) > 0L) {

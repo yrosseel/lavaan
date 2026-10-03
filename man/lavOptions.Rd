@@ -324,7 +324,11 @@ Data options:
       least-squares estimators, requesting
       \code{missing = "ml"} (or \code{"fiml"}) is interpreted as a generic
       request to handle the missing values, and is silently treated as
-      \code{missing = "two.stage"}.
+      \code{missing = "two.stage"}. Both options can be combined with
+      sampling weights (since version 0.7-3); because the plain two-stage
+      standard errors do not account for the variability of the weights,
+      \code{missing = "two.stage"} is then silently treated as
+      \code{missing = "robust.two.stage"}.
       If (part of) the data is categorical, and the estimator is
       from the (W)LS family, the only option (besides listwise deletion)
       is \code{"pairwise"}. In this three-step approach, missingness is

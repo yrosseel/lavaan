@@ -890,6 +890,17 @@ lav_options_set <- function(opt = NULL) {
   # checks if missing = "two.stage" or "robust.two.stage" ####
   if (any(opt$missing == c("two.stage", "robust.two.stage"))) {
     opt$meanstructure <- TRUE
+    # sampling weights: the stage-1 acov of the (weighted) EM moments must
+    # account for the variability of the weights, which only the sandwich
+    # (robust.two.stage) does; the plain I_1^{-1} under-estimates the SEs.
+    # The point estimates are identical, so silently use the sandwich (as
+    # the ML sandwich is forced for complete data with sampling weights)
+    if (opt$missing == "two.stage" && isTRUE(opt$.sampling.weights)) {
+      opt$missing <- "robust.two.stage"
+      if (opt$se == "two.stage") {
+        opt$se <- "robust.two.stage"
+      }
+    }
     # the (continuous) least-squares estimators do not have a dedicated
     # two-stage SE machinery; instead, they reuse the standard robust.sem
     # sandwich, with the two-stage NACOV of the EM moments (computed in

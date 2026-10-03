@@ -242,8 +242,12 @@ lav_step02_options <- function(slot_options = NULL,
     # YR 17/06/26: only force se/test if the user did not explicitly
     #              request a value for them; if the user insists on a
     #              different se=/test=, we honor that choice
+    # YR 03/10/26: not for two-stage missing data, which has its own
+    #              (weighted) se/test (two.stage/robust.two.stage +
+    #              satorra.bentler); see lav_options_set()
     if (!is.null(sampling_weights) && !opt$.categorical &&
-      toupper(estimator) %in% c("DEFAULT", "ML", "PML")) {
+      toupper(estimator) %in% c("DEFAULT", "ML", "PML") &&
+      !any(tolower(opt$missing) == c("two.stage", "robust.two.stage"))) {
       if (opt$se != "none" && is.null(dotdotdot$se)) {
         opt$se <- "robust.huber.white"
       }
