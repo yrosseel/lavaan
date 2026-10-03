@@ -972,12 +972,20 @@ lav_fit <- function(object, fit_measures = "all",
   # attributes: record which test statistic(s) the fit measures are based
   # on, so that developers (eg semTools) do not need to re-read the call or
   # parse labels; "standard.test" is always present (new in 0.7-3; before,
-  # only if fit_measures was "all"/"default" and the test was not
-  # "standard"), "scaled.test" only if a scaled test statistic was used
+  # only if the test was not "standard"), "scaled.test" only if a scaled
+  # test statistic was used
+  # only if ALL (default) fit measures are requested, or for the text
+  # output (which needs them for its note about a non-standard test): an
+  # explicit subset (eg fitMeasures(fit, "cfi")) is often used as a plain
+  # (named) scalar downstream (eg ShortForm compares
+  # unname(fitMeasures(fit, "cfi")) with max(...) using expect_equal(),
+  # which also compares attributes), so it must stay attribute-free
   # the print methods (lavaan.vector/lavaan.matrix/lavaan.fitMeasures) hide
   # these attributes; the plain-list output has no print method, so we
   # leave it unadorned
-  if (output != "list") {
+  if (output == "text" ||
+      (output != "list" && length(fit_measures_orig) == 1L &&
+       fit_measures_orig %in% c("all", "default"))) {
     attr(out, "X2.label") <- test[[test_idx]]$label # NULL if "standard"
     baseline_test <- object@baseline$test
     baseline_idx <- which(names(baseline_test) == standard_test)

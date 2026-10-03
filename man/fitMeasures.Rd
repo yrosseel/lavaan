@@ -129,14 +129,18 @@ fit of a latent variable model.}
   A named numeric vector of fit measures (or a list, a matrix, or a
   pretty-printed text version, depending on the \code{output} argument).
 
-  Unless \code{output = "list"}, the result carries two (hidden)
-  attributes that record which test statistic(s) the fit measures are
-  based on (intended for developers): \code{"standard.test"} (always
-  present; e.g. \code{"standard"} or \code{"browne.residual.nt.model"}),
-  and \code{"scaled.test"} (only present if a scaled test statistic was
-  used; e.g. \code{"satorra.bentler"}). Before 0.7-3, these attributes
-  were only set if all (default) fit measures were requested, and only if
-  the test was not \code{"standard"}.
+  If all (default) fit measures are requested (and \code{output} is not
+  \code{"list"}), or if \code{output = "text"}, the result carries two
+  (hidden) attributes that record
+  which test statistic(s) the fit measures are based on (intended for
+  developers): \code{"standard.test"} (always present; e.g.
+  \code{"standard"} or \code{"browne.residual.nt.model"}), and
+  \code{"scaled.test"} (only present if a scaled test statistic was used;
+  e.g. \code{"satorra.bentler"}). Before 0.7-3, \code{"standard.test"}
+  was only set if the test was not \code{"standard"}. If an explicit
+  subset of fit measures is requested (e.g. \code{fitMeasures(fit, "cfi")}),
+  the (vector or matrix) result has no attributes (other than the names),
+  as before.
 }
 \details{
 When a scaled (or robust) test statistic is requested (for example, by using
