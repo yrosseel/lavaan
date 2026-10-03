@@ -827,7 +827,7 @@ lav_options_set <- function(opt = NULL) {
         dQuote(opt$missing)
       ))
     }
-    # uls/gls/wls/dls are allowed (continuous data only): they use the
+    # uls/gls/wls/dls/dwls are allowed (continuous data only): they use the
     # two-stage EM moments for estimation and the robust.sem sandwich for SEs
     if (any(opt$estimator == c(
       "mlm", "mlmv", "wlsm", "wlsmv",
@@ -894,7 +894,8 @@ lav_options_set <- function(opt = NULL) {
     # two-stage SE machinery; instead, they reuse the standard robust.sem
     # sandwich, with the two-stage NACOV of the EM moments (computed in
     # lav_samplestats); only the (point) estimation uses the EM moments
-    ls_two_stage <- any(opt$estimator == c("uls", "gls", "wls", "dls"))
+    ls_two_stage <- any(opt$estimator == c("uls", "gls", "wls", "dls",
+                                           "dwls"))
     # se
     if (ls_two_stage) {
       if (opt$se == "default") {

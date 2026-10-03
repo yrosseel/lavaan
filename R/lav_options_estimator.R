@@ -387,6 +387,11 @@ lav_options_est_dls <- function(opt) {
 
 lav_options_est_dwls <- function(opt) {
   # DWLS, WLSM, WLSMV, WLSMVS                                      ####
+  # two-stage missing data (plain DWLS only; the scaled variants are
+  # rejected in lav_options_set()): see lav_options_est_gls()
+  if (any(opt$missing == c("two.stage", "robust.two.stage"))) {
+    return(opt)
+  }
   # new in 0.6-17: if !categorical, give a warning
   # changed in 0.7-1: catch this earlier
   #if (!opt$.categorical) {

@@ -89,7 +89,7 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
       nacov_compute <- TRUE
     }
     if (any(missing == c("two.stage", "robust.two.stage")) &&
-        estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+        estimator %in% c("ULS", "GLS", "WLS", "DLS", "DWLS")) {
       nacov_compute <- TRUE
     }
   }
@@ -115,7 +115,7 @@ lav_gamma_recipe <- function(lavoptions = NULL, lavdata = NULL,
     }
   } else if (nacov_compute && !categorical &&
              any(missing == c("two.stage", "robust.two.stage")) &&
-             estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+             estimator %in% c("ULS", "GLS", "WLS", "DLS", "DWLS")) {
     flavor <- paste0("missing.", missing)
   } else if (estimator %in% c("ML", "GLS") && missing == "listwise" &&
              nacov_compute) {

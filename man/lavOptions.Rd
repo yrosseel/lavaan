@@ -316,10 +316,12 @@ Data options:
       0.7-2 also in combination with \code{conditional_x = TRUE}), and
       also for the
       (continuous-data) least-squares estimators \code{"ULS"}, \code{"GLS"},
-      \code{"WLS"} and \code{"DLS"}; for the latter, lavaan automatically
-      switches to \code{se = "robust.sem"} and \code{test = "satorra.bentler"},
-      using the two-stage variance-covariance matrix of the EM-based sample
-      statistics. In addition, for these least-squares estimators, requesting
+      \code{"WLS"}, \code{"DWLS"} and \code{"DLS"}; for the latter, lavaan
+      automatically switches to \code{se = "robust.sem"} and
+      \code{test = "satorra.bentler"}, using the two-stage variance-covariance
+      matrix of the EM-based sample statistics (which also provides the
+      \code{"WLS"}/\code{"DWLS"} weight matrix). In addition, for these
+      least-squares estimators, requesting
       \code{missing = "ml"} (or \code{"fiml"}) is interpreted as a generic
       request to handle the missing values, and is silently treated as
       \code{missing = "two.stage"}.

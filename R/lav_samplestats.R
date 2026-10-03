@@ -737,7 +737,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           } else {
             # two-stage: the sample statistics ARE the EM estimates
             missing_flag <- FALSE
-            if (estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+            if (estimator %in% c("ULS", "GLS", "WLS", "DLS", "DWLS")) {
               lav_msg_stop(gettextf(
                 "missing = %1$s + conditional_x is not supported (yet) for
                 estimator %2$s; use estimator = \"ML\", or
@@ -1121,7 +1121,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     if (!nacov_user && nlevels == 1L) {
       if (nacov_compute && !categorical &&
           any(missing == c("two.stage", "robust.two.stage")) &&
-          estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+          estimator %in% c("ULS", "GLS", "WLS", "DLS", "DWLS")) {
         # two-stage missing data: the NACOV of the (saturated) EM moments,
         # in (mean, vech(cov)) order, to be used by the robust.sem sandwich
         # and the satorra.bentler test
