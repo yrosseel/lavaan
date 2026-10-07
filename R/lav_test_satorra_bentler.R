@@ -23,8 +23,19 @@ lav_test_sb <- function(lavobject = NULL,
                                      ug2_old_approach = FALSE,
                                      return_u = FALSE,
                                      return_ugamma = FALSE,
-                                     gamma_full = NULL) {
+                                     gamma_full = NULL,
+                                     gamma_rows = NULL) {
   test_1 <- list()
+
+  # gamma_rows: the casewise rows behind Gamma (N x p~, single group), for
+  # the corrected trace estimator when there is no raw data (eg the
+  # structural step of a local SAM model, where Gamma is Gamma.eta)
+  if (is.list(gamma_rows)) {
+    gamma_rows <- gamma_rows[[1]]
+  }
+  if (!is.null(gamma_rows) && !is.matrix(gamma_rows)) {
+    gamma_rows <- NULL
+  }
 
   # if a full (cross-group) Gamma is supplied, we must use the 'original'
   # method (the only path that consumes a single assembled Gamma matrix)
@@ -39,7 +50,12 @@ lav_test_sb <- function(lavobject = NULL,
     lavimplied <- lavobject@implied
     lavdata <- lavobject@Data
     lavh1 <- lavobject@h1
-    test_1$standard <- lavobject@test[[1]]
+    # the base statistic: the first test, unless scaled.test asks for
+    # another (non-scaled) one that the object holds (eg the RLS statistic
+    # "browne.residual.nt.model")
+    test_1$standard <- lav_test_scaled_base(
+      test_1 = lavobject@test, lavoptions = lavoptions, test = test
+    )
   } else {
     test_1$standard <- test_unscaled
   }
@@ -87,7 +103,8 @@ lav_test_sb <- function(lavobject = NULL,
   ))
   if (corrected_trace) {
     lav_test_hayakawa_check(
-      lavoptions = lavoptions, lavdata = lavdata, lavmodel = lavmodel
+      lavoptions = lavoptions, lavdata = lavdata, lavmodel = lavmodel,
+      gamma_rows = gamma_rows
     )
   }
 
@@ -254,9 +271,10 @@ lav_test_sb <- function(lavobject = NULL,
       u_mat <- u_mat[[1]] # single group only (checked above)
     }
     if (is.matrix(u_mat)) {
+      # the casewise rows: supplied (no raw data), else from the raw data
       trace_c <- lav_test_hayakawa_trace2(
         u = u_mat, m_y = lavdata@X[[1]],
-        meanstructure = lavmodel@meanstructure
+        meanstructure = lavmodel@meanstructure, rows = gamma_rows
       )
       trace_ugamma_c <- trace_c$trace.UGamma
       trace_ugamma2_c <- trace_c$trace.UGamma2

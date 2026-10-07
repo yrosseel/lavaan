@@ -534,6 +534,13 @@ sam <- function(model = NULL,
     # adjustment (lav_sam_step2_se) needs the casewise rows of Gamma.eta
     hc_rows_flag <- (se == "local" &&
       lav_hc_leverage_flag(fit@Options$information.meat.hc))
+    # the corrected adjusted structural tests (Hayakawa 2018) also need the
+    # casewise rows: they replace the raw data in the (unbiased) estimator
+    # of tr(UGamma^2) (see lav_sam_step2()). Not with se = "local.nt": its
+    # Gamma.eta is the normal-theory one, which has no casewise rows.
+    corrected_rows_flag <- (se != "local.nt" &&
+      lav_sam_corrected_test_flag(fit@Options$test, struc_args$test))
+    rows_flag <- hc_rows_flag || corrected_rows_flag
     ge_try <- tryCatch({
       gamma_eta <- vector("list", length = fit@Data@ngroups)
       gamma_rows <- vector("list", length = fit@Data@ngroups)
@@ -577,7 +584,7 @@ sam <- function(model = NULL,
         if (use_influence) {
           for (g in seq_len(fit@Data@ngroups)) {
             ge_g <- lav_sam_gamma_eta_g(fit = fit, jac_g = jac[[g]], g = g,
-                                        return_rows = hc_rows_flag)
+                                        return_rows = rows_flag)
             if (is.null(ge_g)) {
               use_influence <- FALSE
               break
@@ -611,7 +618,7 @@ sam <- function(model = NULL,
           }
           for (g in seq_len(fit@Data@ngroups)) {
             gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
-            if (hc_rows_flag) {
+            if (rows_flag) {
               # casewise rows of the ADF Gamma (NULL when not available)
               zc_g <- lav_hc_gamma_rows(
                 lavdata = fit@Data, lavoptions = fit@Options,

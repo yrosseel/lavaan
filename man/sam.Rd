@@ -220,7 +220,21 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     describe the fit of the structural part only, conditional on the (fixed)
     measurement model of step 1. When available, the reported (scaled) test
     statistic and the robust fit measures are corrected for the estimation
-    of the measurement model in step 1.
+    of the measurement model in step 1: by default, this is the
+    Satorra-Bentler scaled structural test, driven by the asymptotic
+    covariance matrix of the latent moments (which accounts for step 1).
+    The \code{test} argument may request another member of the
+    Satorra-Bentler family for the structural test instead:
+    \code{"mean.var.adjusted"}, \code{"scaled.shifted"}, or their
+    \code{"corrected"} versions \code{"mean.var.adjusted.corrected"} and
+    \code{"scaled.shifted.corrected"} (see \code{\link{lavTest}}), which
+    use the unbiased estimator of the second-order trace of Hayakawa
+    (2018), computed from the casewise contributions of the observations
+    to the latent moments (available for single-group, single-level models
+    with continuous indicators, except with \code{se = "local.nt"}; in
+    other settings the corrected tests are dropped with a warning).
+    Several tests can be combined, for instance
+    \code{test = c("satorra.bentler", "mean.var.adjusted.corrected")}.
 
     If \code{sam.method} is \code{"global"}, the returned object is an
     ordinary (joint) lavaan object, and \code{fitMeasures} returns the usual

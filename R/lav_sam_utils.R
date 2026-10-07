@@ -1311,14 +1311,22 @@ lav_sam_struc_fit_object <- function(fit_pa = NULL, step1 = NULL) {
       )
 
       # baseline: refit the independence model on the latent (co)variances,
-      # then apply the same Satorra-Bentler correction with the full Gamma
+      # then apply the same Satorra-Bentler correction with the full Gamma.
+      # (The corrected adjusted tests, if any, were added afterwards by
+      # lav_sam_step2_corrected_test() -- they need the casewise rows of
+      # Gamma.eta, which this moments-only refit does not have.)
+      opts_base <- fp@Options
+      opts_base$test <- setdiff(opts_base$test, lav_sam_corrected_tests)
+      if (length(opts_base$test) == 0L) {
+        opts_base$test <- "standard"
+      }
       fit_base <- lavaan::lavaan(
         model = fp@baseline$partable,
         sample.cov = step1$VETA,
         sample.mean = if (meanstr) step1$EETA else NULL,
         sample.nobs = as.list(unlist(fp@SampleStats@nobs)),
         nacov = step1$Gamma.eta,
-        slot_options = fp@Options
+        slot_options = opts_base
       )
       test_base <- lav_test_sb(
         lavobject = fit_base, test = "satorra.bentler",
@@ -1368,16 +1376,20 @@ lav_sam_struc_fit <- function(fit_pa = NULL) {
   # fitMeasures() reports them. (The naive fallback() above keeps the plain
   # chisq/pvalue/cfi/rmsea labels.)
   scaled_labels <- c(
-    "chisq.scaled", "df", "pvalue.scaled",
+    "chisq.scaled", "df.scaled", "pvalue.scaled",
     "cfi.robust", "rmsea.robust", "srmr"
   )
   fm <- try(fitMeasures(fit_pa, scaled_labels), silent = TRUE)
   if (inherits(fm, "try-error")) {
     return(fallback())
   }
-  fm <- as.numeric(fm)
-  names(fm) <- scaled_labels
-  fm
+  # measures that fitMeasures() does not provide for this scaled test (eg
+  # the robust cfi/rmsea when the scaled test is a mean-var-adjusted one)
+  # are reported as NA
+  out <- rep(as.numeric(NA), length(scaled_labels))
+  names(out) <- scaled_labels
+  out[names(fm)] <- as.numeric(fm)
+  out
 }
 
 # Yuan & Chan (2002) rescaled GLOBAL test statistic for sam.method = "global".

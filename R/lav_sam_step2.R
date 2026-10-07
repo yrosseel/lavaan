@@ -25,8 +25,33 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   # whenever Gamma.eta is available -- INDEPENDENT of the requested SE. (For
   # se = "twostep"/"naive" the FIT.PA SEs below are not the final ones: twostep
   # SEs are recomputed in step 4, naive SEs are FIT.PA's plain vcov.)
+  # The user may ask for another member of the Satorra-Bentler family instead
+  # (test = "mean.var.adjusted", "scaled.shifted", or their ".corrected"
+  # versions, see lav_test_hayakawa.R): the same Gamma.eta then feeds that
+  # adjustment of the structural test.
   if (gamma_flag) {
-    lavoptions_pa$test <- "satorra.bentler"
+    sb_tests <- lavoptions_pa$test[lavoptions_pa$test %in% lav_sam_sb_family]
+    if (length(sb_tests) == 0L) {
+      sb_tests <- "satorra.bentler"
+    }
+    # a non-standard base statistic (scaled.test = "browne.residual.nt.model",
+    # Hayakawa's RLS version) must stay in front, as lav_options_set() does
+    scaled_base <- lavoptions_pa$scaled.test
+    if (!is.null(scaled_base) && !scaled_base %in% c("standard", "default")) {
+      sb_tests <- unique(c(scaled_base, sb_tests))
+    }
+    lavoptions_pa$test <- sb_tests
+  } else if (sam_method %in% c("local", "fsr", "cfsr") &&
+             any(lavoptions_pa$test %in% lav_sam_sb_family)) {
+    # no Gamma.eta (eg se = "none"/"bootstrap"): the moments-only structural
+    # fit has no NACOV, so none of the scaled tests can be computed
+    lav_msg_warn(gettextf(
+      "the requested test (%s) needs Gamma.eta, which is not available
+       with se = %s; the standard structural test is reported instead.",
+      lav_msg_view(lavoptions_pa$test[lavoptions_pa$test %in%
+                                      lav_sam_sb_family]),
+      dQuote(lavoptions_pa$se, q = FALSE)))
+    lavoptions_pa$test <- "standard"
   }
   if (lavoptions_pa$se == "naive") {
     # naive SEs = FIT.PA's plain (standard) vcov
@@ -52,6 +77,26 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   lavoptions_pa$.categorical <- FALSE
   lavoptions_pa$rotation <- "none"
   lavoptions_pa <- modifyList(lavoptions_pa, struc_args)
+  if (!is.null(struc_args$test)) {
+    lavoptions_pa$test <- lav_test_rename(struc_args$test)
+  }
+
+  # the corrected adjusted tests (Hayakawa 2018) need the casewise rows
+  # behind Gamma.eta, which the moments-only structural fit does not have:
+  # take them out of the structural fit, and add them afterwards (see below)
+  corrected_tests <- character(0L)
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
+    corrected_tests <-
+      lavoptions_pa$test[lavoptions_pa$test %in% lav_sam_corrected_tests]
+    if (length(corrected_tests) > 0L) {
+      # keep the order of the requested tests for the final @test slot
+      requested_tests <- lavoptions_pa$test
+      lavoptions_pa$test <- setdiff(lavoptions_pa$test, corrected_tests)
+      if (length(lavoptions_pa$test) == 0L) {
+        lavoptions_pa$test <- "satorra.bentler"
+      }
+    }
+  }
   # information.meat.hc: the leverage adjustment of the local SEs is
   # applied afterwards, in lav_sam_step2_se() (the structural fit has no
   # casewise data of its own); the structural fit keeps the classic meat
@@ -307,6 +352,20 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     }
   }
 
+  # the corrected adjusted structural tests (Hayakawa 2018): the unbiased
+  # estimator of tr(UGamma^2) needs the casewise rows of Gamma.eta (the
+  # influence contributions of the cases to the latent moments, built in
+  # step 1c), which take the place of the raw data (see lav_test_hayakawa.R).
+  # Computed afterwards, so that the structural fit itself stays the regular
+  # (moments-only) fit; the resulting entries are added to FIT.PA@test in
+  # the order the tests were requested.
+  if (length(corrected_tests) > 0L) {
+    fit_pa <- lav_sam_step2_corrected_test(
+      fit_pa = fit_pa, step1 = step1,
+      corrected_tests = corrected_tests, requested_tests = requested_tests
+    )
+  }
+
   # which parameters from PTS do we wish to fill in:
   # - all 'free' parameters
   # - :=, <, > (if any)
@@ -337,4 +396,105 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   )
 
   step2
+}
+
+# the Satorra-Bentler family of structural tests a local SAM model can
+# report (all driven by Gamma.eta as the NACOV of the latent moments)
+lav_sam_sb_family <- c(
+  "satorra.bentler", "mean.var.adjusted", "scaled.shifted",
+  "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+)
+# the members that need the casewise rows of Gamma.eta (Hayakawa 2018)
+lav_sam_corrected_tests <- c(
+  "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+)
+
+# is a corrected adjusted test requested, either through test = (already
+# canonical) or through struc_args = list(test = )?
+lav_sam_corrected_test_flag <- function(test = NULL, struc_test = NULL) {
+  if (!is.null(struc_test)) {
+    struc_test <- lav_test_rename(struc_test)
+  }
+  any(c(test, struc_test) %in% lav_sam_corrected_tests)
+}
+
+# add the corrected adjusted structural tests to FIT.PA (single group only):
+# the unbiased tr(UGamma^2) estimator reads the casewise rows of Gamma.eta
+# (step1$Gamma.eta.rows). When the rows are not available for this setting,
+# the corrected tests are dropped with a warning (the other requested tests
+# are reported as usual).
+lav_sam_step2_corrected_test <- function(fit_pa = NULL, step1 = NULL,
+                                         corrected_tests = character(0L),
+                                         requested_tests = character(0L)) {
+  rows <- NULL
+  if (length(step1$Gamma.eta.rows) > 0L) {
+    rows <- step1$Gamma.eta.rows[[1]]
+  }
+  test_c <- NULL
+  if (is.null(rows) || !is.matrix(rows)) {
+    lav_msg_warn(gettextf(
+      "the corrected adjusted tests (%s) need the casewise contributions
+       to Gamma.eta, which are not available for this model (eg se =
+       \"local.nt\", or a setting without casewise influence); they are not
+       reported.", paste(dQuote(corrected_tests, q = FALSE),
+                         collapse = ", ")))
+  } else {
+    test_c <- tryCatch(
+      lav_test_sb(lavobject = fit_pa, test = corrected_tests,
+                  gamma_rows = rows),
+      error = function(e) e
+    )
+    if (inherits(test_c, "error")) {
+      lav_msg_warn(gettextf(
+        "the corrected adjusted tests (%1$s) could not be computed for the
+         structural model: %2$s",
+        paste(dQuote(corrected_tests, q = FALSE), collapse = ", "),
+        conditionMessage(test_c)))
+      test_c <- NULL
+    }
+  }
+  if (is.null(test_c)) {
+    return(fit_pa)
+  }
+
+  # @test: "standard" first, then the requested tests in their order
+  keep <- c("standard", requested_tests)
+  opts_pa <- fit_pa@Options # the (moments-only) options of the fit
+  fit_pa@test <- lav_sam_test_merge(fit_pa@test, test_c, keep)
+  fit_pa@Options$test <- names(fit_pa@test)
+
+  # the baseline (independence) model too, so that the scaled fit indices
+  # (cfi.scaled, ...) based on the corrected test are available: refit it on
+  # the latent moments (as lav_sam_struc_fit_object() does) and apply the
+  # same correction
+  if (!is.null(fit_pa@baseline$partable) && !is.null(fit_pa@baseline$test)) {
+    test_base <- tryCatch({
+      meanstr <- fit_pa@Model@meanstructure
+      fit_base <- lavaan::lavaan(
+        model = fit_pa@baseline$partable,
+        sample.cov = step1$VETA,
+        sample.mean = if (meanstr) step1$EETA else NULL,
+        sample.nobs = as.list(unlist(fit_pa@SampleStats@nobs)),
+        nacov = step1$Gamma.eta,
+        slot_options = opts_pa
+      )
+      lav_test_sb(lavobject = fit_base, test = corrected_tests,
+                  gamma_rows = rows)
+    }, error = function(e) NULL)
+    if (!is.null(test_base)) {
+      fit_pa@baseline$test <-
+        lav_sam_test_merge(fit_pa@baseline$test, test_base, keep)
+    }
+  }
+  fit_pa
+}
+
+# merge the entries of test_new (by name) into test_old, and return the
+# entries named in keep (in that order), ignoring names that are absent
+lav_sam_test_merge <- function(test_old = list(), test_new = list(),
+                               keep = character(0L)) {
+  for (nm in setdiff(names(test_new), "standard")) {
+    test_old[[nm]] <- test_new[[nm]]
+  }
+  test_old[keep[keep %in% names(test_old)]]
 }
