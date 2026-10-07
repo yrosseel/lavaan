@@ -244,9 +244,15 @@ muthen1984 <- function(data_1 = NULL,
   # (lav_samp_gamma: zc <- rowsum(zc, cluster_idx)). Only affects Gamma/NACOV
   # (hence the robust SEs and scaled test); the WLS weight matrix (and thus the
   # point estimates) is still built from the standard i.i.d. 'wls_w' above.
+  # Under missing = "pairwise", 'sc' contains NA for the cases that do not
+  # contribute to a given score column; the i.i.d. meat (lav_mat_crossprod)
+  # treats those as zero contributions, so the per-cluster sums must do the
+  # same (na.rm = TRUE), or else every cluster with at least one incomplete
+  # case would drop out of the meat altogether (issue #642)
   wls_w_cl <- NULL
   if (!is.null(cluster_idx)) {
-    sc_cl <- rowsum.default(sc, group = cluster_idx, reorder = FALSE)
+    sc_cl <- rowsum.default(sc, group = cluster_idx, reorder = FALSE,
+                            na.rm = TRUE)
     inner_cl <- lav_mat_crossprod(sc_cl)
     wls_w_cl <- b_inv %*% inner_cl %*% t(b_inv)
   }
