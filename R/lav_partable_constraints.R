@@ -151,15 +151,16 @@ lav_pt_con_def <- function(partable, con = NULL, debug = FALSE, # nolint start
     return(body_txt)
   }
 
-  # put the results in 'out'
+  # Put the results in 'out' in parameter-table order, not the sorted order used
+  # above, as callers assign them to the ':=' rows by position.
   body_txt <- paste(body_txt, "\nout <- ",
-    paste("c(", paste(lhs_names, collapse = ","), ")\n", sep = ""),
+    paste("c(", paste(lab_unsorted, collapse = ","), ")\n", sep = ""),
     sep = ""
   )
   # what to do with NA values? -> return +Inf???
   body_txt <- paste(body_txt, "out[is.na(out)] <- Inf\n", sep = "")
   body_txt <- paste(body_txt, "names(out) <- ",
-    paste("c(\"", paste(lhs_names, collapse = "\",\""), "\")\n", sep = ""),
+    paste("c(\"", paste(lab_unsorted, collapse = "\",\""), "\")\n", sep = ""),
     sep = ""
   )
   body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
