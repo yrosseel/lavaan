@@ -1248,7 +1248,7 @@ lav_model_est <- function(lavmodel = NULL,
     )
     if (!is.null(runaway)) {
       warn_txt <- paste0(
-        gettextf("the optimizer (%s) claimed the model converged,\n", optimizer),
+        gettext("the optimizer claimed the model converged,\n"),
         gettext("       but the solution seems to have run away:\n"),
         paste0("       ", gettextf(
           "the estimated residual variance of %1$s is %2$s, while its observed variance is only %3$s",
