@@ -25,8 +25,11 @@
 # YR 26 July 2022: add alternative slots, if lavobject = NULL
 # YR 22 Jan  2023: allow for model-based 'structured' Sigma
 
-# TODo: - allow for non-linear equality constraints
-#         (see Browne, 1982, eq 1.7.19; although we may face singular matrices)
+# Nonlinear equality constraints: handled by the same projection as the
+# linear case; lav_con_eq_basis() returns the null space of the constraint
+# Jacobian evaluated at the solution (con.jac), i.e. the local tangent
+# space of the constraint manifold, which is the same linearization the
+# vcov and df computations rely on
 
 lav_test_browne <- function(lavobject = NULL,
                             # or
@@ -81,11 +84,6 @@ lav_test_browne <- function(lavobject = NULL,
     lav_msg_stop(gettext("Browne's test is not available when data is
                          multilevel."))
   }
-  if (length(lavmodel@ceq.nonlinear.idx) > 0L) {
-    lav_msg_stop(gettext("Browne's test is not available (yet) when nonlinear
-                         equality constraints are involved."))
-  }
-
   if (!is.logical(n_minus_one)) {
     if (lavoptions$estimator == "ML" &&
       lavoptions$likelihood == "normal") {
@@ -95,7 +93,7 @@ lav_test_browne <- function(lavobject = NULL,
     }
   }
 
-  # linear equality constraints? NOTE: do not test the packing flags
+  # equality constraints (linear or nonlinear)? NOTE: do not test the packing flags
   # (@eq.constraints / @ceq.simple.only) here -- they are both FALSE when
   # equality constraints coexist with inequality constraints or bounds,
   # and the constraints would silently be dropped from the projection
@@ -274,7 +272,8 @@ lav_test_browne <- function(lavobject = NULL,
     }
     stat <- sum(stat_group)
 
-    # 2. linear equality constraint
+    # 2. equality constraints (linear, or nonlinear linearized at the
+    #    solution)
   } else if (lineq_flag) {
     res_all <- do.call("c", wls_obs) - do.call("c", wls_est)
     delta_all <- do.call("rbind", delta)
@@ -307,8 +306,6 @@ lav_test_browne <- function(lavobject = NULL,
     stat <- ntotal * (q1 - q2)
     stat_group <- stat * unlist(nobs) / ntotal # proxy only
   }
-  # (nonlinear equality constraints were caught at the top)
-
 
   # DF
   if (!is.null(lavobject)) {
