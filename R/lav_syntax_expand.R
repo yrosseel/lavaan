@@ -126,7 +126,7 @@ lav_expand_tokens <- function(modellist,
           if (the_error == 1L) {
             lav_msg_stop(gettext("substring distances not conform for expanding"),
                     tl[1L],
-                    footer = tl[2L]) 
+                    footer = tl[2L])
           } else {
             lav_msg_stop(gettext("string lengths not conform for expanding"),
                     tl[1L],

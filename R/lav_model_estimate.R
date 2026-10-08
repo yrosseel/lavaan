@@ -1202,10 +1202,9 @@ lav_model_est <- function(lavmodel = NULL,
         # avoid false alarm
         if (length(non_zero) > 0L) {
           converged <- FALSE
-          warn_txt <- paste("the optimizer (", optimizer, ") ",
-            "claimed the model converged,\n",
+          warn_txt <- paste("the optimizer claimed the model converged,\n",
             "       but not all elements of the gradient are (near) zero;\n",
-            "       the optimizer may not have found a local solution\n",
+            "       the optimizer may not have found a local solution;\n",
             "       use check.gradient = FALSE to skip this check.",
             sep = ""
           )
