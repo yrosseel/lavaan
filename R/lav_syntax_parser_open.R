@@ -211,12 +211,24 @@ lav_parse_tokens_open <- function(modelsrc, types) {
       elem_i <- elem_i + 1L
     }
   }
+  lavpp <- gregexpr("++", modelsrcw, fixed = TRUE)[[1]] # ++
+  if (lavpp[1L] > -1L) {
+    for (i in seq_along(lavpp)) {
+      pfpos <- lavpp[i]
+      pflen <- 2L
+      elem_pos[elem_i] <- pfpos
+      elem_text[elem_i] <- "++"
+      elem_type[elem_i] <- types$symbol
+      substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
+      elem_i <- elem_i + 1L
+    }
+  }
   symbols <- gregexpr("[,()/*?^']", modelsrcw)[[1L]] # f1=~x2 + 0.5 ? x3
   symbols1 <- gregexpr("[-+][^.0-9]", modelsrcw)[[1L]] # f1=~x2+x3
   symbols2 <- gregexpr("[._0-9a-df-zA-DF-Z)] *[-+][.0-9]", modelsrcw)[[1L]]
-  # f1=~x2+2*x3, len-2 !
+                                                  # f1=~x2+2*x3, len-2 !
   symbols3 <- gregexpr("[^.0-9][eE] *[-+][.0-9]", modelsrcw)[[1L]]
-  # f1=~xe+2*x3, len-2 !
+                                                  # f1=~xe+2*x3, len-2 !
   if (symbols1[1L] > -1L) {
     if (symbols[1L] == -1L) {
       symbols <- symbols1
@@ -357,7 +369,8 @@ lav_parse_formula_numbers <- function(list_before_numbering, types) {
     frm_hasefa <- TRUE
   }
   if (any(elem_text[i] ==
-      c("+", "*", "/", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
+      c("+", "*", "/", "=~", "-", "<~",
+        "~*~", "~~", "~", "|~", "|", "%", "++"))) {
     if (frm_incremented) {
       frm_number <- frm_number - 1L
       elem_formula_number[i] <- frm_number
@@ -671,6 +684,7 @@ lav_parse_model_string_open <- function(model_syntax = "",
       formula = modellist$elem_formula_number
     ))
   }
+  modellist <- lav_expand_plusplus(modellist, modelsrc, types)
   formulalist <- lav_parse_formulas_open(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat_-----
   max_mono_formulas <- length(formulalist)
