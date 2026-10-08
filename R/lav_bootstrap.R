@@ -779,7 +779,7 @@ lav_bootstrap_indices <- function(r = 0L,
   stopifnot(!is.null(iseed))
 
   if (return_freq && !merge_groups) {
-    lav_msg_stop(gettext("return.freq only available if merge.groups = TRUE"))
+    lav_msg_stop(gettext("return_freq only available if merge_groups = TRUE"))
   }
 
   if (is.integer(nobs)) {

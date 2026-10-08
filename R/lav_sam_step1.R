@@ -400,7 +400,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
          approach estimates each measurement block in isolation, so every
          block must be identified by itself, even if the full model is
          identified. Consider simplifying the measurement block (eg
-         removing residual covariances), combining blocks via mm.list, or
+         removing residual covariances), combining blocks via mm_list, or
          using sem() instead.",
         lav_msg_view(mm_list[[mm]], "none"), blk_df))
     }
@@ -462,7 +462,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
            computed (its information matrix could not be inverted); the
            block may not be identified on its own (empirically). Consider
            simplifying the measurement block, combining blocks via
-           mm.list, or using sem() instead.",
+           mm_list, or using sem() instead.",
           lav_msg_view(mm_list[[mm]], "none")))
       }
       keep_idx <- ptm_free[ptm_idx]

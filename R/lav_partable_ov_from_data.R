@@ -30,7 +30,7 @@ lav_pt_ov_from_data <- function(flat = NULL,
   }
 
   if (is.null(data_names) || length(data_names) == 0L) {
-    lav_msg_stop(gettext("could not find variable names in data/sample.cov"))
+    lav_msg_stop(gettext("could not find variable names in data/sample_cov"))
   }
 
   # extract needed ov.names in the same order as the data

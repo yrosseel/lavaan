@@ -216,14 +216,14 @@ lav_lavdata <- function(data = NULL, # data.frame
           (!is.list(sample_mean) ||
            length(sample_mean) != length(sample_cov))) {
         lav_msg_stop(gettextf(
-          "sample.cov is a list of %s matrices; sample.mean should be a
+          "sample_cov is a list of %s matrices; sample_mean should be a
           list of the same length.", length(sample_cov)))
       }
       if (!is.null(sample_th) &&
           (!is.list(sample_th) ||
            length(sample_th) != length(sample_cov))) {
         lav_msg_stop(gettextf(
-          "sample.cov is a list of %s matrices; sample.th should be a
+          "sample_cov is a list of %s matrices; sample_th should be a
           list of the same length.", length(sample_cov)))
       }
       # multiple groups, multiple cov matrices
@@ -277,7 +277,7 @@ lav_lavdata <- function(data = NULL, # data.frame
     } else {
       if (length(ov_names) != ngroups) {
         lav_msg_stop(gettextf(
-          "ov.names assumes %1$s groups; data contains %2$s groups",
+          "ov_names assumes %1$s groups; data contains %2$s groups",
           length(ov_names), ngroups))
       }
       # nothing to do
@@ -291,7 +291,7 @@ lav_lavdata <- function(data = NULL, # data.frame
     } else {
       if (length(ov_names_x) != ngroups) {
         lav_msg_stop(gettextf(
-          "ov.names.x assumes %1$s groups; data contains %2$s groups",
+          "ov_names_x assumes %1$s groups; data contains %2$s groups",
           length(ov_names_x), ngroups))
       }
     }
@@ -428,7 +428,7 @@ lav_lavdata <- function(data = NULL, # data.frame
 
     # ngroups: ov.names (when group: is used), or sample_nobs
     if (is.null(ov_names)) {
-      lav_msg_warn(gettext("ov.names is NULL"))
+      lav_msg_warn(gettext("ov_names is NULL"))
       ov_names <- character(0L)
       if (is.null(sample_nobs)) {
         ngroups <- 1L
@@ -688,7 +688,7 @@ lav_data_full <- function(data = NULL, # data.frame
       idx <- match(group_label, label)
       if (any(is.na(idx))) {
         lav_msg_warn(gettextf(
-          "some group.labels do not appear in the grouping variable: %s",
+          "some group_label values do not appear in the grouping variable: %s",
           lav_msg_view(group_label[which(is.na(idx))], log_sep = "none"))
         )
       }
@@ -729,7 +729,7 @@ lav_data_full <- function(data = NULL, # data.frame
       # check for missing values in sampling weight variable
       if (any(is.na(data[[sampling_weights]]))) {
         lav_msg_stop(
-          gettextf("sampling.weights variable %s contains missing values",
+          gettextf("sampling_weights variable %s contains missing values",
           sQuote(sampling_weights)))
       }
     } else {
@@ -800,7 +800,7 @@ lav_data_full <- function(data = NULL, # data.frame
     if (is.list(ov_names)) {
       if (length(ov_names) != ngroups) {
         lav_msg_stop(gettextf(
-          "ov.names assumes %1$s groups; data contains %2$s groups",
+          "ov_names assumes %1$s groups; data contains %2$s groups",
           length(ov_names), ngroups))
       }
     } else {
@@ -811,7 +811,7 @@ lav_data_full <- function(data = NULL, # data.frame
     if (is.list(ov_names_x)) {
       if (length(ov_names_x) != ngroups) {
         lav_msg_stop(gettextf(
-          "ov.names.x assumes %1$s groups; data contains %2$s groups",
+          "ov_names_x assumes %1$s groups; data contains %2$s groups",
           length(ov_names_x), ngroups))
       }
     } else {
@@ -829,7 +829,7 @@ lav_data_full <- function(data = NULL, # data.frame
           syntax, one for each group (for now).", ngroups))
       } else {
         lav_msg_stop(gettextf(
-          "ov.names.l assumes %1$s groups; data contains %2$s groups",
+          "ov_names_l assumes %1$s groups; data contains %2$s groups",
           length(ov_names_l), ngroups))
       }
     }
@@ -1156,7 +1156,7 @@ lav_data_full <- function(data = NULL, # data.frame
       # check for missing values in sampling weight variable
       if (any(is.na(wt))) {
         lav_msg_stop(gettextf(
-          "sampling.weights variable %s contains missing values",
+          "sampling_weights variable %s contains missing values",
           sQuote(sampling_weights)))
       }
 

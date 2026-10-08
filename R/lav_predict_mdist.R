@@ -70,7 +70,7 @@ lav_predict_mdist_cat <- function(lavobject = NULL, # for convenience
 
   ndraws <- as.integer(ndraws)
   if (length(ndraws) != 1L || is.na(ndraws) || ndraws < 10L) {
-    lav_msg_stop(gettext("mdist.draws must be a single integer >= 10."))
+    lav_msg_stop(gettext("mdist_draws must be a single integer >= 10."))
   }
 
   # data

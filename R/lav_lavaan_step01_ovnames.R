@@ -335,7 +335,7 @@ lav_step01_ovnames_group <- function(flat_model = NULL,
   # detect early
   if (length(unlist(ov_names)) == 0L) {
     lav_msg_stop(
-      gettext("ov.names is empty: model does not refer to any observed
+      gettext("ov_names is empty: model does not refer to any observed
               variables; check your syntax."))
   }
 

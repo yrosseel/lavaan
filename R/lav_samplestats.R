@@ -1641,7 +1641,7 @@ lav_samp_align_by_names <- function(stat = NULL, row_names = NULL,
     stat <- drop(stat)
     if (length(stat) != length(row_names)) {
       lav_msg_stop(gettextf(
-        "%1$s attribute of sample.cov in group %2$s should contain %3$s
+        "%1$s attribute of sample_cov in group %2$s should contain %3$s
         elements.", what, g, length(row_names)))
     }
     if (!is.null(names(stat))) {
@@ -1818,7 +1818,7 @@ lav_samp_from_moments <- function(sample_cov = NULL,
     th_idx <- attr(sample_th, "th.idx")
     attr(sample_th, "th.idx") <- NULL
     if (is.null(th_idx)) {
-      lav_msg_stop(gettext("sample.th should have a th.idx attribute"))
+      lav_msg_stop(gettext("sample_th should have a th.idx attribute"))
     } else {
       if (is.list(th_idx)) {
         th_names <- lapply(th_idx, names)

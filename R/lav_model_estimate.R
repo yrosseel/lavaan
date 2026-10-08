@@ -1205,7 +1205,7 @@ lav_model_est <- function(lavmodel = NULL,
           warn_txt <- paste("the optimizer claimed the model converged,\n",
             "       but not all elements of the gradient are (near) zero;\n",
             "       the optimizer may not have found a local solution;\n",
-            "       use check.gradient = FALSE to skip this check.",
+            "       use check_gradient = FALSE to skip this check.",
             sep = ""
           )
         }

@@ -318,7 +318,7 @@ lav_model_test <- function(lavobject = NULL,
   # core test machinery (eg sem(test = "yuan.chan")), drop it with a note.
   if (any(test == "yuan.chan")) {
     lav_msg_warn(gettext(
-      "test = \"yuan.chan\" is only available for sam(sam.method = \"global\");
+      "test = \"yuan.chan\" is only available for sam(sam_method = \"global\");
        it will be ignored here."))
     test <- test[test != "yuan.chan"]
     if (length(test) == 0L) {

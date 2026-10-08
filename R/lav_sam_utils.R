@@ -728,7 +728,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   }
 
   if (length(lv_int_names) == 0L) {
-    lav_msg_stop(gettext("lv.int.names is empty: no lv quadratic/interaction
+    lav_msg_stop(gettext("lv_int_names is empty: no lv quadratic/interaction
                          terms are provided"))
   }
 
@@ -1147,7 +1147,7 @@ lav_sam_fs2 <- function(fs = NULL, lv_names = NULL, lv_int_names = NULL) {
   }
 
   if (length(lv_int_names) == 0L) {
-    lav_msg_stop(gettext("lv.int.names is empty: no lv quadratic/interaction
+    lav_msg_stop(gettext("lv_int_names is empty: no lv quadratic/interaction
                          terms are provided"))
   }
 
@@ -1912,8 +1912,8 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     # shrinkage bias of the structural estimates (summary() note)
     sam_trunc <- lav_sam_trunc_bias(step1 = step1, fit_pa = fit_pa)
   } else {
-    sam_struc_fit <- paste0("no local fit measures available for",
-                    "structural part if sam.method is global")
+    sam_struc_fit <- paste0("no local fit measures available for ",
+                    "structural part if sam_method is global")
     names(sam_struc_fit) <- "warning"
     sam_struc_fit_object <- NULL
     sam_mm_rel <- numeric(0L)

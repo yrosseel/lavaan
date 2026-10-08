@@ -95,7 +95,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     } else if (any(local_flags)) {
       lav_msg_stop(gettext(
         "lavTestLRT() cannot compare a model fitted with sam() (using a
-         local sam.method) with other models."))
+         local sam_method) with other models."))
     }
   }
 

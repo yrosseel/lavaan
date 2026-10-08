@@ -602,7 +602,7 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
     }
   } else {
     lav_msg_stop(gettext(
-      "only mg.agreement.method procrustes is supported for now"))
+      "only mg_agreement_method procrustes is supported for now"))
   }
 
   out <- (w * a_mg) + ((1 - w) * q_mg)

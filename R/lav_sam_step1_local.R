@@ -210,7 +210,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         # eg cfsr or lv interactions: no idea what to do here (yet)
         print(this_lambda)
         lav_msg_stop(gettext(
-          "LAMBDA has no full column rank. Please use sam.method = global"))
+          "LAMBDA has no full column rank. Please use sam_method = global"))
       }
     }
 

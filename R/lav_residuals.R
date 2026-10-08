@@ -373,7 +373,7 @@ lavResiduals <- function(object, type = "cor_bentler", h1 = NULL,         # noli
       object <- fit_pa
     } else {
       lav_msg_stop(gettext(
-        "lavResiduals() is not available if sam.method = \"global\": the
+        "lavResiduals() is not available if sam_method = \"global\": the
          standard errors of the residuals require an h1 ACOV that a two-step
          (sam) procedure does not provide; use residuals() to inspect the
          raw residuals."))
@@ -1211,7 +1211,7 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
   # check type
   if (z_type %in% c("normalized", "standardized.mplus") && type != "raw") {
     lav_msg_stop(gettextf(
-      "z.type = %1$s can only be used with type = %2$s",
+      "z_type = %1$s can only be used with type = %2$s",
       dQuote(z_type), dQuote("raw")))
   }
 

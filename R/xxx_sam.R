@@ -299,15 +299,15 @@ sam <- function(model = NULL,
     if (mgm_mm_flag) {
       if (fit@Model@categorical) {
         lav_msg_stop(gettext(
-          "estimator MGM (in mm.args) does not support categorical data."))
+          "estimator MGM (in mm_args) does not support categorical data."))
       }
       if (fit@Data@nlevels > 1L) {
         lav_msg_stop(gettext(
-          "estimator MGM (in mm.args) does not support multilevel data."))
+          "estimator MGM (in mm_args) does not support multilevel data."))
       }
       if (length(fit@Data@cluster) > 0L) {
         lav_msg_stop(gettext(
-          "estimator MGM (in mm.args) does not support clustered data
+          "estimator MGM (in mm_args) does not support clustered data
            (no cluster-robust standard errors are available for MGM)."))
       }
     }
@@ -344,7 +344,7 @@ sam <- function(model = NULL,
         argument)."))
     }
     if (mgm_mm_flag && se == "twostep.robust" && !nacov_flag) {
-      lav_msg_stop(gettext("estimator MGM (in mm.args) needs either the raw
+      lav_msg_stop(gettext("estimator MGM (in mm_args) needs either the raw
         data (data= argument) or the NACOV= argument for its (robust)
         standard errors if only summary statistics are provided;
         alternatively, use se = \"naive\" or se = \"none\"."))
@@ -363,7 +363,7 @@ sam <- function(model = NULL,
   if (lv_interaction_flag) {
     if (sam_method != "local") {
       lav_msg_stop(gettextf("latent interaction terms are only supported by
-        sam.method = \"local\" (not sam.method = \"%s\").", sam_method))
+        sam_method = \"local\" (not sam_method = \"%s\").", sam_method))
     }
     if (fit@Data@ngroups > 1L && !se %in% c("none", "bootstrap")) {
       lav_msg_stop(gettext("analytic standard errors are not available (yet)

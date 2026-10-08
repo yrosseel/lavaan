@@ -93,7 +93,7 @@ efa <- function(data = NULL,
       if (sampling_weights_flag) {
         if (!all(dotdotdot$sampling.weights %in% ov_names)) {
           lav_msg_stop(gettextf(
-            "sampling.weights variable(s) %s not found in data.",
+            "sampling_weights variable(s) %s not found in data.",
             lav_msg_view(dotdotdot$sampling.weights[
               !dotdotdot$sampling.weights %in% ov_names])))
         }

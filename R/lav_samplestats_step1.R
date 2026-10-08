@@ -145,7 +145,7 @@ lav_samp_step1 <- function(y,
       )
       th_idx_1[[i]] <- rep(i, length(th[[i]]))
     } else {
-      lav_msg_stop(gettext("unknown ov.types:"), ov_types[i])
+      lav_msg_stop(gettext("unknown ov_types:"), ov_types[i])
     }
   }
 

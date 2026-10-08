@@ -372,7 +372,7 @@ lav_fit <- function(object, fit_measures = "all",
   if (!is.character(fm_args$cat_nonpd) ||
       !fm_args$cat_nonpd %in% c("na", "refit", "smooth")) {
     lav_msg_warn(gettextf(
-      "invalid cat.nonpd value [%s] set to default \"na\".",
+      "invalid cat_nonpd value [%s] set to default \"na\".",
       fm_args$cat_nonpd
     ))
     fm_args$cat_nonpd <- "na"
@@ -842,7 +842,7 @@ lav_fit <- function(object, fit_measures = "all",
       rmsea_ci_level <- fm_args$rmsea_ci_level
       if (rmsea_ci_level < 0 || rmsea_ci_level > 1.0) {
         lav_msg_warn(gettextf(
-          "invalid rmsea.ci.level value [%s] set to default 0.90.",
+          "invalid rmsea_ci_level value [%s] set to default 0.90.",
           rmsea_ci_level))
         rmsea_ci_level <- 0.90
       }
@@ -900,7 +900,7 @@ lav_fit <- function(object, fit_measures = "all",
       gfi_ci_level <- fm_args$gfi_ci_level
       if (gfi_ci_level < 0 || gfi_ci_level > 1.0) {
         lav_msg_warn(gettextf(
-          "invalid gfi.ci.level value [%s] set to default 0.90.",
+          "invalid gfi_ci_level value [%s] set to default 0.90.",
           gfi_ci_level))
         gfi_ci_level <- 0.90
       }
