@@ -458,7 +458,7 @@ lav_sam_step2_corrected_test <- function(fit_pa = NULL, step1 = NULL,
   }
 
   # @test: "standard" first, then the requested tests in their order
-  keep <- c("standard", requested_tests)
+  keep <- unique(c("standard", requested_tests))
   opts_pa <- fit_pa@Options # the (moments-only) options of the fit
   fit_pa@test <- lav_sam_test_merge(fit_pa@test, test_c, keep)
   fit_pa@Options$test <- names(fit_pa@test)
