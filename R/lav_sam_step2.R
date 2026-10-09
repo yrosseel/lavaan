@@ -1,5 +1,36 @@
 # SAM step 2: estimate structural part
 
+# the options for the structural part only (the struc_args list of sam())
+# are merged into the processed options of the structural fit, bypassing
+# lav_options_set(): aliases and spellings ("rls", "ml", "Observed",
+# information_bread) would reach the structural fit unprocessed. Make them
+# canonical the way lavaan() does: run the default options with struc_args
+# applied through lav_options_set(), and take back the values of the options
+# the user supplied -- only those: the settings the structural fit derives
+# from the common options are made in lav_sam_step2(), not here. Names that
+# are not lavaan options are left untouched (as before).
+lav_sam_struc_args_canonical <- function(struc_args = list()) {
+  if (!is.list(struc_args) || length(struc_args) == 0L) {
+    return(struc_args)
+  }
+  opt_default <- lav_options_default()
+  # option names: the snake_case spelling (or any case) of the option names
+  struc_args <- lav_args_canonical(struc_args, names(opt_default))
+  known <- intersect(names(struc_args), names(opt_default))
+  if (length(known) == 0L) {
+    return(struc_args)
+  }
+  opt <- modifyList(opt_default, struc_args[known])
+  # the hidden flags lav_options_set() needs; the structural part is
+  # fitted on the (continuous) latent moments
+  opt$.categorical <- FALSE
+  opt$.clustered <- FALSE
+  opt$.multilevel <- FALSE
+  opt <- lav_options_set(opt)
+  struc_args[known] <- opt[known]
+  struc_args
+}
+
 lav_sam_step2 <- function(step1 = NULL, fit = NULL,
                           sam_method = "local", struc_args = list()) {
   lavoptions <- fit@Options
@@ -18,39 +49,6 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   # "yuan.chan" is a SAM-global test for the JOINT model, computed afterwards in
   # lav_sam_global_test(); the structural fit itself uses the ordinary test
   if (any(lavoptions_pa$test == "yuan.chan")) {
-    lavoptions_pa$test <- "standard"
-  }
-  # the corrected two-step STRUCTURAL test (Satorra-Bentler, using Gamma.eta as
-  # the NACOV of vech(VETA)) is the default test for sam.method = local/fsr/cfsr
-  # whenever Gamma.eta is available -- INDEPENDENT of the requested SE. (For
-  # se = "twostep"/"naive" the FIT.PA SEs below are not the final ones: twostep
-  # SEs are recomputed in step 4, naive SEs are FIT.PA's plain vcov.)
-  # The user may ask for another member of the Satorra-Bentler family instead
-  # (test = "mean.var.adjusted", "scaled.shifted", or their ".corrected"
-  # versions, see lav_test_hayakawa.R): the same Gamma.eta then feeds that
-  # adjustment of the structural test.
-  if (gamma_flag) {
-    sb_tests <- lavoptions_pa$test[lavoptions_pa$test %in% lav_sam_sb_family]
-    if (length(sb_tests) == 0L) {
-      sb_tests <- "satorra.bentler"
-    }
-    # a non-standard base statistic (scaled.test = "browne.residual.nt.model",
-    # Hayakawa's RLS version) must stay in front, as lav_options_set() does
-    scaled_base <- lavoptions_pa$scaled.test
-    if (!is.null(scaled_base) && !scaled_base %in% c("standard", "default")) {
-      sb_tests <- unique(c(scaled_base, sb_tests))
-    }
-    lavoptions_pa$test <- sb_tests
-  } else if (sam_method %in% c("local", "fsr", "cfsr") &&
-             any(lavoptions_pa$test %in% lav_sam_sb_family)) {
-    # no Gamma.eta (eg se = "none"/"bootstrap"): the moments-only structural
-    # fit has no NACOV, so none of the scaled tests can be computed
-    lav_msg_warn(gettextf(
-      "the requested test (%s) needs Gamma.eta, which is not available
-       with se = %s; the standard structural test is reported instead.",
-      lav_msg_view(lavoptions_pa$test[lavoptions_pa$test %in%
-                                      lav_sam_sb_family]),
-      dQuote(lavoptions_pa$se, q = FALSE)))
     lavoptions_pa$test <- "standard"
   }
   if (lavoptions_pa$se == "naive") {
@@ -76,9 +74,51 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   lavoptions_pa$categorical <- FALSE
   lavoptions_pa$.categorical <- FALSE
   lavoptions_pa$rotation <- "none"
+  # the options for the structural part only (already canonical, see
+  # lav_sam_struc_args_canonical()) take precedence over the common options
   lavoptions_pa <- modifyList(lavoptions_pa, struc_args)
-  if (!is.null(struc_args$test)) {
-    lavoptions_pa$test <- lav_test_rename(struc_args$test)
+
+  # the corrected two-step STRUCTURAL test (Satorra-Bentler, using Gamma.eta as
+  # the NACOV of vech(VETA)) is the default test for sam.method = local/fsr/cfsr
+  # whenever Gamma.eta is available -- INDEPENDENT of the requested SE. (For
+  # se = "twostep"/"naive" the FIT.PA SEs above are not the final ones: twostep
+  # SEs are recomputed in step 4, naive SEs are FIT.PA's plain vcov.)
+  # The user may ask for another member of the Satorra-Bentler family instead
+  # (test = "mean.var.adjusted", "scaled.shifted", or their ".corrected"
+  # versions, see lav_test_hayakawa.R): the same Gamma.eta then feeds that
+  # adjustment of the structural test. Both test = and scaled_test = may be
+  # given as common (top-level) options or in struc_args; the latter wins.
+  if (!is.null(struc_args$test) &&
+      !all(lavoptions$test %in% c("standard", "yuan.chan", struc_args$test))) {
+    lav_msg_warn(gettextf(
+      "the test(s) requested in struc_args (%1$s) replace the test(s)
+       requested with the test = argument (%2$s) for the structural part.",
+      lav_msg_view(setdiff(struc_args$test, "standard")),
+      lav_msg_view(setdiff(lavoptions$test, "standard"))))
+  }
+  if (gamma_flag) {
+    sb_tests <- lavoptions_pa$test[lavoptions_pa$test %in% lav_sam_sb_family]
+    if (length(sb_tests) == 0L) {
+      sb_tests <- "satorra.bentler"
+    }
+    # a non-standard base statistic (scaled.test = "browne.residual.nt.model",
+    # Hayakawa's RLS version) must stay in front, as lav_options_set() does
+    scaled_base <- lavoptions_pa$scaled.test
+    if (!is.null(scaled_base) && !scaled_base %in% c("standard", "default")) {
+      sb_tests <- unique(c(scaled_base, sb_tests))
+    }
+    lavoptions_pa$test <- sb_tests
+  } else if (sam_method %in% c("local", "fsr", "cfsr") &&
+             any(lavoptions_pa$test %in% lav_sam_sb_family)) {
+    # no Gamma.eta (eg se = "none"/"bootstrap"): the moments-only structural
+    # fit has no NACOV, so none of the scaled tests can be computed
+    lav_msg_warn(gettextf(
+      "the requested test (%s) needs Gamma.eta, which is not available
+       with se = %s; the standard structural test is reported instead.",
+      lav_msg_view(lavoptions_pa$test[lavoptions_pa$test %in%
+                                      lav_sam_sb_family]),
+      dQuote(lavoptions$se, q = FALSE)))
+    lavoptions_pa$test <- "standard"
   }
 
   # the corrected adjusted tests (Hayakawa 2018) need the casewise rows

@@ -77,6 +77,11 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{"twostep.robust"}; \code{se = "local"} is available as well.}
 \item{struc_args}{List. Optional arguments for the fitting function of the
     structural part only. See \code{\link{lavOptions}} for a complete list.
+    The values are processed as in \code{\link{lavaan}} (aliases such as
+    \code{scaled_test = "rls"} are accepted), and take precedence over the
+    common options given as top-level arguments: in particular, a
+    \code{test} (or \code{scaled_test}) given here replaces the one given as
+    a top-level argument for the structural test (see below).
     Note that when \code{se = "local"}, the bread of the local sandwich
     standard errors is (since 0.7-2) by default the observed information
     matrix of the structural model, while all other ingredients (and the

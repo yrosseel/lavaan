@@ -60,6 +60,13 @@ sam <- function(model = NULL,
       "the bootstrap= argument must be a list (eg list(R = 1000L)) or a
        single number (the number of bootstrap draws)."))
   }
+  # the options for the structural part: canonical names and values (aliases
+  # such as scaled_test = "rls", estimator = "ml"), as lavaan() would store
+  # them; see lav_sam_struc_args_canonical(). (Assigning to the formal
+  # makes missing() FALSE from here on: record it first, for the re-entry
+  # with a stored sam object below.)
+  struc_args_missing <- missing(struc_args)
+  struc_args <- lav_sam_struc_args_canonical(struc_args)
 
   # check model= argument
   has_sam_object_flag <- FALSE
@@ -219,8 +226,9 @@ sam <- function(model = NULL,
     } else {
       mm_args <- mm_args
     }
-    if (missing(struc_args)) {
-      struc_args <- fit@internal$sam.struc.args
+    if (struc_args_missing) {
+      # (an object stored by an older version may hold raw values)
+      struc_args <- lav_sam_struc_args_canonical(fit@internal$sam.struc.args)
     } else {
       struc_args <- struc_args
     }
