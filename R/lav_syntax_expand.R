@@ -115,7 +115,11 @@ lav_expand_tokens <- function(modellist,
                    footer = tl[2L]
     )
   }
-  aantal = 0L
+  # every pair of differing tokens (e.g. the labels a/c and the variables
+  # x1/x3 in "a*x1 ++ c*x3") must span the same number of steps; note that
+  # a pair one step apart (a/b) yields zero intermediate strings, so we
+  # compare the number of steps, not the number of intermediate strings
+  nsteps <- -1L # none seen yet
   for (i in seq(starti, ppi - 1L, 1L)) {
     i2 = ppi + i - starti + 1L
     if (modellist$elem_text[i] != modellist$elem_text[i2]) {
@@ -133,9 +137,10 @@ lav_expand_tokens <- function(modellist,
                     footer = tl[2L])
           }
         }
-        if (aantal == 0) {
-            aantal = length(sub_expanded_strings)
-        } else if (length(sub_expanded_strings) != aantal) {
+        this_steps <- length(sub_expanded_strings) + 1L
+        if (nsteps < 0L) {
+            nsteps <- this_steps
+        } else if (this_steps != nsteps) {
           tl <- lav_parse_txtloc(modelsrc, modellist$elem_pos[ppi])
           lav_msg_stop(gettext("substring distances not conform for expanding"),
                    tl[1L],
@@ -144,6 +149,7 @@ lav_expand_tokens <- function(modellist,
         }
     }
   }
+  aantal <- max(nsteps - 1L, 0L) # number of intermediate elements
   expnum <- 1L
   expanded_tokens$elem_text[expnum] <- "+"
   expanded_tokens$elem_type[expnum] <- types$symbol
