@@ -462,51 +462,6 @@ lav_con_check_simple <- function(lavmodel = NULL) {
   simple
 }
 
-# can the optimizer work with rescaled parameters (optim.parscale =
-# "standardized") without changing the meaning of the constraints?
-#
-# the parameter scaling layer in lav_model_est() imposes the constraints on
-# the SCALED parameters (z = x * parscale). this is harmless for box bounds
-# and for simple equality constraints (a == b: both parameters get the same
-# scaling factor), but anything else is silently distorted: 'a + b == 3'
-# becomes 'a + b == 3/scale', 'a == 2*b' becomes 'a == b', and nonlinear
-# equality constraints and explicit inequality constraints are evaluated in
-# the wrong metric.
-#
-# stopgap (until the scaling layer is overhauled): parameter scaling is only
-# considered safe if
-# - there are no explicit inequality constraints ('<' or '>'); box bounds
-#   are fine
-# - there are no nonlinear equality constraints
-# - every linear equality constraint is of the form 'a == b'
-lav_con_parscale_safe <- function(lavmodel = NULL, lavpartable = NULL) {
-  # explicit inequality constraints
-  if (any(lavpartable$op %in% c("<", ">"))) {
-    return(FALSE)
-  }
-
-  # nonlinear equality constraints
-  if (length(lavmodel@ceq.nonlinear.idx) > 0L) {
-    return(FALSE)
-  }
-
-  # linear equality constraints: a == b only
-  ceq_jac <- lavmodel@ceq.JAC
-  if (nrow(ceq_jac) > 0L) {
-    if (any(lavmodel@ceq.rhs != 0)) {
-      return(FALSE)
-    }
-    n_nonzero <- rowSums(ceq_jac != 0)
-    n_plus <- rowSums(ceq_jac == 1)
-    n_minus <- rowSums(ceq_jac == -1)
-    if (any(n_nonzero != 2L | n_plus != 1L | n_minus != 1L)) {
-      return(FALSE)
-    }
-  }
-
-  TRUE
-}
-
 # orthonormal basis 'K' of the equality-constrained (tangent) space, in the
 # column space of lav_model_delta(): post-multiplying Delta by K restricts it
 # to the directions that satisfy the equality constraints.

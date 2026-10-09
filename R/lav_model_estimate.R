@@ -118,184 +118,42 @@ lav_model_est <- function(lavmodel = NULL,
     }
   }
 
-  # 1. parameter scaling (to handle data scaling, not parameter scaling)
-  parscale <- rep(1.0, length(x_unpack))
+  # 1. parameter scaling (new in 0.6-2, rewritten in 0.7-2)
+  #
+  # optim.parscale = "standardized": the optimizer works with the scaled
+  # (packed) parameters u = p * scale, where p is the packed parameter
+  # vector and 'scale' holds the factors that transform each free
+  # parameter to its standardized-solution metric (as if the data were
+  # standardized); see lav_model_est_parscale(). The reparameterization
+  # is applied AFTER the equality-constraint packing (below), and undone
+  # BEFORE the objective, the gradient and the constraint functions are
+  # evaluated, so the constraints are always imposed on the original
+  # parameters. (Up to 0.7-1, the free parameters were scaled BEFORE
+  # packing, which distorted all but a == b equality constraints.)
 
   # for < 0.6 compatibility
   if (is.null(lavoptions$optim.parscale)) {
     lavoptions$optim.parscale <- "none"
   }
 
-  # stopgap: the scaling layer below imposes the constraints on the SCALED
-  # parameters, which is only harmless for box bounds and simple (a == b)
-  # equality constraints; refuse to rescale in all other cases
-  # (safety net only: lav_step11_estoptim() already does this, and warns)
-  if (lavoptions$optim.parscale != "none" &&
-      !lav_con_parscale_safe(lavmodel = lavmodel,
-                             lavpartable = lavpartable)) {
-    lavoptions$optim.parscale <- "none"
-  }
-
-  if (lavoptions$optim.parscale == "none") {
-    # do nothing, but still set SCALE, as before
-
-
-    # 0.6-17:
-    # only temporarily: 'keep' this mistake, and change it later:
-    # (note the "standarized")
-    # we only do this to avoid breaking a test in semlbci
-    # } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
-    #                                           "standarized", "stand.all")) {
-
-    # this is what it should be:
-  } else if (lavoptions$optim.parscale %in% c(
-    "stand", "st", "standardize",
-    "standardized", "stand.all"
-  )) {
-    # rescale parameters as if the data was standardized
-    # new in 0.6-2
-    #
-    # FIXME: this works well, as long as the variances of the
-    #        latent variables (which we do not know) are more or less
-    #        equal to 1.0 (eg std.lv = TRUE)
-    #
-    #        Once we have better estimates of those variances, we could
-    #        use them to set the scale
-    #
-
-    if (lavdata@nlevels > 1L) {
-      if (length(lavh1) > 0L) {
-        ov_var <- lapply(lavh1$implied$cov, diag)
-      } else {
-        ov_var <- lapply(
-          do.call(c, lapply(lavdata@Lp, "[[", "ov.idx")),
-          function(x) rep(1, length(x))
-        )
-      }
-    } else {
-      if (lavoptions$conditional.x) {
-        ov_var <- lavsamplestats@res.var
-      } else {
-        ov_var <- lavsamplestats@var
-      }
+  # scaling factors in the metric of the free parameters
+  parscale <- rep(1.0, length(x_unpack))
+  if (lavoptions$optim.parscale != "none") {
+    parscale <- lav_model_est_parscale(
+      lavmodel = lavmodel, lavpartable = lavpartable,
+      lavsamplestats = lavsamplestats, lavdata = lavdata,
+      lavh1 = lavh1, lavoptions = lavoptions
+    )
+    if (length(parscale) != length(x_unpack)) {
+      parscale <- rep(1.0, length(x_unpack))
     }
 
-    if (lavoptions$std.lv) {
-      parscale <- lav_standardize_all(
-        lavobject = NULL,
-        est = rep(1, length(lavpartable$lhs)),
-        est_std = rep(1, length(lavpartable$lhs)),
-        cov_std = FALSE, ov_var = ov_var,
-        lavmodel = lavmodel, lavpartable = lavpartable,
-        cov_x = lavsamplestats@cov.x
-      )
-    } else {
-      # needs good estimates for lv variances! under the marker
-      # (fixed-1 loading) convention, a latent variable inherits the
-      # SCALE of its marker indicator, so the marker's observed
-      # variance is the right order of magnitude (an upper bound);
-      # higher-order factors follow their marker chain; lv's without a
-      # marker fall back to 1.0 (the old guess -- which used to be
-      # applied to ALL lv's, making the scaling factors useless
-      # whenever the marker variables were far from unit variance)
-      lv_var <- vector("list", lavmodel@ngroups)
-      group_values <- lav_pt_group_values(lavpartable)
-      for (g in seq_len(lavmodel@ngroups)) {
-        mm_in_group <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
-        mlist <- lavmodel@GLIST[mm_in_group]
-        mm_lambda <- mlist$lambda
-        n_lv <- ncol(mm_lambda)
-        lv_var[[g]] <- rep(1.0, n_lv)
-        lv_names_g <- lav_pt_vnames(lavpartable, "lv",
-                                    group = group_values[g])
-        lv_names_g <- unique(unlist(lv_names_g))
-        ov_names_g <- lav_pt_vnames(lavpartable, "ov",
-                                    group = group_values[g])
-        ov_names_g <- unique(unlist(ov_names_g))
-        if (length(lv_names_g) > 0L && n_lv > 0L) {
-          s2 <- setNames(rep(NA_real_, length(lv_names_g)), lv_names_g)
-          # a few passes to resolve higher-order marker chains
-          for (rep_i in 1:4) {
-            for (l in lv_names_g) {
-              if (!is.na(s2[[l]])) next
-              m_idx <- which(lavpartable$op == "=~" &
-                lavpartable$lhs == l &
-                lavpartable$group == group_values[g] &
-                lavpartable$free == 0L &
-                !is.na(lavpartable$ustart) &
-                lavpartable$ustart != 0)
-              if (length(m_idx) == 0L) next
-              mk <- lavpartable$rhs[m_idx[1]]
-              if (mk %in% ov_names_g) {
-                pos <- match(mk, ov_names_g)
-                if (!is.na(pos) && pos <= length(ov_var[[g]])) {
-                  s2[[l]] <- ov_var[[g]][pos]
-                }
-              } else if (mk %in% lv_names_g && !is.na(s2[[mk]])) {
-                s2[[l]] <- s2[[mk]]
-              }
-            }
-            if (!anyNA(s2)) break
-          }
-          s2[is.na(s2)] <- 1.0
-          pos <- match(lv_names_g, colnames(mm_lambda))
-          ok_pos <- which(!is.na(pos))
-          if (length(ok_pos) > 0L) {
-            lv_var[[g]][pos[ok_pos]] <- s2[ok_pos]
-          }
-        }
-      }
-
-      parscale <- lav_standardize_all(
-        lavobject = NULL,
-        est = rep(1, length(lavpartable$lhs)),
-        # est.std = rep(1, length(lavpartable$lhs)),
-        # here, we use whatever the starting values are
-        # for the latent variances...
-        cov_std = FALSE, ov_var = ov_var,
-        lv_var = lv_var,
-        lavmodel = lavmodel, lavpartable = lavpartable,
-        cov_x = lavsamplestats@cov.x
-      )
-    }
-
-    # note: up to 0.7-1, the variance rows took the square root of
-    # their standardization factor -- an empirical damping for the
-    # (then) crude lv-variance guess of 1.0; with the marker-based lv
-    # scales above, the full factor is the correct one (the z-metric
-    # variance then has the same order of magnitude as a standardized
-    # variance), so the sqrt tweak is gone
-
-    if (lavmodel@ceq.simple.only) {
-      parscale <- parscale[lavpartable$free > 0 &
-        !duplicated(lavpartable$free)]
-    } else {
-      parscale <- parscale[lavpartable$free > 0]
-    }
-  }
-  # parscale should obey the equality constraints
-  if (lavmodel@eq.constraints && lavoptions$optim.parscale != "none") {
-    # pack
-    p_pack <- as.numeric((parscale - lavmodel@eq.constraints.k0) %*%
-      lavmodel@eq.constraints.K)
-    # unpack
-    parscale <- as.numeric(lavmodel@eq.constraints.K %*% p_pack) +
-      lavmodel@eq.constraints.k0
-  }
-  if (debug) {
-    cat("parscale = ", parscale, "\n")
-  }
-  z_unpack <- x_unpack * parscale
-
-  # scale-aware repair of degenerate variance starts (only when
-  # parameter scaling is active): some starting values are absolute
-  # raw-metric constants (e.g., the 0.05 default for latent variances);
-  # transported into the z metric they can collapse to ~0, which puts
-  # the start on the boundary of the positive-definite region and can
-  # derail the optimizer. give those a sane z-metric start (0.05, the
-  # standardized-world default).
-  if (lavoptions$optim.parscale != "none" &&
-      length(z_unpack) == length(parscale)) {
+    # repair degenerate variance starts: some starting values are
+    # raw-metric constants (e.g., the 0.05 default for latent variances);
+    # when the marker has a large variance, such a start is (almost) zero
+    # in the standardized metric, which puts the start on the boundary of
+    # the positive-definite region and can derail the optimizer; give
+    # those the standardized-world default start (0.05) instead
     if (lavmodel@ceq.simple.only) {
       keep <- lavpartable$free > 0L & !duplicated(lavpartable$free)
     } else {
@@ -303,34 +161,35 @@ lav_model_est <- function(lavmodel = NULL,
     }
     is_var <- (lavpartable$op == "~~" &
       lavpartable$lhs == lavpartable$rhs)[keep]
-    small_idx <- which(is_var & abs(z_unpack) < 0.01)
+    small_idx <- which(is_var & abs(x_unpack * parscale) < 0.01)
+    small_idx <- setdiff(small_idx, h1_sat_idx)
     if (length(small_idx) > 0L) {
-      z_unpack[small_idx] <- 0.05
+      x_unpack[small_idx] <- 0.05 / parscale[small_idx]
     }
+  }
+  if (debug) {
+    cat("parscale = ", parscale, "\n")
   }
 
   # 2. pack (apply equality constraints)
   if (lavmodel@eq.constraints && ncol(lavmodel@eq.constraints.K) > 0L) {
-    z_pack <- as.numeric((z_unpack - lavmodel@eq.constraints.k0) %*%
+    x_pack <- as.numeric((x_unpack - lavmodel@eq.constraints.k0) %*%
       lavmodel@eq.constraints.K)
   } else {
-    z_pack <- z_unpack
+    x_pack <- x_unpack
   }
 
-  # 3. transform (already constrained) variances to standard deviations?
-  # TODO
-  # if(lavoptions$optim.var.transform == "sqrt" &&
-  #       length(lavmodel@x.free.var.idx) > 0L) {
-  #    # transforming variances using atan (or another sigmoid function?)
-  #    # FIXME: better approach?
-  #    #start.x[lavmodel@x.free.var.idx] <-
-  #    #    atan(start.x[lavmodel@x.free.var.idx])
-  #    start.x[lavmodel@x.free.var.idx] <-
-  #        sqrt(start.x[lavmodel@x.free.var.idx]) # assuming positive var
-  # }
+  # 3. scale (in the packed metric)
+  scale <- lav_model_est_parscale_pack(
+    parscale = parscale, lavmodel = lavmodel
+  )
+  if (length(scale) != length(x_pack)) {
+    scale <- rep(1.0, length(x_pack))
+  }
+  scaling <- any(scale != 1.0)
 
   # final starting values for optimizer
-  start_x <- z_pack
+  start_x <- x_pack * scale
   if (debug) {
     cat("start.x = ", start_x, "\n")
   }
@@ -376,19 +235,15 @@ lav_model_est <- function(lavmodel = NULL,
     }
   }
 
-  # parameter scaling: the optimizer iterates in the z = x * parscale
-  # metric, so the box constraints must be transformed as well (up to
-  # 0.7-1 they were applied to the z values as if they were raw
-  # values, silently distorting any bounds when optim.parscale was
-  # active)
-  if (lavoptions$optim.parscale != "none" &&
-      length(parscale) > 0L && all(is.finite(parscale)) &&
-      all(parscale > 0)) {
-    if (length(lower) %in% c(1L, length(parscale))) {
-      lower <- lower * parscale
+  # the optimizer iterates in the u = p * scale metric, so the box
+  # constraints must be transformed as well (scale > 0, so the bounds
+  # keep their orientation)
+  if (scaling) {
+    if (length(lower) %in% c(1L, length(scale))) {
+      lower <- lower * scale
     }
-    if (length(upper) %in% c(1L, length(parscale))) {
-      upper <- upper * parscale
+    if (length(upper) %in% c(1L, length(scale))) {
+      upper <- upper * scale
     }
   }
 
@@ -426,14 +281,14 @@ lav_model_est <- function(lavmodel = NULL,
     #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
     # }
 
+    # 3. unscale
+    x <- x / scale
+
     # 2. unpack
     if (lavmodel@eq.constraints) {
       x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
         lavmodel@eq.constraints.k0
     }
-
-    # 1. unscale
-    x <- x / parscale
 
     # update GLIST (change `state') and make a COPY!
     glist <- lav_model_x2glist(lavmodel, x = x)
@@ -494,14 +349,14 @@ lav_model_est <- function(lavmodel = NULL,
     #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
     # }
 
+    # 3. unscale
+    x <- x / scale
+
     # 2. unpack
     if (lavmodel@eq.constraints) {
       x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
         lavmodel@eq.constraints.k0
     }
-
-    # 1. unscale
-    x <- x / parscale
 
     # update GLIST (change `state') and make a COPY!
     glist <- lav_model_x2glist(lavmodel, x = x)
@@ -523,13 +378,13 @@ lav_model_est <- function(lavmodel = NULL,
       cat("\n")
     }
 
-    # 1. scale (note: divide, not multiply!)
-    dx <- dx / parscale
-
     # 2. pack
     if (lavmodel@eq.constraints) {
       dx <- as.numeric(dx %*% lavmodel@eq.constraints.K)
     }
+
+    # 3. scale (note: divide, not multiply!)
+    dx <- dx / scale
 
     # 3. transform variances back
     # if(lavoptions$optim.var.transform == "sqrt" &&
@@ -635,10 +490,8 @@ lav_model_est <- function(lavmodel = NULL,
   }
 
 
-  # parameter scaling
-  # FIXME: what is the best way to set the scale??
-  # current strategy: if startx > 1.0, we rescale by using
-  # 1/startx
+  # nlminb's own scale heuristic (unchanged since 0.5): parameters that
+  # start above 1 (in absolute value) are scaled by 1/|start|
   scale_1 <- rep(1.0, length(start_x))
   idx <- which(abs(start_x) > 1.0)
   if (length(idx) > 0L) {
@@ -979,6 +832,34 @@ lav_model_est <- function(lavmodel = NULL,
     if (!is.null(body(lavmodel@cin.jacobian))) cin_jac <- lavmodel@cin.jacobian
     if (!is.null(body(lavmodel@ceq.function))) ceq <- lavmodel@ceq.function
     if (!is.null(body(lavmodel@ceq.jacobian))) ceq_jac <- lavmodel@ceq.jacobian
+    # parameter scaling: the constraint functions (and their jacobians)
+    # are defined for the original parameters (there is no
+    # equality-constraint packing in this branch), while the optimizer
+    # works with u = x * scale
+    if (scaling) {
+      scale_con <- function(fun) {
+        if (is.null(fun)) {
+          return(NULL)
+        }
+        function(x, ...) fun(x / scale, ...)
+      }
+      scale_con_jac <- function(fun) {
+        if (is.null(fun)) {
+          return(NULL)
+        }
+        function(x, ...) {
+          jac <- fun(x / scale, ...)
+          if (!is.matrix(jac)) {
+            jac <- matrix(jac, ncol = length(scale))
+          }
+          sweep(jac, 2L, scale, "/")
+        }
+      }
+      cin <- scale_con(cin)
+      ceq <- scale_con(ceq)
+      cin_jac <- scale_con_jac(cin_jac)
+      ceq_jac <- scale_con_jac(ceq_jac)
+    }
     trace <- FALSE
     if (verbose) trace <- TRUE
     optim_out <- nlminb_constr(
@@ -1012,6 +893,12 @@ lav_model_est <- function(lavmodel = NULL,
     } else {
       converged <- FALSE
     }
+    # the jacobian of the constraints back in the original metric
+    if (scaling && is.matrix(optim_out$con.jac)) {
+      jac_attr <- attributes(optim_out$con.jac)
+      optim_out$con.jac <- sweep(optim_out$con.jac, 2L, scale, "*")
+      attributes(optim_out$con.jac) <- jac_attr
+    }
   } else if (optimizer == "NONE") {
     x <- start_x
     iterations <- 0L
@@ -1030,6 +917,7 @@ lav_model_est <- function(lavmodel = NULL,
       # needed for df!
 
       optim_out <- list()
+      x_con <- start_x / scale
       if (is.null(body(lavmodel@ceq.function))) {
         ceq <- function(x, ...) {
           numeric(0)
@@ -1044,15 +932,15 @@ lav_model_est <- function(lavmodel = NULL,
       } else {
         cin <- lavmodel@cin.function
       }
-      ceq0 <- ceq(start_x)
-      cin0 <- cin(start_x)
+      ceq0 <- ceq(x_con)
+      cin0 <- cin(x_con)
       con0 <- c(ceq0, cin0)
       jac <- rbind(
-        numDeriv::jacobian(ceq, x = start_x),
-        numDeriv::jacobian(cin, x = start_x)
+        numDeriv::jacobian(ceq, x = x_con),
+        numDeriv::jacobian(cin, x = x_con)
       )
-      nceq <- length(ceq(start_x))
-      ncin <- length(cin(start_x))
+      nceq <- length(ceq(x_con))
+      ncin <- length(cin(x_con))
       ncon <- nceq + ncin
       ceq_idx <- cin_idx <- integer(0)
       if (nceq > 0L) ceq_idx <- 1:nceq
@@ -1096,21 +984,23 @@ lav_model_est <- function(lavmodel = NULL,
       # and cin.JAC operate on the full (unco) space -- unpack BOTH
       # (evaluating cin.function on the packed x returned garbage
       # constraint values, silently corrupting the old classification)
-      dx <- gradient(x)
+      # back to the packed metric (the optimizer works with u = p * scale)
+      dx <- gradient(x) * scale
+      x_p <- x / scale
       if (lavmodel@ceq.simple.only) {
         unpack_idx <- lavpartable$free[lavpartable$free > 0]
-        x_unpack <- x[unpack_idx]
+        x_unpack <- x_p[unpack_idx]
         dx_unpack <- dx[unpack_idx]
       } else if (lavmodel@eq.constraints) {
         # unreachable via the standard pipeline: eq.constraints is a
         # packing flag that is only TRUE when equality constraints are the
         # ONLY constraints, which contradicts cin.simple.only; kept as a
         # safety net
-        x_unpack <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+        x_unpack <- as.numeric(lavmodel@eq.constraints.K %*% x_p) +
           lavmodel@eq.constraints.k0
         dx_unpack <- as.numeric(lavmodel@eq.constraints.K %*% dx)
       } else {
-        x_unpack <- x
+        x_unpack <- x_p
         dx_unpack <- dx
       }
       con0 <- lavmodel@cin.function(x_unpack)
@@ -1228,14 +1118,14 @@ lav_model_est <- function(lavmodel = NULL,
   #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
   # }
 
+  # 3. unscale
+  x <- x / scale
+
   # 2. unpack
   if (lavmodel@eq.constraints) {
     x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
       lavmodel@eq.constraints.k0
   }
-
-  # 1. unscale
-  x <- x / parscale
 
   # runaway solution? (residual variance far more negative than the
   # observed variance: a drift towards an infimum at infinity, not a
@@ -1269,6 +1159,7 @@ lav_model_est <- function(lavmodel = NULL,
   attr(x, "fx") <- fx
   attr(x, "dx") <- dx
   attr(x, "parscale") <- parscale
+  attr(x, "parscale_packed") <- scale
   if (!is.null(optim_out$con.jac)) attr(x, "con.jac") <- optim_out$con.jac
   if (!is.null(optim_out$lambda)) attr(x, "con.lambda") <- optim_out$lambda
   if (lavoptions$optim.partrace) {

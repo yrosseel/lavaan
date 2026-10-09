@@ -2502,14 +2502,23 @@ lav_inspect_grad <- function(object,
 
   # optim?
   if (optim) {
-    # 1. scale (note: divide, not multiply!)
-    if (!is.null(object@optim$parscale)) {
+    # parameter scaling: since 0.7-2, the optimizer works with the
+    # packed parameters times optim$parscale_packed; older objects
+    # scaled the free parameters (optim$parscale) before packing
+    scale_packed <- object@optim$parscale_packed
+    if (is.null(scale_packed) && !is.null(object@optim$parscale)) {
+      # 1. scale (note: divide, not multiply!)
       dx <- dx / object@optim$parscale
     }
 
     # 2. pack
     if (lavmodel@eq.constraints) {
       dx <- as.numeric(dx %*% lavmodel@eq.constraints.K)
+    }
+
+    # 3. scale (note: divide, not multiply!)
+    if (!is.null(scale_packed) && length(scale_packed) == length(dx)) {
+      dx <- dx / scale_packed
     }
     # only for PML: divide by tmp.n (to speed up convergence)
     if (lavmodel@estimator == "PML") {

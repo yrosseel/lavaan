@@ -818,8 +818,21 @@ Optimization options:
       helps convergence. After the optimization, they are treated as free
       parameters again (e.g., when standard errors are computed).}
     \item{\code{optim_dx_tol}}{Numeric. Tolerance used for checking if
-      the elements of the (unscaled) gradient are all zero (in absolute 
+      the elements of the (unscaled) gradient are all zero (in absolute
       value). The default value is 0.001.}
+    \item{\code{optim_parscale}:}{Character. If \code{"standardized"},
+      the optimizer works with rescaled parameters: each free parameter
+      is multiplied by the factor that would transform it to its
+      standardized metric (as if all observed variables had unit
+      variance; a latent variable takes the scale of its marker
+      indicator). This makes the optimization problem better conditioned
+      when the observed variables have very different variances, and
+      the scaling is safe to use with any type of constraint (the
+      constraints are always imposed on the original parameters). The
+      default is \code{"none"}; the retry strategy of the optimizer
+      (see \code{optim_attempts}) uses \code{"standardized"} when the
+      first attempt fails. Note that the \code{rescale_data} option
+      offers a more radical solution for badly scaled data.}
     \item{\code{gn_args}:}{List. Options related to the Gauss-Newton
       optimizer (\code{optim_method = "GN"}). The default values are
       \code{gn_args = list(max_iter = 200, tol_x = 1e-05,
