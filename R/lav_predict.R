@@ -1106,8 +1106,9 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
   # for that factor; factors of the same layer share the same mapping
   mm_lambda_star <- vector("list", length = length(mm_lambda))
   ho_fixes <- vector("list", length = length(mm_lambda))
+  lambda_mm_idx <- which(names(lavmodel@GLIST) == "lambda")
+  empty_names <- character(0L) # transform + factors without indicators
   if (bartlett && !is.null(lavpta) && !is.null(lavpta$vnames$lv.ind)) {
-    lambda_mm_idx <- which(names(lavmodel@GLIST) == "lambda")
     mm_idx_block <- lav_model_group_mm_indices(lavmodel@nmat)
     for (b in seq_along(mm_lambda)) {
       lv_ind_names <- lavpta$vnames$lv.ind[[b]]
@@ -1198,6 +1199,12 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     # higher-order factors (Bartlett only; NULL otherwise)
     lambda_star_g <- mm_lambda_star[[b]]
     ho_fixes_g <- ho_fixes[[b]]
+    # factors without observed indicators (transform only)
+    empty_idx_g <- integer(0L)
+    if (transform) {
+      empty_idx_g <- which(apply(lambda_g == 0, 2L, all))
+      lv_names_g <- lavmodel@dimNames[[lambda_mm_idx[b]]][[2L]]
+    }
 
     if (lavdata@nlevels > 1L) {
       lp <- lavdata@Lp[[g]]
@@ -1319,7 +1326,17 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
     # transform?
     if (transform) {
-      fsc <- tmat[[b]] %*% fsc
+      if (length(empty_idx_g) > 0L) {
+        # factors without observed indicators (higher-order factors): their
+        # scores are an exact linear function of the other scores, see
+        # lav_predict_tmat_empty()
+        m_g <- t(lambda_g) %*% sigma_inv_g %*% lambda_g
+        fsc <- lav_predict_tmat_empty(m = m_g, veta = veta_g,
+          empty_idx = empty_idx_g, bartlett = bartlett) %*% fsc
+        empty_names <- union(empty_names, lv_names_g[empty_idx_g])
+      } else {
+        fsc <- tmat[[b]] %*% fsc
+      }
     }
 
     # store fsm?
@@ -1440,7 +1457,13 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           }
 
           m22 <- t(lambda) %*% sigma_22_inv %*% lambda
-          if (bartlett) {
+          if (length(empty_idx_g) > 0L) {
+            # factors without observed indicators: see the complete-data
+            # case
+            fsc <- lav_predict_tmat_empty(m = m22, veta = veta_g,
+              empty_idx = empty_idx_g, bartlett = bartlett) %*% fsc
+            empty_names <- union(empty_names, lv_names_g[empty_idx_g])
+          } else if (bartlett) {
             tmp <- veta_sqrt %*% m22 %*% veta_sqrt
             fsc <- veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*%
               veta_inv_sqrt %*% fsc
@@ -1584,6 +1607,18 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       }
     } # se = "standard"
   } # g
+
+  if (length(empty_names) > 0L) {
+    lav_msg_warn(gettextf(
+      "transform = TRUE: the factor scores of %s (no observed indicators)
+      are an exact linear function of the factor scores of the factors with
+      observed indicators, and their variances can not be restored. The
+      model-implied (co)variances are restored for the factors with observed
+      indicators; the factor scores of %s are the model-implied conditional
+      means given these (transformed) factor scores, and have a smaller
+      variance than the model-implied one.",
+      lav_msg_view(empty_names, "none"), lav_msg_view(empty_names, "none")))
+  }
 
   if (fsm) {
     attr(fs, "fsm") <- fsm_1
@@ -2008,20 +2043,17 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
           (untransformed) factor scores."))
       } else {
         fs_cov <- cov(dc[ok_idx, , drop = FALSE])
-        veta_sqrt <- lav_mat_sym_sqrt(vetax[[g]])
         if (ml) {
           # Bartlett/ML: Krijnen/McDonald determinacy form, with the
           # empirical inverse score covariance in the role of
           # Lambda' Sigma.inv Lambda
-          veta_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(vetax[[g]]))
-          tmp <- veta_sqrt %*% lav_predict_solve(fs_cov) %*% veta_sqrt
-          tmat_g <- veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*% veta_inv_sqrt
+          tmat_g <- lav_predict_tmat_det_cov(fs_cov = fs_cov,
+                                             veta = vetax[[g]])
         } else {
           # EBM/regression: Green form, with the empirical score
           # covariance in the role of V(ETA) Lambda' Sigma.inv Lambda V(ETA)
-          tmp <- veta_sqrt %*% fs_cov %*% veta_sqrt
-          tmat_g <- veta_sqrt %*%
-            lav_mat_sym_sqrt(lav_predict_solve(tmp)) %*% veta_sqrt
+          tmat_g <- lav_predict_tmat_green_cov(fs_cov = fs_cov,
+                                               veta = vetax[[g]])
         }
         fs[[g]][, reg_idx] <- dc %*% t(tmat_g) + eetax[[g]]
       }
@@ -2499,7 +2531,9 @@ lav_predict_tmat_green_internal <- function(sigma_1 = NULL, veta = NULL,
   veta_sqrt <- lav_mat_sym_sqrt(veta)
   veta32 <- veta %*% veta_sqrt
   tmp <- veta32 %*% t(lambda) %*% sigma_inv %*% lambda %*% veta32
-  tmp_inv_sqrt <- lav_mat_sym_sqrt(solve(tmp))
+  # (pseudo-inverse if some factors have no indicators; such blocks use
+  # lav_predict_tmat_empty() instead)
+  tmp_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(tmp))
   veta_sqrt %*% tmp_inv_sqrt %*% veta_sqrt
 }
 
@@ -2514,4 +2548,68 @@ lav_predict_tmat_det_internal <- function(sigma_1 = NULL, veta = NULL,
     tmp_sqrt <- lav_mat_sym_sqrt(tmp)
     tmat <- veta_sqrt %*% tmp_sqrt %*% veta_inv_sqrt
     tmat
+}
+
+# the same two forms, but starting from the covariance matrix of the
+# (untransformed) factor scores 'fs_cov' (single block); the result T
+# satisfies T fs_cov T' = veta
+#
+# used when Lambda' Sigma.inv Lambda does not describe the covariance matrix
+# of the factor scores: for categorical data, where fs_cov is the empirical
+# covariance matrix of the scores (see lav_predict_eta_ebm_ml())
+#
+# Bartlett/determinacy form: fs_cov^-1 plays the role of
+# Lambda' Sigma.inv Lambda
+lav_predict_tmat_det_cov <- function(fs_cov = NULL, veta = NULL) {
+  veta_sqrt <- lav_mat_sym_sqrt(veta)
+  veta_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(veta))
+  tmp <- veta_sqrt %*% lav_predict_solve(fs_cov) %*% veta_sqrt
+  veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*% veta_inv_sqrt
+}
+
+# Green/regression form: fs_cov plays the role of
+# V(ETA) Lambda' Sigma.inv Lambda V(ETA)
+lav_predict_tmat_green_cov <- function(fs_cov = NULL, veta = NULL) {
+  veta_sqrt <- lav_mat_sym_sqrt(veta)
+  tmp <- veta_sqrt %*% fs_cov %*% veta_sqrt
+  veta_sqrt %*% lav_mat_sym_sqrt(lav_predict_solve(tmp)) %*% veta_sqrt
+}
+
+# transformation matrix when some factors have no observed indicators
+# (empty columns in Lambda: higher-order factors, phantom factors), starting
+# from m = Lambda' Sigma.inv Lambda (or its missing-data-pattern version)
+#
+# the observed indicators carry no information about these factors beyond
+# the scores of the factors with indicators (block 1): both the regression
+# scores and the (collapsed) Bartlett scores of a higher-order factor are an
+# exact linear function of the block-1 scores, so the covariance matrix of
+# the factor scores is singular, and no linear transformation can give them
+# the model-implied variance. We apply the transformation (Green or
+# Krijnen/McDonald) to block 1 only, and compute the scores of the other
+# factors as the model-implied conditional means given the transformed
+# block-1 scores: fs_e = veta_e1 veta_11^-1 fs_1. This restores the
+# covariances of these factors with block 1, but their variance is the
+# 'explained' part veta_e1 veta_11^-1 veta_1e only (a warning is issued)
+lav_predict_tmat_empty <- function(m = NULL, veta = NULL, empty_idx = NULL,
+                                   bartlett = FALSE) {
+  nfac <- nrow(veta)
+  obs_idx <- setdiff(seq_len(nfac), empty_idx)
+  veta_11 <- veta[obs_idx, obs_idx, drop = FALSE]
+  m_11 <- m[obs_idx, obs_idx, drop = FALSE]
+  veta_sqrt <- lav_mat_sym_sqrt(veta_11)
+  if (bartlett) {
+    veta_inv_sqrt <- lav_mat_sym_sqrt(lav_predict_solve(veta_11))
+    tmp <- veta_sqrt %*% m_11 %*% veta_sqrt
+    tmat_11 <- veta_sqrt %*% lav_mat_sym_sqrt(tmp) %*% veta_inv_sqrt
+  } else {
+    veta32 <- veta_11 %*% veta_sqrt
+    tmp <- veta32 %*% m_11 %*% veta32
+    tmat_11 <- veta_sqrt %*% lav_mat_sym_sqrt(lav_predict_solve(tmp)) %*%
+      veta_sqrt
+  }
+  tmat <- matrix(0, nrow = nfac, ncol = nfac)
+  tmat[obs_idx, obs_idx] <- tmat_11
+  tmat[empty_idx, obs_idx] <- veta[empty_idx, obs_idx, drop = FALSE] %*%
+    lav_predict_solve(veta_11) %*% tmat_11
+  tmat
 }

@@ -68,7 +68,15 @@ expression for their variance-covariance matrix exists; the transformation is
 therefore based on the empirical variance-covariance matrix of the factor
 scores, and as a result, the sample variance-covariance matrix of the
 transformed factor scores matches the model-implied variance-covariance
-matrix exactly.
+matrix exactly. For factors without observed indicators (higher-order
+factors, phantom factors), the factor scores (both the regression and the
+Bartlett scores) are an exact linear function of the factor scores of the
+factors with observed indicators, and no transformation can give them the
+model-implied variance. The transformation is then applied to the factors
+with observed indicators only, and the factor scores of the other factors
+are the model-implied conditional means given these (transformed) factor
+scores: their covariances with the other factors are restored, but their
+variance is smaller than the model-implied one (a warning is issued).
 Note: standard errors (\code{se}) and \code{acov} are not available (yet) if
 \code{transform = TRUE}; if requested, they are ignored with a warning. The
 resulting factor scores are often called correlation-preserving factor
