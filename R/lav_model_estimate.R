@@ -268,6 +268,10 @@ lav_model_est <- function(lavmodel = NULL,
     lower[h1_sat_idx] <- upper[h1_sat_idx] <- start_x[h1_sat_idx]
   }
 
+  # a non-finite objective value (eg a non-positive-definite Sigma) is
+  # replaced by this large finite value (see the L-BFGS-B branch below)
+  fx_cap <- 1e20
+
   # function to be minimized
   objective_function <- function(x, verbose = FALSE, inf_to_max = FALSE,
                                  debug = FALSE) {
@@ -331,7 +335,7 @@ lav_model_est <- function(lavmodel = NULL,
     # if(infToMax && is.infinite(fx)) fx <- 1e20
     if (!is.finite(fx)) {
       fx_group <- attr(fx, "fx.group")
-      fx <- 1e20
+      fx <- fx_cap
       attr(fx, "fx.group") <- fx_group # only for lav_model_fit()
     }
 
@@ -760,7 +764,13 @@ lav_model_est <- function(lavmodel = NULL,
       converged <- FALSE
     }
   } else if (optimizer == "L.BFGS.B") {
-    # warning, does not cope with Inf values!!
+    # L-BFGS-B's line search interpolates on the objective values; the
+    # 1e20 stand-in for a non-finite value then collapses the step to
+    # zero, after which the relative-reduction test declares (false)
+    # convergence after a handful of evaluations. A large but moderate
+    # stand-in keeps the backtracking sane (PoliticalDemocracy: converges
+    # in ~200 evaluations instead of stopping after 5).
+    fx_cap <- 1e10
 
     control_lbfgsb <- list(
       trace = 0L, fnscale = 1,
@@ -781,7 +791,11 @@ lav_model_est <- function(lavmodel = NULL,
     optim_out <- optim(
       par = start_x,
       fn = objective_function,
-      gr = gradient,
+      # the line search also asks for the gradient at trial points where
+      # the objective was not finite (nlminb never does); the 'not
+      # positive definite' warnings raised there are not informative
+      gr = if (is.null(gradient)) NULL else
+        function(x, ...) suppressWarnings(gradient(x, ...)),
       method = "L-BFGS-B",
       lower = lower,
       upper = upper,
