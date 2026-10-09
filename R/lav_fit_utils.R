@@ -147,9 +147,16 @@ lav_fit_catml_dwls <- function(lavobject, nonpd = "na") {
 # see:
 #     Zhang X, Savalei V. (2022). New computations for RMSEA and CFI
 #     following FIML and TS estimation with missing data. Psychological Methods.
+#
+# h1_model: optional user-provided (less restrictive) h1 model fitted to the
+# same data. The returned quantities are then those of the h0-vs-h1
+# difference test: the complete-data statistics and df are differenced, and
+# so are the correction traces k (as for the Satorra-Bentler difference
+# test), giving c.hat3 = (k_h0 - k_h1) / (df3_h0 - df3_h1). The same holds
+# for the baseline quantities (baseline-vs-h1).
 
 lav_fit_fiml_corrected <- function(lavobject, baseline_model,
-                                   version = "V3") {
+                                   version = "V3", h1_model = NULL) {
   version <- toupper(version)
   if (!version %in% c("V3", "V6")) {
     lav_msg_stop(gettext("only FIML-C(V3) and FIML-C(V6) are available."))
@@ -168,116 +175,38 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     lavobject@Data@nlevels > 1L ||
     is.null(lavobject@h1$implied$cov[[1]])) {
     return(empty_list)
-  } else {
-    lavdata <- lavobject@Data
-    lavsamplestats <- lavobject@SampleStats
-
-    h1 <- lavTech(lavobject, "h1", add.labels = TRUE)
-    cov_tilde <- lapply(h1, "[[", "cov")
-    mean_tilde <- lapply(h1, "[[", "mean")
-    sample_nobs <- unlist(lavsamplestats@nobs)
   }
 
-  # 'refit' using 'tilde' (=EM/saturated) sample statistics
-  # re-attach the data-based ov order (ov_order = "data"); parTable() has
-  # stripped the "ovda" attribute, so without this fit_tilde would be built
-  # in model order while lavobject (and its delta/information used below) is
-  # in data order, yielding an order-dependent scaling factor. Harmless
-  # no-op when the data order already equals the model order.
-  pt_tilde <- parTable(lavobject)
-  attr(pt_tilde, "ovda") <- lavobject@Data@ov.names[[1]]
-  fit_tilde <- try(lavaan(
-    model = pt_tilde,
-    sample_cov = cov_tilde,
-    sample_mean = mean_tilde,
-    sample_nobs = sample_nobs,
-    sample.cov.rescale = FALSE,
-    information = "observed",
-    optim.method = "none",
-    se = "none",
-    test = "standard",
-    baseline = FALSE,
-    fit.by.level = FALSE,
-    check.post = FALSE
-  ), silent = TRUE)
-  if (inherits(fit_tilde, "try-error")) {
+  # h0 model
+  h0 <- lav_fit_fiml_k(lavobject, version = version)
+  if (is.null(h0)) {
     return(empty_list)
   }
 
-  xx3 <- fit_tilde@test[[1]]$stat
-  df3 <- fit_tilde@test[[1]]$df
-
-  # compute 'k'
-
-  # V3/V6: always use h1.information = "unstructured"!!
-  lavobject@Options$h1.information <- c("unstructured", "unstructured")
-  lavobject@Options$observed.information <- c("h1", "h1")
-  fit_tilde@Options$h1.information <- c("unstructured", "unstructured")
-  fit_tilde@Options$observed.information <- c("h1", "h1")
-
-  wm <- wm_g <- lav_model_h1_info_observed(lavobject)
-  wc <- wc_g <- lav_model_h1_info_observed(fit_tilde)
-
-  if (version == "V3") {
-    jm <- jm_g <- lav_model_h1_info_firstorder(lavobject)
-    gamma_f <- vector("list", length = lavdata@ngroups)
-  }
-  delta <- lavTech(lavobject, "delta")
-  e_inv <- lavTech(lavobject, "inverted.information")
-  wmi <- wmi_g <- try(lapply(wm, lav_mat_sym_inverse),
-    silent = TRUE
-  )
-  if (inherits(wmi, "try-error")) {
-    return(empty_list)
-  }
-
-  fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-  # Fixme: as we only need the trace, perhaps we could do this
-  # group-specific? (see lav_test_sb_trace_original)
-  for (g in seq_len(lavdata@ngroups)) {
-    # group weight
-    wc_g[[g]] <- fg[g] * wc[[g]]
-    wm_g[[g]] <- fg[g] * wm[[g]]
-    wmi_g[[g]] <- 1 / fg[g] * wmi[[g]]
-
-    # gamma
-    if (version == "V3") {
-      jm_g[[g]] <- fg[g] * jm[[g]]
-      gamma_g <- wmi[[g]] %*% jm[[g]] %*% wmi[[g]]
-      gamma_f[[g]] <- 1 / fg[g] * gamma_g
+  # user-provided h1 model? (computed from its own saturated-model
+  # information, so that its variable order does not need to match the
+  # one of lavobject)
+  h1 <- NULL
+  if (!is.null(h1_model)) {
+    stopifnot(inherits(h1_model, "lavaan"))
+    if (h1_model@Options$conditional.x ||
+      h1_model@Data@nlevels > 1L ||
+      is.null(h1_model@h1$implied$cov[[1]])) {
+      return(empty_list)
+    }
+    h1 <- lav_fit_fiml_k(h1_model, version = version)
+    if (is.null(h1)) {
+      return(empty_list)
     }
   }
-  # create 'big' matrices
-  wc_all <- lav_mat_bdiag(wc_g)
-  wm_all <- lav_mat_bdiag(wm_g)
-  wmi_all <- lav_mat_bdiag(wmi_g)
-  delta_all <- do.call("rbind", delta)
 
-  e_comp <- t(delta_all) %*% wc_all %*% delta_all
-               # VS: or grab from fit.tilde, with observed.info="h1"
-
-
-  # compute trace
-  if (version == "V3") {
-    gamma_all <- lav_mat_bdiag(gamma_f)
-    # VS: Simplification of k.fimlc to minimize matrix multiplication
-    #                                                 of big matrices
-    jm_all <- lav_mat_bdiag(jm_g)
-
-    # VS: tr11 is also used for baseline
-    # VS: tr(AB) = sum(A*t(B)) is more efficient
-
-    tr11 <- sum(wc_all * gamma_all)
-    tr12 <- sum((t(delta_all) %*% jm_all %*% wmi_all %*%
-                 wc_all %*% delta_all) * e_inv)
-    tr22 <- sum((t(delta_all) %*% jm_all %*% delta_all %*% e_inv)
-             * t(t(delta_all) %*% wc_all %*% delta_all %*% e_inv))
-
-    k_fimlc <- tr11 - 2 * tr12 + tr22
-  } else {
-    # V6
-    tr1 <- sum(wc_all * wmi_all)
-    k_fimlc <- tr1 - sum(e_comp * e_inv)
+  xx3 <- h0$xx3
+  df3 <- h0$df3
+  k_fimlc <- h0$k
+  if (!is.null(h1)) {
+    xx3 <- xx3 - h1$xx3
+    df3 <- df3 - h1$df3
+    k_fimlc <- k_fimlc - h1$k
   }
 
   # convert to lavaan 'scaling.factor'
@@ -303,9 +232,67 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     return(out)
   }
 
+  # the baseline model is fitted to the same data (same variable order)
+  # as lavobject: reuse its saturated-model information pieces
+  hb <- lav_fit_fiml_k(fit_b, version = version, shared = h0)
+  if (is.null(hb)) {
+    return(out)
+  }
+
+  xx3_null <- hb$xx3
+  df3_null <- hb$df3
+  kb_fimlc <- hb$k
+  if (!is.null(h1)) {
+    xx3_null <- xx3_null - h1$xx3
+    df3_null <- df3_null - h1$df3
+    kb_fimlc <- kb_fimlc - h1$k
+  }
+
+  # convert to lavaan 'scaling.factor'
+  c_hat3_null <- kb_fimlc / df3_null
+
+  # return values
+  list(
+    XX3 = xx3, df3 = df3, c.hat3 = c_hat3, XX3.scaled = xx3_scaled,
+    XX3.null = xx3_null, df3.null = df3_null, c.hat3.null = c_hat3_null
+  )
+}
+
+# FIML-C ingredients for a single fitted model: the complete-data ML test
+# statistic (xx3) and df (df3) of the model refitted to the EM (saturated)
+# sample statistics, and the correction trace k (Zhang & Savalei, 2022;
+# version V3 or V6), so that the scaling factor is k / df3
+#
+# shared: optional output of a previous call for a model fitted to the same
+# data in the same variable order; the saturated-model information pieces
+# (which do not depend on the fitted model) are then reused
+#
+# returns NULL if any of the ingredients could not be computed
+lav_fit_fiml_k <- function(fit, version = "V3", shared = NULL) {
+  if (!is.null(shared)) {
+    cov_tilde <- shared$cov_tilde
+    mean_tilde <- shared$mean_tilde
+    sample_nobs <- shared$sample_nobs
+  } else {
+    if (is.null(fit@h1$implied$cov[[1]])) {
+      return(NULL)
+    }
+    h1 <- lavTech(fit, "h1", add.labels = TRUE)
+    cov_tilde <- lapply(h1, "[[", "cov")
+    mean_tilde <- lapply(h1, "[[", "mean")
+    sample_nobs <- unlist(fit@SampleStats@nobs)
+  }
+
   # 'refit' using 'tilde' (=EM/saturated) sample statistics
-  fit_b_tilde <- try(lavaan(
-    model = parTable(fit_b),
+  # re-attach the data-based ov order (ov_order = "data"); parTable() has
+  # stripped the "ovda" attribute, so without this fit_tilde would be built
+  # in model order while fit (and its delta/information used below) is
+  # in data order, yielding an order-dependent scaling factor. Harmless
+  # no-op when the data order already equals the model order.
+  pt_tilde <- parTable(fit)
+  attr(pt_tilde, "ovda") <- fit@Data@ov.names[[1]]
+  fit_tilde <- try(lavaan(
+    model = pt_tilde,
     sample_cov = cov_tilde,
     sample_mean = mean_tilde,
     sample_nobs = sample_nobs,
@@ -318,44 +305,94 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     fit.by.level = FALSE,
     check.post = FALSE
   ), silent = TRUE)
-  if (inherits(fit_b_tilde, "try-error")) {
-    return(out)
+  if (inherits(fit_tilde, "try-error")) {
+    return(NULL)
   }
 
-  xx3_null <- fit_b_tilde@test[[1]]$stat
-  df3_null <- fit_b_tilde@test[[1]]$df
+  xx3 <- fit_tilde@test[[1]]$stat
+  df3 <- fit_tilde@test[[1]]$df
 
-  fit_b@Options$h1.information <- c("unstructured", "unstructured")
-  fit_b@Options$observed.information <- c("h1", "h1")
-  fit_b_tilde@Options$h1.information <- c("unstructured", "unstructured")
-  fit_b_tilde@Options$observed.information <- c("h1", "h1")
+  # V3/V6: always use h1.information = "unstructured"!!
+  fit@Options$h1.information <- c("unstructured", "unstructured")
+  fit@Options$observed.information <- c("h1", "h1")
 
-  e_inv_b <- lavTech(fit_b, "inverted.information")
-  delta_b <- lavTech(fit_b, "Delta")
-  delta_b_all <- do.call("rbind", delta_b)
+  if (is.null(shared)) {
+    fit_tilde@Options$h1.information <- c("unstructured", "unstructured")
+    fit_tilde@Options$observed.information <- c("h1", "h1")
 
-  e_comp_b <- t(delta_b_all) %*% wc_all %*% delta_b_all #or grab from fitB.tilde
+    # saturated-model information: missing-data (wm) and complete-data (wc)
+    wm <- lav_model_h1_info_observed(fit)
+    wc <- wc_g <- lav_model_h1_info_observed(fit_tilde)
+    if (version == "V3") {
+      jm <- jm_g <- lav_model_h1_info_firstorder(fit)
+      gamma_f <- vector("list", length = fit@Data@ngroups)
+    }
+    wmi <- wmi_g <- try(lapply(wm, lav_mat_sym_inverse), silent = TRUE)
+    if (inherits(wmi, "try-error")) {
+      return(NULL)
+    }
 
-  # V3 or V6?
+    fg <- unlist(fit@SampleStats@nobs) / fit@SampleStats@ntotal
+    # Fixme: as we only need the trace, perhaps we could do this
+    # group-specific? (see lav_test_sb_trace_original)
+    for (g in seq_len(fit@Data@ngroups)) {
+      # group weight
+      wc_g[[g]] <- fg[g] * wc[[g]]
+      wmi_g[[g]] <- 1 / fg[g] * wmi[[g]]
+
+      # gamma
+      if (version == "V3") {
+        jm_g[[g]] <- fg[g] * jm[[g]]
+        gamma_g <- wmi[[g]] %*% jm[[g]] %*% wmi[[g]]
+        gamma_f[[g]] <- 1 / fg[g] * gamma_g
+      }
+    }
+    # create 'big' matrices
+    wc_all <- lav_mat_bdiag(wc_g)
+    wmi_all <- lav_mat_bdiag(wmi_g)
+    jm_all <- NULL
+    tr11 <- tr1 <- as.numeric(NA)
+    if (version == "V3") {
+      gamma_all <- lav_mat_bdiag(gamma_f)
+      # VS: Simplification of k.fimlc to minimize matrix multiplication
+      #                                                 of big matrices
+      jm_all <- lav_mat_bdiag(jm_g)
+      # VS: tr11 is also used for baseline
+      # VS: tr(AB) = sum(A*t(B)) is more efficient
+      tr11 <- sum(wc_all * gamma_all)
+    } else {
+      # V6
+      tr1 <- sum(wc_all * wmi_all)
+    }
+    shared <- list(
+      cov_tilde = cov_tilde, mean_tilde = mean_tilde,
+      sample_nobs = sample_nobs, wc_all = wc_all, wmi_all = wmi_all,
+      jm_all = jm_all, tr11 = tr11, tr1 = tr1
+    )
+  }
+
+  # model-specific pieces
+  delta <- lavTech(fit, "delta")
+  e_inv <- lavTech(fit, "inverted.information")
+  delta_all <- do.call("rbind", delta)
+  wc_all <- shared$wc_all
+  wmi_all <- shared$wmi_all
+
+  # compute trace
   if (version == "V3") {
-    tr12b <-
-      sum((t(delta_b_all) %*% jm_all %*% wmi_all %*% wc_all %*% delta_b_all) *
-        e_inv_b)
-    tr22b <-
-      sum((t(delta_b_all) %*% jm_all %*% delta_b_all %*% e_inv_b) *
-        t(t(delta_b_all) %*% wc_all %*% delta_b_all %*% e_inv_b))
-    kb_fimlc <- tr11 - 2 * tr12b + tr22b
+    jm_all <- shared$jm_all
+    tr12 <- sum((t(delta_all) %*% jm_all %*% wmi_all %*%
+                 wc_all %*% delta_all) * e_inv)
+    tr22 <- sum((t(delta_all) %*% jm_all %*% delta_all %*% e_inv)
+             * t(t(delta_all) %*% wc_all %*% delta_all %*% e_inv))
+    k <- shared$tr11 - 2 * tr12 + tr22
   } else {
     # V6
-    kb_fimlc <- tr1 - sum(e_comp_b * e_inv_b)
+    e_comp <- t(delta_all) %*% wc_all %*% delta_all
+    k <- shared$tr1 - sum(e_comp * e_inv)
   }
 
-  # convert to lavaan 'scaling.factor'
-  c_hat3_null <- kb_fimlc / df3_null
-
-  # return values
-  list(
-    XX3 = xx3, df3 = df3, c.hat3 = c_hat3, XX3.scaled = xx3_scaled,
-    XX3.null = xx3_null, df3.null = df3_null, c.hat3.null = c_hat3_null
-  )
+  # (drop the model-specific pieces of a reused 'shared' list first)
+  shared[c("xx3", "df3", "k")] <- NULL
+  c(shared, list(xx3 = xx3, df3 = df3, k = k))
 }

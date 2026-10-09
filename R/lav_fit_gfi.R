@@ -317,9 +317,19 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
                                   scaled_test = "none",
                                   ci_level = 0.90,
                                   robust = TRUE,
-                                  cat_nonpd = "na") {
+                                  cat_nonpd = "na",
+                                  h1_model = NULL) {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
+
+  # user-provided h1 model (only needed here for the FIML-corrected
+  # robust quantities; the @test slot has already been updated)
+  if (!is.null(h1_model)) {
+    stopifnot(inherits(h1_model, "lavaan"))
+  } else if (!is.null(lavobject@external$h1.model)) {
+    stopifnot(inherits(lavobject@external$h1.model, "lavaan"))
+    h1_model <- lavobject@external$h1.model
+  }
 
   # check for categorical
   categorical_flag <- lavobject@Model@categorical
@@ -371,7 +381,8 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
     fiml <- try(
       lav_fit_fiml_corrected(lavobject,
         baseline_model = NULL,
-        version = version
+        version = version,
+        h1_model = h1_model
       ),
       silent = TRUE
     )

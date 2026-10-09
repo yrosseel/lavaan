@@ -873,7 +873,8 @@ lav_fit <- function(object, fit_measures = "all",
         notclose_h0 = rmsea_notclose_h0,
         robust = fm_args$robust,
         cat_nonpd = fm_args$cat_nonpd,
-        n_override = rmsea_n
+        n_override = rmsea_n,
+        h1_model = h1_model
       )
     )
   }
@@ -914,7 +915,8 @@ lav_fit <- function(object, fit_measures = "all",
         scaled_test = scaled_test,
         ci_level = gfi_ci_level,
         robust = fm_args$robust,
-        cat_nonpd = fm_args$cat_nonpd
+        cat_nonpd = fm_args$cat_nonpd,
+        h1_model = h1_model
       )
     )
     # return the value under the old (requested) name

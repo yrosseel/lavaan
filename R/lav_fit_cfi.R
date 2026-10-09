@@ -234,6 +234,22 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
 
+  # TDJ: Check for user-supplied h1.model, using similar priority as for
+  #      the baseline model (see below):
+  #        1. user-provided h1 model
+  #        2. h1 model in @external slot
+  #        3. default h1 model (already in @h1 slot, no update necessary)
+
+  # 1. user-provided h1 model
+  if (!is.null(h1_model)) {
+    stopifnot(inherits(h1_model, "lavaan"))
+
+    # 2. h1 model in @external slot
+  } else if (!is.null(lavobject@external$h1.model)) {
+    stopifnot(inherits(lavobject@external$h1.model, "lavaan"))
+    h1_model <- lavobject@external$h1.model
+  } # else is.null
+
   # check for categorical
   categorical_flag <- lavobject@Model@categorical
 
@@ -283,7 +299,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
     }
     fiml <- try(
       lav_fit_fiml_corrected(lavobject, baseline_model,
-        version = version
+        version = version,
+        h1_model = h1_model
       ),
       silent = TRUE
     )
@@ -424,20 +441,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   # 3. baseline model in @baseline slot
   # 4. nothing -> compute independence model
 
-  # TDJ: Also check for user-supplied h1.model, using similar priority:
-  #        1. user-provided h1 model
-  #        2. h1 model in @external slot
-  #        3. default h1 model (already in @h1 slot, no update necessary)
-
-  # 1. user-provided h1 model
-  if (!is.null(h1_model)) {
-    stopifnot(inherits(h1_model, "lavaan"))
-
-    # 2. h1 model in @external slot
-  } else if (!is.null(lavobject@external$h1.model)) {
-    stopifnot(inherits(lavobject@external$h1.model, "lavaan"))
-    h1_model <- lavobject@external$h1.model
-  } # else is.null
+  # (a user-supplied h1 model, if any, was resolved at the top)
 
   # 1. user-provided baseline model
   if (!is.null(baseline_model)) {
