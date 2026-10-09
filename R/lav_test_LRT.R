@@ -297,11 +297,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
 
   mods_scaled <- unlist(lapply(mods, function(x) {
-    any(c(
-      "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
-      "mean.var.adjusted", "scaled.shifted",
-      "mean.var.adjusted.corrected", "scaled.shifted.corrected"
-    ) %in%
+    any(lav_test_scaled_names %in%
       unlist(sapply(slot(x, "test"), "[[", "test")))
   }))
 
@@ -310,22 +306,19 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     scaled <- TRUE
     # which test to choose by default?
     # i.e., not determined by method=
-    scaled_list <- sapply(mods[[which(ndf > 0)[1]]]@test,
-                         # first mod with df>0
-                         #FIXME: ? If no mods have df > 0,
-                         #         this still yields error
+    # (read from the first model with df > 0; when all models are
+    # saturated, from the first scaled model: the difference is zero anyway)
+    ref_idx <- which(ndf > 0)[1]
+    if (is.na(ref_idx)) {
+      ref_idx <- which(mods_scaled)[1]
+    }
+    scaled_list <- sapply(mods[[ref_idx]]@test,
                          function(x) !is.null(x$scaled.test.stat))
     if (!any(scaled_list)) {
       # no test entry carries a scaled.test.stat field (eg PML objects
       # created before 0.7-1): fall back to matching the scaled-test names
-      scaled_list <- sapply(mods[[which(ndf > 0)[1]]]@test,
-        function(x) {
-          x$test[1] %in% c(
-            "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
-            "mean.var.adjusted", "scaled.shifted",
-            "mean.var.adjusted.corrected", "scaled.shifted.corrected"
-          )
-        })
+      scaled_list <- sapply(mods[[ref_idx]]@test,
+        function(x) x$test[1] %in% lav_test_scaled_names)
     }
     scaled_idx <- which(scaled_list)[[1]]
     default_test <- object@test[[scaled_idx]]$test

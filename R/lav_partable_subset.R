@@ -499,21 +499,24 @@ lav_pt_subset_sm <- function(pt_1 = NULL,
   # remove not-needed measurement models
   for (g in 1:nblocks) {
 
-    # eqs.names
+    # the variables of the structural model: the variables involved in the
+    # regressions, plus ALL (regular) latent variables -- a latent variable
+    # that appears in no regression is still part of the structural model
+    # (its variance and its covariances with the other latent variables are
+    # structural parameters; before 0.7-4 such a variable was silently left
+    # out, and its covariances were never estimated). In the higher-order
+    # setting, the lower-order factors (lv.ind) belong to the measurement
+    # part, unless they appear in a regression themselves.
     eqs_names <- unique(c(
       lavpta$vnames$eqs.x[[g]],
       lavpta$vnames$eqs.y[[g]]
     ))
-    if (length(eqs_names) == 0L) { # no structural model
-      # only the latent variances/covariances are 'structural'; in the
-      # higher-order setting, the lower-order factors (lv.ind) belong to
-      # the measurement part
-      eqs_names <- lv_names[[g]]
-      lv_ind <- lavpta$vnames$lv.ind[[g]]
-      if (length(lv_ind) > 0L) {
-        eqs_names <- eqs_names[!eqs_names %in% lv_ind]
-      }
+    lv_struc <- lv_names[[g]]
+    lv_ind <- lavpta$vnames$lv.ind[[g]]
+    if (length(lv_ind) > 0L) {
+      lv_struc <- lv_struc[!lv_struc %in% lv_ind]
     }
+    eqs_names <- unique(c(eqs_names, lv_struc))
     # all.names <- unique(c(
     #   eqs.names,
     #   lavpta$vnames$lv.regular[[g]]

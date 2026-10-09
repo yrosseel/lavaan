@@ -251,9 +251,10 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
       idx_only = TRUE
     )
 
-    # remove 'exogenous' factor variances (if any) from reg.idx
-    lv_names_x <- lv_names[lv_names %in% unlist(lavpta$vnames$eqs.x) &
-      !lv_names %in% unlist(lavpta$vnames$eqs.y)]
+    # remove 'exogenous' factor variances (if any) from reg.idx: the
+    # latent variables that are not endogenous in the structural model
+    # (including the ones that appear in no regression at all)
+    lv_names_x <- lv_names[!lv_names %in% unlist(lavpta$vnames$eqs.y)]
     if ((lavoptions_pa$fixed.x || lavoptions_pa$std.lv) &&
         length(lv_names_x) > 0L) {
       var_idx <- which(pt_1$lhs %in% lv_names_x &

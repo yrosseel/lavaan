@@ -250,6 +250,12 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     other settings the corrected tests are dropped with a warning).
     Several tests can be combined, for instance
     \code{test = c("satorra.bentler", "mean.var.adjusted.corrected")}.
+    The structural model contains all latent variables of the model (not
+    only the ones that appear in a regression), together with the observed
+    variables that appear in a regression: the variances of the latent
+    variables, and their covariances, are structural parameters, estimated
+    in step 2 (in a higher-order model, the lower-order factors belong to
+    the measurement part, unless they appear in a regression themselves).
     The measurement blocks of step 1 inherit the \code{test} argument as
     well (unless overridden in \code{mm_args}): when a scaled test is
     requested, the block table in the summary shows that (first) scaled
