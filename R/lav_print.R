@@ -1272,6 +1272,11 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       cat("Summary Information Measurement + Structural:\n\n")
     }
     print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+    # a scaled block test was requested (test = ): name it
+    if (!is.null(attr(sam_mm_table, "test"))) {
+      cat("\n  Scaled test statistic: ",
+          paste(attr(sam_mm_table, "test"), collapse = ", "), "\n", sep = "")
+    }
 
     if (sam_method == "local") {
       # reliability information

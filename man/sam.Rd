@@ -250,6 +250,11 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     other settings the corrected tests are dropped with a warning).
     Several tests can be combined, for instance
     \code{test = c("satorra.bentler", "mean.var.adjusted.corrected")}.
+    The measurement blocks of step 1 inherit the \code{test} argument as
+    well (unless overridden in \code{mm_args}): when a scaled test is
+    requested, the block table in the summary shows that (first) scaled
+    test statistic (columns \code{Chisq.scaled} and \code{Df.scaled}),
+    otherwise the standard chi-square statistic.
 
     If \code{sam.method} is \code{"global"}, the returned object is an
     ordinary (joint) lavaan object, and \code{fitMeasures} returns the usual

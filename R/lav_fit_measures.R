@@ -447,12 +447,7 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # do we have a scaled test statistic? if so, which one?
-  scaled_test_names <- c(
-    "satorra.bentler",
-    "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
-    "mean.var.adjusted", "scaled.shifted",
-    "mean.var.adjusted.corrected", "scaled.shifted.corrected"
-  )
+  scaled_test_names <- lav_test_scaled_names
   scaled_flag <- FALSE
   if (!fmg_standard_test &&
       scaled_test != "none" &&

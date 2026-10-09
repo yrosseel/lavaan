@@ -119,6 +119,16 @@ lavTest <- function(lavobject, test = "standard",               # nolint
 }
 
 # synonyms for the test statistics: canonical name -> accepted aliases
+# the scaled (robust) test statistics: the ones fitMeasures() reports the
+# ".scaled" fit measures for (the first available one), and the one the
+# sam() measurement-block table shows when requested
+lav_test_scaled_names <- c(
+  "satorra.bentler",
+  "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
+  "mean.var.adjusted", "scaled.shifted",
+  "mean.var.adjusted.corrected", "scaled.shifted.corrected"
+)
+
 lav_test_synonyms <- list(
   standard = c("chisq", "chi", "chi-square", "chi.square"),
   satorra.bentler = c(

@@ -1876,6 +1876,19 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
                           local_options = list(), global_options = list()) {
   mm_fit <- step1$MM.FIT
 
+  # the test statistic of each block: the standard chi-square, unless a
+  # scaled test was requested (test = at the top level, or in mm_args): then
+  # the first scaled test of the block, as fitMeasures() does. (The blocks
+  # share their options, so they hold the same tests.)
+  mm_test_idx <- vapply(mm_fit, function(x) {
+    idx <- which(names(x@test) %in% lav_test_scaled_names)[1]
+    if (is.na(idx)) 1L else idx
+  }, integer(1L))
+  mm_test_name <- unique(vapply(seq_along(mm_fit), function(b) {
+    mm_fit[[b]]@test[[mm_test_idx[b]]]$test
+  }, character(1L)))
+  mm_scaled_flag <- any(mm_test_idx > 1L)
+
   sam_mm_table <- data.frame(
     Block = seq_along(step1$mm.list),
     Latent = sapply(mm_fit, function(x) {
@@ -1884,13 +1897,19 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     Nind = sapply(mm_fit, function(x) {
       length(unique(unlist(x@pta$vnames$ov)))
     }),
-    Chisq = sapply(mm_fit, function(x) {
-      x@test[[1]]$stat
-    }),
-    Df = sapply(mm_fit, function(x) {
-      x@test[[1]]$df
-    })
+    Chisq = vapply(seq_along(mm_fit), function(b) {
+      mm_fit[[b]]@test[[mm_test_idx[b]]]$stat
+    }, numeric(1L)),
+    Df = vapply(seq_along(mm_fit), function(b) {
+      mm_fit[[b]]@test[[mm_test_idx[b]]]$df
+    }, numeric(1L))
   )
+  if (mm_scaled_flag) {
+    names(sam_mm_table)[names(sam_mm_table) == "Chisq"] <- "Chisq.scaled"
+    names(sam_mm_table)[names(sam_mm_table) == "Df"] <- "Df.scaled"
+    # the name of the scaled test: shown below the table by summary()
+    attr(sam_mm_table, "test") <- mm_test_name
+  }
   class(sam_mm_table) <- c("lavaan.data.frame", "data.frame")
 
   # extra info for @internal slot
