@@ -81,7 +81,17 @@ lav_standardize_constraints <- function(out, partable, lavmodel) {
   }
   idx <- which(partable$op == "<" | partable$op == ">")
   if (length(idx) > 0L) {
-    out[idx] <- lavmodel@cin.function(x)
+    cin <- lavmodel@cin.function(x)
+    # when the model also has box bounds, the inequality function holds
+    # the bound rows (first) as well; only the explicit rows have a row
+    # in the parameter table
+    bound_idx <- attr(cin, "bound.idx", exact = TRUE)
+    if (length(bound_idx) > 0L) {
+      cin <- cin[-bound_idx]
+    }
+    if (length(cin) == length(idx)) {
+      out[idx] <- cin
+    }
   }
 
   out

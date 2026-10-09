@@ -714,9 +714,12 @@ lav_model_est <- function(lavmodel = NULL,
     # (but WLS works!)
     # - BB.ML works too
 
+    # note: optim()'s parscale is the typical SIZE of a parameter
+    # (optimization is performed on par/parscale), the inverse of
+    # nlminb's scale (up to 0.7-1, scale_1 itself was passed here)
     control_bfgs <- list(
       trace = 0L, fnscale = 1,
-      parscale = scale_1, ## or not?
+      parscale = 1 / scale_1,
       ndeps = 1e-3,
       maxit = 10000,
       abstol = 1e-20,
@@ -761,7 +764,7 @@ lav_model_est <- function(lavmodel = NULL,
 
     control_lbfgsb <- list(
       trace = 0L, fnscale = 1,
-      parscale = scale_1, ## or not?
+      parscale = 1 / scale_1, # see BFGS above
       ndeps = 1e-3,
       maxit = 10000,
       REPORT = 1L,
