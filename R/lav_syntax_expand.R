@@ -191,6 +191,7 @@ lav_expand_plusplus <- function(modellist, modelsrc, types) {
       balance = 0L
       while (starti > 0L && ((
           newvec$elem_text[starti] != "+" &&
+          newvec$elem_type[starti] != types$newline &&
           newvec$elem_type[starti] != types$lavaanoperator) ||
           balance != 0L)
         ) {

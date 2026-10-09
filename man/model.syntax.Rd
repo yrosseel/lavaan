@@ -467,6 +467,33 @@ also label that parameter, you can use something like:
 \preformatted{ f1 =~ x1 + x2 + 4*x3 + x3.loading*x3}
 }
 
+\section{Variable series (the ++ operator)}{
+Long lists of variable names that only differ by a number or a letter can be
+abbreviated with the \code{"++"} operator. The expression \code{"x1 ++ x5"}
+is equivalent to \code{"x1 + x2 + x3 + x4 + x5"}. The series runs from the
+first name to the last name, and may be descending as well: \code{"x5 ++ x1"}
+is equivalent to \code{"x5 + x4 + x3 + x2 + x1"}. The two endpoints must have
+the same structure: the parts that differ must be either numbers (possibly
+with leading zeros, as in \code{"x01 ++ x10"}) or single letters (as in
+\code{"xa ++ xd"}), and the parts that are the same must match exactly. If
+several parts differ, they must all change by the same amount, so that
+\code{"x1y1 ++ x3y3"} expands to \code{"x1y1 + x2y2 + x3y3"}. A series can
+appear anywhere a list of names separated by \code{"+"} is allowed, on the
+right-hand side as well as on the left-hand side of an operator, and it can
+be combined with ordinary terms or with other series:
+\preformatted{ f1 =~ x1 ++ x5 + x8
+ f2 =~ y01 ++ y10
+ f3 =~ z9 ++ z1
+ f1 ++ f3 ~ w1 ++ w4}
+Modifiers may be attached to the endpoints of a series. A numeric constant
+or a label that is identical for both endpoints is applied to every element;
+a label that itself forms a series is expanded along with the variable
+names:
+\preformatted{ f1 =~ a*x1 ++ a*x5       # all loadings equal (labeled a)
+ f2 =~ b1*y1 ++ b5*y5     # labels b1, b2, b3, b4, b5
+ f3 =~ 1*z1 ++ 1*z5       # all loadings fixed to 1}
+}
+
 \section{Random slopes (two-level models)}{
 In a two-level model (with a \code{cluster=} argument), the \code{rv()}
 modifier can be used in the level-1 (within) part of the model to turn a
