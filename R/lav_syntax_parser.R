@@ -132,7 +132,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
       }
     }
   }
-  modelsrcw <- gsub("\t", " ", modelsrcw)
+  modelsrcw <- gsub("\t|\r", " ", modelsrcw)
   newlines <- gregexpr("[;\n]", modelsrcw)[[1L]]
   if (newlines[1L] > -1L) {
     for (i in seq_along(newlines)) {
@@ -219,9 +219,12 @@ lav_parse_text_tokens <- function(modelsrc, types) {
     }
   }
 
+  # a numeric literal, or (signed) Inf (eg lower(-Inf)); Inf must not be
+  # the start of an identifier (Infl)
   numliterals <- gregexpr(
-    "([ \n][-+][.0-9]|[ \n]\\.[0-9]|[ \n][0-9])[-+\\.0-9eE]*",
-    paste0(" ", modelsrcw)
+    paste0("([ \n][-+][.0-9]|[ \n]\\.[0-9]|[ \n][0-9])[-+\\.0-9eE]*",
+           "|[ \n][-+]?Inf(?![_.[:alnum:]])"),
+    paste0(" ", modelsrcw), perl = TRUE
   )[[1]]
   if (numliterals[1L] > -1L) {
     numliteral_lengths <- attr(numliterals, "match.length") - 1L
@@ -270,6 +273,22 @@ lav_parse_text_tokens <- function(modelsrc, types) {
   elem_type <- elem_type[token_order]
   elem_text <- elem_text[token_order]
 
+  # a number immediately followed by an identifier (1f, 2x1) is an invalid
+  # name, not a number and a name (the 1 was silently dropped before)
+  ntok <- length(elem_pos)
+  if (ntok > 1L) {
+    bad <- which(elem_type[-ntok] == types$numliteral &
+                 elem_type[-1L] == types$identifier &
+                 elem_pos[-1L] == elem_pos[-ntok] + nchar(elem_text[-ntok]))
+    if (length(bad) > 0L) {
+      tl <- lav_parse_txtloc(modelsrc, elem_pos[bad[1L]])
+      lav_msg_stop(gettext("identifier can not start with a digit"),
+                   tl[1L],
+                   footer = tl[2L]
+      )
+    }
+  }
+
   # concatenate identifiers with only spaces in between - LDW 22/4/2024
   elem_i <- length(elem_pos)
   concatenated <- FALSE
@@ -277,7 +296,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
     if (any(elem_type[elem_i] == c(types$identifier, types$numliteral)) &&
       elem_type[elem_i - 1L] == types$identifier) {
       spaces_between <- elem_pos[elem_i] - elem_pos[elem_i - 1L] -
-        length(elem_text[elem_i - 1L])
+        nchar(elem_text[elem_i - 1L])
       elem_text[elem_i - 1L] <- paste0(
         elem_text[elem_i - 1L],
         strrep(" ", spaces_between),
@@ -306,8 +325,11 @@ lav_parse_text_tokens <- function(modelsrc, types) {
     if (elem_type[i] == types$identifier && elem_text[i] == "efa") {
       frm_hasefa <- TRUE
     }
+    # a statement continues on the next line after one of these (the
+    # open parser's list; "/" and "++" were missing here)
     if (any(elem_text[i] ==
-      c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
+      c("+", "*", "/", "=~", "-", "<~",
+        "~*~", "~~", "~", "|~", "|", "%", "++"))) {
       if (frm_incremented) {
         frm_number <- frm_number - 1L
         elem_formula_number[i] <- frm_number
@@ -833,6 +855,30 @@ assign("equal", function(...) {
         tl[1L],
         footer = tl[2L]
       )
+    }
+    # a bare number on the right-hand side: 0 or 1 for ~ and |~ (the
+    # intercept, free or fixed to zero), 0 for =~ (phantom latent
+    # variable); anything else used to be silently taken as 1
+    if (formul1$elem_type[nelem] == types$numliteral) {
+      numval <- suppressWarnings(as.numeric(formul1$elem_text[nelem]))
+      if (op == "=~" && !isTRUE(numval == 0)) {
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[nelem])
+        lav_msg_stop(
+          gettext("the right-hand side of =~ should contain variable
+                  names (or 0 for a latent variable without indicators)"),
+          tl[1L],
+          footer = tl[2L]
+        )
+      } else if (op != "=~" && !isTRUE(numval %in% c(0, 1))) {
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[nelem])
+        lav_msg_stop(
+          gettext("a number on the right-hand side of ~ can only be 1
+                  (the intercept) or 0 (no intercept); use 1 with a
+                  modifier to fix the intercept to a value (eg 2*1)"),
+          tl[1L],
+          footer = tl[2L]
+        )
+      }
     }
     # intercept fixed on 0
     # replace 'lhs ~ 0' => 'lhs ~ 0 * 1' - intercept fixed on zero

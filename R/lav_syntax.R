@@ -53,6 +53,9 @@ lav_parse_model_string_orig <- function(model_syntax = "",
   # replace semicolons with newlines prior to split
   model_syntax <- gsub(";", "\n", model_syntax, fixed = TRUE)
 
+  # CRLF line endings
+  model_syntax <- gsub("\r", "", model_syntax, fixed = TRUE)
+
   # remove all whitespace prior to split
   model_syntax <- gsub("[ \t]+", "", model_syntax, perl = TRUE)
   # remove any occurrence of >= 2 consecutive newlines to eliminate
