@@ -76,7 +76,7 @@ lav_expand_strings <- function(str1, str2) {
   nb_of_items <- nb_of_items - 1L
   teken <- sign(numeric_difference)
   if (numeric_difference < -1L || numeric_difference > 1L) {
-    for (i in seq(1L, numeric_difference - teken, teken)) {
+    for (i in seq(teken, numeric_difference - teken, teken)) {
       new_string_text <- ""
       for (k in seq(1, nb_of_items, 1)) {
           new_value <- start_values[k]
