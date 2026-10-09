@@ -1439,6 +1439,9 @@ lav_options_set <- function(opt = NULL) {
       # make sure "standard" comes first
       opt$test <- c("standard", opt$test[-standard_idx])
     }
+    # a test requested more than once (eg test = c("standard", "standard",
+    # "satorra.bentler")) is computed and reported once
+    opt$test <- unique(opt$test)
   }
 
   # final check
