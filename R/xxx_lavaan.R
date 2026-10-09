@@ -793,6 +793,20 @@ lavaan <- function(
   lavoptions$.rescale.vcov <- NULL
   lavoptions$.rescale.test <- NULL
 
+  # a requested (additional) Browne test that could not be computed was
+  # dropped with a warning by lav_model_test(); remove it from the options
+  # too, so that the internal refits below (baseline model, level-specific
+  # fit measures) do not request -- and warn about -- it again
+  browne_names <- c(
+    "browne.residual.nt", "browne.residual.nt.model",
+    "browne.residual.adf", "browne.residual.adf.model"
+  )
+  dropped_tests <- setdiff(intersect(lavoptions$test, browne_names),
+                           names(lavtest))
+  if (length(dropped_tests) > 0L) {
+    lavoptions$test <- setdiff(lavoptions$test, dropped_tests)
+  }
+
   # ----------- lavfit ----------
   lavfit <- lav_step14_fit(
     lavpartable = lavpartable,
