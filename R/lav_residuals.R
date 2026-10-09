@@ -28,7 +28,8 @@
 # cor.bollen). The moment vector stacks the level-specific blocks, each ordered
 # [mean, vech(cov)]; the within-level means are fixed at zero (degenerate
 # moments) and get a zero SE, and the cor standardization is a block-diagonal
-# jacobian over the levels. Only multigroup + multilevel is not ready yet.
+# jacobian over the levels (also with multiple groups: one joint ACOV per
+# group, stacked over the groups).
 
 # - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
 #                 projection matrix (see lav_residuals_acov)
@@ -901,17 +902,6 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
   lavdata <- object@Data
   lavmodel <- object@Model
 
-  # change options if multilevel (for now)
-  if (lavdata@nlevels > 1L) {
-    # per-element residual SEs are supported for a single group (all types);
-    # multigroup + multilevel is not ready yet
-    if (lavdata@ngroups > 1L) {
-      zstat <- se <- FALSE
-      summary <- FALSE
-      summary_options_1 <- lav_residuals_summary_options_off()
-    }
-  }
-
   # residual SEs/summaries are supported for the unconditional case (pure
   # categorical, continuous, and mixed continuous + ordinal) as well as the
   # conditional.x case (the moment vector then includes a regression-slopes
@@ -1159,6 +1149,12 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     } else if (lavdata@nlevels > 1L &&
       length(lavdata@group.label) == 0L) {
       names(out) <- lavdata@level.label
+    } else if (lavdata@nlevels > 1L) {
+      # multigroup + multilevel: one block per group x level (group-major)
+      names(out) <- paste(rep(unlist(lavdata@group.label),
+                              each = lavdata@nlevels),
+                          rep(lavdata@level.label, times = lavdata@ngroups),
+                          sep = ".")
     }
   }
 
@@ -1347,7 +1343,8 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           }
         } else if (lavdata@nlevels > 1L) {
           # multilevel: block-diagonal jacobian over the level-specific blocks
-          jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bentler")
+          jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bentler",
+                                               g = g)
           cor_mat[[g]] <- jac
         } else {
           # Ogasawara (2001), eq (13), or
@@ -1407,7 +1404,8 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           }
         } else if (lavdata@nlevels > 1L) {
           # multilevel: block-diagonal jacobian over the level-specific blocks
-          jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bollen")
+          jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bollen",
+                                               g = g)
           cor_mat[[g]] <- jac
         } else {
           # here we use the Maydeu-Olivares (2017) approach, see eq 17
@@ -1589,11 +1587,14 @@ lav_residuals_condx_intsl_scale <- function(ss, s_x, meanstructure) {
 # [mean, vech(cov)] and independent of the others, so the jacobian is the
 # direct sum of the per-block continuous jacobians (means rescaled by 1/SD;
 # covariances by diagonal scaling for cor.bentler, by lav_deriv_cov2cor_b for
-# cor.bollen). 'sampstat' is the per-block lavTech(object, "sampstat").
-lav_residuals_cor_jacobian_ml <- function(object, sampstat, type) {
-  nblocks <- object@Model@nblocks
-  block_jac <- vector("list", nblocks)
-  for (b in seq_len(nblocks)) {
+# cor.bollen). 'sampstat' is the per-block lavTech(object, "sampstat");
+# only the blocks (levels) of group 'g' enter.
+lav_residuals_cor_jacobian_ml <- function(object, sampstat, type, g = 1L) {
+  nlevels <- object@Data@nlevels
+  blocks <- (g - 1L) * nlevels + seq_len(nlevels)
+  block_jac <- vector("list", nlevels)
+  for (l in seq_len(nlevels)) {
+    b <- blocks[l]
     cov_b <- sampstat[[b]][["cov"]]
     ss <- 1 / sqrt(diag(cov_b))
     cov_jac <- if (type == "cor.bentler") {
@@ -1602,7 +1603,7 @@ lav_residuals_cor_jacobian_ml <- function(object, sampstat, type) {
       lav_deriv_cov2cor_b(cov_b)
     }
     # block order: [mean, vech(cov)]
-    block_jac[[b]] <- lav_mat_bdiag(diag(ss, nrow = length(ss)), cov_jac)
+    block_jac[[l]] <- lav_mat_bdiag(diag(ss, nrow = length(ss)), cov_jac)
   }
   do.call(lav_mat_bdiag, block_jac)
 }
@@ -1806,15 +1807,12 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
 
       # continuous -- multilevel
     } else if (lavdata@nlevels > 1L) {
-      if (lavdata@ngroups > 1L) {
-        # multigroup + multilevel: not ready yet
-        lav_msg_stop(gettext("not ready yet"))
-      }
-      # the moment vector stacks the level-specific blocks, each ordered
-      # [mean, vech(cov)]; the within-level means are fixed at zero and thus
-      # have a zero standard error
+      # the moment vector of this group stacks its level-specific blocks,
+      # each ordered [mean, vech(cov)]; the within-level means are fixed at
+      # zero and thus have a zero standard error
       offset <- 0L
-      for (b in seq_len(lavmodel@nblocks)) {
+      for (l in seq_len(lavdata@nlevels)) {
+        b <- (g - 1L) * lavdata@nlevels + l
         nvb <- object@pta$nvar[[b]]
         pstar_b <- nvb * (nvb + 1) / 2
         mean_se <- sqrt(diag_acov[offset + seq_len(nvb)])
@@ -2153,32 +2151,37 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
   }
 
   multilevel <- (lavdata@nlevels > 1L)
-  if (multilevel && lavdata@ngroups > 1L) {
-    lav_msg_stop(gettext("not ready yet")) # multigroup + multilevel
-  }
 
   # Gather, per type and per block, the column specs and the block's ACOV.
   # block_specs[[ty]][[b]] is a named list of column specs; block_acov[[ty]][[b]]
-  # is the block's ACOV (or NULL). For multilevel data, all blocks share one
-  # joint ACOV; each block's ACOV is the corresponding diagonal sub-block, and
-  # the spec 'offset' records where the block starts in the joint matrix.
+  # is the block's ACOV (or NULL). For multilevel data, the levels of a group
+  # share one joint ACOV; each block's ACOV is the corresponding diagonal
+  # sub-block, and the spec 'offset' records where the block starts in the
+  # stacked (all groups) matrix.
   block_specs <- vector("list", length(type))
   block_acov <- vector("list", length(type))
   names(block_specs) <- names(block_acov) <- type
 
   if (multilevel) {
-    # multilevel: one block per level; the moment vector of each block is
-    # ordered [mean, vech(cov)]
+    # multilevel: one block per group x level (group-major); the moment
+    # vector of each block is ordered [mean, vech(cov)]. 'offset_g' is the
+    # start of the block in the joint ACOV of its group, 'offset' its start
+    # in the stacked (all groups) matrix
     for (ty in type) {
       block_specs[[ty]] <- vector("list", lavmodel@nblocks)
       block_acov[[ty]] <- vector("list", lavmodel@nblocks)
     }
     offset <- 0L
     for (b in seq_len(lavmodel@nblocks)) {
+      g <- (b - 1L) %/% lavdata@nlevels + 1L
+      l <- (b - 1L) %% lavdata@nlevels + 1L
+      if (l == 1L) {
+        offset_g <- 0L
+      }
       nvb <- object@pta$nvar[[b]]
       pstar_b <- nvb * (nvb + 1) / 2
       blk_size <- nvb + pstar_b
-      blk <- offset + seq_len(blk_size) # [mean, cov] block range
+      blk <- offset_g + seq_len(blk_size) # [mean, cov] block range
       for (ty in type) {
         est_b <- switch(ty,
           rmr = rmr_list[[b]], srmr = srmr_list[[b]], crmr = crmr_list[[b]]
@@ -2191,9 +2194,10 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         )
         se_list <- get_se_list(ty)
         if (!is.null(se_list)) {
-          block_acov[[ty]][[b]] <- se_list[[1]][blk, blk, drop = FALSE]
+          block_acov[[ty]][[b]] <- se_list[[g]][blk, blk, drop = FALSE]
         }
       }
+      offset_g <- offset_g + blk_size
       offset <- offset + blk_size
     }
   } else {
@@ -2275,14 +2279,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     for (ty in type) {
       full_acov <- NULL
       if (se || unbiased) {
-        if (multilevel) {
-          # one joint ACOV across the levels
+        # the joint (stacked) ACOV attached by lav_residuals_acov(): for
+        # multilevel data one joint matrix across the levels (and groups);
+        # for single-level multigroup data it retains the cross-group
+        # covariance of the residuals under across-group equality
+        # constraints
+        full_acov <- attr(get_se_list(ty), "full")
+        if (is.null(full_acov) && multilevel && lavdata@ngroups == 1L) {
           full_acov <- get_se_list(ty)[[1]]
-        } else {
-          # single-level multigroup: the joint (stacked) ACOV attached by
-          # lav_residuals_acov(), which retains the cross-group covariance
-          # of the residuals under across-group equality constraints
-          full_acov <- attr(get_se_list(ty), "full")
         }
       }
       out[[ty]] <- combine_specs_table(
