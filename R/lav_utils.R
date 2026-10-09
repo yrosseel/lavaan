@@ -659,7 +659,18 @@ lav_adapt_func <- function(envir, dotdotdot, options_ddd) {
     dddnewnames <- lav_snake_case(dddnames)
     newargs <- dddnewnames %in% lijst
     for (j in which(newargs)) {
-      assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
+      # the current name was supplied explicitly as well? then it wins,
+      # and the old name (only an alias) is dropped silently: a wrapper
+      # that builds the call programmatically may carry both (e.g.
+      # lavaan.mi passes its own fun = next to the user's FUN =), and
+      # overwriting the explicit value with the alias corrupts the call
+      explicit <- tryCatch(
+        !eval(call("missing", as.name(dddnewnames[j])), envir),
+        error = function(e) FALSE
+      )
+      if (!explicit) {
+        assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
+      }
       dotdotdot[[dddnames[j]]] <- NULL
     }
     if (length(dotdotdot) > 0L) {
