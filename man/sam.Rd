@@ -137,8 +137,18 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      first-order one and, for models with latent product terms, the
      second-order one; when no truncation binds, they are unaffected.
      Note that when the debiased truncation engages, large product-term
-     coefficients are somewhat shrunken, and their confidence intervals
-     can be slightly anti-conservative. When a truncation engaged,
+     coefficients are somewhat shrunken (toward zero), and their
+     confidence intervals can be anti-conservative: in a demanding
+     simulation setting (four correlated latent predictors, reliabilities
+     of 0.4, fourteen structural terms), the coverage of the 95\%
+     intervals of the strongly shrunken product terms was about 90\%,
+     while the linear terms and the product terms with a true value of
+     zero were covered at the nominal level. The intervals are not
+     adjusted for this bias: the per-sample (delta-method) estimate of the
+     shrinkage bias is too noisy (its sampling variability exceeds the
+     standard error of the coefficient) to center the intervals, and
+     widening the intervals by this estimate would make the intervals of
+     all the other coefficients very conservative. When a truncation engaged,
      \code{summary()} prints a note with the truncated multiplier(s)
      and (where available) two diagnostics for the regression
      coefficients, also expressed in standard error units: a
