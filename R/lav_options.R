@@ -624,7 +624,11 @@ lav_options_set <- function(opt = NULL) {
         # ok, will be set later
       } else if (all(opt$test %in% c(
         "none", "standard", "yuan.bentler",
-        "yuan.bentler.mplus"
+        "yuan.bentler.mplus",
+        # Browne's residual tests: two-level ML (since 0.7-4; the
+        # unsupported settings are refused in lav_test_browne())
+        "browne.residual.nt", "browne.residual.nt.model",
+        "browne.residual.adf", "browne.residual.adf.model"
       ))) {
         # nothing to do
       } else {
@@ -632,7 +636,9 @@ lav_options_set <- function(opt = NULL) {
           "`test' argument must be one of %s in the multilevel case",
           lav_msg_view(c(
             "none", "standard", "yuan.bentler",
-            "yuan.bentler.mplus"
+            "yuan.bentler.mplus", "browne.residual.nt",
+            "browne.residual.nt.model", "browne.residual.adf",
+            "browne.residual.adf.model"
           ), log_sep = "or")
         ))
       }

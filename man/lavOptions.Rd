@@ -701,9 +701,11 @@ Estimation options:
       test statistic (also known as the reweighted least-squares (RLS)
       statistic) is computed, as its type I error rates are much closer
       to the nominal level. With sampling weights, the ADF version
-      (\code{"browne.residual.adf"}) is used instead; for multilevel
-      data (and a few other settings where no suitable Gamma matrix is
-      available), only the standard statistic is computed. See also the
+      (\code{"browne.residual.adf"}) is used instead; for two-level
+      data, the NT model-based version is available since 0.7-4 (not yet
+      with \code{conditional_x = TRUE}); in a few other settings where no
+      suitable Gamma matrix is available, only the standard statistic is
+      computed. See also the
       \code{\link{lavTest}} function to extract (alternative)
       test statistics from a fitted lavaan object. FMG test names such as
       \code{"peba4"}, \code{"pols3"}, \code{"pall"}, and \code{"all"} can be

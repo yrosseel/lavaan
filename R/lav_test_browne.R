@@ -81,8 +81,19 @@ lav_test_browne <- function(lavobject = NULL,
       version instead (e.g., test = \"browne.residual.nt.model\")."))
   }
   if (lavdata@nlevels > 1L) {
-    lav_msg_stop(gettext("Browne's test is not available when data is
-                         multilevel."))
+    # two-level data: see lav_test_browne_2l() below
+    tmp <- lav_test_browne_2l(
+      lavobject = lavobject, lavdata = lavdata,
+      lavsamplestats = lavsamplestats, lavmodel = lavmodel,
+      lavoptions = lavoptions, lavh1 = lavh1, lavimplied = lavimplied,
+      adf = adf, model_based = model_based
+    )
+    df_1 <- lav_test_browne_df(lavobject = lavobject,
+                               lavpartable = lavpartable,
+                               lavmodel = lavmodel)
+    return(lav_test_browne_out(stat = tmp$stat, stat_group = tmp$stat_group,
+                               df_1 = df_1, adf = adf,
+                               model_based = model_based))
   }
   if (!is.logical(n_minus_one)) {
     if (lavoptions$estimator == "ML" &&
@@ -308,13 +319,27 @@ lav_test_browne <- function(lavobject = NULL,
   }
 
   # DF
+  df_1 <- lav_test_browne_df(lavobject = lavobject, lavpartable = lavpartable,
+                             lavmodel = lavmodel)
+
+  lav_test_browne_out(stat = stat, stat_group = stat_group, df_1 = df_1,
+                      adf = adf, model_based = model_based)
+}
+
+# degrees of freedom (same approach as in lav_test.R)
+lav_test_browne_df <- function(lavobject = NULL, lavpartable = NULL,
+                               lavmodel = NULL) {
   if (!is.null(lavobject)) {
     df_1 <- lavobject@test[[1]]$df
   } else {
-    # same approach as in lav_test.R
     df_1 <- lav_test_df(lavpartable = lavpartable, lavmodel = lavmodel)
   }
+  df_1
+}
 
+# assemble the test list
+lav_test_browne_out <- function(stat = NULL, stat_group = NULL, df_1 = NULL,
+                                adf = TRUE, model_based = FALSE) {
   if (adf) {
     if (model_based) {
       # using model-based Gamma
@@ -344,7 +369,7 @@ lav_test_browne <- function(lavobject = NULL,
     pvalue <- 1 - pchisq(stat, df_1)
   }
 
-  out <- list(
+  list(
     test = name,
     stat = stat,
     stat.group = stat_group,
@@ -353,6 +378,185 @@ lav_test_browne <- function(lavobject = NULL,
     pvalue = pvalue,
     label = label
   )
+}
+
+# two-level data (ML): the residual is the difference between the
+# saturated (h1) moments and the model-implied moments of both levels,
+# in the order of the two-level information kernels (mu_w, vech(sigma_w),
+# mu_b, vech(sigma_b); the order of lav_model_delta() and
+# lav_model_wls_est()). The statistic is computed in its information form
+#
+#   T_B = n * [ res' A res - b' (Delta' A Delta)^{-1} b ],  b = Delta' A res
+#
+# with A = Gamma^{-1} the (per-cluster) information matrix of the
+# saturated model, so that no inverse of Gamma is needed (the x-rows of A
+# are zero when fixed.x = TRUE, and the rows of the within-level means of
+# variables that are split over the two levels are zero too):
+# - NT: A = the expected h1 information (the observed one under
+#   missing = "ml"), at the model-implied moments (model-based) or at the
+#   h1 estimates; n = the number of clusters (the units of the kernels)
+# - ADF, sample-based: A = the (generalized) inverse of the cluster
+#   sandwich Gamma = n_obs x acov at the h1 estimates (lav_object_gamma);
+#   n = the number of observations
+# - ADF, model-based: Gamma = A1^{-1} B1 A1^{-1} with A1 the expected
+#   (or observed) and B1 the first-order h1 information at the
+#   model-implied moments; n = the number of clusters
+# Equality constraints (linear or nonlinear): Delta is projected on the
+# tangent space of the constraints (as in the single-level case), and
+# the groups are combined into a single quadratic form.
+lav_test_browne_2l <- function(lavobject = NULL,
+                               lavdata = NULL,
+                               lavsamplestats = NULL,
+                               lavmodel = NULL,
+                               lavoptions = NULL,
+                               lavh1 = NULL,
+                               lavimplied = NULL,
+                               adf = TRUE,
+                               model_based = FALSE) {
+  if (lavmodel@estimator != "ML") {
+    lav_msg_stop(gettextf(
+      "Browne's residual test is not available (yet) for two-level data
+       with estimator = %s.", dQuote(lavmodel@estimator, q = FALSE)))
+  }
+  if (lavmodel@conditional.x) {
+    lav_msg_stop(gettext(
+      "Browne's residual test is not available (yet) for two-level data
+       with conditional_x = TRUE."))
+  }
+  if (length(lavh1) == 0L || length(lavh1$implied) == 0L) {
+    lavh1 <- lav_h1_implied_logl(
+      lavdata = lavdata, lavsamplestats = lavsamplestats,
+      lavoptions = lavoptions
+    )
+  }
+  if (length(lavimplied) == 0L) {
+    lavimplied <- lav_model_implied(lavmodel)
+  }
+  missing_flag <- lavdata@missing %in% c("ml", "ml.x")
+  ngroups <- lavdata@ngroups
+  nlevels <- lavdata@nlevels
+
+  # ingredients: Delta, model-implied and saturated moments
+  delta <- lav_model_delta(lavmodel)
+  wls_est <- lav_model_wls_est(lavmodel)
+  res <- vector("list", ngroups)
+  for (g in seq_len(ngroups)) {
+    w_idx <- (g - 1L) * nlevels + 1L
+    b_idx <- (g - 1L) * nlevels + 2L
+    s_h1 <- c(
+      lavh1$implied$mean[[w_idx]],
+      lav_mat_vech(lavh1$implied$cov[[w_idx]]),
+      lavh1$implied$mean[[b_idx]],
+      lav_mat_vech(lavh1$implied$cov[[b_idx]])
+    )
+    if (length(s_h1) != length(wls_est[[g]])) {
+      lav_msg_stop(gettext(
+        "the two-level saturated and model-implied moment vectors do not
+         have the same length."))
+    }
+    res[[g]] <- s_h1 - wls_est[[g]]
+  }
+
+  # the information matrix A (per group), and the sample-size factor
+  a_mat <- vector("list", ngroups)
+  nfac <- numeric(ngroups)
+  if (adf && !model_based) {
+    gamma_1 <- lav_object_gamma(
+      lavobject = NULL, lavdata = lavdata, lavoptions = lavoptions,
+      lavsamplestats = lavsamplestats, lavh1 = lavh1,
+      lavimplied = lavimplied, adf = TRUE, model_based = FALSE
+    )
+    for (g in seq_len(ngroups)) {
+      a_mat[[g]] <- lav_mat_sym_inverse_ginv(gamma_1[[g]])
+      nfac[g] <- lavsamplestats@nobs[[g]]
+    }
+  } else {
+    opt_1 <- lavoptions
+    opt_1$information <- if (missing_flag) "observed" else "expected"
+    opt_1$h1.information <- if (model_based) "structured" else "unstructured"
+    a1 <- lav_model_h1_info(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+      lavdata = lavdata, lavimplied = lavimplied, lavh1 = lavh1,
+      lavoptions = opt_1
+    )
+    if (adf) {
+      opt_1$information <- "first.order"
+      b1 <- lav_model_h1_info(
+        lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+        lavdata = lavdata, lavimplied = lavimplied, lavh1 = lavh1,
+        lavoptions = opt_1
+      )
+    }
+    for (g in seq_len(ngroups)) {
+      if (adf) {
+        a_mat[[g]] <- a1[[g]] %*% lav_mat_sym_inverse_ginv(b1[[g]]) %*%
+          a1[[g]]
+      } else {
+        a_mat[[g]] <- a1[[g]]
+      }
+      nfac[g] <- lavdata@Lp[[g]]$nclusters[[2]]
+    }
+  }
+
+  # quadratic form (information form, see above)
+  quad <- function(res_g, delta_g, a_g, nfac_g) {
+    a_res <- a_g %*% res_g
+    q1 <- drop(crossprod(res_g, a_res))
+    b <- crossprod(delta_g, a_res)
+    m <- crossprod(delta_g, a_g %*% delta_g)
+    mb <- tryCatch(solve(m, b), error = function(e) MASS::ginv(m) %*% b)
+    stat_g <- nfac_g * (q1 - drop(crossprod(b, mb)))
+    if (is.finite(stat_g) && stat_g < 0 && stat_g > -1e-8) {
+      stat_g <- 0
+    }
+    stat_g
+  }
+
+  eq_basis <- lav_con_eq_basis(lavmodel)
+  stat_group <- numeric(ngroups)
+  if (is.null(eq_basis)) {
+    # no equality constraints: the groups have no parameters in common,
+    # so the statistic is a sum of per-group statistics (drop the
+    # all-zero columns of Delta: the parameters of the other groups)
+    for (g in seq_len(ngroups)) {
+      delta_g <- delta[[g]]
+      keep <- colSums(abs(delta_g)) > 0
+      delta_g <- delta_g[, keep, drop = FALSE]
+      stat_group[g] <- quad(res[[g]], delta_g, a_mat[[g]], nfac[g])
+    }
+    stat <- sum(stat_group)
+  } else {
+    # equality constraints: a single quadratic form over the groups, with
+    # Delta projected on the tangent space of the constraints
+    q1 <- 0
+    b <- 0
+    m <- 0
+    for (g in seq_len(ngroups)) {
+      delta_g <- delta[[g]] %*% eq_basis
+      a_res <- a_mat[[g]] %*% res[[g]]
+      q1 <- q1 + nfac[g] * drop(crossprod(res[[g]], a_res))
+      b <- b + nfac[g] * crossprod(delta_g, a_res)
+      m <- m + nfac[g] * crossprod(delta_g, a_mat[[g]] %*% delta_g)
+    }
+    mb <- tryCatch(solve(m, b), error = function(e) MASS::ginv(m) %*% b)
+    stat <- q1 - drop(crossprod(b, mb))
+    if (is.finite(stat) && stat < 0 && stat > -1e-8) {
+      stat <- 0
+    }
+    stat_group <- stat * nfac / sum(nfac) # proxy only
+  }
+
+  list(stat = stat, stat_group = stat_group)
+}
+
+# symmetric inverse with a pseudo-inverse fallback (singular Gamma, e.g.
+# the zero rows/columns of the x-moments when fixed.x = TRUE)
+lav_mat_sym_inverse_ginv <- function(x = NULL) {
+  out <- tryCatch(chol2inv(chol(x)), error = function(e) NULL)
+  if (is.null(out)) {
+    out <- MASS::ginv(x)
+  }
+  dimnames(out) <- NULL
   out
 }
 
