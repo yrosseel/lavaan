@@ -14,7 +14,7 @@ lav_expand_strings <- function(str1, str2) {
   j1 <- 1L
   j2 <- 1L
   while (j1 <= length(byte1) && j2 <= length(byte2)) {
-    if (byte1[j1] == byte2[j2]) {
+    if (byte1[j1] == byte2[j2] && getdigit(byte1[j1]) < 0L) {
       start_values[nb_of_items] <- stop_values[nb_of_items] <- byte1[j1]
       nb_of_items <- nb_of_items + 1L
       j1 <- j1 + 1L
