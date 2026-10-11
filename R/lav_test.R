@@ -589,11 +589,24 @@ lav_model_test <- function(lavobject = NULL,
     } else if (lavoptions$estimator == "PML") {
       if (this_test == "mean.var.adjusted") {
         label <- "mean+var adjusted correction (PML)"
+        # saturated model (df == 0): the asymptotic mean and variance of
+        # the PLRT are both zero, and the adjusted df/scaling factor are a
+        # 0/0 ratio; mirror the other scaled tests (lav_test_scaled_na):
+        # unscaled statistic, df = 0, NA p-value and scaling factor
+        if (test_1[[1]]$df == 0L) {
+          pml$stat <- test_1[[1]]$stat
+          pml$df <- 0L
+          pml$p.value <- as.numeric(NA)
+          pml$scaling.factor <- as.numeric(NA)
+          pml_stat_group <- test_1[[1]]$stat.group
+        } else {
+          pml_stat_group <- test_1[[1]]$stat.group * pml$scaling.factor
+        }
         test_1[[this_test]] <-
           list(
             test = this_test,
             stat = pml$stat,
-            stat.group = test_1[[1]]$stat.group * pml$scaling.factor,
+            stat.group = pml_stat_group,
             df = pml$df,
             pvalue = pml$p.value,
             scaling.factor = 1 / pml$scaling.factor,

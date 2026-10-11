@@ -382,7 +382,11 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
     } else {
       xx2 <- x2
       df2 <- sum(test[[scaled_idx]]$trace.UGamma)
-      if (!is.finite(df2) || df2 == 0) {
+      if (df == 0) {
+        # saturated model: tr[U Gamma] is 0 as well; keep df2 = 0 so that
+        # rmsea.scaled is 0 (perfect fit), as for the shifted family
+        df2 <- 0
+      } else if (!is.finite(df2) || df2 == 0) {
         df2 <- as.numeric(NA)
       }
     }

@@ -408,6 +408,13 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
     } else {
       c_hat <- test[[scaled_idx]]$scaling.factor
     }
+    # saturated model (df == 0): the scaling factor is undefined (NA), but
+    # it only enters the robust indices multiplied by df; use c_hat = 1 so
+    # that the robust indices equal their perfect-fit value (1), as for
+    # the categorical and FIML routes
+    if (df == 0) {
+      c_hat <- 1
+    }
   }
 
   # output container

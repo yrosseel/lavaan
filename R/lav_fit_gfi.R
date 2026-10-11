@@ -151,10 +151,15 @@ lav_fit_pgfi <- function(gfi = NULL, nel = NULL, df = NULL) {
 # always using N (if a user needs N-1, just replace N by N-1)
 lav_fit_gfi <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
                         c_hat = 1.0) {
+  # saturated model (df == 0): c_hat only enters multiplied by df, but is
+  # NA when it comes from a scaled test statistic; use c_hat = 1 so that
+  # the (robust) GFI equals its perfect-fit value
+  if (length(df) == 1L && is.finite(df) && df == 0) {
+    c_hat <- 1
+  }
   if (length(x2) == 0L || !is.finite(x2) || !is.finite(df) ||
     !is.finite(n) || !is.finite(p) ||
     length(c_hat) == 0L || !is.finite(c_hat)) {
-    # (c_hat is NA for a saturated model with a scaled test statistic)
     return(as.numeric(NA))
   }
 
@@ -567,6 +572,12 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
         # for T_LR and T_RLS (Maydeu-Olivares et al., 2024, Eq. 19), so we only
         # need the unadjusted RLS statistic and reuse the same scaling factor(s)
         xx3_rls <- x2_rls
+        # saturated model (df == 0): the scaling factor (and shift) are
+        # undefined; the scaled statistic equals the unscaled one
+        if (df == 0) {
+          c_hat <- c_hat3 <- 1
+          shift_par <- 0
+        }
         xx3_scaled_rls <- x2_rls / c_hat + shift_par
       }
     }

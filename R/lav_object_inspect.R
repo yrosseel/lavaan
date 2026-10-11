@@ -2284,7 +2284,7 @@ lav_inspect_wls_est <- function(object,
 lav_inspect_wls_obs <- function(object,
     add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
-  return_value <- object@SampleStats@WLS.obs ### FIXME: should be in @h1??
+  return_value <- object@SampleStats@WLS.obs
 
   # two-level models (e.g., estimator = "ML"): the WLS.obs slot may not
   # be filled in; construct the observed statistic vector from the h1
@@ -2293,6 +2293,13 @@ lav_inspect_wls_obs <- function(object,
     if (length(object@h1) == 0L) {
       lav_msg_stop(gettext("h1 slot is not available; refit with h1 = TRUE"))
     }
+    return_value <- lav_model_wls_est(lavmodel = object@Model,
+      lavimplied = object@h1$implied)
+  } else if (object@Options$missing %in% c("ml", "ml.x") &&
+             length(object@h1) > 0L) {
+    # FIML: the WLS.obs slot holds the available-case statistics, but the
+    # model is fitted to (and a saturated model reproduces) the h1 (EM)
+    # statistics -- the ones lavInspect(, "sampstat") reports; use those
     return_value <- lav_model_wls_est(lavmodel = object@Model,
       lavimplied = object@h1$implied)
   }
