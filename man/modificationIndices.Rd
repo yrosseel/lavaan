@@ -10,12 +10,14 @@ Given a fitted lavaan object, compute the modification indices
 \usage{
 modificationIndices(object, standardized = TRUE, cov_std = TRUE,
                     information = "expected",
-                    power = FALSE, delta = 0.1, alpha = 0.05,
+                    power = FALSE, delta = 0.1, delta_std = FALSE,
+                    alpha = 0.05,
                     high_power = 0.75, sort = FALSE, minimum_value = 0,
                     maximum_number = nrow(list_1), free_remove = TRUE,
                     na_remove = TRUE, op = NULL, ...)
 modindices(object, standardized = TRUE, cov_std = TRUE, information = "expected",
-                    power = FALSE, delta = 0.1, alpha = 0.05, high_power = 0.75,
+                    power = FALSE, delta = 0.1, delta_std = FALSE,
+                    alpha = 0.05, high_power = 0.75,
                     sort = FALSE, minimum_value = 0,
                     maximum_number = nrow(list_1), free_remove = TRUE,
                     na_remove = TRUE, op = NULL, ...)
@@ -35,7 +37,18 @@ information is the default, which provides better control of Type I errors.}
 \item{power}{If \code{TRUE}, the (post-hoc) power is computed for each
 modification index, using the values of \code{delta} and \code{alpha}.}
 \item{delta}{The value of the effect size, as used in the post-hoc power
-computation, currently using the unstandardized metric of the epc column.}
+computation. Per default (\code{delta_std = FALSE}), \code{delta} is in
+the unstandardized metric of the epc column.}
+\item{delta_std}{Logical or character. If \code{FALSE} (the default),
+\code{delta} is interpreted in the unstandardized metric of each parameter
+(the epc column). If \code{TRUE} (or \code{"std.all"}), \code{delta} is
+interpreted in the fully standardized metric (the sepc.all column); other
+options are \code{"std.lv"} (the sepc.lv column) and \code{"std.nox"}
+(the sepc.nox column). The value of \code{delta} is then converted to the
+unstandardized metric of each parameter before the noncentrality parameter
+and the power are computed, and the \code{decision} column compares the
+standardized epc with \code{delta}. Only the standardized epc column in the
+metric of \code{delta} is shown.}
 \item{alpha}{The significance level used for deciding if the modification
 index is statistically significant or not.}
 \item{high_power}{If the computed power is higher than this cutoff value,

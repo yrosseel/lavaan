@@ -8,6 +8,7 @@ modindices <- function(object,
                        # power statistics?
                        power = FALSE,
                        delta = 0.1,
+                       delta_std = FALSE,
                        alpha = 0.05,
                        high_power = 0.75,
                        # customize output
@@ -261,11 +262,42 @@ modindices <- function(object,
 
   # power?
   if (power) {
+    if (!is.numeric(delta) || length(delta) != 1L || !is.finite(delta) ||
+        delta <= 0) {
+      lav_msg_stop(gettext("delta must be a single positive number."))
+    }
+    delta_std <- lav_modindices_delta_std(delta_std)
     list_1$delta <- delta
-    # FIXME: this is using epc in unstandardized metric
-    #        this would be much more useful in standardized metric
-    #        we need a lav_standardize_all.reverse function...
-    list_1$ncp <- (list_1$mi / (list_1$epc * list_1$epc)) * (delta * delta)
+    # the ncp uses the EPC in the unstandardized metric; if delta is given
+    # in a standardized metric (delta_std), convert it to the unstandardized
+    # metric of each parameter: the standardized value is linear in the
+    # parameter (given the model-implied (residual) variances), so the
+    # per-parameter factor is the standardized value of a unit parameter
+    if (delta_std == "none") {
+      delta_raw <- rep(delta, length(list_1$lhs))
+    } else {
+      est_one <- rep(1, length(list_1$lhs))
+      if (cov_std) {
+        # the (residual) covariances are standardized using the (residual)
+        # variances, which must then hold their estimated values
+        var_idx <- which(list_1$op == "~~" & list_1$lhs == list_1$rhs &
+          list_1$exo == 0L)
+        est_one[var_idx] <- list_1$est[var_idx]
+      }
+      fac <- switch(delta_std,
+        std.lv = lav_standardize_lv(object, partable = list_1,
+          est = est_one, cov_std = cov_std),
+        std.all = lav_standardize_all(object, partable = list_1,
+          est = est_one, cov_std = cov_std),
+        std.nox = lav_standardize_all_nox(object, partable = list_1,
+          est = est_one, cov_std = cov_std)
+      ) / est_one
+      fac[!is.finite(fac) | abs(fac) < sqrt(.Machine$double.eps)] <-
+        as.numeric(NA)
+      delta_raw <- delta / fac
+    }
+    list_1$ncp <- (list_1$mi / (list_1$epc * list_1$epc)) *
+      (delta_raw * delta_raw)
     list_1$power <- 1 - pchisq(qchisq((1.0 - alpha), df = 1),
       df = 1, ncp = list_1$ncp
     )
@@ -276,9 +308,9 @@ modindices <- function(object,
       TRUE, FALSE
     )
     high_power <- list_1$power > high_power
-    # FIXME: sepc.all or epc??
-    # epc.high <- abs(LIST$sepc.all) > LIST$delta
-    epc_high <- abs(list_1$epc) > list_1$delta
+    # |epc| > delta in the metric of delta (unstandardized, or the
+    # standardized metric selected by delta_std)
+    epc_high <- abs(list_1$epc) > delta_raw
 
     list_1$decision[which(!mi_significant & !high_power)] <- "(i)"
     list_1$decision[which(mi_significant & !high_power)] <- "**(m)**"
@@ -307,7 +339,15 @@ modindices <- function(object,
   list_1$upper <- list_1$lower <- NULL
 
   if (power) {
-    list_1$sepc.lv <- list_1$sepc.nox <- NULL
+    # keep only the standardized epc column in the metric of delta
+    # (sepc.all per default)
+    if (delta_std == "std.lv") {
+      list_1$sepc.all <- list_1$sepc.nox <- NULL
+    } else if (delta_std == "std.nox") {
+      list_1$sepc.lv <- list_1$sepc.all <- NULL
+    } else {
+      list_1$sepc.lv <- list_1$sepc.nox <- NULL
+    }
   }
 
   # create data.frame
@@ -374,3 +414,28 @@ modindices <- function(object,
 # aliases
 modificationIndices <- lav_alias("modindices") # nolint
 modificationindices <- lav_alias("modindices") # nolint
+
+# canonical form of the delta_std argument of modindices():
+# FALSE/"none" (delta in the unstandardized metric), TRUE/"std.all",
+# "std.lv" or "std.nox" (delta in that standardized metric)
+lav_modindices_delta_std <- function(delta_std = FALSE) {
+  if (is.logical(delta_std) && length(delta_std) == 1L &&
+      !is.na(delta_std)) {
+    return(if (delta_std) "std.all" else "none")
+  }
+  if (is.character(delta_std) && length(delta_std) == 1L) {
+    out <- lav_keyword_canonical(tolower(delta_std))
+    if (out %in% c("none", "false", "raw", "unstandardized")) {
+      return("none")
+    } else if (out %in% c("std.all", "all", "true", "standardized")) {
+      return("std.all")
+    } else if (out %in% c("std.lv", "lv")) {
+      return("std.lv")
+    } else if (out %in% c("std.nox", "nox")) {
+      return("std.nox")
+    }
+  }
+  lav_msg_stop(gettextf(
+    "delta_std must be TRUE, FALSE or one of %s.",
+    lav_msg_view(c("std.lv", "std.all", "std.nox"), "or")))
+}
