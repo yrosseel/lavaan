@@ -446,6 +446,20 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
 
   # ---------- the 'old' (LISREL) GFI and friends ----------
   if (any(fit_gfi_lisrel %in% fit_measures)) {
+    # the LISREL GFI is a weighted residual ratio on the sample statistics,
+    # and needs the weight matrix of the fit function that was minimised;
+    # PML has no such weight matrix (it is a composite likelihood over the
+    # bivariate tables, not a discrepancy function on summary statistics)
+    if (lavobject@Options$estimator == "PML") {
+      lav_msg_stop(gettextf(
+        "the LISREL-style fit measures %s are not available for estimator
+         PML, because they require the weight matrix of a discrepancy
+         function on the sample statistics, which PML does not use. The
+         chi-square based GFI (%s) is available instead.",
+        lav_msg_view(fit_gfi_lisrel, "none"),
+        lav_msg_view(c("gfi", "gfi_lrt", "gfi_rls"), "none")))
+    }
+
     # extract ingredients
     wls_obs <- lav_inspect_wls_obs(lavobject)
     wls_est <- lav_inspect_wls_est(lavobject)
