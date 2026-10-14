@@ -798,7 +798,7 @@ lav_options_set <- function(opt = NULL) {
                                "iv", "js", "jsa", "mgm"))) {
       opt$missing <- "two.stage"
     } else if (any(opt$estimator == c(
-      "mlm", "mlmv", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
+      "mlm", "mlmv", "mlmvs", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
@@ -818,7 +818,7 @@ lav_options_set <- function(opt = NULL) {
                                "iv", "js", "jsa", "mgm"))) {
       opt$missing <- "two.stage"
     } else if (any(opt$estimator == c(
-      "mlm", "mlmv", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
+      "mlm", "mlmv", "mlmvs", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
@@ -836,7 +836,7 @@ lav_options_set <- function(opt = NULL) {
     # uls/gls/wls/dls/dwls are allowed (continuous data only): they use the
     # two-stage EM moments for estimation and the robust.sem sandwich for SEs
     if (any(opt$estimator == c(
-      "mlm", "mlmv", "wlsm", "wlsmv",
+      "mlm", "mlmv", "mlmvs", "wlsm", "wlsmv",
       "ulsm", "ulsmv", "pml", "mml"
     ))) {
       lav_msg_stop(gettextf(
@@ -853,7 +853,7 @@ lav_options_set <- function(opt = NULL) {
       ))
     }
     if (any(opt$estimator == c(
-      "mlm", "mlmv", "wlsm", "wlsmv",
+      "mlm", "mlmv", "mlmvs", "wlsm", "wlsmv",
       "ulsm", "ulsmv", "pml", "mml"
     ))) {
       lav_msg_stop(gettextf(
