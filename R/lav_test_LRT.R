@@ -129,7 +129,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   # list of models
   mods <- c(list(object), dotdotdot[modp])
   if (!is.null(model_names)) {
-    names(mods) <- model_names
+    if (length(model_names) != length(mods)) {
+      lav_msg_stop(gettextf(
+        "model_names has length %1$d, but %2$d models were provided.",
+        length(model_names), length(mods)))
+    }
+    names(mods) <- as.character(model_names)
   } else {
     names(mods) <- sapply(
       as.list(mcall)[which(c(FALSE, TRUE, modp))],

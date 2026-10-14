@@ -1765,7 +1765,23 @@ setMethod(
     }
     tmp_names <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    lavTestLRT(object = object, ..., model_names = tmp_names)
+    # the user may have supplied model_names (or model.names) as well; this
+    # would clash with the model_names argument we pass to lavTestLRT(), so
+    # we remove it from the dots, and let it override the deparsed names
+    dot_names <- names(dots)
+    if (is.null(dot_names)) {
+      dot_names <- rep("", length(dots))
+    }
+    mn_idx <- which(lav_snake_case(dot_names) == "model_names")
+    if (length(mn_idx) > 0L) {
+      tmp_names <- dots[[mn_idx[1]]]
+      dots <- dots[-mn_idx]
+    }
+
+    # (the function name is passed as a string, so the call keeps the name
+    # lavTestLRT for the message headers)
+    do.call("lavTestLRT",
+            c(list(object = object), dots, list(model_names = tmp_names)))
   }
 )
 
