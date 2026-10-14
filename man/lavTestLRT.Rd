@@ -125,7 +125,10 @@ anova(object, ...)
     special scaled difference test statistic is computed. If \code{method} is
     \code{"satorra.bentler.2001"}, a simple approximation is used
     described in Satorra & Bentler (2001). In some settings,
-    this can lead to a negative test statistic. To ensure a positive
+    this can lead to a negative scaling factor (and hence a negative test
+    statistic). In that case, a warning is issued and the unscaled
+    chi-squared difference test is reported instead (the \code{"scaled"}
+    attribute of the result is then \code{FALSE}). To ensure a positive
     test statistic, we can use the method proposed by
     Satorra & Bentler (2010). Alternatively, when \code{method="satorra.2000"},
     the original formulas of Satorra (2000) are used. The latter is used for

@@ -554,15 +554,33 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     }
   }
 
-  # check if scaled diff failed somehow
-  if (scaled &&
-     ((method %in% c("satorra.bentler.2001", "satorra.bentler.2010") &&
-          is.na(out$scaling.factor)) ||
-         (method == "satorra.2000" && scaled_shifted && is.na(out$a)) ||
-         (method == "satorra.2000" && !scaled_shifted &&
-          is.na(out$scaling.factor)))
-     ) {
-    scaled <- FALSE
+  # check if the scaled difference test failed somehow for ANY pair of
+  # models (eg a negative scaling factor, which lav_test_diff_sb2001()
+  # replaces by NA); in that case we fall back to the unscaled difference
+  # test for the whole table, and we RESTORE the unscaled statistics and
+  # degrees of freedom (the scaled versions were divided by the NA factor)
+  if (type == "chisq" && scaled && length(mods) > 1L) {
+    if (method == "satorra.2000" && scaled_shifted) {
+      failed_flag <- is.na(a_delta[-1])
+    } else if (!is.null(c_delta)) {
+      failed_flag <- is.na(c_delta[-1])
+    } else {
+      # eg method = "mean.var.adjusted.PLRT": nothing to check
+      failed_flag <- logical(length(mods) - 1L)
+    }
+    if (any(failed_flag)) {
+      # only mention the fallback if the failure is not merely due to
+      # identical degrees of freedom (which gets its own warning below)
+      if (any(failed_flag & df_delta_orig[-1] != 0L)) {
+        lav_msg_warn(gettext(
+          "the scaled chi-squared difference test could not be computed
+          (undefined scaling factor); the unscaled chi-squared difference
+          test is reported instead."))
+      }
+      scaled <- FALSE
+      stat_delta <- stat_delta_orig
+      df_delta <- df_delta_orig
+    }
   }
 
 
