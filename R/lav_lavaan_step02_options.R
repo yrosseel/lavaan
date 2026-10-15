@@ -350,6 +350,28 @@ lav_step02_options <- function(slot_options = NULL,
       }
     }
 
+    # sample_cov looks like a correlation matrix (all variances are 1), but
+    # the user did not say whether a correlation structure is intended:
+    # warn (an explicit correlation = FALSE silences this)
+    if (is.null(data) && !is.null(sample_cov) && is.null(sample_th) &&
+        is.null(dotdotdot$correlation) && !isTRUE(opt$correlation) &&
+        !opt$.categorical && tolower(estimator) != "catml") {
+      cov_list <- if (is.list(sample_cov)) sample_cov else list(sample_cov)
+      unit_var <- vapply(cov_list, function(S) {
+        is.matrix(S) && is.numeric(S) && nrow(S) > 1L &&
+          all(is.finite(diag(S))) &&
+          all(abs(diag(S) - 1) < sqrt(.Machine$double.eps))
+      }, logical(1L))
+      if (length(unit_var) > 0L && all(unit_var)) {
+        lav_msg_warn(gettext(
+          "sample_cov appears to be a correlation matrix (all variances
+           are 1), but the correlation= argument was not specified. If
+           the intention is to analyze a correlation matrix, use
+           correlation = TRUE. To analyze it as a covariance matrix (and
+           to remove this warning), set correlation = FALSE explicitly."))
+      }
+    }
+
     # store check.sigma.pd in lavaan_cache_env
     assign("opt_check_sigma_pd", opt$check.sigma.pd, lavaan_cache_env)
 
