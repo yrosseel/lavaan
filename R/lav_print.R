@@ -1074,6 +1074,13 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       }
     }
 
+    # correlation structure (full or partial)
+    correlation_flag <- y$optim$correlation
+    if (!is.null(correlation_flag) && !isFALSE(correlation_flag)) {
+      c1 <- c(c1, "Correlation structure")
+      c2 <- c(c2, correlation_flag)
+    }
+
     # optimization method + npar
     c1 <- c(c1, "Optimization method", "Number of model parameters")
     c2 <- c(c2, toupper(optim_method), npar)

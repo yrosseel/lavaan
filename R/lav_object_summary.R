@@ -278,9 +278,25 @@ lav_object_summary <- function(object, header = TRUE,
         con_jac_rank <- qr(object@Model@con.jac)$rank
       }
 
+      # correlation structure: FALSE, "TRUE" (all observed variables have
+      # unit variance) or "Partial" (only a subset of the observed
+      # variables, see the .correlation.ov option, is standardized)
+      correlation_flag <- FALSE
+      if (isTRUE(object@Options$correlation)) {
+        correlation_flag <- "TRUE"
+        correlation_ov <- object@Options$.correlation.ov
+        if (length(correlation_ov) > 0L) {
+          ov_all <- unique(unlist(lav_pt_vnames(object@ParTable, "ov")))
+          if (!all(ov_all %in% correlation_ov)) {
+            correlation_flag <- "Partial"
+          }
+        }
+      }
+
       res$optim <- list(
         estimator = object@Options$estimator,
         estimator.args = object@Options$estimator.args,
+        correlation = correlation_flag,
         optim.method = object@Options$optim.method,
         npar = object@Model@nx.free,
         eq.constraints = object@Model@eq.constraints,
