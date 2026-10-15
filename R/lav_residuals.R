@@ -1223,6 +1223,18 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
     acov_obs <- lav_residuals_acov_obs(object, h1_acov = h1_acov)
   }
 
+  # continuous correlation structure (GLS/WLS/ULS, not the Delta-augmented
+  # ML route): the moment vector has no entries for the fixed unit
+  # variances. Expand ACOV(s), the h1 information weights and Delta to the
+  # full [means, vech(cov)] layout (zero rows/columns for the fixed
+  # diagonal), so that the cov->cor jacobians, the SE mapping and the
+  # residual summaries below can use the standard continuous layout; the
+  # fixed diagonal residuals are then structurally zero with zero variance
+  expand <- lav_residuals_corstruct_expand(object)
+  if (!is.null(expand)) {
+    acov_obs <- lav_residuals_corstruct_apply(acov_obs, expand, "cov")
+  }
+
   # shortcut for normalized
   if (z_type == "normalized") {
     acov_res <- acov_obs
@@ -1234,6 +1246,9 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
         # A1 is diagonal matrix
         a1 <- lapply(a1, diag)
       }
+      if (!is.null(expand)) {
+        a1 <- lav_residuals_corstruct_apply(a1, expand, "cov")
+      }
       if (type %in% c("cor.bentler", "cor.bollen")) {
         sampstat <- lavTech(object, "sampstat")
       }
@@ -1241,6 +1256,9 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
       vcov_1 <- lavTech(object, "vcov")
     }
     mm_delta <- lavTech(object, "delta")
+    if (!is.null(expand)) {
+      mm_delta <- lav_residuals_corstruct_apply(mm_delta, expand, "rows")
+    }
   }
 
   if (z_type == "standardized") {
@@ -1461,6 +1479,68 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
   }
 
   acov_res
+}
+
+# Continuous correlation structure fitted by GLS/WLS/ULS (not the
+# Delta-augmented ML route, which uses the full covariance moment space):
+# the moment vector of group g is [leading block, variances of the
+# non-standardized variables (num.idx), vech(cov, no diagonal)], where the
+# leading block holds the means (meanstructure) or vecr(cbind(intercepts,
+# slopes)) (conditional.x), possibly preceded by the group weight. Returns,
+# per group, the positions of these entries in the full [leading block,
+# vech(cov)] layout (and the full length), or NULL when no expansion is
+# needed (no correlation structure, Delta-augmented ML, categorical,
+# multilevel).
+lav_residuals_corstruct_expand <- function(object) {
+  lavmodel <- object@Model
+  if (!lavmodel@correlation || lavmodel@categorical ||
+      object@Data@nlevels > 1L || lav_model_delta_free(lavmodel)) {
+    return(NULL)
+  }
+  ngroups <- object@Data@ngroups
+  out <- vector("list", length = ngroups)
+  for (g in seq_len(ngroups)) {
+    if (lavmodel@conditional.x) {
+      nvar <- length(object@pta$vnames$ov.nox[[g]])
+      ncol_b <- lavmodel@nexo[g] + as.integer(lavmodel@meanstructure)
+      n_lead <- nvar * ncol_b
+    } else {
+      nvar <- object@pta$nvar[[g]]
+      n_lead <- if (lavmodel@meanstructure) nvar else 0L
+    }
+    if (lavmodel@group.w.free) {
+      n_lead <- n_lead + 1L
+    }
+    num_idx <- lavmodel@num.idx[[g]]
+    diagh <- lav_mat_diagh_idx(nvar)
+    offdiag <- setdiff(seq_len(nvar * (nvar + 1L) / 2L), diagh)
+    idx <- c(seq_len(n_lead), n_lead + diagh[num_idx], n_lead + offdiag)
+    out[[g]] <- list(idx = idx, full_n = n_lead + nvar * (nvar + 1L) / 2L)
+  }
+  out
+}
+
+# expand a per-group list of reduced-layout objects to the full layout
+# (see lav_residuals_corstruct_expand): what = "cov" for (symmetric)
+# matrices over the moments (zero rows and columns are inserted), "rows"
+# for matrices with one row per moment (e.g., Delta). Objects that already
+# have the full size are left alone.
+lav_residuals_corstruct_apply <- function(x, expand, what = "cov") {
+  for (g in seq_along(x)) {
+    if (is.null(x[[g]]) || is.null(expand[[g]])) next
+    idx <- expand[[g]]$idx
+    full_n <- expand[[g]]$full_n
+    if (nrow(x[[g]]) != length(idx)) next # already full (or unexpected)
+    if (what == "cov") {
+      full <- matrix(0, full_n, full_n)
+      full[idx, idx] <- x[[g]]
+    } else {
+      full <- matrix(0, full_n, ncol(x[[g]]))
+      full[idx, ] <- x[[g]]
+    }
+    x[[g]] <- full
+  }
+  x
 }
 
 # index map of the (categorical) h1 sample-statistics vector, in the order
