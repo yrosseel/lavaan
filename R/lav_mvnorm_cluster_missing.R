@@ -44,9 +44,12 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
   both_idx <- lp$both.idx[[2]]
   cluster_idx <- lp$cluster.idx[[2]]
 
-  # sanity checks
+  # sanity checks; if the implied covariance matrices are not admissible,
+  # we return a 'worst possible' value: -Inf for a loglikelihood, +Inf for
+  # the (-2 times) objective that is minimized
+  bad_value <- if (log2pi && !minus_two) -Inf else +Inf
   if (any(diag(sigma_w_1) < 0) || any(diag(sigma_b_1) < 0)) {
-    return(+Inf)
+    return(bad_value)
   }
 
   # check is both.idx part of sigma_b is 'too' negative; if so, return +Inf
@@ -55,16 +58,28 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
     only.values = TRUE
   )$values
   if (any(ev < -0.05)) {
-    return(+Inf)
+    return(bad_value)
   }
+  # a (slightly) indefinite sigma_b is tolerated, as long as every
+  # cluster-level covariance matrix sigma_j = sigma_w + n_j * sigma_b
+  # remains positive definite; we check this below (per cluster) only
+  # when needed
+  sigma_b_nonpd_flag <- any(ev < 0)
 
   # cat("sigma_w = \n"); print(sigma_w)
   # cat("sigma_b = \n"); print(sigma_b)
   # cat("mu_y = \n"); print(mu_y)
 
   # global
+  # sigma_w must be positive definite (note that log(det()) is finite when
+  # an even number of eigenvalues is negative, which would silently produce
+  # a meaningless (and possibly hugely negative) objective value)
+  ev_w <- eigen(sigma_w_1, symmetric = TRUE, only.values = TRUE)$values
+  if (any(ev_w < sqrt(.Machine$double.eps))) {
+    return(bad_value)
+  }
   sigma_w_inv <- solve.default(sigma_w_1)
-  sigma_w_logdet <- log(det(sigma_w_1))
+  sigma_w_logdet <- sum(log(ev_w))
   sigma_b_1 <- sigma_b_1[both_idx, both_idx, drop = FALSE] # only both part
 
   # y
@@ -83,7 +98,7 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
     # check is sigma_zz is PD; if not, return +Inf
     ev <- eigen(sigma_zz, symmetric = TRUE, only.values = TRUE)$values
     if (any(ev < sqrt(.Machine$double.eps))) {
-      return(+Inf)
+      return(bad_value)
     }
 
     z <- y2[, between_idx, drop = FALSE]
@@ -213,7 +228,21 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
     ibza_j[both_diag_idx] <- ibza_j[both_diag_idx] + 1
     # logdet IBZA.j
     tmp <- determinant.matrix(ibza_j, logarithm = TRUE)
-    ibza_j_logdet[j] <- tmp$modulus * tmp$sign
+    # det(IBZA.j) = det(sigma_j) / det(sigma_w_j): a nonpositive
+    # determinant means that sigma_j is not positive definite; when sigma_b
+    # is indefinite, we must also catch an even number of negative
+    # eigenvalues (IBZA.j is similar to a symmetric matrix, so its
+    # eigenvalues are real)
+    if (tmp$sign < 0) {
+      return(bad_value)
+    }
+    if (sigma_b_nonpd_flag) {
+      ev_j <- Re(eigen(ibza_j, only.values = TRUE)$values)
+      if (any(ev_j <= 0)) {
+        return(bad_value)
+      }
+    }
+    ibza_j_logdet[j] <- tmp$modulus
     # IBZA.j.inv.BZ.p
     ibza_j_inv_bz_p <- solve.default(ibza_j, drop(sigma_b_z %*% p_j))
     q_yy_b[j] <- sum(p_j * ibza_j_inv_bz_p)
