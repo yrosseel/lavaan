@@ -220,6 +220,11 @@ lav_options_default <- function() {
   elm("orthogonal.x", FALSE, bl = TRUE)
   elm("orthogonal.y", FALSE, bl = TRUE)
   elm("std.lv", FALSE, bl = TRUE)
+  # standardized solution: product terms with an observed component
+  # ("product": scaled by the SD of the product itself; "component":
+  # like latent product terms, scaled by the product of the component SDs,
+  # main effects as simple slopes at the means, centered product moments)
+  elm("std.ov.interaction", "component", chr = c("component", "product"))
   elm("correlation", FALSE, bl = TRUE) # correlation structure
   elm("effect.coding", FALSE, chr = c("",
                                       "loadings", "intercepts",

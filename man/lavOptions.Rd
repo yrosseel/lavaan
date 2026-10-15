@@ -69,6 +69,22 @@ Model features:
       the \code{group_equal} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of other groups are set free.}
+    \item{\code{std_ov_interaction}:}{Character. How product terms with
+      an observed component (an observed product term such as \code{x1:x2},
+      or a mixed product term such as \code{f1:x1}) are treated in the
+      standardized solution (see \code{\link{standardizedSolution}}).
+      If \code{"component"} (the default), the product term is treated like
+      a latent product term: it is scaled by the product of the standard
+      deviations of its components, the main effects of the components are
+      reported as simple slopes evaluated at the means of the other
+      components, and the (co)variances and means involving the product
+      term are centered first. If \code{"product"} (the behavior of lavaan
+      versions before 0.7-3), the product term is treated as a variable in
+      its own right: it is scaled by its own standard deviation, and the
+      main effects of its components are not adjusted. Observed variables that are not standardized (for example, the
+      exogenous covariates under \code{std.nox}) keep their metric and are
+      not centered. Product terms with only latent components always use
+      the component-based treatment.}
     \item{\code{effect_coding}:}{Can be logical or character string. If
      logical and \code{TRUE}, this implies 
      \code{effect_coding = c("loadings", "intercepts")}. If logical and 

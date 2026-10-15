@@ -86,6 +86,21 @@ prettified and displayed with subsections (as used by the summary function).}
 \item{...}{To support old argument names.}
 }
 \details{
+When the model contains product terms (interaction or quadratic terms,
+written with a colon in the model syntax), the standardized solution treats
+a product term with only latent components as the product of the centered,
+standardized components: the product term is scaled by the product of the
+standard deviations of its components (not by its own standard deviation),
+the main effects of the components are reported as simple slopes evaluated
+at the means of the other components, and the (co)variances and means
+involving the product term are centered first. Product terms with an
+observed component (\code{x1:x2}, \code{f1:x1}) follow the
+\code{std_ov_interaction} option (see \code{\link{lavOptions}}): with the
+default \code{"component"} they receive the same treatment as latent
+product terms; with \code{"product"} (the behavior of lavaan versions
+before 0.7-3) they are treated as variables in their own right (scaled by
+their own standard deviation).
+
 The standardized estimates are functions of the (unstandardized) free
 parameters and of (a subset of) the model-implied (co)variances used for
 scaling. The standard errors reported by \code{standardizedSolution} are
