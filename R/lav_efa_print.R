@@ -138,6 +138,12 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
     }
   }
 
+  # correlation structure (full or partial)
+  if (!is.null(x$correlation) && !isFALSE(x$correlation)) {
+    c1 <- c(c1, "Correlation structure")
+    c2 <- c(c2, x$correlation)
+  }
+
   # rotation method
   c1 <- c(c1, "Rotation method")
   if (x$rotation == "none") {

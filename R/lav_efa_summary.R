@@ -357,6 +357,7 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot_cutoff = 0.1,
   # estimator
   estimator <- out$optim$estimator
   estimator_args <- out$optim$estimator.args
+  correlation_flag <- out$optim$correlation
 
   # rotation
   rotation <- out$rotation$rotation
@@ -452,6 +453,7 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot_cutoff = 0.1,
     converged.flag = converged_flag,
     estimator = estimator,
     estimator.args = estimator_args,
+    correlation = correlation_flag,
     rotation = rotation,
     rotation.args = rotation_args,
     lavdata = lavdata,
