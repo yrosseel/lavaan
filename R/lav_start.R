@@ -218,6 +218,12 @@ lav_start <- function(start_method = "default",
           marg <- marg + res_slopes %*% cov_x %*% t(res_slopes)
         }
         s_y <- sqrt(diag(marg))
+        # partial correlation structure: only the variables with a
+        # scaling (~*~) row are standardized; the others keep their
+        # original metric (scale 1)
+        scaled_ov_g <- lavpartable$lhs[lavpartable$group ==
+          group_values[g] & lavpartable$op == "~*~"]
+        s_y[!(ov_names_g %in% scaled_ov_g)] <- 1
         free_delta_idx <- which(lavpartable$group == group_values[g] &
           lavpartable$op == "~*~" &
           (lavpartable$free > 0L | is.na(lavpartable$ustart)) &
@@ -263,6 +269,14 @@ lav_start <- function(start_method = "default",
       # include the FIXED (ustart = NA) scaling rows: under fixed.x =
       # TRUE the exogenous x scales are fixed at their sample sds
       s_y <- sqrt(diag(lavsamplestats@cov[[g]]))
+      # partial correlation structure: only the variables with a scaling
+      # (~*~) row are standardized; the others (e.g., observed product
+      # terms, or variables not listed in correlation = c(...)) keep
+      # their original metric (scale 1), also when they are fixed.x
+      # covariates whose sample moments become fixed parameter values
+      scaled_ov_g <- lavpartable$lhs[lavpartable$group == group_values[g] &
+        lavpartable$op == "~*~"]
+      s_y[!(ov_names_g %in% scaled_ov_g)] <- 1
       free_delta_idx <- which(lavpartable$group == group_values[g] &
         lavpartable$op == "~*~" &
         (lavpartable$free > 0L | is.na(lavpartable$ustart)) &
@@ -275,7 +289,9 @@ lav_start <- function(start_method = "default",
       # standardize the sample moments used for the remaining starts
       # (including the means: the mean parameters live in the
       # standardized metric, Mu = Delta mu*)
-      lavsamplestats@cov[[g]] <- cov2cor(lavsamplestats@cov[[g]])
+      scaled_idx <- which(ov_names_g %in% scaled_ov_g)
+      lavsamplestats@cov[[g]] <-
+        lav_start_cov2cor_partial(lavsamplestats@cov[[g]], scaled_idx)
       lavsamplestats@var[[g]] <- diag(lavsamplestats@cov[[g]])
       if (length(lavsamplestats@mean) >= g &&
           length(lavsamplestats@mean[[g]]) > 0L) {
@@ -286,13 +302,15 @@ lav_start <- function(start_method = "default",
         lavsamplestats@missing.h1[[g]]$mu <-
           lavsamplestats@missing.h1[[g]]$mu / s_y
         lavsamplestats@missing.h1[[g]]$sigma <-
-          cov2cor(lavsamplestats@missing.h1[[g]]$sigma)
+          lav_start_cov2cor_partial(lavsamplestats@missing.h1[[g]]$sigma,
+                                    scaled_idx)
       }
       if (length(lavh1) > 0L &&
           length(lavh1$implied[["cov"]]) >= g &&
           !is.null(lavh1$implied[["cov"]][[g]])) {
         lavh1$implied[["cov"]][[g]] <-
-          cov2cor(lavh1$implied[["cov"]][[g]])
+          lav_start_cov2cor_partial(lavh1$implied[["cov"]][[g]],
+                                    scaled_idx)
         if (length(lavh1$implied[["mean"]]) >= g &&
             !is.null(lavh1$implied[["mean"]][[g]])) {
           lavh1$implied[["mean"]][[g]] <-
@@ -1349,4 +1367,17 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
     } # cov.idx
   }
   start
+}
+
+# standardize only the variables in scaled_idx to unit variance (partial
+# correlation structure); the other variables keep their original metric.
+# When scaled_idx covers all variables, this is identical to cov2cor().
+lav_start_cov2cor_partial <- function(V, scaled_idx = seq_len(NROW(V))) {
+  p <- NROW(V)
+  is_scale <- rep(1, p)
+  is_scale[scaled_idx] <- sqrt(1 / diag(V)[scaled_idx])
+  r <- V
+  r[] <- is_scale * V * rep(is_scale, each = p)
+  r[cbind(scaled_idx, scaled_idx)] <- 1
+  r
 }
