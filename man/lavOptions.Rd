@@ -135,7 +135,8 @@ Model features:
      augmented moments, so correlation structures can be fit to
      incomplete data by full-information maximum likelihood (use
      \code{estimator = "MLR"} for sandwich standard errors under
-     MAR). \code{conditional_x = TRUE} is supported on the ML route as
+     MAR); this requires \code{conditional_x = FALSE}.
+     \code{conditional_x = TRUE} is supported on the ML route as
      well: the exogenous x are standardized internally (a fixed
      transformation -- the analysis conditions on x), the y-side
      scales are free \code{~*~} parameters, and the unit-variance

@@ -1730,6 +1730,25 @@ lav_options_set <- function(opt = NULL) {
     correlation_ml_ok <-
       (!opt$conditional.x && any(opt$missing == c("listwise", "ml"))) ||
       (opt$conditional.x && opt$missing == "listwise")
+    # unsupported missing-data settings on the ML route: say so BEFORE the
+    # GLS fallback below, which would otherwise warn about switching the
+    # estimator and then complain that an ML-family estimator is needed
+    if (lav_options_estimatorgroup(opt$estimator) == "ML" &&
+        any(opt$missing == c("ml", "ml.x"))) {
+      if (opt$missing == "ml.x") {
+        lav_msg_stop(gettext(
+          "correlation structures do not support missing = \"ml.x\"; use
+           missing = \"ml\" (with conditional_x = FALSE) or
+           missing = \"listwise\"."))
+      }
+      if (opt$conditional.x) {
+        lav_msg_stop(gettext(
+          "correlation structures with missing = \"ml\" are not supported
+           when conditional_x = TRUE; use conditional_x = FALSE (the
+           exogenous covariates are then part of the joint model, with
+           fixed_x = TRUE), or missing = \"listwise\"."))
+      }
+    }
     if (lav_options_estimatorgroup(opt$estimator) == "ML" &&
         correlation_ml_ok) {
       opt$.correlation.ml <- TRUE
@@ -1764,10 +1783,11 @@ lav_options_set <- function(opt = NULL) {
       }
     }
     if (any(opt$missing == c("ml", "ml.x")) && !opt$.correlation.ml) {
-      lav_msg_stop(gettext(
+      lav_msg_stop(gettextf(
         "correlation structures with missing = \"ml\" require an
-        ML-family estimator (and missing = \"ml.x\" is not supported)."
-      ))
+        ML-family estimator (estimator %s was requested); use
+        estimator = \"ML\" (or \"MLR\"), or missing = \"listwise\".",
+        opt$estimator.orig))
     }
     if (opt$.multilevel) {
       lav_msg_stop(gettext(
