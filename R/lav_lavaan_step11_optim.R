@@ -392,6 +392,11 @@ lav_step11_estoptim <- function(lavdata = NULL,
         if (inherits(x, "try-error")) {
           return(as.numeric(NA))
         }
+        # a capped objective (the stand-in for a non-finite value, 1e20,
+        # or 1e10 for L-BFGS-B) is not a usable value
+        if (isTRUE(attr(x, "fx_capped"))) {
+          return(as.numeric(NA))
+        }
         fx <- attr(x, "fx")[1]
         if (is.null(fx) || !is.finite(fx) || fx >= 1e20) {
           return(as.numeric(NA))

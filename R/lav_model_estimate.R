@@ -515,19 +515,8 @@ lav_model_est <- function(lavmodel = NULL,
   }
 
 
-  # first try: check if starting values return a finite value
+  # evaluate the objective at the starting values (verbose/debug output)
   fx <- objective_function(start_x, verbose = verbose, debug = debug)
-  if (!is.finite(fx)) {
-    # emergency change of start.x
-    if (length(h1_sat_idx) > 0L) {
-      # do not touch the (fixed) h1 values of saturated blocks
-      start_x[-h1_sat_idx] <- start_x[-h1_sat_idx] / 10
-    } else {
-      start_x <- start_x / 10
-    }
-  }
-
-
 
   # first some nelder mead steps? (default = FALSE)
   init_nelder_mead <- lavoptions$optim.init_nelder_mead
@@ -1082,7 +1071,8 @@ lav_model_est <- function(lavmodel = NULL,
   # the objective is not finite (e.g., starting values that imply a
   # singular covariance matrix: every trial point returns fx_cap, so the
   # relative change is zero); that is not a solution
-  if (converged && (!is.finite(fx) || fx >= fx_cap)) {
+  fx_capped <- !is.finite(fx) || fx >= fx_cap
+  if (converged && fx_capped) {
     converged <- FALSE
   }
 
@@ -1191,6 +1181,7 @@ lav_model_est <- function(lavmodel = NULL,
   attr(x, "iterations") <- iterations
   attr(x, "control") <- control
   attr(x, "fx") <- fx
+  attr(x, "fx_capped") <- fx_capped # fx is the stand-in for a non-finite value
   attr(x, "dx") <- dx
   attr(x, "parscale") <- parscale
   attr(x, "parscale_packed") <- scale
