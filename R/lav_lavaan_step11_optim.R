@@ -383,6 +383,29 @@ lav_step11_estoptim <- function(lavdata = NULL,
           isTRUE(attr(x, "runaway"))
       }
       x_runaway <- NULL
+      # the non-converged attempt with the smallest finite objective value:
+      # returned (with its warning) when no attempt is usable, rather than
+      # whichever attempt happened to run last (e.g., a fallback start at
+      # which the objective is not even finite)
+      x_best_fail <- NULL
+      fx_of <- function(x) {
+        if (inherits(x, "try-error")) {
+          return(as.numeric(NA))
+        }
+        fx <- attr(x, "fx")[1]
+        if (is.null(fx) || !is.finite(fx) || fx >= 1e20) {
+          return(as.numeric(NA))
+        }
+        fx
+      }
+      keep_best_fail <- function(x) {
+        fx <- fx_of(x)
+        if (!is.na(fx) && !isTRUE(attr(x, "converged")) &&
+            (is.null(x_best_fail) || fx < fx_of(x_best_fail))) {
+          x_best_fail <<- x
+        }
+        invisible(NULL)
+      }
 
 
       # try 1
@@ -404,6 +427,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
       if (!inherits(x, "try-error") && isTRUE(attr(x, "runaway"))) {
         x_runaway <- x
       }
+      keep_best_fail(x)
 
       # try 2: optim.parscale = "standardize" (new in 0.6-7)
       if (lavoptions$optim.attempts > 1L &&
@@ -430,6 +454,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
             isTRUE(attr(x, "runaway"))) {
           x_runaway <- x
         }
+        keep_best_fail(x)
       }
 
       # try 3: start = "simple"
@@ -456,6 +481,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
             isTRUE(attr(x, "runaway"))) {
           x_runaway <- x
         }
+        keep_best_fail(x)
       }
 
       # try 4: start = "simple" + optim.parscale = "standardize"
@@ -487,6 +513,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
             isTRUE(attr(x, "runaway"))) {
           x_runaway <- x
         }
+        keep_best_fail(x)
       }
 
 
@@ -557,6 +584,13 @@ lav_step11_estoptim <- function(lavdata = NULL,
       if (!is.null(x_runaway) &&
           (inherits(x, "try-error") || !attr(x, "converged"))) {
         x <- x_runaway
+      }
+      # still nothing usable: return the non-converged attempt with the
+      # smallest finite objective value (with its warning)
+      if (!is.null(x_best_fail) &&
+          (inherits(x, "try-error") || !attr(x, "converged")) &&
+          (is.na(fx_of(x)) || fx_of(x) > fx_of(x_best_fail))) {
+        x <- x_best_fail
       }
     }
 

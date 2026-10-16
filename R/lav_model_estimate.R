@@ -62,6 +62,15 @@ lav_model_est <- function(lavmodel = NULL,
     if (length(var_idx) > 0L) {
       start_1[var_idx] <- 1
     }
+    # scaling parameters (~*~; free under the Delta-augmented ML
+    # correlation structure) and composite loadings (<~) at 1: at zero,
+    # the implied covariance matrix is singular and the objective is not
+    # finite everywhere around the starting point
+    scale_idx <- which(lavpartable$free > 0L &
+      (lavpartable$op == "~*~" | lavpartable$op == "<~"))
+    if (length(scale_idx) > 0L) {
+      start_1[scale_idx] <- 1
+    }
 
     if (lavmodel@ceq.simple.only) {
       x_unpack <- start_1[lavpartable$free > 0L &
@@ -1068,6 +1077,14 @@ lav_model_est <- function(lavmodel = NULL,
 
 
   fx <- objective_function(x) # to get "fx.group" attribute
+
+  # the optimizer may report convergence on the flat, capped surface where
+  # the objective is not finite (e.g., starting values that imply a
+  # singular covariance matrix: every trial point returns fx_cap, so the
+  # relative change is zero); that is not a solution
+  if (converged && (!is.finite(fx) || fx >= fx_cap)) {
+    converged <- FALSE
+  }
 
   # check convergence
   warn_txt <- ""
