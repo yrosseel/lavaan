@@ -181,6 +181,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       ov_names_aux = ov_names_aux,
       std_ov = std_ov,
       std_ov_x_only = std_ov_x_only,
+      std_ov_x_rescale = isTRUE(lavoptions$sample.cov.rescale),
       correlation_ov = correlation_ov,
       missing = missing,
       allow_single_case = allow_single_case,
@@ -653,6 +654,7 @@ lav_data_full <- function(data = NULL, # data.frame
                           ov_names_aux = character(0L), # auxiliary variables
                           std_ov = FALSE, # standardize ov's?
                           std_ov_x_only = FALSE, # only the exo x (D-aug ML)
+                          std_ov_x_rescale = TRUE, # n (TRUE) or n-1 denominator
                           correlation_ov = character(0L), # std only these
                           missing = "listwise", # remove missings?
                           allow_single_case = FALSE, # allow single case?
@@ -1240,12 +1242,26 @@ lav_data_full <- function(data = NULL, # data.frame
           # partial correlation structure: only standardize the listed
           # exogenous variables, leave the others in their original metric
           ex_std <- which(ov_names_x[[g]] %in% correlation_ov)
-          if (length(ex_std) > 0L) {
+        } else {
+          ex_std <- seq_len(ncol(exo[[g]]))
+        }
+        if (length(ex_std) > 0L) {
+          if (std_ov_x_only) {
+            # Delta-augmented ML + conditional.x: the y side stays in the
+            # metric of the sample statistics (the free ~*~ scales), so
+            # the x side must be standardized with the SAME denominator
+            # (n under sample.cov.rescale = TRUE, n - 1 otherwise): cov.x
+            # then has an exact unit diagonal, and the slopes equal those
+            # of the joint (fixed.x = TRUE) analysis; scale() would use
+            # n - 1 and leave a factor sqrt(n / (n - 1)) in the slopes
+            exo[[g]][, ex_std] <- lav_data_std_x(
+              exo[[g]][, ex_std, drop = FALSE],
+              rescale = std_ov_x_rescale
+            )
+          } else {
             exo[[g]][, ex_std] <-
               scale(exo[[g]][, ex_std, drop = FALSE])[, , drop = FALSE]
           }
-        } else {
-          exo[[g]] <- scale(exo[[g]])[, , drop = FALSE]
         }
       }
     }
@@ -1562,4 +1578,17 @@ lav_data_full <- function(data = NULL, # data.frame
     Lp = lp
   )
   lav_data
+}
+
+
+# center and scale the columns of x to unit variance, with the variance
+# computed with denominator n (rescale = TRUE, the lavaan default for the
+# sample statistics) or n - 1 (rescale = FALSE)
+lav_data_std_x <- function(x, rescale = TRUE) {
+  x <- as.matrix(x)
+  n <- nrow(x)
+  xc <- sweep(x, 2L, colMeans(x), "-")
+  denom <- if (rescale) n else n - 1L
+  sds <- sqrt(colSums(xc * xc) / denom)
+  sweep(xc, 2L, sds, "/")
 }

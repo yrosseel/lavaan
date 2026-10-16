@@ -2162,12 +2162,19 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         cov[[g]] <- tmp_cov
         mean[[g]] <- tmp_mean
 
+        # rescale cov by (N-1)/N?
+        if (rescale) {
+          cov[[g]] <- ((nobs[[g]] - 1) / nobs[[g]]) * cov[[g]]
+        }
+
         # Delta-augmented ML mode: standardize (and center) only the x
         # block of the joint matrix -- the moment-level analogue of the
-        # data-level scale() of the exogenous x (BEFORE the (n-1)/n
-        # rescale, so raw-data and moment input match exactly); y stays
-        # in its original metric (the free ~*~ scales absorb the sds).
-        # For a partial structure only the LISTED x are standardized.
+        # data-level standardization of the exogenous x (AFTER the
+        # (n-1)/n rescale: the x then have an exact unit variance in the
+        # metric of the sample statistics, as with raw data, so raw-data
+        # and moment input match exactly); y stays in its original
+        # metric (the free ~*~ scales absorb the sds). For a partial
+        # structure only the LISTED x are standardized.
         if (isTRUE(lavoptions$.correlation.ml)) {
           x_std_idx <- x_idx[[g]]
           if (length(correlation_ov) > 0L) {
@@ -2181,11 +2188,6 @@ lav_samp_from_moments <- function(sample_cov = NULL,
               t(t(cov[[g]][, x_std_idx, drop = FALSE]) / s_x)
             mean[[g]][x_std_idx] <- 0
           }
-        }
-
-        # rescale cov by (N-1)/N?
-        if (rescale) {
-          cov[[g]] <- ((nobs[[g]] - 1) / nobs[[g]]) * cov[[g]]
         }
         if (ridge) {
           diag(cov[[g]]) <- diag(cov[[g]]) + ridge_eps
