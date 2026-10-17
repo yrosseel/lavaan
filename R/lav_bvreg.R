@@ -82,16 +82,22 @@ pbinorm2 <- function(upper_x = NULL, upper_y = NULL, rho = 0.0,
   }
 
   upper_only <- all(lower_x == -Inf & lower_y == -Inf)
+
+  # pbivnorm returns NaN for (Inf, Inf) and (-Inf, -Inf): replace all
+  # infinite bounds (upper and lower) by large finite values
+  big <- exp(10)
+  upper_x[upper_x == +Inf] <- big
+  upper_y[upper_y == +Inf] <- big
+  upper_x[upper_x == -Inf] <- -big
+  upper_y[upper_y == -Inf] <- -big
+
   if (upper_only) {
-    upper_x[upper_x == +Inf] <- exp(10) # better pnorm?
-    upper_y[upper_y == +Inf] <- exp(10)
-    upper_x[upper_x == -Inf] <- -exp(10)
-    upper_y[upper_y == -Inf] <- -exp(10)
     res <- pbivnorm(upper_x, upper_y, rho = rho)
   } else {
-    # pbivnorm does not handle -Inf well...
-    lower_x[lower_x == -Inf] <- -exp(10)
-    lower_y[lower_y == -Inf] <- -exp(10)
+    lower_x[lower_x == +Inf] <- big
+    lower_y[lower_y == +Inf] <- big
+    lower_x[lower_x == -Inf] <- -big
+    lower_y[lower_y == -Inf] <- -big
     res <- pbivnorm(upper_x, upper_y, rho = rho) -
       pbivnorm(lower_x, upper_y, rho = rho) -
       pbivnorm(upper_x, lower_y, rho = rho) +
