@@ -99,10 +99,7 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
   tp <- stmt$elem_type
   pos <- stmt$elem_pos
   is_sym <- function(i, s) tp[i] == types$symbol && txt[i] == s
-  lav_msg_at <- function(i, msg) {
-    tl <- lav_parse_txtloc(modelsrc, pos[i])
-    lav_msg_stop(msg, tl[1L], footer = tl[2L])
-  }
+  where <- function(i) lav_parse_txtloc(modelsrc, pos[i])
   is_int <- function(s) grepl("^[0-9]+$", s)
 
   # 1. locate the indexed names: name '[' ... ']'
@@ -111,42 +108,58 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
   i <- 1L
   while (i <= ntok) {
     if (is_sym(i, "]")) {
-      lav_msg_at(i, gettext("unexpected ']' (an index starts with '[')"))
+      tl <- where(i)
+      lav_msg_stop(gettext("unexpected ']' (an index starts with '[')"),
+                   tl[1L], footer = tl[2L])
     }
     if (!is_sym(i, "[")) {
       i <- i + 1L
       next
     }
     if (i == 1L || tp[i - 1L] != types$identifier) {
-      lav_msg_at(i, gettext("only a name can have an index"))
+      tl <- where(i)
+      lav_msg_stop(gettext("only a name can have an index"),
+                   tl[1L], footer = tl[2L])
     }
     if (pos[i - 1L] + nchar(txt[i - 1L]) != pos[i]) {
-      lav_msg_at(i, gettext("there can be no space between a name and its
-                         index"))
+      tl <- where(i)
+      lav_msg_stop(gettext("there can be no space between a name and its
+                         index"),
+                   tl[1L], footer = tl[2L])
     }
     j <- i + 1L
     while (j <= ntok && !is_sym(j, "]")) {
       if (tp[j] == types$lavaanoperator && txt[j] != ":") {
-        lav_msg_at(i, gettext("index without closing ']'"))
+        tl <- where(i)
+        lav_msg_stop(gettext("index without closing ']'"),
+                     tl[1L], footer = tl[2L])
       }
       if (is_sym(j, "[")) {
-        lav_msg_at(j, gettext("an index can not contain another index"))
+        tl <- where(j)
+        lav_msg_stop(gettext("an index can not contain another index"),
+                     tl[1L], footer = tl[2L])
       }
       j <- j + 1L
     }
     if (j > ntok) {
-      lav_msg_at(i, gettext("index without closing ']'"))
+      tl <- where(i)
+      lav_msg_stop(gettext("index without closing ']'"),
+                   tl[1L], footer = tl[2L])
     }
     if (j == i + 1L) {
-      lav_msg_at(i, gettext("empty index"))
+      tl <- where(i)
+      lav_msg_stop(gettext("empty index"),
+                   tl[1L], footer = tl[2L])
     }
     if (j < ntok && tp[j + 1L] %in% c(types$identifier, types$numliteral) &&
         pos[j + 1L] == pos[j] + 1L) {
-      lav_msg_at(j + 1L, gettext("text after an index is not supported; the
-                              index must come at the end of the name"))
+      tl <- where(j + 1L)
+      lav_msg_stop(gettext("text after an index is not supported; the
+                              index must come at the end of the name"),
+                   tl[1L], footer = tl[2L])
     }
     groups[[length(groups) + 1L]] <- lav_expand_index_parse(
-      i - 1L, i, j, stmt, types, lav_msg_at, is_int
+      i - 1L, i, j, stmt, types, where, is_int
     )
     in_bracket[seq.int(i, j)] <- TRUE
     i <- j + 1L
@@ -156,36 +169,43 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
   bind_flag <- vapply(groups, function(g) g$binding, logical(1L))
   bindings <- groups[bind_flag]
   if (length(bindings) == 0L) {
-    lav_msg_at(groups[[1L]]$name_i,
-            gettextf("the index '%s' is not bound in this statement (bind it
+    tl <- where(groups[[1L]]$name_i)
+    lav_msg_stop(gettextf("the index '%s' is not bound in this statement (bind it
                      once, as in %s[%s in 1:4])", groups[[1L]]$index,
-                     txt[groups[[1L]]$name_i], groups[[1L]]$index))
+                     txt[groups[[1L]]$name_i], groups[[1L]]$index),
+                 tl[1L], footer = tl[2L])
   }
   bnames <- vapply(bindings, function(g) g$index, character(1L))
   if (anyDuplicated(bnames)) {
     dup <- bindings[[anyDuplicated(bnames)]]
-    lav_msg_at(dup$name_i, gettextf("the index '%s' is bound twice in this
-                                 statement", dup$index))
+    tl <- where(dup$name_i)
+    lav_msg_stop(gettextf("the index '%s' is bound twice in this
+                                 statement", dup$index),
+                 tl[1L], footer = tl[2L])
   }
   for (b in seq_along(bindings)) {
     for (bnd in list(bindings[[b]]$lo, bindings[[b]]$hi)) {
       if (!is.null(bnd$ref) && !bnd$ref %in% bnames[seq_len(b - 1L)]) {
-        lav_msg_at(bindings[[b]]$name_i,
-                gettextf("the bound '%s' of a range must be an index bound
-                         earlier in this statement", bnd$ref))
+        tl <- where(bindings[[b]]$name_i)
+        lav_msg_stop(gettextf("the bound '%s' of a range must be an index bound
+                         earlier in this statement", bnd$ref),
+                     tl[1L], footer = tl[2L])
       }
     }
     if (is.null(bindings[[b]]$lo$ref) && is.null(bindings[[b]]$hi$ref) &&
         bindings[[b]]$lo$value > bindings[[b]]$hi$value) {
-      lav_msg_at(bindings[[b]]$name_i,
-              gettext("an index range must be ascending (lo:hi with
-                      lo <= hi)"))
+      tl <- where(bindings[[b]]$name_i)
+      lav_msg_stop(gettext("an index range must be ascending (lo:hi with
+                      lo <= hi)"),
+                   tl[1L], footer = tl[2L])
     }
   }
   for (g in groups[!bind_flag]) {
     if (!g$index %in% bnames) {
-      lav_msg_at(g$name_i, gettextf("the index '%s' is not bound in this
-                                 statement", g$index))
+      tl <- where(g$name_i)
+      lav_msg_stop(gettextf("the index '%s' is not bound in this
+                                 statement", g$index),
+                   tl[1L], footer = tl[2L])
     }
   }
   width <- vapply(bindings, function(g) g$width, integer(1L))
@@ -210,9 +230,11 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
         (tp[k + 1L] == types$symbol && txt[k + 1L] %in% term_end) ||
         tp[k + 1L] == types$lavaanoperator
       if (nxt_is_end) {
-        lav_msg_at(k, gettextf("the index '%s' can not be used as a variable;
+        tl <- where(k)
+        lav_msg_stop(gettextf("the index '%s' can not be used as a variable;
                             a name with an index is written as x[%s]",
-                            txt[k], txt[k]))
+                            txt[k], txt[k]),
+                     tl[1L], footer = tl[2L])
       }
       prv_is_start <- k == 1L ||
         (tp[k - 1L] == types$symbol &&
@@ -220,9 +242,11 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
         tp[k - 1L] == types$lavaanoperator
       nxt_is_mod <- tp[k + 1L] == types$symbol && txt[k + 1L] %in% c("*", "?")
       if (prv_is_start && nxt_is_mod) {
-        lav_msg_at(k, gettextf("'%1$s' is an index here, and can not be a label;
+        tl <- where(k)
+        lav_msg_stop(gettextf("'%1$s' is an index here, and can not be a label;
                             use fixed(%1$s) for its value as a fixed value",
-                            txt[k]))
+                            txt[k]),
+                     tl[1L], footer = tl[2L])
       }
     }
   }
@@ -248,8 +272,10 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
         g <- groups[[gi]]
         v <- env[[g$index]] + g$offset
         if (v < 0L) {
-          lav_msg_at(k, gettextf("the index value %1$s for '%2$s' is negative",
-                              v, txt[k]))
+          tl <- where(k)
+          lav_msg_stop(gettextf("the index value %1$s for '%2$s' is negative",
+                              v, txt[k]),
+                       tl[1L], footer = tl[2L])
         }
         vtxt <- if (width[[g$index]] > 0L) {
           formatC(v, width = width[[g$index]], flag = "0")
@@ -297,15 +323,17 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
 # parse the tokens of one index: name '[' ... ']'
 # returns list(name_i, close_i, index, binding, offset, lo, hi, width)
 lav_expand_index_parse <- function(name_i, open_i, close_i, stmt, types,
-                                   lav_msg_at, is_int) {
+                                   where, is_int) {
   txt <- stmt$elem_text
   tp <- stmt$elem_type
   inner <- seq.int(open_i + 1L, close_i - 1L)
   n <- length(inner)
   t1 <- inner[1L]
   if (tp[t1] != types$identifier) {
-    lav_msg_at(t1, gettext("an index is a name (x[t]), possibly with an
-                        integer offset (x[t-1]), or a binding (x[t in 1:4])"))
+    tl <- where(t1)
+    lav_msg_stop(gettext("an index is a name (x[t]), possibly with an
+                        integer offset (x[t-1]), or a binding (x[t in 1:4])"),
+                 tl[1L], footer = tl[2L])
   }
   res <- list(name_i = name_i, close_i = close_i, index = txt[t1],
               binding = FALSE, offset = 0L, lo = NULL, hi = NULL,
@@ -318,8 +346,10 @@ lav_expand_index_parse <- function(name_i, open_i, close_i, stmt, types,
   if (tp[t2] == types$symbol && txt[t2] %in% c("+", "-")) {
     if (n != 3L || tp[inner[3L]] != types$numliteral ||
         !is_int(txt[inner[3L]])) {
-      lav_msg_at(t2, gettext("the offset of an index must be an integer
-                          (x[t-1], x[t+2])"))
+      tl <- where(t2)
+      lav_msg_stop(gettext("the offset of an index must be an integer
+                          (x[t-1], x[t+2])"),
+                   tl[1L], footer = tl[2L])
     }
     k <- as.integer(txt[inner[3L]])
     res$offset <- if (txt[t2] == "-") -k else k
@@ -332,18 +362,24 @@ lav_expand_index_parse <- function(name_i, open_i, close_i, stmt, types,
   }
   # binding: t in lo : hi
   if (tp[t2] != types$identifier || txt[t2] != "in") {
-    lav_msg_at(t2, gettext("an index is a name (x[t]), possibly with an
-                        integer offset (x[t-1]), or a binding (x[t in 1:4])"))
+    tl <- where(t2)
+    lav_msg_stop(gettext("an index is a name (x[t]), possibly with an
+                        integer offset (x[t-1]), or a binding (x[t in 1:4])"),
+                 tl[1L], footer = tl[2L])
   }
   colon <- inner[tp[inner] == types$lavaanoperator & txt[inner] == ":"]
   if (length(colon) != 1L) {
-    lav_msg_at(t2, gettext("the range of an index is written lo:hi
-                        (x[t in 1:4])"))
+    tl <- where(t2)
+    lav_msg_stop(gettext("the range of an index is written lo:hi
+                        (x[t in 1:4])"),
+                 tl[1L], footer = tl[2L])
   }
   lav_expand_index_bound <- function(from, to) {
     if (from > to) {
-      lav_msg_at(colon, gettext("the range of an index is written lo:hi
-                             (x[t in 1:4])"))
+      tl <- where(colon)
+      lav_msg_stop(gettext("the range of an index is written lo:hi
+                             (x[t in 1:4])"),
+                   tl[1L], footer = tl[2L])
     }
     m <- to - from + 1L
     if (m == 1L && tp[from] == types$numliteral && is_int(txt[from])) {
@@ -367,10 +403,12 @@ lav_expand_index_parse <- function(name_i, open_i, close_i, stmt, types,
       return(list(ref = txt[from + 1L],
                   value = if (txt[from + 2L] == "-") -k else k, width = 0L))
     }
-    lav_msg_at(from, gettext("a bound of an index range is an integer, an index
+    tl <- where(from)
+    lav_msg_stop(gettext("a bound of an index range is an integer, an index
                           bound earlier in the statement, or such an index
                           plus or minus an integer, in parentheses:
-                          x[t in (s+1):4]"))
+                          x[t in (s+1):4]"),
+                 tl[1L], footer = tl[2L])
   }
   res$binding <- TRUE
   res$lo <- lav_expand_index_bound(inner[3L], colon - 1L)
