@@ -46,6 +46,27 @@ efa <- function(data = NULL,
     data <- as.data.frame(data)
   }
 
+  # long panel data: reshape to wide data here (the variables are the wide
+  # names in ov_names), and do not pass panel= on to sem()
+  if (!is.null(dotdotdot$panel)) {
+    if (length(ov_names) == 0L) {
+      lav_msg_stop(gettext(
+        "with panel=, efa() needs the (wide) variable names in ov_names=,
+        as in ov_names = c(\"x1\", \"y1\", \"z1\")."))
+    }
+    temp <- lav_data_panel(
+      data = data, panel = dotdotdot$panel,
+      flat_model = list(lhs = ov_names, op = rep("~~", length(ov_names)),
+                        rhs = ov_names),
+      ordered = dotdotdot$ordered, group = dotdotdot$group,
+      cluster = dotdotdot$cluster,
+      sampling_weights = dotdotdot$sampling.weights
+    )
+    data <- temp$data
+    if (!is.null(dotdotdot$ordered)) dotdotdot$ordered <- temp$ordered
+    dotdotdot$panel <- NULL
+  }
+
   # handle ov_names
   if (!is.null(data) && inherits(data, "lavMoments")) {
     data <- lav_moments_canonical(data)

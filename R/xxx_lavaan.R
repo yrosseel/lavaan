@@ -36,6 +36,8 @@ lavaan <- function(
     group = NULL,
     # multiple levels?
     cluster = NULL,
+    # long panel data? (id and time variable)
+    panel = NULL,
     # constraints
     constraints = "",
     # user-specified variance matrices
@@ -141,6 +143,23 @@ lavaan <- function(
     model            = model,
     dotdotdot_parser = useparser
   )
+
+  # ------------ long panel data -> wide data ----------------------------
+  if (!is.null(panel)) {
+    temp <- lav_data_panel(
+      data             = data,
+      panel            = panel,
+      flat_model       = flat_model,
+      ordered          = ordered,
+      aux              = aux,
+      group            = group,
+      cluster          = cluster,
+      sampling_weights = sampling_weights
+    )
+    data <- temp$data
+    ordered <- temp$ordered
+    aux <- temp$aux
+  }
 
   # ------------ ov.names 1b ----- handle 'old way' for composites -------
   if (!is.null(dotdotdot[["composites", exact = TRUE]]) &&
@@ -914,6 +933,7 @@ cfa <- function(
   sample_nobs = NULL,
   group = NULL,
   cluster = NULL,
+  panel = NULL,
   constraints = "",
   wls_v = NULL,
   nacov = NULL,
@@ -941,6 +961,7 @@ sem <- function(
     sample_nobs = NULL,
     group = NULL,
     cluster = NULL,
+    panel = NULL,
     constraints = "",
     wls_v = NULL,
     nacov = NULL,
@@ -968,6 +989,7 @@ growth <- function(
     sample_nobs = NULL,
     group = NULL,
     cluster = NULL,
+    panel = NULL,
     constraints = "",
     wls_v = NULL,
     nacov = NULL,

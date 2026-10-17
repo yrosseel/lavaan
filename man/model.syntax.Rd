@@ -566,7 +566,9 @@ silently: a range that is too wide generates names that do not exist (such
 as \code{wx0}), and lavaan reports them as such. (5) An endpoint of the
 \code{++} operator can not be an indexed name, and a quoted name is never
 expanded. Indexed names are only available in the default parser
-(\code{parser = "open"}).
+(\code{parser = "open"}). For data in long format (one row per person and
+occasion), the \code{panel=} argument of \code{\link{lavaan}} reshapes the
+data to this wide format, so that the same syntax can be used.
 
 For each element of the parameter table that is generated from a statement
 in which the left- and the right-hand side carry the same index, the

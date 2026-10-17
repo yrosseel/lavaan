@@ -87,7 +87,10 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    The options should now be given in the \code{rotation} argument as a list.}
 \item{ov_names}{Character vector. The variables names that are needed for
    the EFA. Should be a subset of the variables names in the data.frame.
-   By default (if NULL), all the variables in the data are used.}
+   By default (if NULL), all the variables in the data are used. For long
+   panel data (with the \code{panel=} argument, see \code{\link{lavaan}}),
+   \code{ov_names} is required, and contains the wide variable names (as
+   in \code{c("x1", "y1", "z1")}).}
 \item{bounds}{Per default, \code{bounds = "pos.var"} forces all variances
    of both observed and latent variables to be strictly nonnegative. See
    the entry in \code{\link{lavOptions}} for more options.}

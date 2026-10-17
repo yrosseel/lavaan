@@ -6,7 +6,7 @@ Fit a Confirmatory Factor Analysis (CFA) model.}
 \usage{
 cfa(model = NULL, data = NULL, ordered = NULL, aux = NULL, sampling_weights = NULL,
     sample_cov = NULL, sample_mean = NULL, sample_th = NULL,
-    sample_nobs = NULL, group = NULL, cluster = NULL,
+    sample_nobs = NULL, group = NULL, cluster = NULL, panel = NULL,
     constraints = "", wls_v = NULL, nacov = NULL, ov_order = "model",
     ...)
 
@@ -54,6 +54,26 @@ cfa(model = NULL, data = NULL, ordered = NULL, aux = NULL, sampling_weights = NU
 \item{group}{Character. A variable name in the data frame defining the groups
 in a multiple group analysis.}
 \item{cluster}{Character. A (single) variable name in the data frame defining the clusters in a two-level dataset.}
+\item{panel}{Character. If the data are long panel data (one row per
+    person and occasion), the names of the id and the time variable, as in
+    \code{panel = c(id = "pid", time = "wave")}. The data are then reshaped
+    to wide data (one row per id) before the analysis: the variable
+    \code{x} at time 3 becomes \code{x3}, so the model is written for the
+    wide variables, by name (\code{x1}, \code{x2}, \ldots) or with indexed
+    names (\code{x[t in 1:4]}, see \code{\link{model.syntax}}). An optional
+    element \code{sep} is put between the name and the time
+    (\code{sep = "_"} gives \code{x_3}). The time variable must contain
+    non-negative integers, and every id can have at most one row per
+    time; occasions without a row become missing values (use
+    \code{missing = "ml"}). Only the wide variables that the model uses
+    are created (a name may also be zero-padded, as in \code{x03}).
+    Variables that are constant within each id (time-invariant covariates,
+    and the \code{group}, \code{cluster} and \code{sampling_weights}
+    variables) are kept as a single variable; a variable that changes
+    over time must be referred to at a given time. In \code{ordered} and
+    \code{aux}, the name of a time-varying variable stands for all its
+    wide variables. The rows of the wide data are the ids, in the order of
+    their first appearance in the data.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
 \item{wls_v}{A user provided weight matrix to be used by estimator \code{"WLS"};
