@@ -1764,6 +1764,34 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     }
   }
 
+  # the conditional density P(y_i | eta_i) below is the product of the
+  # univariate (item) densities: this assumes conditional independence of
+  # the indicators given the latent variables. Residual covariances (non-zero
+  # off-diagonal elements in THETA) are ignored, and the resulting scores are
+  # not the posterior mode (EBM) or ML estimates under the fitted model
+  # (issue #650)
+  cov_pairs <- character(0L)
+  for (g in seq_len(lavdata@ngroups)) {
+    if (ncol(vetax[[g]]) == 0L) {
+      next # no regular lv's: no optimisation for this group
+    }
+    theta_g <- mm_theta[[g]]
+    nz_idx <- which(theta_g != 0 & lower.tri(theta_g), arr.ind = TRUE)
+    if (nrow(nz_idx) > 0L) {
+      ov_names_g <- lavdata@ov.names[[g]]
+      cov_pairs <- c(cov_pairs, paste(ov_names_g[nz_idx[, 2L]], "~~",
+                                      ov_names_g[nz_idx[, 1L]]))
+    }
+  }
+  if (length(cov_pairs) > 0L) {
+    cov_pairs <- unique(cov_pairs)
+    lav_msg_warn(gettextf(
+      "The factor scores for non-normal (e.g., ordered) indicators assume
+      that the indicators are independent given the latent variables;
+      the residual covariances in the model are ignored: %s.",
+      lav_msg_view(cov_pairs, log_sep = "none", qd = FALSE)))
+  }
+
   # Model matrices per group, used by the conditional-density evaluation. They
   # are loop-invariant within a group, so we extract them once here instead of
   # rebuilding them on every objective evaluation (the objective is called many
