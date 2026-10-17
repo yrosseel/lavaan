@@ -17,7 +17,7 @@ lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            parallel = c("auto", "no", "multicore", "snow"),
            ncpus = NULL, cl = NULL,
            drop_list_single_group = TRUE,
-           mdist_draws = 2000L,
+           mdist_draws = 2000L, local_independence = FALSE,
            ...)
 }
 \arguments{
@@ -40,7 +40,11 @@ variables provided by the \code{eta} argument.}
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
 the Empirical Bayes Modal approach, and \code{"ML"} for the maximum
-likelihood approach. For higher-order factors (which have no observed
+likelihood approach. If the model contains residual covariances, the
+indicators that are connected by them are treated jointly: their
+contribution to the likelihood is a (bivariate or multivariate) normal
+probability, computed by a deterministic GHK simulator for blocks of three
+or more ordered indicators. For higher-order factors (which have no observed
 indicators of their own), the \code{"Bartlett"} scores are computed from the
 collapsed measurement model (regressing the observed indicators of the
 lower-order factors on the higher-order factors), as in \code{\link{sam}}.}
@@ -162,6 +166,14 @@ the \code{"optim()"} function is used with the BFGS method.}
     the data is ordered categorical: the number of Monte Carlo draws per
     distinct response pattern used to approximate the expected Mahalanobis
     distances.}
+\item{local_independence}{Logical. Only used if (some of) the indicators
+    are ordered categorical, and the model contains residual covariances.
+    If \code{FALSE} (the default), the indicators that are connected by
+    residual covariances are treated jointly when computing the factor
+    scores (see \code{method}). If \code{TRUE}, the residual covariances
+    are ignored, and the indicators are assumed to be independent given the
+    latent variables (local independence); this was the behavior of
+    lavaan versions before this option was introduced.}
 \item{...}{To support old argument names.}
 }
 \details{

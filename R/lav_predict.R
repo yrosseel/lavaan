@@ -58,6 +58,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
                        ncpus = NULL, cl = NULL,
                        drop_list_single_group = TRUE,
                        mdist_draws = 2000L,
+                       local_independence = FALSE,
                       ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
@@ -165,7 +166,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
     level = level, optim_method = optim_method, eta = eta,
     parallel = parallel, ncpus = ncpus, cl = cl,
     drop_list_single_group = drop_list_single_group,
-    mdist_draws = mdist_draws
+    mdist_draws = mdist_draws,
+    local_independence = isTRUE(local_independence)
   )
 
   res
@@ -188,7 +190,8 @@ lav_predict_internal <- function(lavmodel = NULL,
                                level = 1L, optim_method = "bfgs", eta = NULL,
                                parallel = "no", ncpus = NULL, cl = NULL,
                                drop_list_single_group = TRUE,
-                               mdist_draws = 2000L) {
+                               mdist_draws = 2000L,
+                               local_independence = FALSE) {
   # Delta-augmented ML correlation mode: absorb the free ~*~ scales
   # into the measurement part (LAMBDA/THETA/NU), so that the whole
   # prediction machinery operates on raw-metric model matrices that
@@ -371,7 +374,8 @@ lav_predict_internal <- function(lavmodel = NULL,
       se = se, acov = acov, level = level,
       data_obs = data_obs, exo = exo, method = method,
       fsm = fsm, rel = rel, transform = transform, optim_method = optim_method,
-      parallel = parallel, ncpus = ncpus, cl = cl
+      parallel = parallel, ncpus = ncpus, cl = cl,
+      local_independence = local_independence
     )
 
     # extract fsm here
@@ -671,7 +675,8 @@ lav_predict_internal <- function(lavmodel = NULL,
         data_obs = data_obs, exo = exo,
         eta = eta, method = method, optim_method = optim_method,
         fsm = fsm,
-        resid_flag = resid_flag
+        resid_flag = resid_flag,
+        local_independence = local_independence
       )
       if (fsm) {
         fsm_1 <- attr(out, "fsm")
@@ -759,7 +764,8 @@ lav_predict_internal <- function(lavmodel = NULL,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavimplied = lavimplied,
       data_obs = data_obs, exo = exo,
-      eta = eta, method = method, optim_method = optim_method
+      eta = eta, method = method, optim_method = optim_method,
+      local_independence = local_independence
     )
 
     # label?
@@ -865,7 +871,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
                             se = "none", acov = "none",
                             level = 1L,
                             optim_method = "bfgs",
-                            parallel = "no", ncpus = NULL, cl = NULL) {
+                            parallel = "no", ncpus = NULL, cl = NULL,
+                            local_independence = FALSE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavdata <- lavobject@Data
@@ -907,7 +914,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
       level = level, data_obs = data_obs, exo = exo,
       ml = (method == "ml"), transform = transform,
       optim_method = optim_method,
-      parallel = parallel, ncpus = ncpus, cl = cl
+      parallel = parallel, ncpus = ncpus, cl = cl,
+      local_independence = local_independence
     )
   }
 
@@ -1677,7 +1685,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
                                    se = "none", acov = "none", level = 1L,
                                    ml = FALSE, transform = FALSE,
                                    optim_method = "bfgs",
-                                   parallel = "no", ncpus = NULL, cl = NULL) {
+                                   parallel = "no", ncpus = NULL, cl = NULL,
+                                   local_independence = FALSE) {
   optim_method <- tolower(optim_method)
 
   stopifnot(optim_method %in% c("nlminb", "bfgs"))
@@ -1764,33 +1773,24 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     }
   }
 
-  # the conditional density P(y_i | eta_i) below is the product of the
-  # univariate (item) densities: this assumes conditional independence of
-  # the indicators given the latent variables. Residual covariances (non-zero
-  # off-diagonal elements in THETA) are ignored, and the resulting scores are
-  # not the posterior mode (EBM) or ML estimates under the fitted model
-  # (issue #650)
-  cov_pairs <- character(0L)
-  for (g in seq_len(lavdata@ngroups)) {
-    if (ncol(vetax[[g]]) == 0L) {
-      next # no regular lv's: no optimisation for this group
+  # residual covariances (issue #650): if THETA is diagonal, the conditional
+  # density P(y_i | eta_i) is the product of the univariate (item) densities.
+  # Otherwise, the indicators fall apart in blocks (the connected components
+  # of THETA); the density is the product of the joint (multivariate normal)
+  # block densities. The (exogenous) ov.x dummies are conditioned on, and
+  # never part of a block. If local_independence = TRUE, the residual
+  # covariances are ignored (the old behavior, before issue #650).
+  theta_blocks_g <- lapply(seq_len(lavdata@ngroups), function(gg) {
+    if (local_independence) {
+      return(NULL)
     }
-    theta_g <- mm_theta[[g]]
-    nz_idx <- which(theta_g != 0 & lower.tri(theta_g), arr.ind = TRUE)
-    if (nrow(nz_idx) > 0L) {
-      ov_names_g <- lavdata@ov.names[[g]]
-      cov_pairs <- c(cov_pairs, paste(ov_names_g[nz_idx[, 2L]], "~~",
-                                      ov_names_g[nz_idx[, 1L]]))
-    }
-  }
-  if (length(cov_pairs) > 0L) {
-    cov_pairs <- unique(cov_pairs)
-    lav_msg_warn(gettextf(
-      "The factor scores for non-normal (e.g., ordered) indicators assume
-      that the indicators are independent given the latent variables;
-      the residual covariances in the model are ignored: %s.",
-      lav_msg_view(cov_pairs, log_sep = "none", qd = FALSE)))
-  }
+    lav_predict_theta_blocks(
+      theta = mm_theta[[gg]],
+      var_type = lavdata@ov$type[match(lavdata@ov.names[[gg]],
+                                       lavdata@ov$name)],
+      exclude = lavmodel@ov.x.dummy.ov.idx[[gg]]
+    )
+  })
 
   # Model matrices per group, used by the conditional-density evaluation. They
   # are loop-invariant within a group, so we extract them once here instead of
@@ -1850,7 +1850,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       th_idx = th_idx,
       g = g,
       log = TRUE,
-      mlist = fy_mlist_g[[g]]
+      mlist = fy_mlist_g[[g]],
+      theta_blocks = theta_blocks_g[[g]]
     )
 
     if (ml) {
@@ -2144,7 +2145,8 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              duplicate = FALSE,
                              optim_method = "bfgs",
                              fsm = FALSE,
-                             resid_flag = FALSE) {
+                             resid_flag = FALSE,
+                             local_independence = FALSE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavmodel <- lav_model_delta_absorb(lavobject@Model)
@@ -2173,7 +2175,8 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavimplied = lavimplied,
       data_obs = data_obs, exo = exo, method = method,
-      optim_method = optim_method, fsm = fsm
+      optim_method = optim_method, fsm = fsm,
+      local_independence = local_independence
     )
     fsm_1 <- attr(eta, "fsm")
   } else {
@@ -2247,7 +2250,8 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                            # options
                            method = "EBM",
                            log_1 = FALSE,
-                           optim_method = "bfgs") {
+                           optim_method = "bfgs",
+                           local_independence = FALSE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavmodel <- lav_model_delta_absorb(lavobject@Model)
@@ -2275,7 +2279,8 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
     lavdata = lavdata, lavsamplestats = lavsamplestats,
     lavimplied = lavimplied,
     data_obs = data_obs, exo = exo, eta = eta, method = method,
-    duplicate = FALSE, optim_method = optim_method
+    duplicate = FALSE, optim_method = optim_method,
+    local_independence = local_independence
   )
 
   mm_theta <- lav_model_theta(lavmodel = lavmodel)
@@ -2402,7 +2407,10 @@ lav_predict_fy_eta_i <- function(lavmodel = NULL, lavdata = NULL,
                                  y_i = NULL, x_i = NULL,
                                  eta_i = NULL, theta_sd = NULL, g = 1L,
                                  th = NULL, th_idx = NULL, log = TRUE,
-                                 mlist = NULL) {
+                                 mlist = NULL, theta_blocks = NULL) {
+  # theta_blocks: if not NULL, the blocks of indicators with residual
+  # covariances (see lav_predict_theta_blocks()); the joint density of each
+  # block replaces the univariate densities of its items
   # model matrices for this group; loop-invariant, so callers in a tight loop
   # may pass a precomputed 'mlist' to avoid rebuilding it on every call
   if (is.null(mlist)) {
@@ -2489,7 +2497,246 @@ lav_predict_fy_eta_i <- function(lavmodel = NULL, lavdata = NULL,
     }
   }
 
+  # blocks of indicators with residual covariances: the (log) joint density
+  # of the block is stored in the first (observed) item of the block, and
+  # zero (log) or one (no log) in the remaining items
+  if (length(theta_blocks) > 0L) {
+    yhat <- as.numeric(yhat)
+    y_i <- as.numeric(y_i)
+    for (b in theta_blocks) {
+      obs <- !is.na(y_i[b$idx])
+      if (sum(obs) < 2L) {
+        next # zero or one observed item: univariate density is exact
+      }
+      if (all(obs)) {
+        block <- b
+      } else {
+        # marginal density of the observed items of this block
+        block <- lav_predict_theta_block_prep(
+          theta = b$theta[obs, obs, drop = FALSE],
+          idx = b$idx[obs], ord = b$ord[obs]
+        )
+      }
+      logp <- lav_predict_theta_block_logp(
+        block = block, y = y_i[block$idx], yhat = yhat[block$idx],
+        th = th, th_idx = th_idx
+      )
+      fy[block$idx] <- if (log) 0 else 1
+      fy[block$idx[1L]] <- if (log) logp else exp(logp)
+    }
+  }
+
   fy
+}
+
+# the blocks of indicators that are connected by residual covariances (the
+# connected components of the non-zero pattern of THETA), excluding the
+# indices in 'exclude' (the ov.x dummies). Only blocks with two or more
+# items are returned; NULL if THETA is diagonal (conditional independence).
+# Each block contains the ingredients that do not depend on eta (see
+# lav_predict_theta_block_prep()).
+lav_predict_theta_blocks <- function(theta = NULL, var_type = NULL,
+                                     exclude = integer(0L)) {
+  nvar <- nrow(theta)
+  adj <- theta != 0
+  diag(adj) <- FALSE
+  adj[exclude, ] <- FALSE
+  adj[, exclude] <- FALSE
+  if (!any(adj)) {
+    return(NULL)
+  }
+
+  # connected components (breadth-first search)
+  comp <- integer(nvar)
+  ncomp <- 0L
+  for (i in seq_len(nvar)) {
+    if (comp[i] > 0L) next
+    ncomp <- ncomp + 1L
+    todo <- i
+    while (length(todo) > 0L) {
+      j <- todo[1L]
+      todo <- todo[-1L]
+      if (comp[j] == 0L) {
+        comp[j] <- ncomp
+        todo <- c(todo, which(adj[j, ] & comp == 0L))
+      }
+    }
+  }
+  comp_size <- tabulate(comp, nbins = ncomp)
+
+  out <- lapply(which(comp_size > 1L), function(k) {
+    idx <- which(comp == k)
+    theta_k <- theta[idx, idx, drop = FALSE]
+    # the joint density requires a positive definite THETA block
+    if (inherits(try(chol(theta_k), silent = TRUE), "try-error")) {
+      return(NULL)
+    }
+    lav_predict_theta_block_prep(
+      theta = theta_k, idx = idx, ord = var_type[idx] == "ordered"
+    )
+  })
+  if (any(vapply(out, is.null, logical(1L)))) {
+    lav_msg_warn(gettext(
+      "The (residual) variance matrix THETA is not positive definite; for
+      the indicators involved, the factor scores ignore the residual
+      covariances (and assume conditional independence)."))
+    out <- out[!vapply(out, is.null, logical(1L))]
+  }
+  if (length(out) == 0L) {
+    return(NULL)
+  }
+
+  out
+}
+
+# the parts of the joint density of a block of items that do not depend on
+# eta: y_c (numeric items) is normal, with covariance theta_cc; given y_c, the
+# latent responses y*_o of the ordered items are normal with mean
+# yhat_o + b_oc (y_c - yhat_c) and covariance s_oo = theta_oo - b_oc theta_co,
+# where b_oc = theta_oc theta_cc^{-1}
+lav_predict_theta_block_prep <- function(theta = NULL, idx = NULL,
+                                         ord = NULL) {
+  c_idx <- which(!ord)
+  o_idx <- which(ord)
+  out <- list(idx = idx, ord = ord, theta = theta,
+              c_idx = c_idx, o_idx = o_idx)
+
+  if (length(c_idx) > 0L) {
+    theta_cc <- theta[c_idx, c_idx, drop = FALSE]
+    out$chol_cc <- chol(theta_cc)
+    if (length(o_idx) > 0L) {
+      b_oc <- theta[o_idx, c_idx, drop = FALSE] %*% chol2inv(out$chol_cc)
+      out$b_oc <- b_oc
+      s_oo <- theta[o_idx, o_idx, drop = FALSE] -
+        b_oc %*% theta[c_idx, o_idx, drop = FALSE]
+    }
+  } else {
+    s_oo <- theta
+  }
+
+  if (length(o_idx) > 0L) {
+    out$s_oo <- s_oo
+    out$sd_oo <- sqrt(diag(s_oo))
+    if (length(o_idx) == 2L) {
+      out$rho <- s_oo[1L, 2L] / prod(out$sd_oo)
+    } else if (length(o_idx) > 2L) {
+      out$l_oo <- t(chol(s_oo))
+      out$ghk_u <- lav_predict_ghk_points(ndim = length(o_idx) - 1L)
+    }
+  }
+
+  out
+}
+
+# log of the joint density of the items in a block, given the linear
+# predictor yhat (for these items)
+lav_predict_theta_block_logp <- function(block = NULL, y = NULL, yhat = NULL,
+                                         th = NULL, th_idx = NULL) {
+  c_idx <- block$c_idx
+  o_idx <- block$o_idx
+  logp <- 0
+
+  # numeric items: multivariate normal density
+  m_o <- yhat[o_idx]
+  if (length(c_idx) > 0L) {
+    res_c <- y[c_idx] - yhat[c_idx]
+    z <- backsolve(block$chol_cc, res_c, transpose = TRUE)
+    logp <- -0.5 * sum(z * z) - sum(log(diag(block$chol_cc))) -
+      0.5 * length(c_idx) * log(2 * pi)
+    if (length(o_idx) > 0L) {
+      m_o <- m_o + as.numeric(block$b_oc %*% res_c)
+    }
+  }
+
+  # ordered items: probability of the rectangle [lower, upper] for y*_o
+  if (length(o_idx) > 0L) {
+    bounds <- lav_predict_ord_bounds(
+      y = y[o_idx], var_idx = block$idx[o_idx], th = th, th_idx = th_idx
+    )
+    if (length(o_idx) == 1L) {
+      prob <- pnorm((bounds$upper - m_o) / block$sd_oo) -
+        pnorm((bounds$lower - m_o) / block$sd_oo)
+    } else if (length(o_idx) == 2L) {
+      zl <- (bounds$lower - m_o) / block$sd_oo
+      zu <- (bounds$upper - m_o) / block$sd_oo
+      prob <- pbinorm(
+        upper_x = zu[1L], upper_y = zu[2L],
+        lower_x = zl[1L], lower_y = zl[2L], rho = block$rho
+      )
+    } else {
+      prob <- lav_predict_ghk_prob(
+        lower = bounds$lower - m_o, upper = bounds$upper - m_o,
+        l_chol = block$l_oo, u = block$ghk_u
+      )
+    }
+    if (!is.finite(prob) || prob < .Machine$double.eps) {
+      prob <- .Machine$double.eps
+    }
+    logp <- logp + log(prob)
+  }
+
+  logp
+}
+
+# lower and upper thresholds of the observed categories 'y' (1-based) of the
+# ordered variables 'var_idx'; -Inf/+Inf for the first/last category
+lav_predict_ord_bounds <- function(y = NULL, var_idx = NULL, th = NULL,
+                                   th_idx = NULL) {
+  ncat <- tabulate(th_idx, nbins = max(var_idx))[var_idx] + 1L
+  th_off <- match(var_idx, th_idx) - 1L
+  upper <- th[th_off + y]
+  upper[y == ncat] <- Inf
+  lower <- rep(-Inf, length(y))
+  nz <- y > 1L
+  lower[nz] <- th[th_off[nz] + y[nz] - 1L]
+  list(lower = lower, upper = upper)
+}
+
+# P(lower < z < upper), z ~ N(0, l_chol l_chol'), using the GHK simulator
+# with fixed (quasi-random) points 'u': no random numbers are used, and the
+# result is a smooth function of lower/upper (as needed by the optimizer)
+lav_predict_ghk_prob <- function(lower = NULL, upper = NULL, l_chol = NULL,
+                                 u = NULL) {
+  ndim <- length(lower)
+  npoints <- nrow(u)
+  z <- matrix(0, npoints, ndim - 1L)
+  prob <- rep(1, npoints)
+  for (k in seq_len(ndim)) {
+    if (k > 1L) {
+      shift <- as.numeric(z[, seq_len(k - 1L), drop = FALSE] %*%
+                            l_chol[k, seq_len(k - 1L)])
+    } else {
+      shift <- 0
+    }
+    pa <- pnorm((lower[k] - shift) / l_chol[k, k])
+    pb <- pnorm((upper[k] - shift) / l_chol[k, k])
+    pk <- pb - pa
+    prob <- prob * pk
+    if (k < ndim) {
+      p_draw <- pa + u[, k] * pk
+      p_draw <- pmin(pmax(p_draw, 1e-15), 1 - 1e-15)
+      z[, k] <- qnorm(p_draw)
+    }
+  }
+  mean(prob)
+}
+
+# fixed (deterministic) quasi-random points in (0,1)^ndim: a Richtmyer
+# (Kronecker) sequence based on the square roots of the first primes
+lav_predict_ghk_points <- function(ndim = 1L, npoints = 2000L) {
+  primes <- c(2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+              59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113)
+  if (ndim > length(primes)) {
+    # more primes, if needed
+    cand <- seq_len(ndim * 20L) + 1L
+    is_prime <- vapply(cand, function(n) {
+      n < 4L || all(n %% 2:floor(sqrt(n)) != 0L)
+    }, logical(1L))
+    primes <- cand[is_prime]
+  }
+  r <- seq_len(npoints)
+  vapply(sqrt(primes[seq_len(ndim)]), function(a) (r * a) %% 1,
+         numeric(npoints))
 }
 
 # gather the (unconditional) per-block ingredients shared by both
