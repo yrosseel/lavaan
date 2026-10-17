@@ -108,6 +108,13 @@ lav_expand_tokens <- function(modellist,
   stopi # index of last item of ending tokens
   ) {
   expanded_tokens <- list()
+  has_index <- !is.null(modellist$elem_index)
+  if (has_index &&
+      any(nzchar(modellist$elem_index[seq.int(starti, stopi)]))) {
+    tl <- lav_parse_txtloc(modelsrc, modellist$elem_pos[ppi])
+    lav_msg_stop(gettext("an endpoint of ++ can not be a name with an index"),
+                 tl[1L], footer = tl[2L])
+  }
   if (ppi - starti != stopi - ppi) {
     tl <- lav_parse_txtloc(modelsrc, modellist$elem_pos[ppi])
     lav_msg_stop(gettext("tokens before and after ++ not conform"),
@@ -155,6 +162,10 @@ lav_expand_tokens <- function(modellist,
   expanded_tokens$elem_type[expnum] <- types$symbol
   expanded_tokens$elem_pos[expnum] <- modellist$elem_pos[ppi]
   expanded_tokens$elem_formula_number[expnum] <- modellist$elem_formula_number[ppi]
+  if (has_index) {
+    expanded_tokens$elem_index[expnum] <- ""
+    expanded_tokens$elem_offset[expnum] <- 0L
+  }
   expnum <- expnum + 1L
   if (aantal > 0L) {
     for (j in seq(1L, aantal, 1L)) {
@@ -169,12 +180,20 @@ lav_expand_tokens <- function(modellist,
           expanded_tokens$elem_type[expnum] <- modellist$elem_type[i]
           expanded_tokens$elem_pos[expnum] <- modellist$elem_pos[i]
           expanded_tokens$elem_formula_number[expnum] <- modellist$elem_formula_number[ppi]
+          if (has_index) {
+            expanded_tokens$elem_index[expnum] <- ""
+            expanded_tokens$elem_offset[expnum] <- 0L
+          }
           expnum <- expnum + 1L
       }
       expanded_tokens$elem_text[expnum] <- "+"
       expanded_tokens$elem_type[expnum] <- types$symbol
       expanded_tokens$elem_pos[expnum] <- modellist$elem_pos[ppi]
       expanded_tokens$elem_formula_number[expnum] <- modellist$elem_formula_number[ppi]
+      if (has_index) {
+        expanded_tokens$elem_index[expnum] <- ""
+        expanded_tokens$elem_offset[expnum] <- 0L
+      }
       expnum <- expnum + 1L
     }
   }
@@ -190,6 +209,7 @@ lav_expand_plusplus <- function(modellist, modelsrc, types) {
         }
     }
     if (ppi == -1) return(modellist)  # no '++' to handle
+    has_index <- !is.null(modellist$elem_index)
     newvec <- modellist
     while (ppi > -1) {
       # find starting item
@@ -230,6 +250,10 @@ lav_expand_plusplus <- function(modellist, modelsrc, types) {
         rv$elem_type[rvi] <- newvec$elem_type[i]
         rv$elem_pos[rvi] <- newvec$elem_pos[i]
         rv$elem_formula_number[rvi] <- newvec$elem_formula_number[i]
+        if (has_index) {
+          rv$elem_index[rvi] <- newvec$elem_index[i]
+          rv$elem_offset[rvi] <- newvec$elem_offset[i]
+        }
         rvi <- rvi + 1L
       }
       for (i in seq_along(toinsert$elem_type)) {
@@ -237,6 +261,10 @@ lav_expand_plusplus <- function(modellist, modelsrc, types) {
         rv$elem_type[rvi] <- toinsert$elem_type[i]
         rv$elem_pos[rvi] <- toinsert$elem_pos[i]
         rv$elem_formula_number[rvi] <- toinsert$elem_formula_number[i]
+        if (has_index) {
+          rv$elem_index[rvi] <- toinsert$elem_index[i]
+          rv$elem_offset[rvi] <- toinsert$elem_offset[i]
+        }
         rvi <- rvi + 1L
       }
       for (i in seq(ppi + 1L, length(newvec$elem_typ), 1L)) {
@@ -244,6 +272,10 @@ lav_expand_plusplus <- function(modellist, modelsrc, types) {
         rv$elem_type[rvi] <- newvec$elem_type[i]
         rv$elem_pos[rvi] <- newvec$elem_pos[i]
         rv$elem_formula_number[rvi] <- newvec$elem_formula_number[i]
+        if (has_index) {
+          rv$elem_index[rvi] <- newvec$elem_index[i]
+          rv$elem_offset[rvi] <- newvec$elem_offset[i]
+        }
         rvi <- rvi + 1L
       }
       # check for more '++'s

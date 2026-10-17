@@ -247,7 +247,8 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   }
   # a lone '=' (the operators '==', '=~', ':=' are gone by now) is only
   # valid for a named argument inside a call (pnorm(a, log.p = TRUE))
-  symbols <- gregexpr("[,()/*?^=]", modelsrcw)[[1L]] # f1=~x2 + 0.5 ? x3
+  # '[' and ']' delimit an index (x[t in 1:4], x[t-1]; lav_syntax_index.R)
+  symbols <- gregexpr("[][,()/*?^=]", modelsrcw)[[1L]] # f1=~x2 + 0.5 ? x3
   symbols1 <- gregexpr("[-+][^.0-9]", modelsrcw)[[1L]] # f1=~x2+x3
   symbols2 <- gregexpr("[._0-9a-df-zA-DF-Z)] *[-+][.0-9]", modelsrcw)[[1L]]
                                                   # f1=~x2+2*x3, len-2 !
@@ -362,7 +363,11 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   # two names (or a name and a number) with only spaces in between: a name
   # that contains spaces must be quoted ("my var"); up to 0.7-2 the parts
   # were glued together, with a deprecation warning
+  # (not inside an index: x[t in 1:4])
+  in_index <- cumsum(elem_type == types$symbol & elem_text == "[") -
+    cumsum(elem_type == types$symbol & elem_text == "]") > 0L
   for (elem_i in seq_len(length(elem_pos) - 1L) + 1L) {
+    if (in_index[elem_i]) next
     if (any(elem_type[elem_i] == c(types$identifier, types$numliteral)) &&
         elem_type[elem_i - 1L] == types$identifier) {
       tl <- lav_parse_txtloc(modelsrc, elem_pos[elem_i])
@@ -461,13 +466,20 @@ lav_parse_formulas_open <- function(modellist, modelsrc, types) {
   relational_operators <- config$operators$op[!non_relational]
   welke <- modellist$elem_type != types$newline
   formula_numbers <- unique(modellist$elem_formula_number[welke])
+  has_index <- !is.null(modellist$elem_index)
   formulas <- lapply(formula_numbers, function(s) {
     welkenu <- modellist$elem_formula_number == s & welke
-    list(
+    out <- list(
       elem_pos = modellist$elem_pos[welkenu],
       elem_type = modellist$elem_type[welkenu],
       elem_text = modellist$elem_text[welkenu]
     )
+    if (has_index) {
+      # indexed names: index and offset of each name token
+      out$elem_index <- modellist$elem_index[welkenu]
+      out$elem_offset <- modellist$elem_offset[welkenu]
+    }
+    out
   })
   maxnum <- length(formula_numbers) + sum(modellist$elem_text == "+")
   outval <- vector(mode = "list", length = maxnum)
@@ -745,6 +757,7 @@ lav_parse_model_string_open <- function(model_syntax = "",
       formula = modellist$elem_formula_number
     ))
   }
+  modellist <- lav_expand_index(modellist, modelsrc, types)
   modellist <- lav_expand_plusplus(modellist, modelsrc, types)
   formulalist <- lav_parse_formulas_open(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat_-----
@@ -755,6 +768,7 @@ lav_parse_model_string_open <- function(model_syntax = "",
   flat$rhs <- character(max_mono_formulas)
   flat$mod_idx <- integer(max_mono_formulas)
   flat$block <- integer(max_mono_formulas) # keep track of groups using ":" opr
+  flat$lag <- rep(NA_integer_, max_mono_formulas) # indexed names only
   for (mod1 in config$modifiers$mod) {
     flat[[mod1]] <- character(max_mono_formulas) # only for display purposes!
   }
@@ -776,7 +790,8 @@ lav_parse_model_string_open <- function(model_syntax = "",
                                         modenvl, modenvr, config)
   }
   lav_parse_final_operations(tmplist$flat, tmplist$modlist, config,
-    tmplist$constraints, as_data_frame, hashstring, cachesrc)
+    tmplist$constraints, as_data_frame, hashstring, cachesrc,
+    indexed = !is.null(modellist$elem_index))
 }
 
 lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
@@ -968,6 +983,15 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
     if (formule$elem_type[nelem] == types$numliteral) {
       if (op == "~" || op == "|~") flat$rhs[idx] <- ""
     }
+    # indexed names: the lag between lhs and rhs, if both carry the same
+    # index (wx[t] ~ wx[t-1]: lag 1)
+    if (!is.null(formule$elem_index)) {
+      lhs_index <- formule$elem_index[opi - 1L]
+      if (nzchar(lhs_index) && lhs_index == formule$elem_index[nelem]) {
+        flat$lag[idx] <- formule$elem_offset[opi - 1L] -
+          formule$elem_offset[nelem]
+      }
+    }
   }
   # modifiers always come before an asterix or a question mark
   modelems <- which(formule$elem_type == types$symbol &
@@ -1146,6 +1170,10 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
     formule$elem_type <- c(formule$elem_type, types$symbol, types$numliteral)
     formule$elem_text <- c(formule$elem_text, "*", "1")
     formule$elem_pos <- c(formule$elem_pos, rep(formule$elem_pos[nelem], 2))
+    if (!is.null(formule$elem_index)) {
+      formule$elem_index <- c(formule$elem_index, "", "")
+      formule$elem_offset <- c(formule$elem_offset, 0L, 0L)
+    }
     nelem <- length(formule$elem_type)
   }
   # phantom latent variable
@@ -1165,6 +1193,14 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
       formule$elem_pos[seq.int(1L, nelem - 1L)],
       rep(formule$elem_pos[nelem], 6)
     )
+    if (!is.null(formule$elem_index)) {
+      formule$elem_index <- c(
+        formule$elem_index[seq.int(1L, nelem - 1L)], rep("", 6L)
+      )
+      formule$elem_offset <- c(
+        formule$elem_offset[seq.int(1L, nelem - 1L)], rep(0L, 6L)
+      )
+    }
     nelem <- length(formule$elem_type)
   }
   # handling interaction variable types
@@ -1185,6 +1221,7 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
     )
   }
   if (length(colons) > 0L) {
+    formule <- lav_parse_index_product(formule, colons[1L])
     # collapse items around colon "a" ":" "b" => "a:b"
     formule$elem_text[colons[1L] - 1L] <-
       paste(formule$elem_text[seq.int(colons[1L] - 1L, colons[1L] + 1L)],
@@ -1199,6 +1236,7 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
     }
   }
   if (length(colons) == 2L) {
+    formule <- lav_parse_index_product(formule, colons[2L])
     # collapse items around colon "a" ":" "b" => "a:b"
     formule$elem_text[colons[2L] - 1L] <-
       paste(formule$elem_text[seq.int(colons[2L] - 1L, colons[2L] + 1L)],
@@ -1214,9 +1252,25 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
   invisible(NULL)
 }
 
+# indexed names: a product term (x[t-1]:z[t-1]) keeps the index of its parts
+# only if both parts carry the same index and offset
+lav_parse_index_product <- function(formule, colon) {
+  if (is.null(formule$elem_index)) {
+    return(formule)
+  }
+  a <- colon - 1L
+  b <- colon + 1L
+  if (!(formule$elem_index[a] == formule$elem_index[b] &&
+        formule$elem_offset[a] == formule$elem_offset[b])) {
+    formule$elem_index[a] <- ""
+    formule$elem_offset[a] <- 0L
+  }
+  formule
+}
+
 lav_parse_final_operations <- function(flat, modlist, config,
                         constraints, as_data_frame, hashstring,
-                        cachesrc = "") {
+                        cachesrc = "", indexed = FALSE) {
   # update flat (omit items without operator)
   filled_ones <- which(flat$op != "")
   flat$lhs <- flat$lhs[filled_ones]
@@ -1225,6 +1279,8 @@ lav_parse_final_operations <- function(flat, modlist, config,
   flat$mod.idx <- flat$mod_idx[filled_ones]
   flat$mod_idx <- NULL
   flat$block <- flat$block[filled_ones]
+  lag <- flat$lag[filled_ones]
+  flat$lag <- NULL
 
   # change op for intercepts (for convenience only)
   int_idx <- which(flat$op == "~" & flat$rhs == "")
@@ -1279,7 +1335,22 @@ lav_parse_final_operations <- function(flat, modlist, config,
     }
   }
   # new in 0.6, reorder covariances here!
+  lhs_before <- flat$lhs
   flat <- lav_pt_covariance_reorder(flat)
+  # indexed names: the lag is time(lhs) - time(rhs); store it as a
+  # modifier, so that it ends up in the 'lag' column of the parameter table
+  lag_idx <- which(!is.na(lag))
+  if (length(lag_idx) > 0L) {
+    swapped <- flat$lhs != lhs_before
+    lag[swapped] <- -lag[swapped]
+    for (nr in lag_idx) {
+      if (flat$mod.idx[nr] == 0L) {
+        modlist <- c(modlist, list(list()))
+        flat$mod.idx[nr] <- length(modlist)
+      }
+      modlist[[flat$mod.idx[nr]]]$lag <- lag[nr]
+    }
+  }
   # remove empty modifier columns
   for (mod1 in config$modifiers$mod) {
     flat[[mod1]] <- flat[[mod1]][filled_ones]
@@ -1306,6 +1377,8 @@ lav_parse_final_operations <- function(flat, modlist, config,
   # create output
   attr(flat, "modifiers") <- modlist
   attr(flat, "constraints") <- constraints
+  # indexed names: the parameter table gets a 'lag' column
+  if (indexed) attr(flat, "indexed") <- TRUE
   lav_syntax_cache_set(hashstring, cachesrc, flat)
   flat
 }
@@ -1322,11 +1395,11 @@ lav_parse_fold_confusables <- function(x) {
             "\uff0d", "\u2212", "\u2013", # -
             "\uff0b", "\uff0a", "\uff0f", "\uff3e", "\uff1d", "\uff1c",
             "\uff1e", "\uff1a", "\uff5c", "\uff1f", "\uff05", "\uff08",
-            "\uff09", "\uff0c", "\uff1b")
+            "\uff09", "\uff0c", "\uff1b", "\uff3b", "\uff3d")
   to <- c("~", "~", "~", "-", "-", "-",
           "+", "*", "/", "^", "=", "<",
           ">", ":", "|", "?", "%", "(",
-          ")", ",", ";")
+          ")", ",", ";", "[", "]")
   # (not chartr(): a '-' in its specification denotes a range)
   for (k in seq_along(from)) {
     x <- gsub(from[k], to[k], x, fixed = TRUE)

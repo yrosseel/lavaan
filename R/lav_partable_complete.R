@@ -28,7 +28,9 @@ lav_pt_complete <- function(partable = NULL, start = TRUE) {
       # try to extend them in a 'natural' way
       for (i in short_idx) {
         too_short <- tmp_n - nel[i]
-        if (is.integer(partable[[i]])) {
+        if (names(partable)[i] == "lag") {
+          partable[[i]] <- c(partable[[i]], rep(NA_integer_, too_short))
+        } else if (is.integer(partable[[i]])) {
           partable[[i]] <- c(partable[[i]],
             integer(too_short))
         } else if (is.numeric(partable[[i]])) {

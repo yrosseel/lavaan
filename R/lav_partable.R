@@ -93,6 +93,9 @@ lav_model_pt  <- function(
   # ov_names_data?
   ov_names_data <- attr(flat, "ovda")
 
+  # indexed names (x[t in 1:4]) in the syntax? -> 'lag' column
+  indexed_flag <- isTRUE(attr(flat, "indexed"))
+
   # extra constraints?
   if (!is.null(constraints) && any(nchar(constraints) > 0L)) {
     flat2 <- lavParseModelString(model_syntax = constraints, warn = lav_warn())
@@ -644,6 +647,8 @@ lav_model_pt  <- function(
       tmp_mod_prior <- tmp_mod[[el]]$prior
       tmp_mod_efa <- tmp_mod[[el]]$efa
       tmp_mod_rv <- tmp_mod[[el]]$rv
+      # not a user modifier: the parser stores the lag of indexed names here
+      tmp_mod_lag <- tmp_mod[[el]]$lag
 
       # check for single argument if multiple groups
       if (ngroups > 1L && length(idx) > 1L) {
@@ -669,6 +674,9 @@ lav_model_pt  <- function(
         }
         if (length(tmp_mod_rv) == 1L) {
           tmp_mod_rv <- rep(tmp_mod_rv, ngroups)
+        }
+        if (length(tmp_mod_lag) == 1L) {
+          tmp_mod_lag <- rep(tmp_mod_lag, ngroups)
         }
 
         # new in 0.6-7 (proposal):
@@ -705,6 +713,7 @@ lav_model_pt  <- function(
         (!is.null(tmp_mod_prior) && nidx != length(tmp_mod_prior)) ||
         (!is.null(tmp_mod_efa) && nidx != length(tmp_mod_efa)) ||
         (!is.null(tmp_mod_rv) && nidx != length(tmp_mod_rv)) ||
+        (!is.null(tmp_mod_lag) && nidx != length(tmp_mod_lag)) ||
         (!is.null(tmp_mod_label) && nidx != length(tmp_mod_label))) {
         el_idx <- which(tmp_list$mod.idx == el)[1L]
         lav_msg_stop(gettextf(
@@ -755,6 +764,13 @@ lav_model_pt  <- function(
         tmp_list$free[idx] <- 0L
         tmp_list$ustart[idx] <- as.numeric(NA) #
       }
+      if (!is.null(tmp_mod_lag)) {
+        # indexed names: lag = time(lhs) - time(rhs); NA if undefined
+        if (is.null(tmp_list$lag)) {
+          tmp_list$lag <- rep(NA_integer_, length(tmp_list$lhs))
+        }
+        tmp_list$lag[idx] <- as.integer(tmp_mod_lag)
+      }
       if (!is.null(tmp_mod_lower)) {
         # do we already have a `lower' column? if not, create one
         if (is.null(tmp_list$lower)) {
@@ -776,6 +792,11 @@ lav_model_pt  <- function(
   }
   # remove mod.idx column
   tmp_list$mod.idx <- NULL
+
+  # indexed names: always a 'lag' column (NA where undefined)
+  if (indexed_flag && is.null(tmp_list$lag)) {
+    tmp_list$lag <- rep(NA_integer_, length(tmp_list$lhs))
+  }
 
   # categorical: check for nonfree variances if parameterization = "delta"
   # we already gave warning; here, we force them to be nonfree

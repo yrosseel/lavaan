@@ -508,6 +508,74 @@ names:
  f3 =~ 1*z1 ++ 1*z5       # all loadings fixed to 1}
 }
 
+\section{Indexed names (repeated measures)}{
+Models for repeated measures in wide format (one column per variable and
+per wave, as in \code{x1}, \code{x2}, \code{x3}, \code{x4}) contain many
+statements that only differ by the wave. An \emph{index} in square brackets
+writes such a family of statements once. The index is \emph{bound} to a
+range of integers in one place of a statement (\code{x[t in 1:4]}), and can
+be \emph{referred} to elsewhere in the same statement, possibly with an
+integer offset (\code{x[t]}, \code{x[t-1]}, \code{x[t+1]}). The statement
+then stands for one copy per value of the index, in which each indexed name
+is written with the value after it. For example,
+\preformatted{ wx[t in 2:4] ~ wx[t-1] + wy[t-1]}
+is equivalent to
+\preformatted{ wx2 ~ wx1 + wy1
+ wx3 ~ wx2 + wy2
+ wx4 ~ wx3 + wy3}
+A random-intercept cross-lagged panel model for two variables measured at
+four waves can thus be written as:
+\preformatted{ RIx =~ 1*x[t in 1:4]
+ RIy =~ 1*y[t in 1:4]
+ wx[t in 1:4] =~ 1*x[t]
+ wy[t in 1:4] =~ 1*y[t]
+ x[t in 1:4] ~~ 0*x[t]
+ y[t in 1:4] ~~ 0*y[t]
+ wx[t in 2:4] ~ wx[t-1] + wy[t-1]
+ wy[t in 2:4] ~ wx[t-1] + wy[t-1]
+ wx[t in 1:4] ~~ wx[t] + wy[t]
+ wy[t in 1:4] ~~ wy[t]
+ RIx ~~ RIx + RIy
+ RIy ~~ RIy}
+Labels are names, and can carry an index as well. A label without an index
+is repeated in every copy, which implies an equality constraint across the
+waves; a label with an index gives one label per wave:
+\preformatted{ wx[t in 2:4] ~ a*wx[t-1]       # labels a, a, a: equal effects
+ wx[t in 2:4] ~ a[t]*wx[t-1]    # labels a2, a3, a4: free effects
+ a[t in 2:3] == a[t+1]          # equality written as constraints
+ d[t in 2:3] := a[t+1] - a[t]   # one defined parameter per wave}
+Inside a modifier (or in a constraint or a definition), a bound index used
+as a number stands for its value. This gives, for example, the fixed time
+scores of a growth model: \code{s =~ (t-1)*y[t in 1:5]} fixes the loadings
+to 0, 1, 2, 3, 4. A bare index as the whole modifier (\code{t*y[t]}) would
+read as a label, and is not allowed; write \code{fixed(t)*y[t]} instead.
+
+The rules are as follows. (1) An index is bound once per statement, on any
+name of the statement; several indices may be bound, and the copies then
+run over all combinations of their values. (2) A range \code{lo:hi} is
+ascending. A bound may also be an index bound earlier in the same
+statement, alone or with an integer offset in parentheses, as in
+\code{x1_[s in 1:2] ~~ x1_[t in (s+1):3]} (which gives each pair once); such
+a dependent range that comes out empty generates nothing. (3) The value is
+written directly after the name in front of the bracket: \code{x1_[t]}
+gives \code{x1_3}; there is no space between a name and its index, and no
+text after the index. If the lower bound of a range is written with a
+leading zero, all names use that width: \code{y[t in 03:10] ~ y[t-1]} gives
+\code{y03 ~ y02}, \ldots, \code{y10 ~ y09}. (4) Nothing is dropped
+silently: a range that is too wide generates names that do not exist (such
+as \code{wx0}), and lavaan reports them as such. (5) An endpoint of the
+\code{++} operator can not be an indexed name, and a quoted name is never
+expanded. Indexed names are only available in the default parser
+(\code{parser = "open"}).
+
+For each element of the parameter table that is generated from a statement
+in which the left- and the right-hand side carry the same index, the
+column \code{lag} of the parameter table contains the difference between
+the index values of the two sides: 1 for \code{wx2 ~ wx1}, 0 for
+\code{wx2 ~~ wy2}, and \code{NA} for all other elements. The column is only
+present if the syntax contains indexed names.
+}
+
 \section{Random slopes (two-level models)}{
 In a two-level model (with a \code{cluster=} argument), the \code{rv()}
 modifier can be used in the level-1 (within) part of the model to turn a

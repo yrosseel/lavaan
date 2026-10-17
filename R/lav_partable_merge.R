@@ -109,6 +109,13 @@ lav_pt_merge <- function(pt1 = NULL, pt2 = NULL,        # nolint start
     pt2$efa <- rep("", length(pt2$lhs))
   }
 
+  # lag (indexed names)
+  if (is.null(pt1$lag) && !is.null(pt2$lag)) {
+    pt1$lag <- rep(NA_integer_, length(pt1$lhs))
+  } else if (is.null(pt2$lag) && !is.null(pt1$lag)) {
+    pt2$lag <- rep(NA_integer_, length(pt2$lhs))
+  }
+
   # start
   if (is.null(pt1$start) && !is.null(pt2$start)) {
     pt1$start <- rep(as.numeric(NA), length(pt1$lhs))

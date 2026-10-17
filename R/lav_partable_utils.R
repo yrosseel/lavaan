@@ -385,7 +385,10 @@ lav_pt_add <- function(partable = NULL, add = list()) {
 
   # add copy of last row
   for (c in seq_along(partable)) {
-    if (is.integer(partable[[c]][[1]])) {
+    if (names(partable)[c] == "lag") {
+      # indexed names: no lag unless given
+      partable[[c]][nel + 1] <- NA_integer_
+    } else if (is.integer(partable[[c]][[1]])) {
       if (partable[[c]][nel] == 0L) {
         partable[[c]][nel + 1] <- 0L
       } else if (partable[[c]][nel] == 1L) {
