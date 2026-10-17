@@ -93,7 +93,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
   #   posterior standard deviations
   # - level = 1: within factor scores, conditional on the posterior
   #   means of the cluster-level random effects (exact posterior means)
-  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+  if (lav_model_rs_flag(lavmodel)) {
     if (!lav_keyword_canonical(type) %in%
         c("latent", "lv", "factor", "factor.score", "factorscore")) {
       lav_msg_stop(gettext(

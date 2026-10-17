@@ -25,9 +25,17 @@
 #   for its value: s =~ (t-1)*y[t in 1:5]; a bare index as the whole modifier
 #   (t*x[t]) is an error (it reads as a label)
 # - no space between a name and its index; no text after the index
+#
+# Long panel data (panel= in a two-level model; long_lags = TRUE): an index
+# that is NOT bound refers to the time variable of the data: in
+# y ~ y[t-1] + x[t-1], the names y[t-1] and x[t-1] are the values at the
+# previous occasion of the same id; they become the observed variables
+# y.lag1 and x.lag1 (y[t+1] becomes y.lead1), which lavaan creates in the
+# data (lav_data_panel_long). A name without index is the current time
+# (for the 'lag' column of the parameter table).
 # ---------------------------------------------------------------------------- #
 
-lav_expand_index <- function(modellist, modelsrc, types) {
+lav_expand_index <- function(modellist, modelsrc, types, long_lags = FALSE) {
   is_open <- modellist$elem_type == types$symbol &
     modellist$elem_text %in% c("[", "]")
   if (!any(is_open)) {
@@ -59,6 +67,7 @@ lav_expand_index <- function(modellist, modelsrc, types) {
 
   frm_numbers <- unique(modellist$elem_formula_number)
   new_frm <- 0L
+  lagged <- NULL # long data: the lagged variables (name, var, lag)
   for (frm in frm_numbers) {
     idx <- which(modellist$elem_formula_number == frm)
     stmt <- lav_parse_sublist(modellist, idx)
@@ -73,7 +82,8 @@ lav_expand_index <- function(modellist, modelsrc, types) {
     keep <- stmt$elem_type != types$newline
     trailing_pos <- stmt$elem_pos[length(stmt$elem_pos)]
     stmt <- lav_parse_sublist(stmt, which(keep))
-    copies <- lav_expand_index_statement(stmt, modelsrc, types)
+    copies <- lav_expand_index_statement(stmt, modelsrc, types, long_lags)
+    lagged <- rbind(lagged, attr(copies, "lagged"))
     if (length(copies) == 0L) {
       tl <- lav_parse_txtloc(modelsrc, stmt$elem_pos[1L])
       lav_msg_warn(
@@ -88,12 +98,21 @@ lav_expand_index <- function(modellist, modelsrc, types) {
       out <- add_tokens(out, newline_token(trailing_pos), new_frm)
     }
   }
+  if (!is.null(lagged)) {
+    attr(out, "lagged") <- unique(lagged)
+  }
   out
+}
+
+# the name of a lagged (lag > 0) or lead (lag < 0) variable in long data
+lav_lag_name <- function(var, lag) {
+  ifelse(lag > 0L, paste0(var, ".lag", lag), paste0(var, ".lead", -lag))
 }
 
 # expand one statement (a token list without line breaks) into a list of
 # token lists, one per combination of index values
-lav_expand_index_statement <- function(stmt, modelsrc, types) {
+lav_expand_index_statement <- function(stmt, modelsrc, types,
+                                       long_lags = FALSE) {
   ntok <- length(stmt$elem_type)
   txt <- stmt$elem_text
   tp <- stmt$elem_type
@@ -168,6 +187,9 @@ lav_expand_index_statement <- function(stmt, modelsrc, types) {
   # 2. the bindings, in order of appearance
   bind_flag <- vapply(groups, function(g) g$binding, logical(1L))
   bindings <- groups[bind_flag]
+  if (length(bindings) == 0L && long_lags) {
+    return(lav_expand_index_long(stmt, groups, in_bracket, modelsrc, types))
+  }
   if (length(bindings) == 0L) {
     tl <- where(groups[[1L]]$name_i)
     lav_msg_stop(gettextf("the index '%s' is not bound in this statement (bind it
@@ -415,4 +437,70 @@ lav_expand_index_parse <- function(name_i, open_i, close_i, stmt, types,
   res$hi <- lav_expand_index_bound(colon + 1L, close_i - 1L)
   res$width <- max(res$lo$width, res$hi$width)
   res
+}
+
+# long panel data: a statement whose indices are not bound; the index is
+# the time variable of the data, and x[t-k] is the variable x.lagk
+lav_expand_index_long <- function(stmt, groups, in_bracket, modelsrc,
+                                  types) {
+  ntok <- length(stmt$elem_type)
+  txt <- stmt$elem_text
+  tp <- stmt$elem_type
+  pos <- stmt$elem_pos
+  where <- function(i) lav_parse_txtloc(modelsrc, pos[i])
+  inames <- unique(vapply(groups, function(g) g$index, character(1L)))
+  if (length(inames) > 1L) {
+    tl <- where(groups[[1L]]$name_i)
+    lav_msg_stop(gettextf(
+      "in long panel data, a statement can only use one time index (found
+      %s).", lav_msg_view(inames, "none")),
+      tl[1L], footer = tl[2L])
+  }
+  idx <- inames
+  bare <- which(tp == types$identifier & !in_bracket & txt == idx)
+  bare <- setdiff(bare, vapply(groups, function(g) g$name_i, integer(1L)))
+  if (length(bare) > 0L) {
+    tl <- where(bare[1L])
+    lav_msg_stop(gettextf(
+      "in long panel data, the index '%s' refers to the time variable of the
+      data, and has no value of its own.", idx),
+      tl[1L], footer = tl[2L])
+  }
+  # every name without index is the current time (offset 0)
+  tok <- list(elem_pos = integer(0L), elem_type = integer(0L),
+              elem_text = character(0L), elem_index = character(0L),
+              elem_offset = integer(0L))
+  lagged <- NULL
+  gi <- 1L
+  k <- 1L
+  while (k <= ntok) {
+    if (gi <= length(groups) && k == groups[[gi]]$name_i) {
+      g <- groups[[gi]]
+      lag <- -g$offset
+      nm <- if (lag == 0L) txt[k] else lav_lag_name(txt[k], lag)
+      if (lag != 0L) {
+        lagged <- rbind(lagged, data.frame(name = nm, var = txt[k],
+                                           lag = lag,
+                                           stringsAsFactors = FALSE))
+      }
+      tok$elem_pos <- c(tok$elem_pos, pos[k])
+      tok$elem_type <- c(tok$elem_type, types$identifier)
+      tok$elem_text <- c(tok$elem_text, nm)
+      tok$elem_index <- c(tok$elem_index, idx)
+      tok$elem_offset <- c(tok$elem_offset, g$offset)
+      k <- g$close_i + 1L
+      gi <- gi + 1L
+      next
+    }
+    tok$elem_pos <- c(tok$elem_pos, pos[k])
+    tok$elem_type <- c(tok$elem_type, tp[k])
+    tok$elem_text <- c(tok$elem_text, txt[k])
+    tok$elem_index <- c(tok$elem_index,
+                        if (tp[k] == types$identifier) idx else "")
+    tok$elem_offset <- c(tok$elem_offset, 0L)
+    k <- k + 1L
+  }
+  copies <- list(tok)
+  attr(copies, "lagged") <- lagged
+  copies
 }

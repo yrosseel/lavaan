@@ -56,6 +56,14 @@
 # loops. (cfr. the 'partial sufficient statistics' of Mplus.)
 
 
+# use the random-slope kernel? (random slopes, or -- for lagged covariates
+# in long panel data (panel=) -- conditioning on the observed within-only
+# covariates, as Mplus does for WITHIN= variables, without random slopes)
+lav_model_rs_flag <- function(lavmodel) {
+  length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L ||
+    isTRUE(lavmodel@modprop$within_x_cond)
+}
+
 # collect and validate all static information needed for the random-slope
 # kernels; returns an index map ('rs_info') that is computed only once
 # (and cached in lavcache[[g]]$rs)
@@ -99,7 +107,7 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
         "random slopes (rv() modifier) can only be used in the level-1
          (within) part of the model."))
     }
-    if (length(rs_idx) == 0L) {
+    if (length(rs_idx) == 0L && !isTRUE(lavmodel@modprop$within_x_cond)) {
       lav_msg_stop(gettext("no random-slope (rv) regressions found at
                             level 1."))
     }

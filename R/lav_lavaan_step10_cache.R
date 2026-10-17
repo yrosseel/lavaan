@@ -344,7 +344,7 @@ lav_step10_cache <- function(slot_cache = NULL,
   # random slopes (rv() modifier): store the index map and the
   # per-cluster crossproduct statistics (new in 0.7-1)
   if (isTRUE(lavoptions$.rv) ||
-      length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+      lav_model_rs_flag(lavmodel)) {
     if (lavdata@data.type != "full") {
       lav_msg_stop(gettext(
         "random slopes (rv() modifier) require full (raw) data."))

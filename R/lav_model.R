@@ -536,6 +536,11 @@ lav_model <- function(lavpartable = NULL,
     nmat = nmat,
     m_free_idx = m_free_idx
   )
+  # lagged covariates in long panel data: condition on the observed
+  # within-only covariates (the random-slope kernel, without random slopes)
+  if (isTRUE(lavoptions$.within_x_cond)) {
+    modprop$within_x_cond <- TRUE
+  }
 
   # GLS: the gradient reconstructs the (possibly rescaled) V11 block of
   # the normal-theory weight matrix without forming WLS.V, so it needs

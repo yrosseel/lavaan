@@ -1,6 +1,7 @@
 lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
                                                model            = NULL,
-                                               dotdotdot_parser = "new") {
+                                               dotdotdot_parser = "new",
+                                               long_lags        = FALSE) {
   # if slotPartable not NULL copy to flat_model
   # else
   #   if model is of type character
@@ -25,6 +26,14 @@ lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
   # 1a. get ov.names and ov.names.x (per group) -- needed for lav_lavdata()
   if (!is.null(slot_par_table)) {
     flat_model <- slot_par_table
+  } else if (is.character(model) && long_lags) {
+    # long panel data (panel=): unbound indices are lags (y[t-1]); only the
+    # default ("open") parser knows indexed names
+    if (!is.null(dotdotdot_parser) && tolower(dotdotdot_parser) != "open") {
+      lav_msg_stop(gettext(
+        "panel= needs the default parser (parser = \"open\")."))
+    }
+    flat_model <- lav_parse_model_string_open(model, long_lags = TRUE)
   } else if (is.character(model)) {
     if (is.null(dotdotdot_parser)) {
       flat_model <- lavParseModelString(model)

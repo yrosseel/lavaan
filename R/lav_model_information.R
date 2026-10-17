@@ -510,7 +510,7 @@ lav_model_info_firstorder <- function(lavmodel = NULL,
   # convention for two-level models is per *cluster*: B0 =
   # crossprod(scores) / nclusters (matching the hessian-based observed
   # information, which is also expressed per cluster)
-  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+  if (lav_model_rs_flag(lavmodel)) {
     g <- 1L # single group only (enforced elsewhere)
     rs <- lavcache[[g]]$rs
     if (is.null(rs)) {

@@ -19,47 +19,13 @@ lav_data_panel <- function(data = NULL, panel = NULL, flat_model = NULL,
                            ordered = NULL, aux = NULL, group = NULL,
                            cluster = NULL, sampling_weights = NULL) {
   spec <- lav_data_panel_spec(panel)
-  if (is.null(data) || !is.data.frame(data)) {
-    lav_msg_stop(gettext(
-      "the panel= argument needs (long) raw data in the data= argument."))
-  }
+  temp <- lav_data_panel_check(data, spec)
+  data <- temp$data
+  id <- temp$id
+  time_int <- temp$time
   id_name <- spec$id
   time_name <- spec$time
   sep <- spec$sep
-  for (v in c(id_name, time_name)) {
-    if (!v %in% names(data)) {
-      lav_msg_stop(gettextf(
-        "panel= variable %s not found in the data.", dQuote(v, FALSE)))
-    }
-  }
-
-  # rows without id or time are useless
-  id <- data[[id_name]]
-  time <- data[[time_name]]
-  if (is.factor(time)) time <- as.character(time)
-  time_num <- suppressWarnings(as.numeric(time))
-  bad_time <- !is.na(time) & (is.na(time_num) | time_num < 0 |
-                                time_num != round(time_num))
-  if (any(bad_time)) {
-    lav_msg_stop(gettextf(
-      "the time variable %1$s of panel= must contain non-negative integers
-      (found %3$s); recode it first, for example with
-      as.integer(factor(%2$s)).", dQuote(time_name, FALSE), time_name,
-      dQuote(as.character(time[which(bad_time)[1L]]), FALSE)))
-  }
-  drop_idx <- which(is.na(id) | is.na(time_num))
-  if (length(drop_idx) > 0L) {
-    lav_msg_warn(gettextf(
-      "%1$s row(s) of the data have a missing value for the id or the time
-      variable of panel=, and are removed.", length(drop_idx)))
-    data <- data[-drop_idx, , drop = FALSE]
-    id <- id[-drop_idx]
-    time_num <- time_num[-drop_idx]
-  }
-  if (nrow(data) == 0L) {
-    lav_msg_stop(gettext("no rows left in the data for panel=."))
-  }
-  time_int <- as.integer(time_num)
 
   # one row per id: positions of the rows per (id, time)
   ids <- unique(id)
@@ -222,4 +188,125 @@ lav_data_panel_model_names <- function(flat_model) {
   nms <- c(flat_model$lhs[rel], flat_model$rhs[rel])
   nms <- unlist(strsplit(nms, ":", fixed = TRUE))
   unique(nms[nzchar(nms)])
+}
+
+# check the id and time variables of panel=; remove rows with a missing id
+# or time; returns the data and the id and (integer) time vectors
+lav_data_panel_check <- function(data = NULL, spec = NULL) {
+  if (is.null(data) || !is.data.frame(data)) {
+    lav_msg_stop(gettext(
+      "the panel= argument needs (long) raw data in the data= argument."))
+  }
+  id_name <- spec$id
+  time_name <- spec$time
+  for (v in c(id_name, time_name)) {
+    if (!v %in% names(data)) {
+      lav_msg_stop(gettextf(
+        "panel= variable %s not found in the data.", dQuote(v, FALSE)))
+    }
+  }
+
+  # rows without id or time are useless
+  id <- data[[id_name]]
+  time <- data[[time_name]]
+  if (is.factor(time)) time <- as.character(time)
+  time_num <- suppressWarnings(as.numeric(time))
+  bad_time <- !is.na(time) & (is.na(time_num) | time_num < 0 |
+                                time_num != round(time_num))
+  if (any(bad_time)) {
+    lav_msg_stop(gettextf(
+      "the time variable %1$s of panel= must contain non-negative integers
+      (found %3$s); recode it first, for example with
+      as.integer(factor(%2$s)).", dQuote(time_name, FALSE), time_name,
+      dQuote(as.character(time[which(bad_time)[1L]]), FALSE)))
+  }
+  drop_idx <- which(is.na(id) | is.na(time_num))
+  if (length(drop_idx) > 0L) {
+    lav_msg_warn(gettextf(
+      "%1$s row(s) of the data have a missing value for the id or the time
+      variable of panel=, and are removed.", length(drop_idx)))
+    data <- data[-drop_idx, , drop = FALSE]
+    id <- id[-drop_idx]
+    time_num <- time_num[-drop_idx]
+  }
+  if (nrow(data) == 0L) {
+    lav_msg_stop(gettext("no rows left in the data for panel=."))
+  }
+  list(data = data, id = id, time = as.integer(time_num))
+}
+
+# ------------------------ long panel data, two-level ------------------------ #
+# panel= in a two-level model: the data stay long (one row per occasion),
+# the id variable is the cluster variable, and the lagged variables of the
+# model (y[t-1] in the syntax, y.lag1 in the parameter table; see
+# lav_expand_index_long) are created: y.lag1 is the value of y at time - 1
+# for the same id, and missing if there is no such occasion (no row, or a
+# missing value). The lags follow the values of the time variable, so gaps
+# in the measurement occasions are respected.
+lav_data_panel_long <- function(data = NULL, panel = NULL, lagged = NULL,
+                                cluster = NULL, flat_model = NULL) {
+  spec <- lav_data_panel_spec(panel)
+  temp <- lav_data_panel_check(data, spec)
+  data <- temp$data
+  id <- temp$id
+  time_int <- temp$time
+  id_name <- spec$id
+
+  # the cluster variable is the id variable
+  if (!is.null(cluster) && !identical(cluster, id_name)) {
+    lav_msg_stop(gettextf(
+      "panel=: in a two-level model, the cluster variable is the id
+      variable %1$s (found cluster = %2$s).", dQuote(id_name, FALSE),
+      dQuote(paste(cluster, collapse = " "), FALSE)))
+  }
+
+  # one row per (id, time)
+  key <- paste(match(id, unique(id)), time_int, sep = ":")
+  if (anyDuplicated(key)) {
+    dup <- which(duplicated(key))[1L]
+    lav_msg_stop(gettextf(
+      "panel=: the data contain more than one row for id %1$s at time %2$s;
+      every id can have at most one row per occasion.",
+      dQuote(as.character(id[dup]), FALSE), time_int[dup]))
+  }
+
+  # the lagged variables
+  for (i in seq_len(NROW(lagged))) {
+    nm <- lagged$name[i]
+    v <- lagged$var[i]
+    if (nm %in% names(data)) {
+      lav_msg_stop(gettextf(
+        "panel=: the data already contain a variable %1$s; this name is
+        used for %2$s at an earlier (or later) occasion.",
+        dQuote(nm, FALSE), dQuote(v, FALSE)))
+    }
+    if (!v %in% names(data)) {
+      lav_msg_stop(gettextf(
+        "panel=: the lagged variable %s is not found in the data.",
+        dQuote(v, FALSE)))
+    }
+    other_key <- paste(match(id, unique(id)), time_int - lagged$lag[i],
+                       sep = ":")
+    data[[nm]] <- data[[v]][match(other_key, key)]
+  }
+
+  # occasions without the value of a lagged predictor (the first occasion
+  # of each id, an occasion after a gap) can not be used: the likelihood is
+  # conditional on the predictors (Mplus drops them silently as well);
+  # remove them here, rather than with a warning about missing values in
+  # exogenous variables
+  if (NROW(lagged) > 0L) {
+    endo <- character(0L)
+    if (!is.null(flat_model)) {
+      endo <- c(flat_model$lhs[flat_model$op == "~"],
+                flat_model$rhs[flat_model$op == "=~"])
+    }
+    pred <- setdiff(unique(lagged$name), endo)
+    if (length(pred) > 0L) {
+      keep <- stats::complete.cases(data[, pred, drop = FALSE])
+      data <- data[keep, , drop = FALSE]
+    }
+  }
+
+  list(data = data, cluster = id_name)
 }

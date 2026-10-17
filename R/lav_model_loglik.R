@@ -61,7 +61,7 @@ lav_model_loglik <- function(lavdata = NULL,
   if (logl_ok) {
     for (g in seq_len(ngroups)) {
       if (lavdata@nlevels > 1L &&
-          (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L)) {
+          lav_model_rs_flag(lavmodel)) {
         # random slopes (rv() modifier): conditional (on the exogenous
         # covariates) observed-data loglikelihood
         rs <- lavcache[[g]]$rs

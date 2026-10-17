@@ -410,8 +410,7 @@ lav_fit <- function(object, fit_measures = "all",
   # random slopes (rv() modifier): no test statistics (and no
   # comparable h1 loglikelihood) exist, but the loglikelihood-based
   # measures -- and the H0 scaling correction factor -- are available
-  if (length(object@Model@rv.ov) > 0L ||
-      length(object@Model@rv.lv) > 0L) {
+  if (lav_model_rs_flag(object@Model)) {
     return(lav_fit_rv(object, fit_measures = fit_measures,
                       output = output))
   }

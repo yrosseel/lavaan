@@ -17,7 +17,7 @@ lav_model_objective <- function(lavmodel = NULL,
 
   # random slopes: if the rs cache is missing (unusual call path),
   # rebuild it from the raw data
-  if ((length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) &&
+  if (lav_model_rs_flag(lavmodel) &&
       (is.null(lavcache) || is.null(lavcache[[1]]$rs))) {
     if (is.null(lavcache)) {
       lavcache <- vector("list", length = lavdata@ngroups)

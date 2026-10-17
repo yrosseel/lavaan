@@ -1230,6 +1230,13 @@ lav_model_est_h1_saturated <- function(lavmodel = NULL,
     return(empty)
   }
 
+  # random slopes, or lagged covariates in long panel data: the likelihood
+  # is conditional on the within-only covariates, and the (joint) h1
+  # estimates of a saturated block are not its conditional ML estimates
+  if (lav_model_rs_flag(lavmodel)) {
+    return(empty)
+  }
+
   nlevels <- lavdata@nlevels
   ngroups <- lavdata@ngroups
 

@@ -1,5 +1,6 @@
 lav_step02_options <- function(slot_options = NULL,
                                       slot_data = NULL,
+                                      within_x_cond = FALSE,
                                       flat_model = NULL,
                                       ordered = NULL,
                                       ordered_orig = NULL,
@@ -232,6 +233,10 @@ lav_step02_options <- function(slot_options = NULL,
 
     # random slopes (rv() modifier)?
     opt$.rv <- !is.null(flat_model$rv) && any(nchar(flat_model$rv) > 0L)
+
+    # lagged covariates in long panel data (panel=): condition on the
+    # observed within-only covariates, using the random-slope kernel
+    opt$.within_x_cond <- isTRUE(within_x_cond)
 
     # sampling weights? (internal flag; used when resolving estimator
     # defaults, e.g. the se/test defaults for continuous ULS)

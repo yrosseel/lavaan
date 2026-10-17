@@ -88,7 +88,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
     }
 
     # random slopes? check if the EM version can handle this model
-    rv_flag <- length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L
+    rv_flag <- lav_model_rs_flag(lavmodel)
     if (lavoptions$optim.method == "em" && rv_flag) {
       em_reason <- lav_mvn_cl_rs_em_ok(lavcache[[1]]$rs)
       if (length(em_reason) > 0L) {

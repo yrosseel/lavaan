@@ -720,7 +720,8 @@ lav_parse_modenv <- function(config, side) {
 
 # -------------------- main parsing function --------------------------------- #
 lav_parse_model_string_open <- function(model_syntax = "",
-                                        as_data_frame = FALSE) {
+                                        as_data_frame = FALSE,
+                                        long_lags = FALSE) {
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(
     pattern = "\u02dc",
@@ -735,7 +736,7 @@ lav_parse_model_string_open <- function(model_syntax = "",
   }
   # parsed-syntax cache: the hash is only a bucket key, the source text is
   # compared on retrieval (issue #636, see lav_syntax_cache_get())
-  cachesrc <- paste0(modelsrc, as_data_frame)
+  cachesrc <- paste0(modelsrc, as_data_frame, if (long_lags) "long")
   hashstring <- paste0("mdl_o_", lav_char2hash(cachesrc))
   cached <- lav_syntax_cache_get(hashstring, cachesrc)
   if (!is.null(cached)) {
@@ -757,7 +758,8 @@ lav_parse_model_string_open <- function(model_syntax = "",
       formula = modellist$elem_formula_number
     ))
   }
-  modellist <- lav_expand_index(modellist, modelsrc, types)
+  modellist <- lav_expand_index(modellist, modelsrc, types, long_lags)
+  lagged <- attr(modellist, "lagged") # long panel data: lagged variables
   modellist <- lav_expand_plusplus(modellist, modelsrc, types)
   formulalist <- lav_parse_formulas_open(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat_-----
@@ -791,7 +793,7 @@ lav_parse_model_string_open <- function(model_syntax = "",
   }
   lav_parse_final_operations(tmplist$flat, tmplist$modlist, config,
     tmplist$constraints, as_data_frame, hashstring, cachesrc,
-    indexed = !is.null(modellist$elem_index))
+    indexed = !is.null(modellist$elem_index), lagged = lagged)
 }
 
 lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
@@ -1270,7 +1272,8 @@ lav_parse_index_product <- function(formule, colon) {
 
 lav_parse_final_operations <- function(flat, modlist, config,
                         constraints, as_data_frame, hashstring,
-                        cachesrc = "", indexed = FALSE) {
+                        cachesrc = "", indexed = FALSE,
+                        lagged = NULL) {
   # update flat (omit items without operator)
   filled_ones <- which(flat$op != "")
   flat$lhs <- flat$lhs[filled_ones]
@@ -1379,6 +1382,8 @@ lav_parse_final_operations <- function(flat, modlist, config,
   attr(flat, "constraints") <- constraints
   # indexed names: the parameter table gets a 'lag' column
   if (indexed) attr(flat, "indexed") <- TRUE
+  # long panel data: the lagged variables to create (name, var, lag)
+  if (!is.null(lagged)) attr(flat, "lagged") <- lagged
   lav_syntax_cache_set(hashstring, cachesrc, flat)
   flat
 }

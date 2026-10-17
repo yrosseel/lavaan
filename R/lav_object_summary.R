@@ -365,8 +365,7 @@ lav_object_summary <- function(object, header = TRUE,
          older version of lavaan; please rerun sam()"))
     } else if (length(object@Options$test) == 1L &&
       object@Options$test == "none" &&
-      length(object@Model@rv.ov) == 0L &&
-      length(object@Model@rv.lv) == 0L) {
+      !lav_model_rs_flag(object@Model)) {
       # (random-slope models do provide the loglikelihood-based
       #  measures, despite test = "none")
       lav_msg_warn(gettext(

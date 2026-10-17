@@ -74,7 +74,12 @@ in a multiple group analysis.}
     over time must be referred to at a given time. In \code{ordered} and
     \code{aux}, the name of a time-varying variable stands for all its
     wide variables. The rows of the wide data are the ids, in the order of
-    their first appearance in the data.}
+    their first appearance in the data. In a two-level model (with
+    \code{level:} blocks in the syntax), the data are not reshaped: every
+    row is an occasion, the id variable is the cluster variable, and the
+    model can use lagged variables (\code{y ~ y[t-1]}: the value of
+    \code{y} at the previous occasion); see the section on indexed names
+    in \code{\link{model.syntax}}.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
 \item{wls_v}{A user provided weight matrix to be used by estimator \code{"WLS"};

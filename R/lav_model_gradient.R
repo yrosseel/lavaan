@@ -31,7 +31,7 @@ lav_model_grad <- function(lavmodel = NULL,
   # a small Jacobian of the implied map); falls back to a numerical
   # approximation of the gradient of the objective if the analytic
   # path is not available
-  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+  if (lav_model_rs_flag(lavmodel)) {
     if (type != "free") {
       lav_msg_fixme(
         "gradient with type != \"free\" is not available for models

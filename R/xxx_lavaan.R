@@ -141,11 +141,39 @@ lavaan <- function(
   flat_model <- lav_step01_ovnames_initflat(
     slot_par_table   = slot_par_table,
     model            = model,
-    dotdotdot_parser = useparser
+    dotdotdot_parser = useparser,
+    long_lags        = !is.null(panel)
   )
 
-  # ------------ long panel data -> wide data ----------------------------
-  if (!is.null(panel)) {
+  # ------------ long panel data ------------------------------------------
+  # - two-level model: the data stay long, the id is the cluster variable,
+  #   and the lagged variables (y[t-1]) are created; the likelihood is then
+  #   conditional on the observed within-only covariates
+  # - otherwise: long data -> wide data (one row per id)
+  within_x_cond <- FALSE
+  lagged <- attr(flat_model, "lagged")
+  panel_twolevel <- !is.null(panel) && !is.null(flat_model$op) &&
+    any(flat_model$op == ":" & tolower(flat_model$lhs) == "level")
+  if (panel_twolevel) {
+    temp <- lav_data_panel_long(
+      data    = data,
+      panel   = panel,
+      lagged  = lagged,
+      cluster = cluster,
+      flat_model = flat_model
+    )
+    data <- temp$data
+    cluster <- temp$cluster
+    within_x_cond <- !is.null(lagged)
+  } else if (!is.null(panel)) {
+    if (!is.null(lagged)) {
+      lav_msg_stop(gettextf(
+        "panel=: a variable at an earlier occasion (such as %1$s[t-1]) in
+        long data needs a two-level model (level: 1 and level: 2 blocks); in
+        a single-level model, the data are reshaped to wide data, and the
+        index must be bound, as in %1$s[t in 2:4] ~ %1$s[t-1].",
+        lagged$var[1L]))
+    }
     temp <- lav_data_panel(
       data             = data,
       panel            = panel,
@@ -331,6 +359,7 @@ lavaan <- function(
   lavoptions <- lav_step02_options(
     slot_options      = slot_options,
     slot_data         = slot_data,
+    within_x_cond     = within_x_cond,
     flat_model       = flat_model,
     ordered          = ordered,
     ordered_orig     = ordered_orig,

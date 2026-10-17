@@ -671,6 +671,51 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
+  # lagged covariates in long panel data (panel=) ####
+  # (two-level; the likelihood is conditional on the observed within-only
+  #  covariates, as for random slopes: same kernel, same restrictions)
+  if (isTRUE(opt$.within_x_cond)) {
+    if (!isTRUE(opt$.multilevel)) {
+      lav_msg_stop(gettext(
+        "lagged variables in long panel data (panel=) require a two-level
+         model (level: 1 and level: 2 blocks)."))
+    }
+    if (opt$.categorical) {
+      lav_msg_stop(gettext(
+        "lagged variables in long panel data (panel=) are not supported for
+         categorical data."))
+    }
+    if (isTRUE(opt$.sampling.weights)) {
+      lav_msg_stop(gettext(
+        "lagged variables in long panel data (panel=) are not supported in
+         combination with sampling weights."))
+    }
+    if (!opt$estimator %in% c("ml", "mlr", "default")) {
+      lav_msg_stop(gettextf(
+        "lagged variables in long panel data (panel=) require estimator = %s
+         or %s.", dQuote("ML"), dQuote("MLR")))
+    }
+    if (opt$missing %in% c("ml.x", "two.stage", "robust.two.stage")) {
+      lav_msg_stop(gettextf(
+        "lagged variables in long panel data (panel=) support missing = %s or
+         missing = %s only.", dQuote("listwise"), dQuote("ml")))
+    }
+    if (isTRUE(opt$conditional.x)) {
+      lav_msg_stop(gettext(
+        "lagged variables in long panel data (panel=) are not supported in
+         combination with conditional_x = TRUE."))
+    }
+    if (!all(opt$test %in% c("default", "none")) &&
+        !(opt$estimator == "mlr" &&
+          all(opt$test %in% c("yuan.bentler", "yuan.bentler.mplus")))) {
+      lav_msg_warn(gettext(
+        "test statistics are not available (yet) for models with lagged
+         variables in long panel data; test set to \"none\"."))
+      opt$test <- "none"
+    }
+    opt$.rv <- TRUE
+  }
+
   # random slopes (rv() modifier) ####
   if (is.null(opt$.rv)) {
     opt$.rv <- FALSE

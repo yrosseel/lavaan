@@ -822,7 +822,7 @@ lav_model_objective_2l <- function(lavmodel = NULL,
                          lavcache_group = NULL, # only for random slopes
                          group = 1L) {
   # random slopes? (rv() modifier) -> use the random-slope kernel
-  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+  if (lav_model_rs_flag(lavmodel)) {
     rs <- lavcache_group$rs
     if (is.null(rs)) {
       lav_msg_fixme(

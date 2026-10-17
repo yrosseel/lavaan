@@ -570,6 +570,51 @@ expanded. Indexed names are only available in the default parser
 occasion), the \code{panel=} argument of \code{\link{lavaan}} reshapes the
 data to this wide format, so that the same syntax can be used.
 
+\emph{Lagged variables in long data (two-level models).} With
+\code{panel = c(id = "pid", time = "day")} and a two-level model (with
+\code{level: 1} and \code{level: 2} blocks), the data are not reshaped:
+each row is an occasion, and the id variable is the cluster variable. An
+index that is \emph{not} bound then refers to the time variable of the
+data: \code{y[t-1]} is the value of \code{y} at the previous occasion of the
+same person, \code{y[t-2]} the value two occasions earlier (and
+\code{y[t+1]} the next one). For example, a bivariate first-order
+(vector) autoregressive model with random intercepts:
+\preformatted{ level: 1
+   y ~ y[t-1] + x[t-1]
+   x ~ x[t-1] + y[t-1]
+   y ~~ x
+ level: 2
+   y ~~ y + x
+   x ~~ x}
+The lagged variables are created in the data, with the names
+\code{y.lag1}, \code{x.lag1} (or \code{y.lead1} for \code{y[t+1]}), under
+which they appear in the output; the \code{lag} column of the parameter
+table contains 1 for \code{y ~ y.lag1}. The lags follow the values of the
+time variable (which must contain integers): if an occasion is missing, the
+lagged value at the next occasion is missing too. Occasions without the
+values of the lagged predictors (the first occasion of each person, and the
+first occasion after a gap) are not used. A name without index is the
+value at the current occasion. A random autoregressive effect is written
+with the \code{rv()} modifier, as in \code{y ~ rv("phi")*y[t-1]} (see
+Random slopes above).
+
+These lagged variables are observed variables at the within level: they
+are not centered, and the likelihood is \emph{conditional} on them (and on
+all other observed within-only covariates), as in \code{lme4::lmer()} with
+a lagged predictor, or in Mplus with lagged variables computed by hand and
+declared as \code{WITHIN} variables (\code{ESTIMATOR = ML}). The first
+occasion of each person is conditioned upon, but the random intercept is
+assumed to be independent of it, although in an autoregressive process it
+is not (the 'initial condition' problem, which matters mostly for short
+series); a common remedy is to add the first observed value of \code{y} of
+each person as a between-level covariate. This differs from the dynamic
+structural equation models (DSEM) of Mplus, which decompose the lagged
+variables into latent within and between parts (latent centering) and use
+Bayesian estimation. Lagged variables in long data require estimator
+\code{"ML"} or \code{"MLR"} and continuous data (\code{missing = "ml"} is
+supported); as for random slopes, no chi-square test statistic is computed,
+but the loglikelihood and information criteria are available.
+
 For each element of the parameter table that is generated from a statement
 in which the left- and the right-hand side carry the same index, the
 column \code{lag} of the parameter table contains the difference between
