@@ -252,6 +252,20 @@ be split over multiple lines. Both the sharp (#) and the exclamation (!)
 characters can be used to start a comment. Multiple formulas can be placed
 on a single line if they are separated by a semicolon (;).
 
+A formula continues on the next line when a line ends with an operator
+(\code{+}, \code{-}, \code{*}, \code{/}, \code{^}, \code{++}, a comma, an
+opening parenthesis, or any of the lavaan operators such as \code{=~} or
+\code{:=}), or when the next line starts with \code{+}, \code{++}, \code{*},
+a closing parenthesis, or a lavaan operator. A semicolon always ends a
+formula. Variable names that contain spaces (or other special characters)
+must be quoted, with single or double quotes (\code{"my var" =~ x1 + 'x 2'});
+two names separated only by spaces are an error. In constraints, \code{>=}
+and \code{<=} may be used as synonyms of \code{>} and \code{<}. Characters
+that look like an operator but are different characters (full-width forms,
+the small tilde, the minus sign and the en dash, `smart' quotes, no-break
+spaces), as produced by word processors or web pages, are read as the
+corresponding ASCII character; inside quoted names they are left as they are.
+
 There can be seven types of formula-like expressions in the model syntax:
 \enumerate{
 

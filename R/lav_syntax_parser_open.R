@@ -20,7 +20,7 @@ lav_parse_options <- function(
   if (is.null(config)) {
     ops = data.frame(
       op = c("=~", "<~", "~*~", "~~", "~", "|~", "==",
-      "<", ">", ":=", ":", "|", "%", ":~"),
+      "<=", ">=", "<", ">", ":=", ":", "|", "%", ":~"),
       pkg = "lavaan"
     )
     mods = data.frame(
@@ -138,7 +138,13 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   elem_i <- 1L
   modelsrcw <- paste0(modelsrc, "\n") # working model, must end
                                       # with a newline for tests via regexpr
-  stringliterals <- gregexpr("\"[^\"]*?[\"\n]", modelsrcw)[[1L]]
+  # 'smart' quotes (word processors, web pages) are plain quotes; they are
+  # folded BEFORE the string literals are located, so that they open and
+  # close a string; single and double quotes are interchangeable
+  modelsrcw <- gsub("[\u201c\u201d]", "\"", modelsrcw)
+  modelsrcw <- gsub("[\u2018\u2019]", "'", modelsrcw)
+  stringliterals <- gregexpr("\"[^\"]*?[\"\n]|'[^']*?['\n]",
+                             modelsrcw)[[1L]]
   if (stringliterals[1L] > -1L) {
     stringliteral_lengths <- attr(stringliterals, "match.length")
     for (i in seq_along(stringliterals)) {
@@ -166,14 +172,24 @@ lav_parse_tokens_open <- function(modelsrc, types) {
       }
     }
   }
-  modelsrcw <- gsub("\t|\r", " ", modelsrcw)
+  # whitespace look-alikes (tab, CR, vertical tab, form feed, no-break
+  # space, figure/narrow/ideographic space, zero-width space, byte-order
+  # mark) are blanks
+  modelsrcw <- gsub("[\t\r\u000b\f\u00a0\u2007\u202f\u3000\u200b\ufeff]",
+                    " ", modelsrcw)
+  # operator look-alikes (full-width forms, small tilde, tilde operator,
+  # minus sign, en dash) are the ASCII operator; the string literals and
+  # the comments are blanked out already, so their content is not touched
+  modelsrcw <- lav_parse_fold_confusables(modelsrcw)
+  # a newline or a ';' ends a statement; the text keeps track of which one,
+  # because a statement never continues across a ';'
   newlines <- gregexpr("[;\n]", modelsrcw)[[1L]]
   if (newlines[1L] > -1L) {
     for (i in seq_along(newlines)) {
       pfpos <- newlines[i]
+      elem_text[elem_i] <- substr(modelsrcw, pfpos, pfpos)
       substr(modelsrcw, pfpos, pfpos) <- "\n"
       elem_pos[elem_i] <- pfpos
-      elem_text[elem_i] <- "\n"
       elem_type[elem_i] <- types$newline
       elem_i <- elem_i + 1L
     }
@@ -183,14 +199,13 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   for (opr in config$operators$op[nchar(config$operators$op) == 2L]) {
     oprre <- paste0("([^=~%])[", substr(opr, 1L, 1L), "]( +)[",
                                             substr(opr, 2L, 2L), "]([^=~%])")
-    oprsub <- paste0("\\1", opr, "\\2\\3")
     if (grepl(oprre, modelsrcw)) {
+      # up to 0.7-2 the operator was glued together with a warning
       waar <- regexpr(oprre, modelsrcw)[1] + 1L
-      modelsrcw <- gsub(oprre, oprsub, modelsrcw)
       tl <- lav_parse_txtloc(modelsrc, waar)
-      lav_msg_warn(gettextf("splitting of operator '%s' deprecated", opr),
-                  tl[1L],
-                  footer = tl[2L]
+      lav_msg_stop(gettextf("the operator '%s' can not contain spaces", opr),
+                   tl[1L],
+                   footer = tl[2L]
       )
     }
   }
@@ -206,6 +221,13 @@ lav_parse_tokens_open <- function(modelsrc, types) {
       pflen <- lavop_lengths[i]
       elem_pos[elem_i] <- pfpos
       elem_text[elem_i] <- substr(modelsrcw, pfpos, pfpos + pflen - 1L)
+      # '<=' and '>=' are synonyms of '<' and '>' (the constraints are
+      # non-strict anyway); the parameter table keeps the canonical form
+      if (elem_text[elem_i] == "<=") {
+        elem_text[elem_i] <- "<"
+      } else if (elem_text[elem_i] == ">=") {
+        elem_text[elem_i] <- ">"
+      }
       elem_type[elem_i] <- types$lavaanoperator
       substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
       elem_i <- elem_i + 1L
@@ -223,7 +245,9 @@ lav_parse_tokens_open <- function(modelsrc, types) {
       elem_i <- elem_i + 1L
     }
   }
-  symbols <- gregexpr("[,()/*?^']", modelsrcw)[[1L]] # f1=~x2 + 0.5 ? x3
+  # a lone '=' (the operators '==', '=~', ':=' are gone by now) is only
+  # valid for a named argument inside a call (pnorm(a, log.p = TRUE))
+  symbols <- gregexpr("[,()/*?^=]", modelsrcw)[[1L]] # f1=~x2 + 0.5 ? x3
   symbols1 <- gregexpr("[-+][^.0-9]", modelsrcw)[[1L]] # f1=~x2+x3
   symbols2 <- gregexpr("[._0-9a-df-zA-DF-Z)] *[-+][.0-9]", modelsrcw)[[1L]]
                                                   # f1=~x2+2*x3, len-2 !
@@ -257,9 +281,9 @@ lav_parse_tokens_open <- function(modelsrc, types) {
   if (symbols[1L] > -1L) {
     for (i in seq_along(symbols)) {
       pfpos <- symbols[i]
-      substr(modelsrcw, pfpos, pfpos) <- " "
       elem_pos[elem_i] <- pfpos
-      elem_text[elem_i] <- substr(modelsrc, pfpos, pfpos)
+      elem_text[elem_i] <- substr(modelsrcw, pfpos, pfpos) # folded (ASCII)
+      substr(modelsrcw, pfpos, pfpos) <- " "
       elem_type[elem_i] <- types$symbol
       elem_i <- elem_i + 1L
     }
@@ -277,9 +301,9 @@ lav_parse_tokens_open <- function(modelsrc, types) {
     for (i in seq_along(numliterals)) {
       pfpos <- numliterals[i]
       pflen <- numliteral_lengths[i]
-      substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
       elem_pos[elem_i] <- pfpos
-      elem_text[elem_i] <- substr(modelsrc, pfpos, pfpos + pflen - 1L)
+      elem_text[elem_i] <- substr(modelsrcw, pfpos, pfpos + pflen - 1L)
+      substr(modelsrcw, pfpos, pfpos + pflen - 1L) <- strrep(" ", pflen)
       elem_type[elem_i] <- types$numliteral
       elem_i <- elem_i + 1L
     }
@@ -300,7 +324,7 @@ lav_parse_tokens_open <- function(modelsrc, types) {
     }
   }
   # check for uninterpreted chars
-  wrong <- regexpr("[^\"\n ]", modelsrcw)
+  wrong <- regexpr("[^\"'\n ]", modelsrcw) # the quotes of the strings remain
   if (wrong != -1L) {
     tl <- lav_parse_txtloc(modelsrc, wrong)
     lav_msg_stop(gettext("unexpected character"),
@@ -335,29 +359,23 @@ lav_parse_tokens_open <- function(modelsrc, types) {
     }
   }
 
-  # concatenate identifiers with only spaces in between - LDW 22/4/2024
-  elem_i <- length(elem_pos)
-  concatenated <- FALSE
-  while (elem_i > 1L) {
+  # two names (or a name and a number) with only spaces in between: a name
+  # that contains spaces must be quoted ("my var"); up to 0.7-2 the parts
+  # were glued together, with a deprecation warning
+  for (elem_i in seq_len(length(elem_pos) - 1L) + 1L) {
     if (any(elem_type[elem_i] == c(types$identifier, types$numliteral)) &&
         elem_type[elem_i - 1L] == types$identifier) {
-      spaces_between <- elem_pos[elem_i] - elem_pos[elem_i - 1L] -
-        nchar(elem_text[elem_i - 1L])
-      elem_text[elem_i - 1L] <- paste0(
-        elem_text[elem_i - 1L],
-        strrep(" ", spaces_between),
-        elem_text[elem_i]
+      tl <- lav_parse_txtloc(modelsrc, elem_pos[elem_i])
+      lav_msg_stop(
+        gettextf(
+          "unexpected '%1$s' after '%2$s': a name that contains spaces must
+           be quoted (\"%2$s %1$s\"), and two terms must be separated by an
+           operator",
+          elem_text[elem_i], elem_text[elem_i - 1L]),
+        tl[1L],
+        footer = tl[2L]
       )
-      elem_type[elem_i] <- 0L
-      concatenated <- TRUE
     }
-    elem_i <- elem_i - 1L
-  }
-  if (concatenated) { # remove items with type 0
-    elements <- which(elem_type > 0L)
-    elem_pos <- elem_pos[elements]
-    elem_type <- elem_type[elements]
-    elem_text <- elem_text[elements]
   }
 
   list_before_numbering <-  list(
@@ -371,61 +389,55 @@ lav_parse_tokens_open <- function(modelsrc, types) {
 
 # ------------------------ lav_parse_formula_numbers ------------------------- #
 # help function to add formula numbers to tokens
+#
+# a line break ends a statement, unless the statement continues: it does
+# when the last token before the break is a binary operator (+ - * / ^),
+# the series operator ++, a formula, constraint or definition operator, a
+# ',' or a '(' (or '?'), or when the first token after the break is '+',
+# '++', '*', ')' or a formula, constraint or definition operator. A ';'
+# always ends a statement. The same rule applies to every kind of
+# statement.
 # ---------------------------------------------------------------------------- #
 lav_parse_formula_numbers <- function(list_before_numbering, types) {
   elem_pos <- list_before_numbering$elem_pos
   elem_type <- list_before_numbering$elem_type
   elem_text <- list_before_numbering$elem_text
-  # to set formula number
-  elem_formula_number <- rep(0L, length(elem_type))
+  n <- length(elem_type)
+  config <- lav_parse_options()
+  lavops <- setdiff(config$operators$op, ":") # not the block operator
+  cont_after <- c("+", "++", "-", "*", "/", "^", "?", ",", "(", lavops)
+  cont_before <- c("+", "++", "*", ")", lavops)
+  op_types <- c(types$symbol, types$lavaanoperator)
+  is_nl <- elem_type == types$newline
+  is_hard <- is_nl & elem_text == ";"
+  elem_formula_number <- integer(n)
   frm_number <- 1L
-  frm_hasefa <- FALSE
-  frm_lastplus <- FALSE
-  frm_incremented <- FALSE
-  for (i in seq_along(elem_type)) {
-  elem_formula_number[i] <- frm_number
-  if (elem_type[i] == types$identifier && elem_text[i] == "efa") {
-    frm_hasefa <- TRUE
-  }
-  if (any(elem_text[i] ==
-      c("+", "*", "/", "=~", "-", "<~",
-        "~*~", "~~", "~", "|~", "|", "%", "++"))) {
-    if (frm_incremented) {
-      frm_number <- frm_number - 1L
-      elem_formula_number[i] <- frm_number
-      frm_incremented <- FALSE
+  for (i in seq_len(n)) {
+    elem_formula_number[i] <- frm_number
+    if (!is_nl[i]) next
+    # decide once per run of line breaks, at its last one
+    if (i < n && is_nl[i + 1L]) next
+    nxt <- i + 1L
+    prev <- i - 1L
+    while (prev >= 1L && is_nl[prev]) prev <- prev - 1L
+    if (prev < 1L || nxt > n) next # nothing before or after: no statement
+    if (any(is_hard[seq.int(prev + 1L, i)])) {
+      frm_number <- frm_number + 1L
+      next
     }
-    frm_lastplus <- TRUE
-  } else {
-    if (any(elem_type[i] == c(
-      types$stringliteral, types$identifier, types$numliteral,
-      types$stringliteral, types$symbol
-    ))) {
-      frm_lastplus <- FALSE
+    if (elem_type[prev] %in% op_types && elem_text[prev] %in% cont_after) {
+      next
     }
-    if (i > 1 && elem_type[i] != types$newline &&
-        elem_type[i - 1L] == types$lavaanoperator) {
-      frm_hasefa <- FALSE
+    if (elem_type[nxt] %in% op_types && elem_text[nxt] %in% cont_before) {
+      next
     }
-  }
-  if (elem_type[i] == types$newline) {
-    if (i > 1 && elem_type[i - 1L] != types$newline) { # ignore multiple nl's
-      if (!frm_hasefa && !frm_lastplus) {
-        frm_number <- frm_number + 1L
-        frm_incremented <- TRUE
-      } else {
-        frm_hasefa <- FALSE
-      }
-    }
-  } else {
-    frm_incremented <- FALSE
-  }
+    frm_number <- frm_number + 1L
   }
   list(
-  elem_pos = elem_pos, elem_type = elem_type,
-  elem_text = elem_text, elem_formula_number = elem_formula_number
+    elem_pos = elem_pos, elem_type = elem_type,
+    elem_text = elem_text, elem_formula_number = elem_formula_number
   )
- }
+}
 
 # ------------------------ lav_parse_formulas_open ------------------------- #
 # function to group the modellist tokens in 'mono' formulas.
@@ -443,7 +455,7 @@ lav_parse_formulas_open <- function(modellist, modelsrc, types) {
   config <- lav_parse_options()
   group_operator <- ":"
   define_operators <- c(":=", ":~")
-  conditional_operators <- c("==", "<", ">")
+  conditional_operators <- c("==", "<", ">", "<=", ">=")
   non_relational <- config$operators$op %in%
                       c(group_operator, define_operators, conditional_operators)
   relational_operators <- config$operators$op[!non_relational]
@@ -466,6 +478,13 @@ lav_parse_formulas_open <- function(modellist, modelsrc, types) {
     nelem <- length(formul1$elem_type)
     if (length(opi) == 0L) {
       tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[1])
+      if (any(formul1$elem_type == types$symbol & formul1$elem_text == "=")) {
+        lav_msg_stop(
+          gettext("formula without valid operator: unexpected '=' (did you
+                  mean '=='?)"),
+          tl[1L], footer = tl[2L]
+        )
+      }
       lav_msg_stop(gettext("formula without valid operator"),
                    tl[1L],
                    footer = tl[2L]
@@ -512,12 +531,35 @@ lav_parse_formulas_open <- function(modellist, modelsrc, types) {
         j0 <- 1L
         if (j > 1L) j0 <- lhplusjes[j - 1L] + 1L
         j1 <- lhplusjes[j] - 1L
-        if (j1 < j0) next # skip empty parts
+        if (j1 < j0) { # empty part: '+ f =~', 'f + =~'
+          tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[lhplusjes[j]])
+          lav_msg_stop(gettext("empty term before '+' or the operator"),
+                       tl[1L], footer = tl[2L])
+        }
         for (k in seq_along(plusjes)) {
           k0 <- opi + 1L
           k1 <- plusjes[k] - 1L
           if (k > 1L) k0 <- plusjes[k - 1L] + 1L
-          if (k1 < k0) next # skip empty parts
+          if (k1 < k0) { # empty part: '=~ + x1', 'x1 + + x2', 'x1 +'
+            tl <- lav_parse_txtloc(modelsrc,
+                                   formul1$elem_pos[min(plusjes[k], nelem)])
+            lav_msg_stop(gettext("empty term: two consecutive '+', or a
+                                 '+' without a term after it"),
+                         tl[1L], footer = tl[2L])
+          }
+          # a bare number after =~ is a phantom latent variable, and only
+          # makes sense on its own (f =~ 0.5), not next to indicators
+          # (f =~ x1 + 2 is a typo: the 2 used to be taken silently)
+          if (formul1$elem_text[opi] == "=~" && length(plusjes) > 1L &&
+              k1 == k0 && formul1$elem_type[k0] == types$numliteral) {
+            tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[k0])
+            lav_msg_stop(
+              gettext("a number on the right-hand side of =~ (a latent
+                      variable without indicators) can not be combined
+                      with indicators"),
+              tl[1L], footer = tl[2L]
+            )
+          }
           welke <- c(seq.int(j0, j1), opi, seq.int(k0, k1))
           realnum <- realnum + 1L
           outval[[realnum]] <- lav_parse_sublist(formul1, welke)
@@ -778,16 +820,53 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
         tl[1L], footer = tl[2L]
       )
     }
-    # the left-hand side of ":~" must be a single parameter label
-    if (op == ":~" &&
+    # the left-hand side of ":=" and ":~" must be a single name
+    if (any(op == c(":=", ":~")) &&
         (opi != 2L || formule$elem_type[1L] != types$identifier)) {
       tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[1L])
       lav_msg_stop(
-        gettext(
-          "left-hand side of the ':~' operator must be a single parameter
-          label."),
+        gettextf(
+          "left-hand side of the '%s' operator must be a single name.", op),
         tl[1L], footer = tl[2L]
       )
+    }
+    # what can not appear in a constraint or definition expression: another
+    # lavaan operator, a string (except the quoted variable name in data()
+    # after ":~"), Inf, a lone '=' outside a call
+    depth <- 0L
+    for (j in seq.int(1L, nelem)) {
+      if (j == opi) next
+      txt <- formule$elem_text[j]
+      tp <- formule$elem_type[j]
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[j])
+      if (tp == types$lavaanoperator) {
+        lav_msg_stop(
+          gettextf("unexpected operator '%s' in a constraint or definition",
+                   txt),
+          tl[1L], footer = tl[2L])
+      } else if (tp == types$stringliteral) {
+        if (!(op == ":~" && j > 2L && formule$elem_text[j - 1L] == "(" &&
+              formule$elem_text[j - 2L] == "data")) {
+          lav_msg_stop(
+            gettext("a string literal can not be used in a constraint or
+                    definition"),
+            tl[1L], footer = tl[2L])
+        }
+      } else if (tp == types$numliteral && grepl("Inf$", txt)) {
+        lav_msg_stop(
+          gettext("Inf can only be used in the lower() and upper()
+                  modifiers"),
+          tl[1L], footer = tl[2L])
+      } else if (tp == types$symbol) {
+        if (txt == "(") {
+          depth <- depth + 1L
+        } else if (txt == ")") {
+          depth <- depth - 1L
+        } else if (txt == "=" && depth == 0L) {
+          lav_msg_stop(gettext("unexpected '=' (did you mean '=='?)"),
+                       tl[1L], footer = tl[2L])
+        }
+      }
     }
     lhs <- paste(formule$elem_text[seq.int(1L, opi - 1L)], collapse = "")
     rhs <- paste(formule$elem_text[seq.int(opi + 1L, nelem)], collapse = "")
@@ -983,19 +1062,20 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
 
 lav_parse_check_relational <- function(formule, modelsrc, types, opi,
                                        nelem, op) {
-  # warn if some identifiers contain spaces
-  contsp <- which(formule$elem_type == types$identifier &
-                    grepl(" ", formule$elem_text, fixed = TRUE))
-  if (length(contsp) > 0L) {
-    tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[contsp[1L]])
-    lav_msg_warn(
-      gettextf(
-        "having identifiers with spaces ('%s') is deprecated",
-        formule$elem_text[contsp[1]]
-      ),
-      tl[1L],
-      footer = tl[2L]
-    )
+  # a lone '=' outside a call is not an operator ('==' is)
+  depth <- 0L
+  for (j in seq_len(nelem)) {
+    if (formule$elem_type[j] != types$symbol) next
+    txt <- formule$elem_text[j]
+    if (txt == "(") {
+      depth <- depth + 1L
+    } else if (txt == ")") {
+      depth <- depth - 1L
+    } else if (txt == "=" && depth == 0L) {
+      tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[j])
+      lav_msg_stop(gettext("unexpected '=' (did you mean '=='?)"),
+                   tl[1L], footer = tl[2L])
+    }
   }
   # checks for valid names in lhs and rhs
   lav_parse_check_name(formule, opi - 1L, modelsrc) # valid name lhs
@@ -1005,27 +1085,32 @@ lav_parse_check_relational <- function(formule, modelsrc, types, opi,
       lav_parse_check_name(formule, j, modelsrc)
     }
   }
-  if (formule$elem_type[nelem] != types$identifier &&
+  # the last element of the right-hand side: a name (quoted or not), or
+  # a number after ~, |~ or =~
+  if (all(formule$elem_type[nelem] !=
+          c(types$identifier, types$stringliteral)) &&
       (formule$elem_type[nelem] != types$numliteral ||
         all(op != c("~", "|~", "=~")))) {
     tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[nelem])
     lav_msg_stop(
-      gettext("Last element of rhs part expected to be an identifier or,
+      gettext("Last element of rhs part expected to be a (quoted) name or,
               for operator ~, |~ or =~, a numeric literal!"),
       tl[1L],
       footer = tl[2L]
     )
   }
   # a bare number on the right-hand side: 0 or 1 for ~ and |~ (the
-  # intercept, free or fixed to zero), 0 for =~ (phantom latent
-  # variable); anything else used to be silently taken as 1
+  # intercept, free or fixed to zero); after =~ any number is the fixed
+  # variance of a latent variable without indicators (f =~ 0.5 is
+  # f =~ fixed(0.5)*f); anything else after ~ used to be silently taken as 1
   if (formule$elem_type[nelem] == types$numliteral) {
     numval <- suppressWarnings(as.numeric(formule$elem_text[nelem]))
-    if (op == "=~" && !isTRUE(numval == 0)) {
+    if (op == "=~" && !isTRUE(is.finite(numval))) {
       tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[nelem])
       lav_msg_stop(
         gettext("the right-hand side of =~ should contain variable
-                names (or 0 for a latent variable without indicators)"),
+                names, or a (finite) number for a latent variable without
+                indicators"),
         tl[1L],
         footer = tl[2L]
       )
@@ -1223,4 +1308,28 @@ lav_parse_final_operations <- function(flat, modlist, config,
   attr(flat, "constraints") <- constraints
   lav_syntax_cache_set(hashstring, cachesrc, flat)
   flat
+}
+
+
+# -------------------- operator look-alikes ---------------------------------- #
+# characters that look like a lavaan operator but are different code points
+# (full-width forms from East-Asian input methods, the small tilde and the
+# tilde operator, the minus sign and the en dash from word processors) are
+# read as the ASCII operator; letters and digits are never folded
+# ---------------------------------------------------------------------------- #
+lav_parse_fold_confusables <- function(x) {
+  from <- c("\u02dc", "\uff5e", "\u223c", # ~
+            "\uff0d", "\u2212", "\u2013", # -
+            "\uff0b", "\uff0a", "\uff0f", "\uff3e", "\uff1d", "\uff1c",
+            "\uff1e", "\uff1a", "\uff5c", "\uff1f", "\uff05", "\uff08",
+            "\uff09", "\uff0c", "\uff1b")
+  to <- c("~", "~", "~", "-", "-", "-",
+          "+", "*", "/", "^", "=", "<",
+          ">", ":", "|", "?", "%", "(",
+          ")", ",", ";")
+  # (not chartr(): a '-' in its specification denotes a range)
+  for (k in seq_along(from)) {
+    x <- gsub(from[k], to[k], x, fixed = TRUE)
+  }
+  x
 }
