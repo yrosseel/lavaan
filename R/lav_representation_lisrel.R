@@ -911,14 +911,16 @@ lav_lisrel_eyetax3 <- function(mlist = NULL,
     lambda__ib_inv <- mm_lambda %*% ib_inv
   }
 
-  # compute model-implied means
+  # compute model-implied means (unscaled: the delta scaling, if requested,
+  # is applied once, to the final result below)
   ey <- lav_lisrel_ey(
     mlist = mlist, mean_x = mean_x,
     sample_mean = sample_mean,
     ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
     ov_x_dummy_ov_idx = ov_x_dummy_ov_idx,
     ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
-    ov_x_dummy_lv_idx = ov_x_dummy_lv_idx
+    ov_x_dummy_lv_idx = ov_x_dummy_lv_idx,
+    delta = FALSE
   )
 
   eeta <- lav_lisrel_eeta(

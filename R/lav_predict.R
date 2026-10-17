@@ -771,7 +771,12 @@ lav_predict_internal <- function(lavmodel = NULL,
     # label?
     if (label) {
       for (g in seq_len(lavdata@ngroups)) {
-        colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        if (ncol(out[[g]]) == length(lavpta$vnames$ov[[g]])) {
+          colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        } else {
+          # conditional.x: the columns only cover the non-exogenous ov's
+          colnames(out[[g]]) <- lavpta$vnames$ov.nox[[g]]
+        }
       }
     }
   } else {
@@ -1750,7 +1755,37 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     }
   }
 
+  # exogenous covariates as ov.x dummies (conditional.x = FALSE): there is
+  # no eXo; the values of the covariates are in the data (and are needed as
+  # 'exo' values for the dummy lv's)
+  x_dummy_flag <- vapply(lavmodel@ov.x.dummy.ov.idx, length, integer(1L)) > 0L
+  if (any(x_dummy_flag)) {
+    if (is.null(exo)) {
+      exo <- vector("list", length = lavdata@ngroups)
+    }
+    for (g in which(x_dummy_flag)) {
+      if (is.null(exo[[g]])) {
+        exo[[g]] <- data_obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]],
+                                  drop = FALSE]
+      }
+    }
+  }
+
   vetax <- lav_model_vetax(lavmodel = lavmodel)
+  # ov.x dummies: the prior of the (regular) latent variables is their
+  # distribution GIVEN the covariates: remove the (co)variances of the
+  # covariates (in PSI) before propagating through (I-B)^-1
+  for (g in which(x_dummy_flag)) {
+    mm_idx_g <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
+    mlist_g <- lavmodel@GLIST[mm_idx_g]
+    x_lv_idx <- lavmodel@ov.x.dummy.lv.idx[[g]]
+    mlist_g$psi[x_lv_idx, ] <- 0
+    mlist_g$psi[, x_lv_idx] <- 0
+    vetax[[g]] <- lav_lisrel_vetax(
+      mlist = mlist_g,
+      lv_dummy_idx = c(lavmodel@ov.y.dummy.lv.idx[[g]], x_lv_idx)
+    )
+  }
   vetax_inv <- vetax
   for (g in seq_len(lavdata@ngroups)) {
     if (nrow(vetax[[g]]) > 0L) {
@@ -1831,7 +1866,13 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     # (evaluated against the RAW thresholds; see th_1 above); only the
     # prior term below uses the deviation from the conditional mean mu_i
     # add 'dummy' values (if any) for ov.y
-    if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+    if (x_dummy_flag[g]) {
+      # full latent vector: regular lv's, ov.y dummies, ov.x dummies
+      x2 <- numeric(ncol(fy_mlist_g[[g]]$lambda))
+      x2[seq_along(x)] <- x
+      x2[lavmodel@ov.y.dummy.lv.idx[[g]]] <- dummy_y
+      x2[lavmodel@ov.x.dummy.lv.idx[[g]]] <- x_i
+    } else if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
       x2 <- c(x, dummy_y)
     } else {
       x2 <- x
@@ -2146,7 +2187,8 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              optim_method = "bfgs",
                              fsm = FALSE,
                              resid_flag = FALSE,
-                             local_independence = FALSE) {
+                             local_independence = FALSE,
+                             delta = TRUE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavmodel <- lav_model_delta_absorb(lavobject@Model)
@@ -2202,11 +2244,27 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
     }
   }
 
+  # ov.x dummies (conditional.x = FALSE): the factor scores do not contain
+  # the dummy lv's of the exogenous covariates; add the observed values
+  for (g in seq_len(lavdata@ngroups)) {
+    x_lv_idx <- lavmodel@ov.x.dummy.lv.idx[[g]]
+    if (length(x_lv_idx) == 0L || !is.matrix(eta[[g]])) next
+    mm_idx_g <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
+    nlv <- ncol(lavmodel@GLIST[mm_idx_g]$lambda)
+    if (ncol(eta[[g]]) < nlv) {
+      eta_full <- matrix(0, nrow(eta[[g]]), nlv)
+      eta_full[, seq_len(ncol(eta[[g]]))] <- eta[[g]]
+      eta_full[, x_lv_idx] <-
+        data_obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
+      eta[[g]] <- eta_full
+    }
+  }
+
   yhat <- lav_model_yhat(
     lavmodel = lavmodel, glist = NULL,
     lavsamplestats = lavsamplestats, exo = exo,
     nobs = lapply(data_obs, NROW),
-    eta = eta, duplicate = duplicate
+    eta = eta, duplicate = duplicate, delta = delta
   )
 
   # if conditional.x, paste exo
@@ -2280,11 +2338,35 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
     lavimplied = lavimplied,
     data_obs = data_obs, exo = exo, eta = eta, method = method,
     duplicate = FALSE, optim_method = optim_method,
-    local_independence = local_independence
+    local_independence = local_independence,
+    delta = FALSE # raw scale, matching the raw thresholds and THETA
   )
 
   mm_theta <- lav_model_theta(lavmodel = lavmodel)
-  th <- lav_model_th(lavmodel = lavmodel, delta = FALSE)
+
+  # RAW thresholds per group (interleaved with zeros for the numeric
+  # variables): yhat is the full linear predictor NU + LAMBDA eta_i, so the
+  # model-implied thresholds of lav_model_th() (which already absorb
+  # NU + LAMBDA (I-B)^-1 ALPHA) would remove the mean structure twice (see
+  # also lav_predict_eta_ebm_ml())
+  th <- lapply(seq_len(lavdata@ngroups), function(g) {
+    mm_idx <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
+    tau_g <- lavmodel@GLIST[mm_idx]$tau
+    th_idx_g <- lavmodel@th.idx[[g]]
+    th_g <- numeric(length(th_idx_g))
+    if (!is.null(tau_g)) {
+      th_g[th_idx_g > 0L] <- tau_g[, 1L]
+    }
+    th_g
+  })
+
+  # link: the 'link' option is only resolved for estimator = "MML"; for all
+  # other estimators, the model for the ordered variables is a probit model
+  # (the option value may still be "default", or "logit" after a warning)
+  link <- "probit"
+  if (lavmodel@link == "logit" && lavmodel@estimator == "MML") {
+    link <- "logit"
+  }
 
   fy <- vector("list", length = lavdata@ngroups)
   for (g in seq_len(lavdata@ngroups)) {
@@ -2293,7 +2375,7 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
       th = th[[g]], mm_theta = mm_theta[[g]],
       num_idx = lavmodel@num.idx[[g]],
       th_idx = lavmodel@th.idx[[g]],
-      link = lavmodel@link, log_1 = log_1
+      link = link, log_1 = log_1
     )
   }
 
