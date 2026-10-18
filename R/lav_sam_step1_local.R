@@ -56,6 +56,24 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       "local option lambda1_floor should be \"debias\", \"default\", or a
        single nonnegative number."))
   }
+  # local.bias.correction: "none" (default) or "plugin" (analytic plug-in
+  # correction of the small-sample attenuation of the latent correlations;
+  # see lav_sam_plugin_apply())
+  local_bias_correction <- local_options[["bias_correction"]]
+  if (is.null(local_bias_correction)) { # eg stored local.options of old objects
+    local_bias_correction <- "none"
+  }
+  if (!(is.character(local_bias_correction) &&
+        length(local_bias_correction) == 1L)) {
+    lav_msg_stop(gettext(
+      "local option bias_correction should be \"none\" or \"plugin\"."))
+  }
+  local_bias_correction <- tolower(local_bias_correction)
+  if (!local_bias_correction %in% c("none", "plugin")) {
+    lav_msg_stop(gettext(
+      "local option bias_correction should be \"none\" or \"plugin\"."))
+  }
+
   # internal (SE machinery only, see lav_sam_local_options_frozen()):
   # per-block frozen first-order truncation state, so that the perturbed
   # re-runs of the numeric jacobian channels do not re-estimate the
@@ -802,6 +820,11 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$ATTEN <- lav_sam_attenuation(step1 = step1, fit = fit,
                                      local_m_method = local_m_method,
                                      sam_method = sam_method)
+  # optional plug-in correction of the attenuation (VETA <- VETA * F); the
+  # numeric-jacobian re-runs skip this (see lav_sam_local_options_frozen())
+  if (local_bias_correction == "plugin") {
+    step1 <- lav_sam_plugin_apply(step1 = step1, fit = fit)
+  }
 
   if (lav_verbose()) {
     cat("done.\n")
@@ -1031,6 +1054,12 @@ lav_sam_local_options_frozen <- function(step1) {
                step1$lambda1_star_used, "lambda1")
   freeze_order(step1$lambda2_kappa, step1$lambda2_floor_used,
                step1$lambda2_star_used, "lambda2")
+  # the plug-in correction factor is conditioned on: the re-runs return the
+  # uncorrected latent moments, and the jacobian rows are rescaled by the
+  # (frozen) factor afterwards (lav_sam_plugin_jac_scale())
+  if (!is.null(lo[["bias_correction"]])) {
+    lo[["bias_correction"]] <- "none"
+  }
   lo
 }
 
@@ -1611,6 +1640,9 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
                                    lavmodel@meanstructure)
     jac <- jac + (jacpsi %*% jaca_psi)
   }
+
+  # plug-in bias correction: the latent moments are VETA * F
+  jac <- lav_sam_plugin_jac_scale(jac, step1, g)
 
   if (return_jac) {
     attr(jac, "JACa") <- jaca
@@ -2350,6 +2382,9 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
   for (g in seq_len(ngroups)) {
     r_idx <- (veta_offset[g] + 1L):veta_offset[g + 1L]
     c_idx <- (stat_offset[g] + 1L):stat_offset[g + 1L]
+    # plug-in bias correction: the latent moments of group g are VETA_g * F_g
+    jac_full[r_idx, ] <- lav_sam_plugin_jac_scale(
+      jac_full[r_idx, , drop = FALSE], step1, g)
     jac[[g]] <- jac_full[r_idx, c_idx, drop = FALSE]
 
     other_c <- if (stat_tot > length(c_idx)) {

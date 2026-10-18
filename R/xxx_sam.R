@@ -24,7 +24,8 @@ sam <- function(model = NULL,
                   lambda2_floor = "debias", # or "default", or a number
                   alpha_correction = 0L, # 0 -> (N-1)
                   twolevel_method = "h1",
-                  gamma_eta = "casewise" # or "additive" (lv interactions)
+                  gamma_eta = "casewise", # or "additive" (lv interactions)
+                  bias_correction = "none" # or "plugin"
                 ),
                 # h1, anova, mean
                 global_options = list(), # not used for now
@@ -483,7 +484,8 @@ sam <- function(model = NULL,
       lambda2_floor = "debias",
       alpha_correction = 0L,
       twolevel_method = "h1",
-      gamma_eta = "casewise"
+      gamma_eta = "casewise",
+      bias_correction = "none"
     )
     # accept the snake_case spelling of the (dot.case) option names
     local_options <- lav_args_canonical(local_options, names(local_opt))
@@ -509,13 +511,42 @@ sam <- function(model = NULL,
       step1$SLOPES <- out$SLOPES # res.slopes of y on x
     }
 
+    # bias_correction: "none" (default) or "plugin" (analytic plug-in
+    # correction of the small-sample attenuation of the latent
+    # correlations; see lav_sam_plugin_apply())
+    local_options[["bias_correction"]] <-
+      tolower(local_options[["bias_correction"]])
+    if (!local_options[["bias_correction"]] %in% c("none", "plugin")) {
+      lav_msg_stop(gettext(
+        "local option bias_correction should be \"none\" or \"plugin\"."))
+    }
+    plugin_flag <- (local_options[["bias_correction"]] == "plugin")
+
     # compute EETA/VETA
     step1 <- lav_sam_step1_local(
       step1 = step1, fit = fit,
       sam_method = sam_method,
       local_options = local_options,
-      return_cov_iveta2 = (se %in% c("local", "local.nt", "twostep.robust"))
+      return_cov_iveta2 = (se %in% c("local", "local.nt", "twostep.robust") ||
+                           plugin_flag)
     )
+
+    # a plug-in correction was applied: the classic two-step standard errors
+    # (joint-information based) do not see the correction factor; the
+    # structural-space sandwich (se = "local") conditions on it (the step-1
+    # jacobian is rescaled by the factor), so switch
+    if (plugin_flag && isTRUE(attr(step1$ATTEN, "corrected")) &&
+        se %in% c("standard", "twostep", "twostep.robust",
+                  "twostep.huber.white")) {
+      lav_msg_note(gettextf(
+        "se = \"%s\" is replaced by se = \"local\": the latent
+         correlations were corrected for their small-sample attenuation
+         (local option bias_correction = \"plugin\"), and only the local
+         standard errors account for the correction.", se))
+      se <- "local"
+      fit@Options$se <- se
+      lavoptions$se <- se
+    }
   }
 
   ##################################################

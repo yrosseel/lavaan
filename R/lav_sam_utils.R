@@ -2561,8 +2561,8 @@ lav_sam_attenuation <- function(step1 = NULL, fit = NULL,
       next
     }
     cor_lv <- stats::cov2cor(veta[lv_reg, lv_reg, drop = FALSE])
-    rel <- bias <- matrix(as.numeric(NA), m, m,
-                          dimnames = list(lv_reg, lv_reg))
+    rel <- bias <- c_mat <- matrix(as.numeric(NA), m, m,
+                                   dimnames = list(lv_reg, lv_reg))
     for (k in seq_len(m - 1L)) {
       for (l in seq(k + 1L, m)) {
         if (is.na(h[k]) || is.na(h[l])) {
@@ -2570,6 +2570,7 @@ lav_sam_attenuation <- function(step1 = NULL, fit = NULL,
         }
         r <- cor_lv[k, l]
         c_hat <- (1 - r^2) / 2 + h[k] + h[l]
+        c_mat[k, l] <- c_mat[l, k] <- c_hat
         if (!is.null(cap) && is.finite(cap)) {
           c_hat <- min(c_hat, cap * (n - 1))
         }
@@ -2577,7 +2578,8 @@ lav_sam_attenuation <- function(step1 = NULL, fit = NULL,
         bias[k, l] <- bias[l, k] <- -r * rel[k, l]
       }
     }
-    out[[b]] <- list(h = h, n = n, cor = cor_lv, rel = rel, bias = bias)
+    out[[b]] <- list(h = h, n = n, cor = cor_lv, c = c_mat, rel = rel,
+                     bias = bias, corrected = FALSE)
   }
   if (all(vapply(out, is.null, logical(1L)))) {
     return(NULL)
@@ -2592,20 +2594,37 @@ lav_sam_attenuation <- function(step1 = NULL, fit = NULL,
 # is at least 'threshold' in absolute value, largest first
 lav_sam_attenuation_print <- function(x = NULL, ngroups = 1L,
                                       group_label = NULL, threshold = 0.03) {
+  corrected <- isTRUE(attr(x, "corrected"))
   rows <- character(0L)
+  shrunk <- character(0L)
   for (g in seq_along(x)) {
     xg <- x[[g]]
     if (is.null(xg)) {
       next
     }
-    bias <- xg$bias
-    sel <- upper.tri(bias) & is.finite(bias) & abs(bias) >= threshold
+    if (corrected) {
+      if (!isTRUE(xg$corrected)) {
+        next
+      }
+      # the applied correction: corrected minus uncorrected correlation
+      diff <- xg$cor_corrected - xg$cor
+    } else {
+      diff <- xg$bias
+    }
+    sel <- upper.tri(diff) & is.finite(diff) & abs(diff) >= threshold
     idx <- which(sel, arr.ind = TRUE)
+    if (corrected && !is.null(xg$shrink) && xg$shrink < 1) {
+      shrunk <- c(shrunk, if (ngroups > 1L && !is.null(group_label)) {
+        group_label[g]
+      } else {
+        ""
+      })
+    }
     if (nrow(idx) == 0L) {
       next
     }
-    idx <- idx[order(-abs(bias[idx])), , drop = FALSE]
-    lv <- rownames(bias)
+    idx <- idx[order(-abs(diff[idx])), , drop = FALSE]
+    lv <- rownames(diff)
     for (i in seq_len(nrow(idx))) {
       k <- idx[i, 1L]
       l <- idx[i, 2L]
@@ -2613,10 +2632,42 @@ lav_sam_attenuation_print <- function(x = NULL, ngroups = 1L,
       if (ngroups > 1L && !is.null(group_label)) {
         lab <- paste0(lab, " [", group_label[g], "]")
       }
-      fmt <- "    %-22s est = %6.3f   predicted bias = %6.3f (%.0f%%)"
-      rows <- c(rows, sprintf(fmt, lab, xg$cor[k, l], bias[k, l],
-                              -100 * xg$rel[k, l]))
+      if (corrected) {
+        fmt <- "    %-22s corrected = %6.3f   uncorrected = %6.3f (%+.0f%%)"
+        rows <- c(rows, sprintf(fmt, lab, xg$cor_corrected[k, l],
+                                xg$cor[k, l],
+                                100 * (xg$factor[lv[k], lv[l]] - 1)))
+      } else {
+        fmt <- "    %-22s est = %6.3f   predicted bias = %6.3f (%.0f%%)"
+        rows <- c(rows, sprintf(fmt, lab, xg$cor[k, l], diff[k, l],
+                                -100 * xg$rel[k, l]))
+      }
     }
+  }
+  if (corrected) {
+    cat("\n")
+    cat("  Note: the latent correlations were corrected for their",
+        "small-sample\n")
+    cat("  attenuation (plug-in correction of the blockwise step 1;",
+        "see ?sam).\n")
+    if (length(rows) > 0L) {
+      cat(rows, sep = "\n")
+    } else {
+      cat("  All corrections are smaller than ", threshold, ".\n",
+          sep = "")
+    }
+    if (length(shrunk) > 0L) {
+      cat("  The correction was reduced",
+          if (any(nzchar(shrunk))) {
+            paste0("in group(s) ", paste(shrunk[nzchar(shrunk)],
+                                         collapse = ", "), " ")
+          } else {
+            ""
+          },
+          "to keep the latent covariance matrix\n")
+      cat("  positive definite.\n")
+    }
+    return(invisible(NULL))
   }
   if (length(rows) == 0L) {
     return(invisible(NULL))
@@ -2630,4 +2681,114 @@ lav_sam_attenuation_print <- function(x = NULL, ngroups = 1L,
       "(mm_list),\n")
   cat("  reduce this bias; it vanishes with increasing sample size.\n")
   invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
+# analytic plug-in correction of the small-sample attenuation
+#
+# rho_tilde = rho_hat * (1 + min(c_hat, kappa (N - 1)) / (N - 1)), with
+# c_hat = (1 - rho_hat^2)/2 + h_k + h_l the (stabilized) curvature term of
+# lav_sam_attenuation(), and kappa = 1/2 (N >= 100) or 1/4 (N < 100): the
+# relative correction is capped because the O(1/N) expansion is only
+# meaningful when the relative bias is well below one, and because c_hat is a
+# convex function of the step-1 estimates (E[c_hat] > c), which makes the
+# uncapped plug-in over-correct in very small samples. The correction is
+# applied to the latent covariance matrix elementwise, VETA <- VETA * F with
+# F_kl = 1 + min(c_kl, kappa (N - 1))/(N - 1) and F_kk = 1, so that the
+# latent variances (and hence the metric) are untouched and only the
+# correlations change. If the corrected matrix is not positive definite, the
+# correction is shrunk (F <- 1 + t (F - 1), largest t in [0, 1] that keeps
+# a positive definite result).
+#
+# The standard errors condition on the factor matrix F: the step-1
+# jacobian rows of vech(VETA) are multiplied by vech(F)
+# (lav_sam_plugin_jac_scale()), and the numeric re-runs of
+# lav_sam_step1_local() do not re-apply the correction
+# (lav_sam_local_options_frozen()).
+lav_sam_plugin_apply <- function(step1 = NULL, fit = NULL) {
+  atten <- step1$ATTEN
+  if (is.null(atten)) {
+    return(step1)
+  }
+  any_corrected <- FALSE
+  for (b in seq_along(atten)) {
+    ab <- atten[[b]]
+    if (is.null(ab) || is.null(ab$c)) {
+      next
+    }
+    veta <- step1$VETA[[b]]
+    n <- ab$n
+    kappa <- if (n >= 100) 0.5 else 0.25
+    lv <- rownames(ab$c)
+    c_cap <- pmin(ab$c, kappa * (n - 1))
+    f_lv <- 1 + c_cap / (n - 1)
+    f_lv[!is.finite(f_lv)] <- 1
+    diag(f_lv) <- 1
+    f_full <- matrix(1, nrow(veta), ncol(veta), dimnames = dimnames(veta))
+    f_full[lv, lv] <- f_lv
+    if (all(f_full == 1)) {
+      next
+    }
+    # keep the result positive definite: shrink the correction if needed
+    pd_margin <- function(t) {
+      v <- veta * (1 + t * (f_full - 1))
+      r <- try(stats::cov2cor(v), silent = TRUE)
+      if (inherits(r, "try-error")) {
+        return(-1)
+      }
+      min(eigen(r, symmetric = TRUE, only.values = TRUE)$values)
+    }
+    t_use <- 1
+    if (pd_margin(1) < 1e-4) {
+      lo <- 0
+      hi <- 1
+      for (i in seq_len(40L)) {
+        mid <- (lo + hi) / 2
+        if (pd_margin(mid) < 1e-4) {
+          hi <- mid
+        } else {
+          lo <- mid
+        }
+      }
+      t_use <- lo
+      lav_msg_warn(gettextf(
+        "the plug-in correction of the latent correlations was reduced
+         (to %s of its size) to keep the latent covariance matrix
+         positive definite.", sprintf("%.2f", t_use)))
+    }
+    f_full <- 1 + t_use * (f_full - 1)
+    veta_new <- veta
+    veta_new[] <- veta * f_full
+    step1$VETA[[b]] <- veta_new
+    ab$factor <- f_full
+    ab$kappa <- kappa
+    ab$shrink <- t_use
+    ab$corrected <- TRUE
+    ab$cor_corrected <- stats::cov2cor(veta_new[lv, lv, drop = FALSE])
+    atten[[b]] <- ab
+    any_corrected <- TRUE
+  }
+  attr(atten, "corrected") <- any_corrected
+  step1$ATTEN <- atten
+  step1
+}
+
+# multiply the trailing vech(VETA_g) rows of a (per-group) step-1 jacobian
+# by vech(F_g): the derivative of the corrected latent moments w.r.t. the
+# sample statistics, conditional on the correction factor
+lav_sam_plugin_jac_scale <- function(jac_g = NULL, step1 = NULL, g = 1L) {
+  atten <- step1$ATTEN
+  if (is.null(atten) || !isTRUE(attr(atten, "corrected")) ||
+      g > length(atten) || is.null(atten[[g]]) ||
+      !isTRUE(atten[[g]]$corrected) || is.null(atten[[g]]$factor)) {
+    return(jac_g)
+  }
+  f_vech <- lav_mat_vech(atten[[g]]$factor)
+  nr <- length(f_vech)
+  if (nrow(jac_g) < nr) {
+    return(jac_g)
+  }
+  row_idx <- nrow(jac_g) - nr + seq_len(nr)
+  jac_g[row_idx, ] <- f_vech * jac_g[row_idx, , drop = FALSE]
+  jac_g
 }

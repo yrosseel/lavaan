@@ -13,7 +13,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     local_options = list(m_method = "ML", lambda_correction = TRUE,
                          lambda1_floor = "debias", lambda2_floor = "debias",
                          alpha_correction = 0L, twolevel_method = "h1",
-                         gamma_eta = "casewise"),
+                         gamma_eta = "casewise", bias_correction = "none"),
     global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show_progress = FALSE),
     output = "lavaan",
@@ -199,7 +199,36 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
      and the bias-correction is the same as with local SAM. When equal to N-1,
      the bias-correction is eliminated, and the results are the same as
      naive FSR. Typical values are 0, P+1 (where P is the number of
-     predictors in the structural model), P+5, and (N-1)/2.}
+     predictors in the structural model), P+5, and (N-1)/2.
+     The option \code{bias_correction} is either \code{"none"} (the
+     default) or \code{"plugin"}. If \code{"plugin"}, the latent
+     correlations are corrected for the small-sample attenuation of the
+     blockwise step 1 (see the Details section): each latent covariance
+     is multiplied by \eqn{1 + \min(c, \kappa (N-1))/(N-1)}, where
+     \eqn{c = (1 - \rho^2)/2 + h_k + h_l} is the predicted (stabilized)
+     curvature term of the pair, and \eqn{\kappa = 1/2} if \eqn{N \ge
+     100} and \eqn{1/4} otherwise. The latent variances are not changed.
+     The correction is only applied to the pairs of factors for which the
+     prediction is available (see Details); if the corrected latent
+     covariance matrix is not positive definite, the correction is shrunk
+     (with a warning). The standard errors condition on the correction
+     factor: the step-1 jacobian of the latent moments is rescaled by the
+     factor, and when a correction was applied the classic two-step
+     standard errors (\code{se = "twostep"}, \code{"twostep.robust"},
+     \code{"twostep.huber.white"} or \code{"standard"}, which do not see
+     the factor) are replaced by \code{se = "local"} with a note;
+     \code{se = "bootstrap"} recomputes the correction in every bootstrap
+     sample. The summary lists the corrected and uncorrected correlations
+     (for pairs where the correction is at least 0.03). Note that the
+     correction targets the latent correlations, and hence the
+     standardized structural coefficients (exactly so for a saturated
+     two-factor regression, as a first-order approximation otherwise);
+     the unstandardized coefficients in the marker-variable metric also
+     depend on the marker loadings of step 1, whose own small-sample bias
+     partly offsets the attenuation and is not corrected, so that in the
+     marker metric the corrected unstandardized coefficients can
+     overshoot. Use \code{std.lv = TRUE} (or the standardized solution)
+     when the correction is requested.}
 \item{global_options}{List. Options specific for global SAM method (not
      used for now).}
 \item{bootstrap}{List. Only used when \code{se = "bootstrap"}. Typical
@@ -284,8 +313,14 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     without equality constraints, and the ML mapping is used. The
     \code{summary()} lists the latent correlations whose predicted bias is
     at least 0.03 in absolute value; the full results are available through
-    \code{lavInspect(fit, "sam_attenuation")}. The estimates are not
-    corrected. The bias is absent when all factors are placed in a single
+    \code{lavInspect(fit, "sam_attenuation")}. By default the estimates
+    are not corrected; the local option \code{bias_correction = "plugin"}
+    applies the analytic plug-in correction (the attenuation factor is
+    estimated from the step-1 estimates and divided out of the latent
+    correlations; in simulations this removes most of the attenuation for
+    \eqn{N \ge 100}, at an RMSE cost of at most a few percent, and does
+    better than a bootstrap bias correction in both bias and RMSE).
+    The bias is absent when all factors are placed in a single
     measurement block (e.g., \code{mm_list = list(c("f1", "f2", "f3"))}):
     the latent covariance matrix then equals the (bounded) joint ML
     estimate, which keeps the robustness of SAM against a misspecified

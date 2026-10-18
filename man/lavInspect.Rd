@@ -736,10 +736,17 @@ Miscellaneous:
         section of \code{\link{sam}}). A list with the block terms
         (\code{h}, one per latent variable; \code{NA} when the prediction
         is not available for that factor), the sample size (\code{n}), the
-        estimated latent correlations (\code{cor}), and the predicted
+        estimated latent correlations (\code{cor}), the (stabilized)
+        curvature term of each pair (\code{c}), and the predicted
         relative (\code{rel}) and absolute (\code{bias}) small-sample bias
-        of each correlation. In the case of multiple groups: a list of such
-        lists. \code{"sam_atten"} is an alias.}
+        of each correlation. When the plug-in correction was applied
+        (local option \code{bias_correction = "plugin"}), the list also
+        contains the correction factors (\code{factor}), the cap
+        (\code{kappa}), the shrinkage applied to keep the latent covariance
+        matrix positive definite (\code{shrink}, 1 = none) and the
+        corrected correlations (\code{cor_corrected}). In the case of
+        multiple groups: a list of such lists. \code{"sam_atten"} is an
+        alias.}
     \item{\code{"version"}:}{The lavaan version number that was used to
         construct the fitted lavaan object.}
 }
