@@ -1930,7 +1930,10 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     # engaged lambda truncation? collect the state + the approximate
     # shrinkage bias of the structural estimates (summary() note)
     sam_trunc <- lav_sam_trunc_bias(step1 = step1, fit_pa = fit_pa)
+    # predicted small-sample attenuation of the latent correlations
+    sam_attenuation <- step1$ATTEN
   } else {
+    sam_attenuation <- NULL
     sam_struc_fit <- paste0("no local fit measures available for ",
                     "structural part if sam_method is global")
     names(sam_struc_fit) <- "warning"
@@ -1963,6 +1966,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     sam.mm.table = sam_mm_table,
     sam.mm.rel = sam_mm_rel,
     sam_trunc = sam_trunc,
+    sam_attenuation = sam_attenuation,
     sam.struc.estimator = fit_pa@Model@estimator,
     sam.struc.args = struc_args,
     sam.struc.fit = sam_struc_fit,
@@ -2338,4 +2342,292 @@ lav_sam_veta_con <- function(s = NULL, mm_lambda = NULL, mm_theta = NULL,
   }
 
   veta_new
+}
+
+# ---------------------------------------------------------------------------
+# predicted small-sample attenuation of the latent correlations in local SAM
+#
+# With one measurement block per factor, the blockwise step-1 estimation of
+# the loadings and residual variances makes the estimated latent correlation
+# a ratio-type statistic whose O(1/N) bias is a multiplicative attenuation:
+#
+#   E[rho_hat_kl] ~ rho_kl * {1 - [(1 - rho_kl^2)/2 + h_k + h_l] / (N - 1)}
+#
+# where the block term h_k depends only on the noise-to-signal ratios
+# u_i = theta_i / lambda_i^2 of the indicators of factor k (ML step 1, ML
+# mapping, congeneric indicators, normal complete data). For three indicators
+# h_k has a simple closed form; for p >= 4 it follows from the generating
+# rule in terms of the polynomial Q(x) = prod_i (x - 2 e_i), e_i = 1/u_i, and
+# its derivatives evaluated at H = sum_i e_i. The block terms are stabilized
+# as in the analytic plug-in correction: u_i is winsorized at ucap times the
+# pooled (tau-equivalent) noise-to-signal ratio of its block, and the
+# relative attenuation is capped at cap (50%). The first term,
+# -rho (1 - rho^2)/2, is the classical O(1/N) bias of a Pearson correlation;
+# the block terms vanish for perfectly reliable indicators, grow
+# quadratically in u, and decrease roughly as 1/p in the number of
+# indicators. (They are absent when all factors share one measurement block:
+# the mapping then reproduces the joint CFA estimate of the latent
+# covariance matrix exactly.)
+
+# block term h for one factor with loadings lam, residual variances th,
+# factor variance phi (1 if the loadings are standardized), and (optionally)
+# the sample covariance matrix s of its indicators
+lav_sam_atten_h <- function(lam = NULL, th = NULL, phi = 1, s = NULL,
+                            ucap = 3) {
+  p <- length(lam)
+  if (p < 3L || length(th) != p) {
+    return(as.numeric(NA))
+  }
+  if (!all(is.finite(lam)) || !all(is.finite(th)) || any(lam == 0) ||
+      any(th < 0) || !is.finite(phi) || phi <= 0) {
+    return(as.numeric(NA))
+  }
+  # noise-to-signal ratios (metric free: the signal of indicator i is
+  # lambda_i^2 phi); a residual variance truncated at zero (Heywood case)
+  # gives u = 0, where the block term is continuous
+  u <- unname(pmax(th / (lam^2 * phi), 1e-6))
+  # winsorize the noise-to-signal ratios at ucap x the pooled ratio of the
+  # block (from the sample covariance matrix of the block if available,
+  # otherwise the median): a within-block covariance near zero drives two
+  # loadings towards zero, and the corresponding u_i (and h) would explode
+  if (!is.null(ucap) && is.finite(ucap)) {
+    ubar <- as.numeric(NA)
+    if (!is.null(s) && is.matrix(s) && all(dim(s) == p)) {
+      l2 <- mean(s[lower.tri(s)])
+      if (is.finite(l2) && l2 > 0) {
+        ubar <- mean((diag(s) - l2) / l2)
+      }
+    }
+    if (!is.finite(ubar) || ubar <= 0) {
+      ubar <- stats::median(u)
+    }
+    u <- pmin(u, ucap * ubar)
+  }
+  if (p == 3L) {
+    # closed form (step 1 is saturated)
+    h_sum <- sum(1 / u)
+    h <- sum(u) + (u[1] * u[2] + u[1] * u[3] + u[2] * u[3]) / 8 +
+      (sum(u) - 5) / h_sum - 6 / h_sum^2
+  } else {
+    e <- 1 / u
+    h_sum <- sum(e)
+    x <- h_sum - 2 * e
+    # Q^{(m)}(H) = m! a_m, with a_m the coefficients of prod_i (t + x_i);
+    # note that x_i < 0 when indicator i carries more than half of the
+    # signal-to-noise of its block: the formula remains valid (P does not
+    # vanish for positive e_i), and only its (numerical) breakdown is
+    # guarded against below
+    a <- 1
+    for (xi in x) {
+      a <- c(0, a) + xi * c(a, 0)
+    }
+    q0 <- a[1]
+    q1 <- a[2]
+    q2 <- 2 * a[3]
+    q3 <- 6 * a[4]
+    pp <- (h_sum * q1 - (p - 2) * q0) / 2
+    h <- (2 * (1 - p) + (3 - 2 * p) * h_sum) / h_sum^2 +
+      (q0 * ((-3 * p^2 + 12 * p - 7) / 2 - (p - 1) * (p - 4) * h_sum / 2) +
+         q2 * h_sum^2 * (3 + 2 * h_sum) / 4) / (h_sum^2 * pp) +
+      (-(p - 1) * (p - 2) * (p - 3) * q0^2 / 4 +
+         3 * (p - 2) * h_sum^2 * q0 * q2 / 8 -
+         h_sum^3 * q0 * q3 / 8) / (h_sum^2 * pp^2)
+  }
+  if (!is.finite(h) || h < 0) {
+    h <- as.numeric(NA)
+  }
+  h
+}
+
+# per (group) block: the block terms h (one per regular latent variable; NA
+# for a factor that shares its measurement block with other factors, has
+# fewer than three indicators, cross-loadings, residual covariances, fixed
+# loadings (other than a single marker) or fixed residual variances, or
+# sits in a block with equality constraints or a non-ML estimator), the
+# estimated latent correlations, and the predicted relative and absolute
+# small-sample bias of each correlation. NULL outside the supported setting
+# (local sam with the ML mapping, single-level continuous complete data, no
+# conditional.x, no weights, no latent interactions or higher-order factors).
+lav_sam_attenuation <- function(step1 = NULL, fit = NULL,
+                                local_m_method = "ML", sam_method = "local",
+                                ucap = 3, cap = 0.5) {
+  if (sam_method != "local" || toupper(local_m_method) != "ML") {
+    return(NULL)
+  }
+  if (fit@Data@nlevels > 1L || fit@Model@categorical ||
+      fit@Model@correlation || fit@Model@conditional.x ||
+      !identical(fit@Data@missing, "listwise")) {
+    return(NULL)
+  }
+  if (length(unlist(fit@pta$vnames$lv.interaction)) > 0L ||
+      length(unlist(fit@pta$vnames$lv.ind)) > 0L) {
+    return(NULL)
+  }
+  if (any(!vapply(fit@Data@weights, is.null, logical(1L)))) {
+    return(NULL)
+  }
+  mm_fit <- step1$MM.FIT
+  mm_list <- step1$mm.list
+  if (is.null(mm_fit) || is.null(mm_list) || is.null(step1$VETA)) {
+    return(NULL)
+  }
+  # eligible measurement blocks: ML, no equality constraints
+  mm_ok <- vapply(mm_fit, function(x) {
+    pt <- x@ParTable
+    identical(x@Model@estimator, "ML") && !any(pt$op == "==") &&
+      !any(duplicated(pt$free[pt$free > 0L]))
+  }, logical(1L))
+  # the latent variables of measurement block mm in (group) block b
+  mm_lv <- function(mm, b) {
+    x <- mm_list[[mm]]
+    if (is.list(x)) {
+      x <- x[[b]]
+    }
+    unlist(x)
+  }
+
+  # free measurement parameters (joint parameter table with the step-1
+  # free indices): the block terms assume a free congeneric one-factor fit
+  pt <- step1$PT
+  pt_group <- pt$group
+  if (is.null(pt_group)) {
+    pt_group <- rep(1L, length(pt$lhs))
+  }
+
+  nblocks <- fit@pta$nblocks
+  lambda_idx <- which(names(fit@Model@GLIST) == "lambda")
+  out <- vector("list", nblocks)
+  for (b in seq_len(nblocks)) {
+    veta <- step1$VETA[[b]]
+    lambda <- step1$LAMBDA[[b]]
+    theta <- step1$THETA[[b]]
+    s_b <- step1$COV[[b]]
+    if (is.null(veta) || is.null(lambda) || is.null(theta) ||
+        length(step1$MSM[[b]]) == 0L) { # not the analytic mapping
+      next
+    }
+    lv_names <- fit@Model@dimNames[[lambda_idx[b]]][[2L]]
+    ov_names <- fit@Model@dimNames[[lambda_idx[b]]][[1L]]
+    lv_reg <- fit@pta$vnames$lv.regular[[b]]
+    lv_reg <- lv_reg[lv_reg %in% colnames(veta) & lv_reg %in% lv_names]
+    m <- length(lv_reg)
+    if (m < 2L) {
+      next
+    }
+    n <- fit@SampleStats@nobs[[b]]
+    h <- rep(as.numeric(NA), m)
+    names(h) <- lv_reg
+    for (k in seq_len(m)) {
+      # the measurement block of this factor must contain this factor only
+      mm <- which(vapply(seq_along(mm_list), function(i) {
+        lv_reg[k] %in% mm_lv(i, b)
+      }, logical(1L)))
+      if (length(mm) != 1L || !mm_ok[mm] || length(mm_lv(mm, b)) != 1L) {
+        next
+      }
+      col <- match(lv_reg[k], lv_names)
+      ind <- which(lambda[, col] != 0)
+      if (length(ind) < 3L) {
+        next
+      }
+      # congeneric indicators: no cross-loadings, no residual covariances
+      if (any(lambda[ind, -col, drop = FALSE] != 0)) {
+        next
+      }
+      th_rows <- theta[ind, , drop = FALSE]
+      th_rows[cbind(seq_along(ind), ind)] <- 0
+      if (any(th_rows != 0)) {
+        next
+      }
+      # free loadings (at most one fixed marker) and free residual variances
+      ov_k <- ov_names[ind]
+      lam_free <- pt$free[pt_group == b & pt$op == "=~" &
+                          pt$lhs == lv_reg[k] & pt$rhs %in% ov_k] > 0L
+      th_free <- pt$free[pt_group == b & pt$op == "~~" &
+                         pt$lhs %in% ov_k & pt$rhs == pt$lhs] > 0L
+      if (sum(!lam_free) > 1L || length(th_free) != length(ind) ||
+          !all(th_free)) {
+        next
+      }
+      s_k <- NULL
+      if (!is.null(s_b) && is.matrix(s_b) && all(dim(s_b) == nrow(lambda))) {
+        s_k <- s_b[ind, ind, drop = FALSE]
+      }
+      h[k] <- lav_sam_atten_h(lam = lambda[ind, col], th = diag(theta)[ind],
+                              phi = veta[lv_reg[k], lv_reg[k]],
+                              s = s_k, ucap = ucap)
+    }
+    if (all(is.na(h))) {
+      next
+    }
+    cor_lv <- stats::cov2cor(veta[lv_reg, lv_reg, drop = FALSE])
+    rel <- bias <- matrix(as.numeric(NA), m, m,
+                          dimnames = list(lv_reg, lv_reg))
+    for (k in seq_len(m - 1L)) {
+      for (l in seq(k + 1L, m)) {
+        if (is.na(h[k]) || is.na(h[l])) {
+          next
+        }
+        r <- cor_lv[k, l]
+        c_hat <- (1 - r^2) / 2 + h[k] + h[l]
+        if (!is.null(cap) && is.finite(cap)) {
+          c_hat <- min(c_hat, cap * (n - 1))
+        }
+        rel[k, l] <- rel[l, k] <- c_hat / (n - 1)
+        bias[k, l] <- bias[l, k] <- -r * rel[k, l]
+      }
+    }
+    out[[b]] <- list(h = h, n = n, cor = cor_lv, rel = rel, bias = bias)
+  }
+  if (all(vapply(out, is.null, logical(1L)))) {
+    return(NULL)
+  }
+  if (nblocks > 1L) {
+    names(out) <- fit@Data@block.label
+  }
+  out
+}
+
+# summary() note: the latent correlations whose predicted small-sample bias
+# is at least 'threshold' in absolute value, largest first
+lav_sam_attenuation_print <- function(x = NULL, ngroups = 1L,
+                                      group_label = NULL, threshold = 0.03) {
+  rows <- character(0L)
+  for (g in seq_along(x)) {
+    xg <- x[[g]]
+    if (is.null(xg)) {
+      next
+    }
+    bias <- xg$bias
+    sel <- upper.tri(bias) & is.finite(bias) & abs(bias) >= threshold
+    idx <- which(sel, arr.ind = TRUE)
+    if (nrow(idx) == 0L) {
+      next
+    }
+    idx <- idx[order(-abs(bias[idx])), , drop = FALSE]
+    lv <- rownames(bias)
+    for (i in seq_len(nrow(idx))) {
+      k <- idx[i, 1L]
+      l <- idx[i, 2L]
+      lab <- paste(lv[k], "~~", lv[l])
+      if (ngroups > 1L && !is.null(group_label)) {
+        lab <- paste0(lab, " [", group_label[g], "]")
+      }
+      fmt <- "    %-22s est = %6.3f   predicted bias = %6.3f (%.0f%%)"
+      rows <- c(rows, sprintf(fmt, lab, xg$cor[k, l], bias[k, l],
+                              -100 * xg$rel[k, l]))
+    }
+  }
+  if (length(rows) == 0L) {
+    return(invisible(NULL))
+  }
+  cat("\n")
+  cat("  Note: the following latent correlations are expected to be",
+      "attenuated\n")
+  cat("  (small-sample bias of the blockwise step 1; see ?sam):\n")
+  cat(rows, sep = "\n")
+  cat("  More indicators per factor, or merging measurement blocks",
+      "(mm_list),\n")
+  cat("  reduce this bias; it vanishes with increasing sample size.\n")
+  invisible(NULL)
 }

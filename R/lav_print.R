@@ -1332,6 +1332,18 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         }
       }
 
+      # predicted small-sample attenuation of the latent correlations
+      # (blockwise step 1, one factor per measurement block; see
+      # lav_sam_attenuation()): only the pairs whose predicted bias is at
+      # least 0.03 in absolute value are listed; the full matrices are
+      # stored in object@internal$sam_attenuation
+      sam_atten <- y$sam$sam_attenuation
+      if (!is.null(sam_atten)) {
+        lav_sam_attenuation_print(sam_atten, ngroups = ngroups,
+                                  group_label = group_label,
+                                  threshold = 0.03)
+      }
+
       # engaged lambda truncation: the structural estimates are shrunken
       # (see the lambda1_floor/lambda2_floor entries in ?sam); the full
       # per-coefficient bias approximation is stored in

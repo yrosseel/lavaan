@@ -729,6 +729,17 @@ Miscellaneous:
         means) of step 1. \code{fitMeasures()}, \code{lavResiduals()} and
         \code{modindices()} operate on this object when they are called with
         the sam object itself. \code{"sam_struc"} is an alias.}
+    \item{\code{"sam_attenuation"}:}{For a model fitted with
+        \code{\link{sam}} using \code{sam_method = "local"}: the predicted
+        small-sample attenuation of the latent correlations induced by the
+        blockwise estimation of the measurement model (see the Details
+        section of \code{\link{sam}}). A list with the block terms
+        (\code{h}, one per latent variable; \code{NA} when the prediction
+        is not available for that factor), the sample size (\code{n}), the
+        estimated latent correlations (\code{cor}), and the predicted
+        relative (\code{rel}) and absolute (\code{bias}) small-sample bias
+        of each correlation. In the case of multiple groups: a list of such
+        lists. \code{"sam_atten"} is an alias.}
     \item{\code{"version"}:}{The lavaan version number that was used to
         construct the fitted lavaan object.}
 }

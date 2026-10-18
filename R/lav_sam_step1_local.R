@@ -796,6 +796,12 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   # store also sam.method and local.options
   step1$sam.method <- sam_method
   step1$local.options <- local_options
+  # predicted small-sample attenuation of the latent correlations (blockwise
+  # step 1 with one factor per measurement block; NULL outside its scope);
+  # reported by summary() and lavInspect(, "sam.attenuation")
+  step1$ATTEN <- lav_sam_attenuation(step1 = step1, fit = fit,
+                                     local_m_method = local_m_method,
+                                     sam_method = sam_method)
 
   if (lav_verbose()) {
     cat("done.\n")

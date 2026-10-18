@@ -751,6 +751,25 @@ lav_lavaan_lavinspect <- function(object,
     }
     fit_pa
 
+    # sam: predicted small-sample attenuation of the latent correlations
+    # (local sam.method, blockwise step 1; see lav_sam_attenuation())
+  } else if (what %in% c("sam.attenuation", "sam.atten")) {
+    if (is.null(object@internal$sam.method)) {
+      lav_msg_stop(gettext("this model was not fitted with sam()."))
+    }
+    out <- object@internal$sam_attenuation
+    if (is.null(out)) {
+      lav_msg_stop(gettext(
+        "no predicted attenuation available: it requires sam_method =
+         \"local\" with the ML mapping, single-level continuous complete
+         data, and at least two factors measured by congeneric blocks of
+         three or more indicators (one factor per measurement block)."))
+    }
+    if (length(out) == 1L && drop_list_single_group) {
+      out <- out[[1]]
+    }
+    out
+
     # post-checking
   } else if (what == "post.check" || what == "post") {
     lav_object_post_check(object)

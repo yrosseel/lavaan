@@ -262,6 +262,38 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     test statistic (columns \code{Chisq.scaled} and \code{Df.scaled}),
     otherwise the standard chi-square statistic.
 
+    With one factor per measurement block (the default \code{mm_list}), the
+    blockwise estimation of the loadings and residual variances in step 1
+    induces a small-sample bias in the estimated latent correlations: they
+    are attenuated (pulled towards zero) by a factor of approximately
+    \eqn{1 - [(1 - \rho^2)/2 + h_k + h_l]/(N - 1)}, where the block terms
+    \eqn{h_k} and \eqn{h_l} depend only on the noise-to-signal ratios
+    \eqn{\theta_i/\lambda_i^2} of the indicators of the two factors: they
+    vanish for reliable indicators, grow quadratically in the noise-to-signal
+    ratio, and decrease roughly in proportion to the number of indicators
+    per factor. For example, with three indicators per factor, standardized
+    loadings of 0.5 and a true correlation of 0.6, the predicted attenuation
+    is about -0.13 when \eqn{N = 100} and -0.03 when \eqn{N = 400}; with
+    standardized loadings of 0.7 it is -0.03 and -0.01. After step 1,
+    \code{sam()} computes this prediction (stabilized as in the analytic
+    plug-in correction: noise-to-signal ratios winsorized at three times the
+    pooled ratio of their block, relative attenuation capped at 50 percent)
+    for every pair of factors that are measured by separate congeneric
+    blocks of at least three indicators, when the data are continuous,
+    complete and single-level, the measurement blocks are estimated by ML
+    without equality constraints, and the ML mapping is used. The
+    \code{summary()} lists the latent correlations whose predicted bias is
+    at least 0.03 in absolute value; the full results are available through
+    \code{lavInspect(fit, "sam_attenuation")}. The estimates are not
+    corrected. The bias is absent when all factors are placed in a single
+    measurement block (e.g., \code{mm_list = list(c("f1", "f2", "f3"))}):
+    the latent covariance matrix then equals the (bounded) joint ML
+    estimate, which keeps the robustness of SAM against a misspecified
+    structural model, but gives up the protection against measurement
+    misspecification in other blocks. Merging only the weakly measured
+    factors into a common block, or using more indicators per factor, are
+    intermediate options.
+
     If \code{sam.method} is \code{"global"}, the returned object is an
     ordinary (joint) lavaan object, and \code{fitMeasures} returns the usual
     fit measures of the joint model. Note, however, that the parameters were
