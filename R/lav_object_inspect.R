@@ -3898,14 +3898,14 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
   }
 
   # k-class estimators (LIML/FULLER): the classic Sargan statistic is
-  # replaced by the T_2NT statistic (which reduces to Sargan under 2SLS);
+  # replaced by the Anderson-Rubin likelihood-ratio statistic N log(lambda);
   # label the columns accordingly
   iv_method <- object@Options$estimator.args[["iv_method"]]
   if (is.null(iv_method)) {
     iv_method <- "2SLS"
   }
   classic_lab <- if (toupper(iv_method) %in% c("LIML", "FULLER")) {
-    "t2nt"
+    "lr"
   } else {
     "sargan"
   }

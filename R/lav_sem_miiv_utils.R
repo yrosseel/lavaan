@@ -790,36 +790,32 @@ lav_sem_miiv_kclass_solve <- function(s_xx = NULL, s_xy = NULL,
   list(amat = amat, bvec = bvec, beta = beta, cxx_z = cxx_z, cxy_z = cxy_z)
 }
 
-# per-equation overidentification statistic T_2NT (Maydeu-Olivares,
-# Fisher, Bollen & Rosseel, eq. 25-27), valid for any k-class estimator;
-# for 2SLS the adjustment term vanishes (first-order conditions) and the
-# statistic reduces to Sargan's J. With Omega = psi * S_zz the statistic
-# simplifies to
-#     T = (N/psi) * ( g' S_zz^{-1} g - h' amat1^{-1} h )
-# with g = s_zy - S_zx beta, h = S_xz S_zz^{-1} g, and amat1 the 2SLS
-# information S_xz S_zz^{-1} S_zx; psi is the ML (divisor N) residual
-# variance (paper eq. 15). df = nz - nx.
-lav_sem_miiv_t2nt <- function(s_zz = NULL, s_zx = NULL, s_xz = NULL,
-                              g = NULL, psi = NULL, nobs = NULL) {
+# per-equation overidentification test for the k-class (LIML/FULLER)
+# estimators: the Anderson & Rubin (1949) likelihood-ratio statistic
+#     LR = N log(lambda)
+# with lambda the smallest generalized eigenvalue of the LIML problem
+# (the minimized variance ratio). It is the ML chi-square statistic of
+# the single-equation instrumental-variables regression model (y ~ x,
+# x ~ z, y ~~ x) fitted with the normal likelihood, and it applies to
+# Fuller as well (Fuller only shifts k, not lambda). df = nz - nx.
+#
+# NOTE: the normal-theory 'adjusted Sargan' form T = (N/psi_k) *
+# (g' S_zz^{-1} g - h' amat1^{-1} h) evaluated at the k-class solution
+# is NOT a LIML statistic: the bracket is the minimized 2SLS criterion
+# (the correction is a Newton step of a quadratic), so T equals the 2SLS
+# Sargan numerator divided by the k-class residual variance, which is
+# (markedly) conservative with many instruments.
+lav_sem_miiv_kclass_lr <- function(lambda = NULL, nz = NULL, nx = NULL,
+                                   nobs = NULL) {
   out <- rep(as.numeric(NA), 3L)
   names(out) <- c("stat", "df", "pvalue")
-  nz <- nrow(s_zx)
-  nx <- ncol(s_zx)
   df <- nz - nx
   out["df"] <- df
-  if (df < 1L) {
+  if (df < 1L || is.na(lambda)) {
     return(out)
   }
-  u <- lav_mat_sym_solve_spd(s_zz, g)
-  h <- s_xz %*% u
-  amat1 <- s_xz %*% lav_mat_sym_solve_spd(s_zz, s_zx)
-  stat <- (nobs / psi) *
-    (sum(g * u) - drop(crossprod(h, solve(amat1, h))))
-  # the adjustment is a projection: the statistic is nonnegative in exact
-  # arithmetic; clamp numerical noise
-  if (stat < 0) {
-    stat <- 0
-  }
+  # lambda >= 1 (clamped at estimation time); stat is nonnegative
+  stat <- nobs * log(lambda)
   out["stat"] <- stat
   out["pvalue"] <- pchisq(stat, df, lower.tail = FALSE)
   out

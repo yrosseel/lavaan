@@ -1174,18 +1174,15 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       }
 
       # 6. Sargan test (see summary.ivreg.R 363--371); k-class (LIML/FULLER)
-      # equations report the T_2NT statistic instead (which reduces to
-      # Sargan under 2SLS)
+      # equations report the Anderson-Rubin likelihood-ratio statistic
+      # N log(lambda) instead (the ML chi-square of the single-equation
+      # IV regression model)
       if (iv_flag && iv_sargan && iv_vcov_stage1 != "none") {
         sargan["df"] <- length(i_idx) - length(x_idx)
         if (sargan["df"] > 0L && kclass) {
-          g <- mom_cov[zi, yi, drop = FALSE] -
-            mom_cov[zi, xi, drop = FALSE] %*% ks$beta
-          sargan <- lav_sem_miiv_t2nt(
-            s_zz = mom_cov[zi, zi, drop = FALSE],
-            s_zx = mom_cov[zi, xi, drop = FALSE],
-            s_xz = mom_cov[xi, zi, drop = FALSE],
-            g = g, psi = resvar, nobs = length(res)
+          sargan <- lav_sem_miiv_kclass_lr(
+            lambda = eq_lambda, nz = length(i_idx), nx = length(x_idx),
+            nobs = length(res)
           )
         } else if (sargan["df"] > 0L) {
           if (is.null(weights)) {
@@ -1829,15 +1826,13 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         # data the p-value is left NA because the classical Sargan test is not
         # valid for polychoric correlations (use the Browne test below instead)
         # for k-class (LIML/FULLER) equations, the 2SLS first-order conditions
-        # do not hold and the Sargan form is replaced by the T_2NT statistic
-        # (Maydeu-Olivares, Fisher, Bollen & Rosseel), which reduces to Sargan
-        # under 2SLS
+        # do not hold and the Sargan form is replaced by the Anderson-Rubin
+        # likelihood-ratio statistic N log(lambda) (the ML chi-square of the
+        # single-equation IV regression model)
         sargan["df"] <- nz - nx
         if (sargan["df"] > 0L && kclass) {
-          g <- s_zy - s_zx %*% beta_slopes
-          sargan <- lav_sem_miiv_t2nt(
-            s_zz = s_zz, s_zx = s_zx, s_xz = s_xz,
-            g = g, psi = resvar, nobs = nobs
+          sargan <- lav_sem_miiv_kclass_lr(
+            lambda = eq_lambda, nz = nz, nx = nx, nobs = nobs
           )
           if (lavmodel@categorical) {
             sargan["pvalue"] <- as.numeric(NA)

@@ -303,10 +303,14 @@ Several \code{\link{lavInspect}} fields are specific to IV estimation:
     \code{lavInspect(fit, "hansen")} is an alias. When
     \code{iv_method = "LIML"} or \code{"FULLER"}, the 2SLS first-order
     conditions no longer hold and the classical Sargan form is replaced by
-    the (asymptotically equivalent under 2SLS) normal-theory residual
-    statistic \eqn{T_{2,NT}} of Maydeu-Olivares, Fisher, Bollen & Rosseel
-    (2026), reported in columns \code{t2nt.stat} and \code{t2nt.pval} with
-    the same degrees of freedom.}
+    the Anderson & Rubin (1949) likelihood-ratio statistic
+    \eqn{N \log(\hat\lambda)}, where \eqn{\hat\lambda} is the minimized
+    LIML variance ratio (the smallest eigenvalue of the LIML problem; Fuller
+    uses the same \eqn{\hat\lambda}). This is the maximum likelihood
+    chi-square statistic of the single-equation instrumental-variables
+    regression model (\code{y ~ x}, \code{x ~ z}, \code{y ~~ x}) fitted with
+    the normal likelihood. It is reported in columns \code{lr.stat} and
+    \code{lr.pval} with the same degrees of freedom.}
   \item{\code{lavInspect(fit, "eqs")}:}{the underlying per-equation
     information.}
 }
@@ -384,7 +388,8 @@ fit2 <- sem(model, data = PoliticalDemocracy,
 lavInspect(fit2, "sargan")
 
 ## LIML instead of 2SLS (less finite-sample bias with many instruments);
-## the per-equation overidentification test is then the T_2NT statistic
+## the per-equation overidentification test is then the Anderson-Rubin
+## likelihood-ratio statistic N log(lambda)
 fit.liml <- sem(model, data = PoliticalDemocracy,
                 estimator = list(estimator = "IV", iv_method = "LIML"))
 lavInspect(fit.liml, "sargan")
