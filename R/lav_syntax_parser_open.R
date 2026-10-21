@@ -1208,45 +1208,22 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
   # handling interaction variable types
   colons <- which(formule$elem_text[seq.int(1L, nelem - 1L)] == ":" &
                     formule$elem_type[seq.int(2L, nelem)] == types$identifier)
-  # check at most 1 colon
-  if (length(colons) > 2L ||
-      (length(colons) == 2L && (colons[1L] > opi || colons[2L] < opi))) {
-    tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[colons[2]])
-    lav_msg_stop(
-      gettext(
-        "Three-way or higher-order interaction terms (using multiple
-        colons) are not supported in the lavaan syntax; please manually
-        construct the product terms yourself in the data.frame, give
-        them an appropriate name, and then you can use these interaction
-        variables as any other (observed) variable in the model syntax."
-      ), tl[1L], footer = tl[2L]
-    )
-  }
-  if (length(colons) > 0L) {
-    formule <- lav_parse_index_product(formule, colons[1L])
+  while (length(colons) > 0L) {
+    thecol <- length(colons)
+    formule <- lav_parse_index_product(formule, colons[thecol])
     # collapse items around colon "a" ":" "b" => "a:b"
-    formule$elem_text[colons[1L] - 1L] <-
-      paste(formule$elem_text[seq.int(colons[1L] - 1L, colons[1L] + 1L)],
+    formule$elem_text[colons[thecol] - 1L] <-
+      paste(formule$elem_text[seq.int(colons[thecol] - 1L, colons[thecol] + 1L)],
             collapse = ""
       )
     formule <- lav_parse_sublist(formule,
-          setdiff(seq.int(1L, nelem), seq.int(colons[1L], colons[1L] + 1L)))
+          setdiff(seq.int(1L, nelem), seq.int(colons[thecol], colons[thecol] + 1L)))
     nelem <- length(formule$elem_type)
-    if (colons[1L] < opi) {
-      opi <- opi - 2L # is in LHS
-      if (length(colons) == 2L) colons[2L] <- colons[2L] - 2L
+    if (thecol == 1L) {
+      colons <- integer(0L)
+    } else {
+      colons <- colons[seq(1L, thecol - 1L)]
     }
-  }
-  if (length(colons) == 2L) {
-    formule <- lav_parse_index_product(formule, colons[2L])
-    # collapse items around colon "a" ":" "b" => "a:b"
-    formule$elem_text[colons[2L] - 1L] <-
-      paste(formule$elem_text[seq.int(colons[2L] - 1L, colons[2L] + 1L)],
-            collapse = ""
-      )
-    formule <- lav_parse_sublist(formule,
-          setdiff(seq.int(1L, nelem), seq.int(colons[2L], colons[2L] + 1L)))
-    nelem <- length(formule$elem_type)
   }
   assign("formule", formule, tmpenv)
   assign("opi", opi, tmpenv)
