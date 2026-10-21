@@ -496,8 +496,11 @@ lav_start_dv <- function(lavpartable, lavdata = NULL) {
       # try to seed a location component to match the lav_start value
       # of the host (candidate: first component unique to this definition)
       target <- lavpartable$start[host_idx[1L]]
-      cand <- all_refs[[i]][all_refs[[i]] %in%
-                              dp_labels[dp_use_count == 1L]]
+      # (a component with a user-supplied ustart is never re-seeded:
+      #  this also covers the import of backend results)
+      dp_no_ustart <- dp_labels[dp_use_count == 1L &
+                                is.na(lavpartable$ustart[dp_idx])]
+      cand <- all_refs[[i]][all_refs[[i]] %in% dp_no_ustart]
       if (length(cand) > 0L && is.finite(target)) {
         c1 <- cand[1L]
         c1_old <- get(c1, envir = env)
@@ -654,8 +657,19 @@ lav_pt_dv_unmoderated <- function(partable) {
   partable$ustart[host_idx] <- NA
 
   # drop the ":~" and "dp" rows, the dv column, and the (fit-specific)
-  # start/est/se columns (the host rows have no scalar value)
-  drop_idx <- which(partable$op %in% c(":~", "dp"))
+  # start/est/se columns (the host rows have no scalar value); constraints
+  # and definitions (:=) that refer to a component parameter go too
+  dp_labels <- partable$lhs[partable$op == "dp"]
+  con_idx <- which(partable$op %in% c("==", "<", ">", ":="))
+  con_drop <- con_idx[vapply(con_idx, function(i) {
+    txt <- c(if (partable$op[i] == ":=") character(0L) else partable$lhs[i],
+             partable$rhs[i])
+    vars <- unique(unlist(lapply(txt[nzchar(txt)], function(s) {
+      all.vars(lav_pt_con_parse(s, gettext("constraint(s)")))
+    })))
+    any(vars %in% dp_labels)
+  }, logical(1L))]
+  drop_idx <- unique(c(which(partable$op %in% c(":~", "dp")), con_drop))
   partable <- lapply(partable, function(x) x[-drop_idx])
   partable$dv <- NULL
   partable$start <- NULL

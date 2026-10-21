@@ -1397,6 +1397,10 @@ lavParameterEstimates <- function(object,                      # nolint
         # (sandwich) expression over the sample moments; the header rows
         # (assembled in lav_noniter_se_rows) replace the information block
         se_rows <- lav_noniter_se_rows(object)
+        if (is.null(se_rows)) {
+          # results imported from an external backend
+          se_rows <- lav_backend_se_rows(object)
+        }
         if (!is.null(se_rows)) {
           attr(tmp_list, "se_rows") <- se_rows
         }

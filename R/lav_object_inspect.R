@@ -66,6 +66,12 @@ lav_lavaan_lavinspect <- function(object,
   # casewise model classes: refuse what is derived from the (single) moment
   # structure or the summary-statistics likelihood
   if (lav_model_dv_flag(object@Model)) {
+    if (what %in% c("loglik.casewise", "lik.casewise") &&
+        !is.null(object@external$backend$loglik_casewise)) {
+      # supplied by the external backend
+      ll_case <- object@external$backend$loglik_casewise
+      return(if (what == "loglik.casewise") ll_case else exp(ll_case))
+    }
     if (what %in% lav_inspect_casewise_refused(rv = FALSE)) {
       lav_object_casewise_check(object, gettextf("lavInspect(what = %s)",
                                                  dQuote(what, q = FALSE)))

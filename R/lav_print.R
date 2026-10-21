@@ -996,7 +996,19 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       cat(sprintf("lavaan %s ", lavaan_version))
 
       # Convergence or not?
-      if (optim_method == "none") {
+      if (!is.null(y$header$backend)) {
+        # results imported from an external estimation backend
+        iter_txt <- if (is.na(optim_iterations)) "" else
+          sprintf(" after %i iterations", optim_iterations)
+        if (optim_converged) {
+          cat(sprintf("ended normally%s (estimated by %s)\n",
+                      iter_txt, y$header$backend))
+        } else {
+          cat(sprintf("did NOT end normally%s (estimated by %s)\n",
+                      iter_txt, y$header$backend))
+          cat("** WARNING ** Estimates below are most likely unreliable\n")
+        }
+      } else if (optim_method == "none") {
         cat("-- DRY RUN with 0 iterations --\n")
       } else if (optim_iterations > 0) {
         if (optim_converged) {

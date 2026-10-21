@@ -174,7 +174,8 @@ lav_object_summary <- function(object, header = TRUE,
       sam.approach = !is.null(object@internal$sam.method),
       optim.method = object@Options$optim.method,
       optim.iterations = object@optim$iterations,
-      optim.converged = object@optim$converged
+      optim.converged = object@optim$converged,
+      backend = object@optim$backend$name # NULL unless imported results
     )
 
     # sam or sem?
@@ -298,7 +299,11 @@ lav_object_summary <- function(object, header = TRUE,
         estimator = object@Options$estimator,
         estimator.args = object@Options$estimator.args,
         correlation = correlation_flag,
-        optim.method = object@Options$optim.method,
+        optim.method = if (!is.null(object@optim$backend)) {
+          object@optim$backend$name # results imported from a backend
+        } else {
+          object@Options$optim.method
+        },
         npar = object@Model@nx.free,
         eq.constraints = object@Model@eq.constraints,
         nrow.ceq.jac = nrow_ceq_jac,
