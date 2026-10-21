@@ -26,6 +26,7 @@ modindices <- function(object,
 
   # check object
   object <- lav_object_check_version(object)
+  lav_object_casewise_check(object, gettext("modification indices"))
 
   # sam objects (issue #517)
   if (!is.null(object@internal$sam.method)) {

@@ -45,6 +45,7 @@ lavBootstrap <- function(object,                                   # nolint
 
   # check object
   object <- lav_object_check_version(object)
+  lav_object_casewise_check(object, gettext("bootstrapping"), rv_too = FALSE)
 
   # checks
   type_1 <- tolower(type) # overwritten if nonparametric

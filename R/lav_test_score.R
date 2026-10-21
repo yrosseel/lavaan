@@ -99,6 +99,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
   lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   object <- lav_object_check_version(object)
+  lav_object_casewise_check(object, gettext("score tests"))
 
   # sam objects: the score test needs the (joint) information/scores, which
   # a two-step (sam) procedure does not provide (issue #517)

@@ -725,6 +725,21 @@ lav_options_set <- function(opt = NULL) {
   if (is.null(opt$.dv)) {
     opt$.dv <- FALSE
   }
+  # casewise likelihood? (data-defined parameters, random slopes)
+  opt$.casewise <- opt$.dv || opt$.rv
+  if (opt$.dv) {
+    # no single set of model-implied moments: no saturated-model
+    # comparison, no chi-square test, no baseline model, no level-specific
+    # fit; lavaan itself has no casewise kernel for these models (yet)
+    opt$baseline <- FALSE
+    opt$fit.by.level <- FALSE
+    if (!all(opt$test %in% c("default", "none"))) {
+      lav_msg_warn(gettext(
+        "test statistics are not available for models with data-defined
+         (:~) parameters; test set to \"none\"."))
+    }
+    opt$test <- "none"
+  }
   if (opt$.rv) {
     # random slopes are only available for two-level models with
     # continuous data, complete data, estimator ML (for now)

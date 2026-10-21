@@ -843,6 +843,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                           add_labels = FALSE, add_class = FALSE,
                           drop_list_single_group = FALSE,
                           summary_blocks_combined = FALSE) {
+  lav_object_casewise_check(object, gettext("residuals"))
   # check object
   object <- lav_object_check_version(object)
 

@@ -64,6 +64,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
   lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   object <- lav_object_check_version(object)
+  lav_object_casewise_check(object, gettext("lavPredict()"), rv_too = FALSE)
 
   parallel <- match.arg(parallel)
 

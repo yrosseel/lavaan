@@ -63,6 +63,20 @@ lav_lavaan_lavinspect <- function(object,
   # ("cov_lv" == "cov.lv"); the internal matching uses the dotted spelling
   what <- lav_keyword_canonical(what)
 
+  # casewise model classes: refuse what is derived from the (single) moment
+  # structure or the summary-statistics likelihood
+  if (lav_model_dv_flag(object@Model)) {
+    if (what %in% lav_inspect_casewise_refused(rv = FALSE)) {
+      lav_object_casewise_check(object, gettextf("lavInspect(what = %s)",
+                                                 dQuote(what, q = FALSE)))
+    }
+  } else if (lav_model_rs_flag(object@Model)) {
+    if (what %in% lav_inspect_casewise_refused(rv = TRUE)) {
+      lav_object_casewise_check(object, gettextf("lavInspect(what = %s)",
+                                                 dQuote(what, q = FALSE)))
+    }
+  }
+
   #### model matrices, with different contents ####
   if (what == "free") {
     lav_inspect_modelmatrices(object, what = "free",
@@ -1643,6 +1657,7 @@ lav_inspect_rsquare <- function(object, est_std_all = NULL,
 lav_inspect_implied <- function(object,
     add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
+  lav_object_casewise_check(object, gettext("model-implied moments"))
   nblocks <- object@Model@nblocks
   ov_names <- object@pta$vnames$ov
   ov_names_res <- object@pta$vnames$ov.nox

@@ -56,6 +56,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
   # check object
   object <- lav_object_check_version(object)
+  lav_object_casewise_check(object, gettext("likelihood ratio tests"),
+                            rv_too = FALSE)
   # check models in dotdotdot
   dotdotdot[modp] <- lapply(dotdotdot[modp], lav_object_check_version)
 

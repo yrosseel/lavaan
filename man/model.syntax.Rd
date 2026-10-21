@@ -872,6 +872,18 @@ free again) is returned by \code{lavInspect(fit, "list_unmoderated")};
 backends can use it, for example, to obtain warm starts or a reference
 model.
 
+Because the model-implied moments vary across observations, everything
+that is derived from a single moment structure is refused for these
+models, rather than being evaluated at the representative starting values
+of the moderated cells: \code{fitted()}, \code{residuals()},
+\code{fitMeasures()}, \code{modindices()}, \code{lavTestScore()},
+\code{lavTestLRT()}, \code{standardizedSolution()}, \code{lavPredict()},
+bootstrapping, and the corresponding \code{lavInspect()} keywords; the
+\code{test} option is set to \code{"none"} and no baseline model is
+fitted. \code{logLik()} returns \code{NA} (with a warning) as long as no
+casewise log-likelihood is available. The parameter estimates, standard
+errors, and \code{coef()}/\code{vcov()} remain available.
+
 Note the difference with random slopes (the \code{rv()} modifier): a
 random slope varies across clusters as a latent variable, while a
 data-defined parameter varies deterministically with observed variables.

@@ -6,7 +6,10 @@ lav_step12_implied <- function(lavoptions = NULL,
 
   # if lavoptions$implied compute lavimplied via lav_model_implied
   lavimplied <- list()
-  if (lavoptions$implied) {
+  # data-defined (":~") parameters: the model-implied moments vary across
+  # observations; evaluating them at the representative values of the
+  # moderated cells would give misleading numbers, so the slot stays empty
+  if (lavoptions$implied && !lav_model_dv_flag(lavmodel)) {
     if (lav_verbose()) {
       cat("lavimplied  ...")
     }
@@ -40,7 +43,9 @@ lav_step12_loglik <- function(lavoptions = NULL,
 
   # if lavoptions$loglik compute lavloglik via lav_model_loglik
   lavloglik <- list()
-  if (lavoptions$loglik) {
+  # (data-defined parameters: no summary-statistics loglikelihood; the
+  #  slot stays empty until an external backend supplies the casewise one)
+  if (lavoptions$loglik && !lav_model_dv_flag(lavmodel)) {
     if (lav_verbose()) {
       cat("lavloglik   ...")
     }

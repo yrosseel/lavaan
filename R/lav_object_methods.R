@@ -254,6 +254,7 @@ standardizedSolution <- function(object,                     # nolint
     lav_adapt_func(environment(), dotdotdot, NULL)
     # check object
     object <- lav_object_check_version(object)
+    lav_object_casewise_check(object, gettext("standardized solution"))
 
     # check type: either one of the std.* keywords, or a vector of (observed)
     # variable names, in which case only the parameters involving these
@@ -997,6 +998,15 @@ lavParameterEstimates <- function(object,                      # nolint
       tmp_list$ci.upper <- ci[, 2]
     }
 
+    # casewise model classes: no standardized solution
+    if (lav_object_casewise_flag(object) &&
+        !(is.logical(standardized) && !standardized)) {
+      lav_msg_warn(gettext(
+        "standardized estimates are not available for casewise-likelihood
+         models (data-defined parameters, random slopes); ignoring the
+         standardized= argument."))
+      standardized <- FALSE
+    }
     # standardized estimates?
     # 28 March 2024: TDJ adds option to select specific types
     # observed variables to standardize when standardized= is a vector of
@@ -1594,6 +1604,17 @@ setMethod(
     }
     if (object@optim$npar > 0L && !object@optim$converged) {
       lav_msg_warn(gettext("model did not converge"))
+    }
+
+    # data-defined (:~) parameters: the summary-statistics loglikelihood
+    # is not computed (it would be evaluated at representative values of
+    # the moderated cells); nothing is available until an external
+    # backend supplies the casewise loglikelihood
+    if (lav_model_dv_flag(object@Model) && is.null(object@loglik$loglik)) {
+      lav_msg_warn(gettext(
+        "no loglikelihood available: models with data-defined (:~)
+         parameters require a casewise likelihood, which lavaan can not
+         (yet) compute."))
     }
 
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)

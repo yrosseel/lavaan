@@ -364,6 +364,10 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available: this sam object was created by an
          older version of lavaan; please rerun sam()"))
+    } else if (lav_model_dv_flag(object@Model)) {
+      lav_msg_warn(gettext(
+        "fit measures not available for models with data-defined (:~)
+         parameters"))
     } else if (length(object@Options$test) == 1L &&
       object@Options$test == "none" &&
       !lav_model_rs_flag(object@Model)) {

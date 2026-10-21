@@ -401,6 +401,10 @@ lav_fit <- function(object, fit_measures = "all",
     lav_msg_stop(gettext("fit measures not available if there is no data."))
   }
 
+  # data-defined (:~) parameters: no moment structure, no test, and (for
+  # now) no loglikelihood either
+  lav_object_casewise_check(object, gettext("fit measures"), rv_too = FALSE)
+
   # has the model converged?
   if (object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_stop(gettext(

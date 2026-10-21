@@ -60,6 +60,10 @@
 # in long panel data (panel=) -- conditioning on the observed within-only
 # covariates, as Mplus does for WITHIN= variables, without random slopes)
 lav_model_rs_flag <- function(lavmodel) {
+  # (objects created by older lavaan versions have no rv.* slots)
+  if (!methods::.hasSlot(lavmodel, "rv.ov")) {
+    return(FALSE)
+  }
   length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L ||
     isTRUE(lavmodel@modprop$within_x_cond)
 }

@@ -376,6 +376,16 @@ lav_pt_dv <- function(partable, var_table = NULL, data_names = NULL) {
     partable$free[dp_idx] <- rep(1L, n_dp) # renumbered later
     partable$exo[dp_idx] <- rep(0L, n_dp)
     partable$block[dp_idx] <- rep(0L, n_dp)
+    # plabels: external backends key the free parameters by plabel, so
+    # the component rows need one too; continue the numbering after the
+    # highest existing plabel (ids may have been renumbered above, so
+    # ".p<id>." could clash with an existing plabel)
+    if (!is.null(partable$plabel)) {
+      p_num <- suppressWarnings(as.integer(
+        sub("^\\.p([0-9]+)\\.$", "\\1", partable$plabel)))
+      p_max <- if (all(is.na(p_num))) 0L else max(p_num, na.rm = TRUE)
+      partable$plabel[dp_idx] <- paste0(".p", p_max + seq_len(n_dp), ".")
+    }
     for (bl in c("group", "level", "class")) {
       if (!is.null(partable[[bl]])) {
         if (is.character(partable[[bl]])) {
@@ -703,4 +713,81 @@ lav_pt_dv_unmoderated <- function(partable) {
     partable <- as.data.frame(partable, stringsAsFactors = FALSE)
   }
   partable
+}
+
+# casewise-likelihood model classes
+#
+# a model with data-defined (":~") parameters has one set of model
+# matrices per observation: there is no single set of model-implied
+# moments, no (summary-statistics) loglikelihood, and no chi-square test.
+# lavaan has no casewise kernel for these models (yet), so an unfitted
+# object (do.fit = FALSE, or results imported from an external backend)
+# must refuse everything derived from the moment structure, instead of
+# returning numbers computed at the representative starting values of
+# the moderated cells. Random-slope models (rv()) are casewise too, but
+# lavaan does have their kernel: they keep their loglikelihood, fit
+# measures and factor scores, and refuse only the moment-based output.
+lav_model_dv_flag <- function(lavmodel) {
+  # (objects created by older lavaan versions have no dv.idx slot)
+  methods::.hasSlot(lavmodel, "dv.idx") && length(lavmodel@dv.idx) > 0L
+}
+
+lav_object_casewise_flag <- function(object) {
+  lav_model_dv_flag(object@Model) || lav_model_rs_flag(object@Model)
+}
+
+# stop with an informative message when 'what' (a feature description,
+# eg "fit measures") is not available for this casewise model class;
+# rv_too = FALSE: only data-defined models are refused
+lav_object_casewise_check <- function(object, what = "this output",
+                                      rv_too = TRUE) {
+  if (lav_model_dv_flag(object@Model)) {
+    lav_msg_stop(gettextf(
+      "%s not available for models with data-defined (:~) parameters:
+       the likelihood is casewise, and the model-implied moments vary
+       across observations.", what))
+  } else if (rv_too && lav_model_rs_flag(object@Model)) {
+    lav_msg_stop(gettextf(
+      "%s not available for models with random slopes: the model-implied
+       moments vary across clusters.", what))
+  }
+  invisible(TRUE)
+}
+
+# lavInspect() keywords that are refused for casewise model classes
+lav_inspect_casewise_refused <- function(rv = FALSE) {
+  # observed-variable moment structure and everything standardized by it
+  moments <- c(
+    "implied", "fitted", "fitted.values",
+    "resid", "res", "residual", "residuals",
+    "cov.ov", "sigma", "sigma.hat", "mean.ov", "mu", "mu.hat",
+    "vy", "rsquare", "r-square", "r2",
+    "loglik.casewise", "lik.casewise",
+    "wls.est", "wls.obs", "wls.v", "wls.vd",
+    "mi", "modindices", "modification.indices",
+    "std", "std.all", "std.lv", "std.nox", "standardized", "est.std",
+    "vcov.std.all", "vcov.standardized", "vcov.std", "vcov.std.lv",
+    "vcov.std.nox", "vcov.def.std.all", "vcov.def.standardized",
+    "vcov.def.std", "vcov.def.std.lv", "vcov.def.std.nox",
+    "vcov.def.joint.std.all", "vcov.def.joint.standardized",
+    "vcov.def.joint.std", "vcov.def.joint.std.lv", "vcov.def.joint.std.nox"
+  )
+  if (rv) {
+    # random slopes: the latent (level-2) moments and thresholds are
+    # ordinary model quantities, and the likelihood kernel exists
+    return(moments)
+  }
+  c(moments,
+    "cov.lv", "veta", "mean.lv", "eeta", "cov.all",
+    "th", "thresholds", "delta", "delta.rownames",
+    "gradient", "gradient.logl", "optim.gradient", "hessian",
+    "information", "information.expected", "information.observed",
+    "information.first.order", "information.firstorder", "first.order",
+    "augmented.information", "augmented.information.expected",
+    "augmented.information.observed", "augmented.information.first.order",
+    "augmented.first.order", "inverted.information",
+    "inverted.information.expected", "inverted.information.observed",
+    "inverted.information.first.order", "inverted.first.order",
+    "ugamma", "ug", "u.gamma", "ufromugamma", "u",
+    "fit", "fitmeasures", "fit.measures", "fit.indices")
 }
