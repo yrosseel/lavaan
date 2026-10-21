@@ -240,6 +240,7 @@ lav_object_backend_results <- function(object, results) {
   lavoptions$se <- "external"
   lavoptions$do.fit <- TRUE
   lavoptions$rotation <- "none"
+  lavoptions$backend <- "lavaan" # the dry run must not call the backend
   if (dv_flag) {
     lavoptions$test <- "none"
     lavoptions$baseline <- FALSE
@@ -360,4 +361,165 @@ lav_backend_se_rows <- function(object = NULL) {
     out["Standard errors"] <- "None"
   }
   out
+}
+
+# ---------------------------------------------------------------------
+# the backend registry (step 4 of the plan): named estimation backends
+#
+# a backend is a descriptor: a name, a function
+#
+#     fun(object, args)
+#
+# that receives the lavaan object prepared for it (do.fit = FALSE) and the
+# backend.args list, and returns the results list lavImportResults() takes
+# (est, vcov/se, loglik, converged, iterations, status, nobs,
+# loglik_casewise, scores, object), plus metadata: the package that
+# provides it (loaded on demand, also on parallel workers), a version,
+# the model classes it supports ("all", "dv" = data-defined parameters,
+# "standard" = ordinary models), and free-form capabilities.
+#
+# the `backend' option is a string resolved through this registry (the
+# form that survives the lavaan 2 transition: no R closure involved); a
+# bare function is accepted as development sugar and registered under an
+# anonymous name for the session.
+lav_backend_registry <- new.env(parent = emptyenv())
+
+lavBackendRegister <- function(name,                           # nolint
+                               fun,
+                               package = NULL,
+                               version = NULL,
+                               supports = "all",
+                               capabilities = list(),
+                               description = "",
+                               overwrite = TRUE) {
+  if (!is.character(name) || length(name) != 1L || !nzchar(name)) {
+    lav_msg_stop(gettext("`name' must be a single (non-empty) string."))
+  }
+  if (tolower(name) == "lavaan") {
+    lav_msg_stop(gettext("the name \"lavaan\" is reserved."))
+  }
+  if (!is.function(fun)) {
+    lav_msg_stop(gettext("`fun' must be a function(object, args)."))
+  }
+  supports <- lav_keyword_canonical(supports)
+  bad <- supports[!supports %in% c("all", "dv", "standard")]
+  if (length(bad) > 0L) {
+    lav_msg_stop(gettextf(
+      "`supports' must be a subset of %s.",
+      lav_msg_view(c("all", "dv", "standard"), "none")))
+  }
+  key <- tolower(name)
+  if (!overwrite && exists(key, envir = lav_backend_registry,
+                           inherits = FALSE)) {
+    lav_msg_stop(gettextf("a backend named %s is already registered.",
+                          dQuote(name, q = FALSE)))
+  }
+  descriptor <- list(
+    name = name,
+    fun = fun,
+    package = if (is.null(package)) NA_character_ else as.character(package)[1L],
+    version = if (is.null(version)) NA_character_ else as.character(version)[1L],
+    supports = supports,
+    capabilities = capabilities,
+    description = as.character(description)[1L]
+  )
+  assign(key, descriptor, envir = lav_backend_registry)
+  invisible(descriptor)
+}
+
+lavBackends <- function() {                                      # nolint
+  keys <- sort(ls(lav_backend_registry))
+  out <- data.frame(
+    name = character(0L), package = character(0L),
+    version = character(0L), supports = character(0L),
+    description = character(0L), stringsAsFactors = FALSE
+  )
+  for (key in keys) {
+    d <- get(key, envir = lav_backend_registry)
+    out[nrow(out) + 1L, ] <- list(
+      d$name, d$package, d$version, paste(d$supports, collapse = ","),
+      d$description
+    )
+  }
+  out
+}
+
+# look up a backend by name; if unknown, try to load a package of that
+# name (its .onLoad() is expected to register the backend)
+lav_backend_get <- function(name) {
+  key <- tolower(name)
+  if (!exists(key, envir = lav_backend_registry, inherits = FALSE)) {
+    if (requireNamespace(name, quietly = TRUE) &&
+        exists(key, envir = lav_backend_registry, inherits = FALSE)) {
+      # registered by the package's .onLoad()
+    } else {
+      registered <- gettext("none")
+      if (length(ls(lav_backend_registry)) > 0L) {
+        registered <- lav_msg_view(lavBackends()$name, "none")
+      }
+      lav_msg_stop(gettextf(
+        "unknown estimation backend %1$s; registered backends: %2$s (see
+         lavBackendRegister()).", dQuote(name, q = FALSE), registered))
+    }
+  }
+  get(key, envir = lav_backend_registry)
+}
+
+# resolve the `backend' option (a string, or a function) to a descriptor
+lav_backend_resolve <- function(backend) {
+  if (is.function(backend)) {
+    # already registered under an anonymous name?
+    for (key in ls(lav_backend_registry)) {
+      d <- get(key, envir = lav_backend_registry)
+      if (startsWith(key, "function#") && identical(d$fun, backend)) {
+        return(d)
+      }
+    }
+    k <- sum(startsWith(ls(lav_backend_registry), "function#")) + 1L
+    return(lavBackendRegister(
+      name = paste0("function#", k), fun = backend,
+      description = gettext("anonymous backend function (this session)")))
+  }
+  if (!is.character(backend) || length(backend) != 1L) {
+    lav_msg_stop(gettext(
+      "the `backend' option must be a single string (the name of a
+       registered backend) or a function(object, args)."))
+  }
+  lav_backend_get(backend)
+}
+
+# run a backend on the prepared object, and import its results
+lav_backend_run <- function(object, descriptor, args = list()) {
+  dv_flag <- lav_model_dv_flag(object@Model)
+  needed <- if (dv_flag) "dv" else "standard"
+  if (!any(descriptor$supports %in% c("all", needed))) {
+    lav_msg_stop(gettextf(
+      "backend %1$s does not support this model class (%2$s); it supports:
+       %3$s.", dQuote(descriptor$name, q = FALSE), needed,
+      lav_msg_view(descriptor$supports, "none")))
+  }
+  if (!is.na(descriptor$package) &&
+      !requireNamespace(descriptor$package, quietly = TRUE)) {
+    lav_msg_stop(gettextf(
+      "backend %1$s needs package %2$s, which is not available.",
+      dQuote(descriptor$name, q = FALSE), dQuote(descriptor$package, q = FALSE)))
+  }
+  if (lav_verbose()) {
+    cat(sprintf("estimation by backend %s ...", descriptor$name))
+  }
+  results <- descriptor$fun(object, args)
+  if (lav_verbose()) {
+    cat(" done.\n")
+  }
+  if (!is.list(results) || is.null(results$est)) {
+    lav_msg_stop(gettextf(
+      "backend %s did not return a list with (at least) an `est' element.",
+      dQuote(descriptor$name, q = FALSE)))
+  }
+  if (is.null(results$backend)) {
+    results$backend <- descriptor$name
+  }
+  fit <- lav_object_backend_results(object = object, results = results)
+  fit@Options$backend <- descriptor$name
+  fit
 }

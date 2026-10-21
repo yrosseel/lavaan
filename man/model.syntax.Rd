@@ -857,7 +857,11 @@ likelihood. lavaan itself can not (yet) estimate such models; calling
 \code{do_fit = FALSE} returns an (unfitted) object holding the complete
 model specification (parameter table, starting values, and the
 \code{dv.function} in the \code{@Model} slot) that external packages can
-use to estimate the model with a suitable backend. Because a casewise
+use to estimate the model with a suitable backend; alternatively, a
+registered backend (see \code{\link{lavBackendRegister}}) can be named
+in the \code{backend} argument, in which case lavaan calls it and
+returns a fitted object (see \code{\link{lavImportResults}}). Because a
+casewise
 likelihood always involves the means, models with \code{":~"}
 definitions always have a mean structure (\code{meanstructure = TRUE}
 is forced). Cases with a missing value for a definition variable can

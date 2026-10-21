@@ -317,6 +317,17 @@ lav_options_set <- function(opt = NULL) {
     if (opt$test[1] == "default") opt$test <- "none"
   }
 
+  # backend: a string (the name of a registered backend) or a function ####
+  if (!(is.character(opt$backend) && length(opt$backend) == 1L) &&
+      !is.function(opt$backend)) {
+    lav_msg_stop(gettext(
+      "the `backend' option must be a single string (the name of a
+       registered backend) or a function(object, args)."))
+  }
+  if (!is.list(opt$backend.args)) {
+    lav_msg_stop(gettext("the `backend.args' option must be a list."))
+  }
+
   # did the user explicitly request meanstructure = FALSE? (needed further
   # below, as opt$meanstructure may be forced to TRUE along the way)
   meanstructure_false <- is.logical(opt$meanstructure) && !opt$meanstructure

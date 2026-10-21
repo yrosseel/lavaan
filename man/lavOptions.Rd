@@ -780,6 +780,18 @@ Estimation options:
      used.}
    \item{\code{do_fit}:}{If \code{FALSE}, the model is not fit, and the 
      current starting values of the model parameters are preserved.}
+   \item{\code{backend}:}{Character (or function). The estimation
+     backend: \code{"lavaan"} (the default), or the name of a backend
+     registered with \code{\link{lavBackendRegister}} (for example a
+     package that estimates models with data-defined (\code{":~"})
+     parameters using a casewise likelihood). lavaan then prepares the
+     model as with \code{do_fit = FALSE}, hands the object to the backend,
+     and imports its results (see \code{\link{lavImportResults}}). A bare
+     function \code{function(object, args)} is accepted as a shortcut for
+     interactive use; it is registered under an anonymous name for the
+     session.}
+   \item{\code{backend_args}:}{List. Settings passed on to the backend
+     (the \code{args} argument of its function).}
 }
 
 Optimization options:

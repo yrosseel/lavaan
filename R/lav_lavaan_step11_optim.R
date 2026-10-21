@@ -61,8 +61,10 @@ lav_step11_estoptim <- function(lavdata = NULL,
       lav_msg_stop(gettext(
         "models with data-defined (:~) parameters require a casewise
         likelihood, and can not (yet) be estimated by lavaan itself;
-        use do_fit = FALSE to obtain the model specification (parameter
-        table, starting values, dv.function) for an external backend."))
+        use the backend= argument to estimate the model with a registered
+        external backend (see lavBackendRegister()), or do_fit = FALSE to
+        obtain the model specification (parameter table, starting values,
+        dv.function) for an external backend."))
     }
     if (lav_verbose()) {
       cat("lavoptim           ... start:\n")

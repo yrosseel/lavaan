@@ -84,7 +84,9 @@ object (for example \code{test = "standard"}).
 An object of class \code{\linkS4class{lavaan}}.
 }
 \seealso{
-\code{\link{model.syntax}}, \code{\link{lavInspect}}.
+\code{\link{lavBackendRegister}} (let lavaan call the backend itself,
+through the \code{backend} option), \code{\link{model.syntax}},
+\code{\link{lavInspect}}.
 }
 \examples{
 set.seed(1)

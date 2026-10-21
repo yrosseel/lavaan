@@ -384,6 +384,10 @@ lav_options_default <- function() {
   elm("representation", "default", chr = c(
     default = "LISREL", lisrel = "LISREL", ram = "RAM"))
   elm("do.fit", TRUE, bl = TRUE)
+  # external estimation backend: "lavaan" (default), the name of a
+  # registered backend (see lavBackendRegister()), or a function
+  elm("backend", "lavaan")
+  elm("backend.args", list(), oklen = c(0L, 100L))
   elm("bounds", "none", chr = c(
     "none", "default", "standard", "user", "wide", "wide.zerovar", "pos.var",
     "pos.ov.var", "pos.lv.var"))      # new in 0.6-6

@@ -387,6 +387,18 @@ lavaan <- function(
   }
   timing <- lav_add_timing(timing, "Options")
 
+  # ------------ external estimation backend ------------
+  # lavaan prepares the model (as with do.fit = FALSE); the backend
+  # estimates it, and its results are imported into the object at the end
+  backend_descriptor <- NULL
+  if (lavoptions$do.fit && !identical(lavoptions$backend, "lavaan")) {
+    backend_descriptor <- lav_backend_resolve(lavoptions$backend)
+    lavoptions$backend <- backend_descriptor$name # always a string
+    lavoptions$do.fit <- FALSE
+  } else if (is.function(lavoptions$backend)) {
+    lavoptions$backend <- lav_backend_resolve(lavoptions$backend)$name
+  }
+
   # ------------ auxiliary variables --------------
   # if the auxiliary variables were already added as saturated correlates
   # (FIML, see above), they are part of the model now; otherwise, validate
@@ -938,6 +950,13 @@ lavaan <- function(
     if (length(fbl) > 0L) {
       out@internal$fit.by.level <- fbl
     }
+  }
+
+  # external estimation backend: estimate, and import the results
+  if (!is.null(backend_descriptor)) {
+    out <- lav_backend_run(out, backend_descriptor,
+                           args = lavoptions$backend.args)
+    out@timing <- lav_add_timing(out@timing, "backend")
   }
 
   # restore random seed
