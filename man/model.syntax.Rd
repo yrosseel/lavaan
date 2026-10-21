@@ -880,13 +880,17 @@ Because the model-implied moments vary across observations, everything
 that is derived from a single moment structure is refused for these
 models, rather than being evaluated at the representative starting values
 of the moderated cells: \code{fitted()}, \code{residuals()},
-\code{fitMeasures()}, \code{modindices()}, \code{lavTestScore()},
-\code{lavTestLRT()}, \code{standardizedSolution()}, \code{lavPredict()},
-bootstrapping, and the corresponding \code{lavInspect()} keywords; the
-\code{test} option is set to \code{"none"} and no baseline model is
-fitted. \code{logLik()} returns \code{NA} (with a warning) as long as no
-casewise log-likelihood is available. The parameter estimates, standard
-errors, and \code{coef()}/\code{vcov()} remain available.
+\code{modindices()}, \code{lavTestScore()},
+\code{standardizedSolution()}, \code{lavPredict()}, bootstrapping, and
+the corresponding \code{lavInspect()} keywords; the \code{test} option
+is set to \code{"none"} and no baseline model is fitted. Once a backend
+has supplied the casewise log-likelihood, \code{logLik()}, \code{AIC()},
+\code{BIC()}, the log-likelihood based \code{fitMeasures()} (\code{logl},
+\code{aic}, \code{bic}, \code{bic2}, \code{npar}, \code{ntotal}) and
+\code{lavTestLRT()} between nested models of this class are available;
+without it, \code{logLik()} returns \code{NA} with a warning. The
+parameter estimates, standard errors, and \code{coef()}/\code{vcov()}
+are always available.
 
 Note the difference with random slopes (the \code{rv()} modifier): a
 random slope varies across clusters as a latent variable, while a

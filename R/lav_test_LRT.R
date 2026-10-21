@@ -56,8 +56,6 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
   # check object
   object <- lav_object_check_version(object)
-  lav_object_casewise_check(object, gettext("likelihood ratio tests"),
-                            rv_too = FALSE)
   # check models in dotdotdot
   dotdotdot[modp] <- lapply(dotdotdot[modp], lav_object_check_version)
 
@@ -116,6 +114,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
 
   # shortcut for single argument (just plain LRT)
   if (!any(modp) && !user_h1_exists) {
+    if (lav_object_casewise_flag(object)) {
+      lav_msg_stop(gettext(
+        "no chi-square test statistic exists for casewise-likelihood models
+         (data-defined parameters, random slopes); provide at least two
+         (nested) models to compare their loglikelihoods."))
+    }
     if (lav_test_fmg_is_preset(test)) {
       test <- lav_test_fmg_resolve_preset(
         test, nested = FALSE, ngroups = ngroups
@@ -148,6 +152,13 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
 
   # ensure model names are unique (they are used as row.names later)
   names(mods) <- make.unique(names(mods))
+
+  # casewise model classes (data-defined parameters, random slopes): no
+  # chi-square test statistics exist; compare the loglikelihoods directly
+  casewise_flags <- vapply(mods, lav_object_casewise_flag, logical(1L))
+  if (any(casewise_flags)) {
+    return(lav_test_lrt_loglik(mods, casewise_flags = casewise_flags))
+  }
 
   # put them in order (using degrees of freedom)
   ndf <- sapply(mods, function(x) x@test[[1]]$df)
@@ -1052,5 +1063,97 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
 
   class(val) <- c("anova", class(val))
 
+  val
+}
+
+
+# likelihood ratio test(s) based on the loglikelihoods of the models
+# (casewise model classes, where no chi-square test statistic exists):
+# the models are ordered by their number of free parameters; each pair of
+# consecutive models is compared by 2 * (logl_larger - logl_smaller) on
+# npar_larger - npar_smaller degrees of freedom
+lav_test_lrt_loglik <- function(mods, casewise_flags = NULL) {
+  if (is.null(casewise_flags)) {
+    casewise_flags <- vapply(mods, lav_object_casewise_flag, logical(1L))
+  }
+  if (!all(casewise_flags)) {
+    lav_msg_stop(gettext(
+      "casewise-likelihood models (data-defined parameters, random slopes)
+       can not be compared with models fitted to summary statistics: their
+       loglikelihoods are not on the same scale."))
+  }
+  # loglikelihoods
+  logl <- vapply(mods, function(m) {
+    if (is.null(m@loglik$loglik)) NA_real_ else m@loglik$loglik
+  }, numeric(1L))
+  if (anyNA(logl)) {
+    lav_msg_stop(gettextf(
+      "no loglikelihood available for model(s): %s.",
+      lav_msg_view(names(mods)[is.na(logl)], "none")))
+  }
+  npar <- vapply(mods, function(m) as.numeric(m@loglik$npar), numeric(1L))
+  ntotal <- vapply(mods, function(m) as.numeric(m@loglik$ntotal),
+                   numeric(1L))
+  if (length(unique(ntotal)) > 1L) {
+    lav_msg_stop(gettext(
+      "the models were not fitted to the same number of observations."))
+  }
+  conv <- vapply(mods, function(m) isTRUE(m@optim$converged), logical(1L))
+  if (!all(conv)) {
+    lav_msg_warn(gettextf(
+      "model(s) did not converge: %s.",
+      lav_msg_view(names(mods)[!conv], "none")))
+  }
+  # same observed variables?
+  ov_names <- lapply(mods, function(x) sort(lav_object_vnames(x)))
+  if (!all(vapply(ov_names, identical, logical(1L), ov_names[[1L]]))) {
+    lav_msg_warn(gettext(
+      "some models are based on a different set of observed variables"))
+  }
+
+  # order: the least restricted model (most parameters) first
+  order_idx <- order(npar, decreasing = TRUE)
+  mods <- mods[order_idx]
+  logl <- logl[order_idx]
+  npar <- npar[order_idx]
+
+  n_mods <- length(mods)
+  stat_delta <- c(NA_real_, 2 * (logl[-n_mods] - logl[-1L]))
+  df_delta <- c(NA_real_, npar[-n_mods] - npar[-1L])
+  if (any(df_delta[-1L] <= 0)) {
+    lav_msg_warn(gettext(
+      "some models have the same number of free parameters; the
+       likelihood ratio test is not meaningful for these pairs."))
+  }
+  if (any(stat_delta[-1L] < -1e-6)) {
+    lav_msg_warn(gettext(
+      "the loglikelihood of a more restricted model exceeds that of a less
+       restricted model: the models may not be nested, or a model has not
+       converged."))
+  }
+  pvalue_delta <- pchisq(stat_delta, df_delta, lower.tail = FALSE)
+  pvalue_delta[!is.na(df_delta) & df_delta <= 0] <- NA_real_
+
+  aic <- vapply(mods, function(m) AIC(m), numeric(1L))
+  bic <- vapply(mods, function(m) BIC(m), numeric(1L))
+
+  val <- data.frame(
+    Npar = npar,
+    AIC = aic,
+    BIC = bic,
+    logLik = logl,
+    "Chisq diff" = stat_delta,
+    "Df diff" = df_delta,
+    "Pr(>Chisq)" = pvalue_delta,
+    row.names = names(mods),
+    check.names = FALSE
+  )
+  attr(val, "heading") <- paste0(
+    "\n", gettext("Likelihood Ratio Test (casewise loglikelihoods)"), "\n")
+  attr(val, "type") <- "Chisq"
+  attr(val, "method") <- "standard"
+  attr(val, "test") <- "standard"
+  attr(val, "scaled") <- FALSE
+  class(val) <- c("anova", class(val))
   val
 }

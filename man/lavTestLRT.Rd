@@ -96,6 +96,17 @@ anova(object, ...)
     The \code{anova} function for lavaan objects simply calls the
     \code{lavTestLRT} function, which has a few additional arguments.
 
+    For models with a casewise likelihood (data-defined, \code{":~"},
+    parameters estimated by an external backend; random slopes), no
+    chi-square test statistic exists. When all models belong to these
+    classes, the models are compared by their log-likelihoods directly:
+    twice the difference in log-likelihood between consecutive models
+    (ordered by their number of free parameters) is referred to a
+    chi-square distribution with the difference in the number of free
+    parameters as degrees of freedom. The \code{method}, \code{test} and
+    \code{type} arguments are ignored, and such models can not be
+    compared with models fitted to summary statistics.
+
     The chi-squared difference test is only valid when all models are
     (nested and) fitted to the same set of sample statistics. Several
     sanity checks are therefore carried out (in the spirit of

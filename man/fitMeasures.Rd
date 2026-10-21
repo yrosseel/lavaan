@@ -143,6 +143,14 @@ fit of a latent variable model.}
   as before.
 }
 \details{
+For models with a casewise likelihood (data-defined, \code{":~"},
+parameters estimated by an external backend; random slopes), no test
+statistic and no (comparable) saturated model exist, and only the
+log-likelihood based measures are available: \code{"npar"},
+\code{"ntotal"}, \code{"logl"}, \code{"aic"}, \code{"bic"} and
+\code{"bic2"} (plus \code{"scaling.factor.h0"} for random slopes with
+robust standard errors). Requesting any other measure is an error.
+
 When a scaled (or robust) test statistic is requested (for example, by using
 \code{test = "satorra.bentler"}), the function will also return fit indices
 based on the scaled chi-square statistic, rather than the standard version.

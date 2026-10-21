@@ -401,22 +401,31 @@ lav_fit <- function(object, fit_measures = "all",
     lav_msg_stop(gettext("fit measures not available if there is no data."))
   }
 
-  # data-defined (:~) parameters: no moment structure, no test, and (for
-  # now) no loglikelihood either
-  lav_object_casewise_check(object, gettext("fit measures"), rv_too = FALSE)
-
   # has the model converged?
   if (object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_stop(gettext(
       "fit measures not available if model did not converge"))
   }
 
-  # random slopes (rv() modifier): no test statistics (and no
-  # comparable h1 loglikelihood) exist, but the loglikelihood-based
-  # measures -- and the H0 scaling correction factor -- are available
+  # casewise model classes: no test statistics (and no comparable h1
+  # loglikelihood) exist, but the loglikelihood-based measures are
+  # available -- for random slopes (rv() modifier; plus the H0 scaling
+  # correction factor), and for data-defined (:~) parameters once a
+  # backend has supplied the casewise loglikelihood
+  if (lav_model_dv_flag(object@Model)) {
+    if (is.null(object@loglik$loglik)) {
+      lav_msg_stop(gettext(
+        "fit measures not available for models with data-defined (:~)
+         parameters: no loglikelihood (the model has not been estimated
+         by an external backend; see lavBackendRegister() and
+         lavImportResults())."))
+    }
+    return(lav_fit_loglik_only(object, fit_measures = fit_measures,
+                               output = output, model_class = "dv"))
+  }
   if (lav_model_rs_flag(object@Model)) {
-    return(lav_fit_rv(object, fit_measures = fit_measures,
-                      output = output))
+    return(lav_fit_loglik_only(object, fit_measures = fit_measures,
+                               output = output, model_class = "rv"))
   }
 
   # do we have a test statistic?
@@ -1010,10 +1019,13 @@ lav_fit <- function(object, fit_measures = "all",
 # factor (cfr. the Mplus MLR output) -- the latter is included in
 # the default set only when se = "robust.huber.white", but can
 # always be requested explicitly
-lav_fit_rv <- function(object, fit_measures = "all",
-                       output = "vector") {
+# loglikelihood-based fit measures only (casewise model classes):
+# model_class = "rv" (random slopes) or "dv" (data-defined parameters)
+lav_fit_loglik_only <- function(object, fit_measures = "all",
+                                output = "vector", model_class = "rv") {
   loglik <- object@loglik
-  robust_flag <- object@Options$se == "robust.huber.white"
+  robust_flag <- model_class == "rv" &&
+    object@Options$se == "robust.huber.white"
 
   indices <- list()
   indices["npar"] <- loglik$npar
@@ -1023,7 +1035,10 @@ lav_fit_rv <- function(object, fit_measures = "all",
   indices["bic"] <- loglik$BIC
   indices["bic2"] <- loglik$BIC2
 
-  available <- c(names(indices), "scaling.factor.h0")
+  available <- names(indices)
+  if (model_class == "rv") {
+    available <- c(available, "scaling.factor.h0")
+  }
 
   fit_measures <- lav_fit_measures_canonical(fit_measures)
 
@@ -1036,6 +1051,11 @@ lav_fit_rv <- function(object, fit_measures = "all",
   } else {
     bad <- fit_measures[!fit_measures %in% available]
     if (length(bad) > 0L) {
+      if (model_class == "dv") {
+        lav_msg_stop(gettextf(
+          "fit measure(s) not available for models with data-defined (:~)
+           parameters: %s.", paste(bad, collapse = " ")))
+      }
       lav_msg_stop(gettextf(
         "fit measure(s) not available for models with random slopes:
          %s.", paste(bad, collapse = " ")))
@@ -1080,6 +1100,11 @@ lav_fit_rv <- function(object, fit_measures = "all",
   }
 
   out
+}
+
+lav_fit_rv <- function(object, fit_measures = "all", output = "vector") {
+  lav_fit_loglik_only(object, fit_measures = fit_measures, output = output,
+                      model_class = "rv")
 }
 
 # print a nice summary of the fit measures

@@ -369,14 +369,16 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available: this sam object was created by an
          older version of lavaan; please rerun sam()"))
-    } else if (lav_model_dv_flag(object@Model)) {
+    } else if (lav_model_dv_flag(object@Model) &&
+               is.null(object@loglik$loglik)) {
       lav_msg_warn(gettext(
         "fit measures not available for models with data-defined (:~)
-         parameters"))
+         parameters that have not been estimated (no loglikelihood)"))
     } else if (length(object@Options$test) == 1L &&
       object@Options$test == "none" &&
-      !lav_model_rs_flag(object@Model)) {
-      # (random-slope models do provide the loglikelihood-based
+      !lav_object_casewise_flag(object)) {
+      # (casewise model classes -- random slopes, data-defined parameters
+      #  estimated by a backend -- do provide the loglikelihood-based
       #  measures, despite test = "none")
       lav_msg_warn(gettext(
         "fit measures not available if test = \"none\""))

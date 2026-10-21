@@ -802,6 +802,5 @@ lav_inspect_casewise_refused <- function(rv = FALSE) {
     "augmented.first.order", "inverted.information",
     "inverted.information.expected", "inverted.information.observed",
     "inverted.information.first.order", "inverted.first.order",
-    "ugamma", "ug", "u.gamma", "ufromugamma", "u",
-    "fit", "fitmeasures", "fit.measures", "fit.indices")
+    "ugamma", "ug", "u.gamma", "ufromugamma", "u")
 }
