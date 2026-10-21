@@ -467,6 +467,18 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   # use empty row names
   rownames(m) <- rep("", nrow(m))
 
+  # data-defined (":~") parameters: the host rows have no scalar estimate
+  # (one value per observation); mark them, and blank the other cells
+  dv_lhs <- x$lhs[x$op == ":~"]
+  if (length(dv_lhs) > 0L && !is.null(x$label)) {
+    host_idx <- which(x$label %in% dv_lhs &
+                      !x$op %in% c(":~", "dp", ":=", "==", "<", ">"))
+    if (length(host_idx) > 0L) {
+      m[host_idx, -1L] <- ""
+      m[host_idx, "est"] <- sprintf(char_format, "(:~)")
+    }
+  }
+
   # handle se == 0.0
   if (!is.null(x$se)) {
     se_idx <- which(x$se == 0)
