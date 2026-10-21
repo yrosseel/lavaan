@@ -45,7 +45,18 @@ lavBootstrap <- function(object,                                   # nolint
 
   # check object
   object <- lav_object_check_version(object)
-  lav_object_casewise_check(object, gettext("bootstrapping"), rv_too = FALSE)
+  if (!is.null(object@optim$backend)) {
+    # estimated by an external backend: every replicate is refitted
+    # through lavaan() with the stored options, hence by the backend
+    if (!tolower(type[1]) %in% c("nonparametric", "ordinary")) {
+      lav_msg_stop(gettext(
+        "only the ordinary (nonparametric) bootstrap is available for
+         models estimated by an external backend."))
+    }
+  } else {
+    lav_object_casewise_check(object, gettext("bootstrapping"),
+                              rv_too = FALSE)
+  }
 
   # checks
   type_1 <- tolower(type) # overwritten if nonparametric

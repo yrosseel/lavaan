@@ -355,12 +355,107 @@ lav_backend_se_rows <- function(object = NULL) {
   if (is.null(backend)) {
     return(NULL)
   }
+  if (identical(object@Options$se, "bootstrap")) {
+    n_req <- object@Options$bootstrap$R
+    if (is.null(n_req)) {
+      n_req <- NA
+    }
+    n_ok <- if (is.null(object@boot$coef)) NA else {
+      nrow(object@boot$coef) - length(attr(object@boot$coef, "error.idx"))
+    }
+    return(c("Standard errors" = "Bootstrap",
+             "Number of requested bootstrap draws" = as.character(n_req),
+             "Number of successful bootstrap draws" = as.character(n_ok),
+             "Estimation backend" = backend$name))
+  }
   out <- c("Standard errors" = "External",
            "Estimation backend" = backend$name)
   if (is.null(object@vcov$vcov)) {
     out["Standard errors"] <- "None"
   }
   out
+}
+
+# se = "bootstrap" for a model estimated by a backend: the generic
+# nonparametric bootstrap (lav_bootstrap_internal) refits every resampled
+# data set through lavaan(), which hands each replicate to the backend
+# again (the stored options carry the backend name and do.fit = TRUE)
+lav_backend_bootstrap <- function(fit, lavoptions = NULL) {
+  if (is.null(lavoptions)) {
+    lavoptions <- fit@Options
+  }
+  r <- 1000L
+  if (!is.null(lavoptions$bootstrap) && !is.null(lavoptions$bootstrap$R)) {
+    r <- as.integer(lavoptions$bootstrap$R)
+  }
+  if ("bollen.stine" %in% lavoptions$test || "yuan" %in% lavoptions$test) {
+    lav_msg_stop(gettext(
+      "model-based (Bollen-Stine, Yuan) bootstrap is not available for
+       models estimated by an external backend; only the ordinary
+       nonparametric bootstrap is."))
+  }
+  lavoptions_b <- fit@Options
+  lavoptions_b$do.fit <- TRUE
+  lavoptions_b$se <- "none"
+  lavoptions_b$parallel <- lavoptions$parallel
+  lavoptions_b$ncpus <- lavoptions$ncpus
+  lavoptions_b$cl <- lavoptions$cl
+  lavoptions_b$iseed <- lavoptions$iseed
+  lavoptions_b$bootstrap <- lavoptions$bootstrap
+
+  if (lav_verbose()) {
+    cat("computing VCOV for      se = bootstrap (backend ",
+        fit@optim$backend$name, ") ...", sep = "")
+  }
+  coef_1 <- lav_bootstrap_internal(
+    object = NULL,
+    lavmodel = fit@Model,
+    lavsamplestats = fit@SampleStats,
+    lavpartable = fit@ParTable,
+    lavoptions = lavoptions_b,
+    lavdata = fit@Data,
+    r = r,
+    check_post = lavoptions$check.post,
+    type = "ordinary",
+    fun = "coef"
+  )
+  if (lav_verbose()) {
+    cat(" done.\n")
+  }
+  coef_orig <- coef_1
+  error_idx <- attr(coef_1, "error.idx")
+  if (length(error_idx) > 0L) {
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs failed or did not converge.", length(error_idx)))
+    coef_1 <- coef_1[-error_idx, , drop = FALSE]
+  }
+  notok <- length(attr(coef_1, "nonadmissible"))
+  if (notok > 0L) {
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs resulted in nonadmissible solutions.", notok))
+  }
+  nboot <- nrow(coef_1)
+  if (nboot < 2L) {
+    lav_msg_warn(gettext(
+      "fewer than 2 successful bootstrap draws; no standard errors."))
+    return(fit)
+  }
+  vcov_mat <- cov(coef_1) * (nboot - 1) / nboot
+  dimnames(vcov_mat) <- NULL
+
+  fit@boot <- list(coef = coef_orig)
+  fit@vcov <- list(se = "bootstrap", information = "external",
+                   vcov = vcov_mat)
+  fit@Options$se <- "bootstrap"
+  fit@ParTable$se <- lav_model_vcov_se(
+    lavmodel = fit@Model, lavpartable = fit@ParTable,
+    vcov = vcov_mat, boot = coef_1, lavoptions = fit@Options
+  )
+  if (lav_model_dv_flag(fit@Model) && !is.null(fit@ParTable$dv)) {
+    host_idx <- which(nzchar(fit@ParTable$dv))
+    fit@ParTable$se[host_idx] <- NA_real_
+  }
+  fit
 }
 
 # ---------------------------------------------------------------------

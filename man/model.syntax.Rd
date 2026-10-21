@@ -887,8 +887,10 @@ is set to \code{"none"} and no baseline model is fitted. Once a backend
 has supplied the casewise log-likelihood, \code{logLik()}, \code{AIC()},
 \code{BIC()}, the log-likelihood based \code{fitMeasures()} (\code{logl},
 \code{aic}, \code{bic}, \code{bic2}, \code{npar}, \code{ntotal}) and
-\code{lavTestLRT()} between nested models of this class are available;
-without it, \code{logLik()} returns \code{NA} with a warning. The
+\code{lavTestLRT()} between nested models of this class are available,
+and \code{se = "bootstrap"} (or \code{lavBootstrap()}) re-estimates
+every resampled data set through the backend; without it, \code{logLik()}
+returns \code{NA} with a warning. The
 parameter estimates, standard errors, and \code{coef()}/\code{vcov()}
 are always available.
 

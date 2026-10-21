@@ -44,6 +44,12 @@ lav_data_update <- function(lavdata = NULL,
       if (!is.null(lavdata@weights[[g]])) {
         newdata@weights[[g]] <- lavdata@weights[[g]][boot_idx_g]
       }
+
+      # auxiliary columns (definition variables of ":~" definitions,
+      # external instruments, aux= variables): rows must stay aligned
+      if (length(lavdata@aux) >= g && !is.null(lavdata@aux[[g]])) {
+        newdata@aux[[g]] <- lavdata@aux[[g]][boot_idx_g, , drop = FALSE]
+      }
     }
 
     # Mp + nobs

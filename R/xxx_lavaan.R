@@ -956,6 +956,11 @@ lavaan <- function(
   if (!is.null(backend_descriptor)) {
     out <- lav_backend_run(out, backend_descriptor,
                            args = lavoptions$backend.args)
+    out@Options$do.fit <- TRUE # the object is fitted (needed by update(),
+                               # and by the bootstrap refits)
+    if (identical(lavoptions$se, "bootstrap")) {
+      out <- lav_backend_bootstrap(out, lavoptions = lavoptions)
+    }
     out@timing <- lav_add_timing(out@timing, "backend")
   }
 

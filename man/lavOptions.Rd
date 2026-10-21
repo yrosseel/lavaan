@@ -789,7 +789,9 @@ Estimation options:
      and imports its results (see \code{\link{lavImportResults}}). A bare
      function \code{function(object, args)} is accepted as a shortcut for
      interactive use; it is registered under an anonymous name for the
-     session.}
+     session. With \code{se = "bootstrap"}, every bootstrap replicate is
+     estimated by the backend as well (ordinary nonparametric bootstrap
+     only); likewise for \code{lavBootstrap()} on the fitted object.}
    \item{\code{backend_args}:}{List. Settings passed on to the backend
      (the \code{args} argument of its function).}
 }
