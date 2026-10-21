@@ -234,6 +234,13 @@ lav_step02_options <- function(slot_options = NULL,
     # random slopes (rv() modifier)?
     opt$.rv <- !is.null(flat_model$rv) && any(nchar(flat_model$rv) > 0L)
 
+    # data-defined (":~") parameters? (flat_model is either a flat model
+    # with the definitions in attr(, "constraints"), or a full partable)
+    tmp_con <- attr(flat_model, "constraints")
+    opt$.dv <- (!is.null(tmp_con) && length(tmp_con) > 0L &&
+                any(vapply(tmp_con, "[[", "", "op") == ":~")) ||
+               (!is.null(flat_model$op) && any(flat_model$op == ":~"))
+
     # lagged covariates in long panel data (panel=): condition on the
     # observed within-only covariates, using the random-slope kernel
     opt$.within_x_cond <- isTRUE(within_x_cond)

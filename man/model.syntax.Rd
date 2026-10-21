@@ -834,6 +834,21 @@ model <- ' f1 ~~ psi_21*f2
            f2 ~~ psi_22*f2
            psi_21 :~ tanh(zr_0 + zr_1 * data(z)) * sqrt(psi_11*psi_22) '
 }
+A definition may also depend on the data only indirectly, through
+another \code{":~"} definition (\sQuote{chained} definitions). For
+example, if the slope \code{b1} is moderated by \code{z}, a second slope
+can be defined as a function of \code{b1}:
+\preformatted{
+model <- ' y1 ~ b1*x
+           y2 ~ b2*x
+           b1 :~ a0 + a1 * data(z)
+           b2 :~ 0.5 * b1 + c0 '
+}
+A definition that involves neither a \code{data()} reference nor another
+\code{":~"} definition is refused: a parameter that is a function of
+other parameters only is defined using \code{":="} (or an equality
+constraint).
+
 While the \code{":="} operator defines a new parameter as a function of
 other parameters only, a \code{":~"} definition involves the data, and
 therefore changes the model itself: estimation requires a casewise
@@ -842,7 +857,20 @@ likelihood. lavaan itself can not (yet) estimate such models; calling
 \code{do_fit = FALSE} returns an (unfitted) object holding the complete
 model specification (parameter table, starting values, and the
 \code{dv.function} in the \code{@Model} slot) that external packages can
-use to estimate the model with a suitable backend.
+use to estimate the model with a suitable backend. Because a casewise
+likelihood always involves the means, models with \code{":~"}
+definitions always have a mean structure (\code{meanstructure = TRUE}
+is forced). Cases with a missing value for a definition variable can
+not contribute to the likelihood, and are always removed (whatever the
+value of the \code{missing} argument); a warning is given unless
+\code{missing = "listwise"}. A definition variable that is also an
+endogenous (dependent) variable in the model triggers a warning: the
+definition conditions on its observed values, while the model also
+describes it. The parameter table of the \sQuote{unmoderated} model (the
+model without the \code{":~"} definitions, with the moderated parameters
+free again) is returned by \code{lavInspect(fit, "list_unmoderated")};
+backends can use it, for example, to obtain warm starts or a reference
+model.
 
 Note the difference with random slopes (the \code{rv()} modifier): a
 random slope varies across clusters as a latent variable, while a

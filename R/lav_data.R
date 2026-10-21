@@ -23,6 +23,7 @@ lav_lavdata <- function(data = NULL, # data.frame
                     ov_names_x = character(0), # exo variables
                     ov_names_l = list(), # names per level
                     ov_names_aux = character(0), # auxiliary variables
+                    ov_names_dv = character(0), # definition variables (:~)
                     ordered = NULL, # ordered variables
                     sampling_weights = NULL, # sampling weights
                     sample_cov = NULL, # sample covariance(s)
@@ -179,6 +180,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       ov_names_x = ov_names_x,
       ov_names_l = ov_names_l,
       ov_names_aux = ov_names_aux,
+      ov_names_dv = ov_names_dv,
       std_ov = std_ov,
       std_ov_x_only = std_ov_x_only,
       std_ov_x_rescale = isTRUE(lavoptions$sample.cov.rescale),
@@ -652,6 +654,7 @@ lav_data_full <- function(data = NULL, # data.frame
                           ov_names_x = character(0L), # exo variables
                           ov_names_l = list(), # var per level
                           ov_names_aux = character(0L), # auxiliary variables
+                          ov_names_dv = character(0L), # definition variables
                           std_ov = FALSE, # standardize ov's?
                           std_ov_x_only = FALSE, # only the exo x (D-aug ML)
                           std_ov_x_rescale = TRUE, # n (TRUE) or n-1 denominator
@@ -1140,6 +1143,44 @@ lav_data_full <- function(data = NULL, # data.frame
       } else {
         case_idx[[g]] <- seq_len(nrow(data))
         nobs[[g]] <- norig[[g]] <- length(case_idx[[g]])
+      }
+    }
+
+    # definition variables (":~" definitions): the model conditions on
+    # them (like the exogenous covariates under fixed.x = TRUE), so a case
+    # with a missing definition variable can not contribute to the
+    # (casewise) likelihood, whatever the missing= setting; we drop these
+    # cases here, so that case.idx (and @aux) are complete
+    if (length(ov_names_dv) > 0L) {
+      dv_col_idx <- match(ov_names_dv, names(data))
+      dv_col_idx <- dv_col_idx[!is.na(dv_col_idx)]
+      if (length(dv_col_idx) > 0L) {
+        keep_idx <- complete.cases(data[case_idx[[g]], dv_col_idx,
+                                        drop = FALSE])
+        n_drop <- sum(!keep_idx)
+        if (n_drop > 0L) {
+          case_idx[[g]] <- case_idx[[g]][keep_idx]
+          nobs[[g]] <- length(case_idx[[g]])
+          if (nobs[[g]] == 0L) {
+            lav_msg_stop(gettext(
+              "all observations were deleted due to missing values in the
+               definition variable(s) of the ':~' definitions."))
+          }
+          if (missing != "listwise") {
+            if (ngroups > 1L || length(group_label) > 0L) {
+              lav_msg_warn(gettextf(
+                "%1$s cases were deleted in group %2$s due to missing
+                 values in definition variable(s) (data() in ':~'
+                 definitions); these cases can not be used, whatever the
+                 missing= setting.", n_drop, group_label[g]))
+            } else {
+              lav_msg_warn(gettextf(
+                "%s cases were deleted due to missing values in definition
+                 variable(s) (data() in ':~' definitions); these cases can
+                 not be used, whatever the missing= setting.", n_drop))
+            }
+          }
+        }
       }
     }
 

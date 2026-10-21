@@ -20,6 +20,15 @@
 #      * anything else          -> a NEW (free) component parameter
 #  - component parameters are added to the parameter table as free scalar
 #    rows with op "dp" (definition parameter)
+#  - a definition may depend on the data only through another ":~"
+#    definition ("chained" definitions, eg b2 :~ 0.5*b1 + c0); a
+#    definition without any data() reference and without a reference to
+#    another ":~" definition is an error (use := instead)
+#  - a definition variable that is also an endogenous (dependent) variable
+#    in the model triggers a warning (the definition conditions on it)
+#  - models with ":~" definitions always have a mean structure (see
+#    lav_options_set); cases with a missing definition variable are
+#    dropped whatever the missing= setting (see lav_data_full)
 #
 # note: lavaan itself cannot (yet) estimate these models: they require a
 # casewise likelihood. the parameter table + the dv.function in the @Model
@@ -129,6 +138,11 @@ lav_pt_dv <- function(partable, var_table = NULL, data_names = NULL) {
   model_vnames <- model_vnames[nchar(model_vnames) > 0L]
   def_lhs <- unique(partable$lhs[partable$op == ":="])
 
+  # endogenous observed variables (dependent variables and indicators)
+  endo_vnames <- unique(c(
+    partable$rhs[model_row_idx][partable$op[model_row_idx] == "=~"],
+    partable$lhs[model_row_idx][partable$op[model_row_idx] == "~"]))
+
   # process each definition
   dv_data_vars <- vector("list", length(dv_idx))
   dv_refs <- vector("list", length(dv_idx)) # references to other ":~" lhs
@@ -146,18 +160,34 @@ lav_pt_dv <- function(partable, var_table = NULL, data_names = NULL) {
 
     # definition variables: data(...)
     data_vars <- lav_dv_expr_datavars(expr)
-    if (length(data_vars) == 0L) {
-      lav_msg_stop(gettextf(
-        "the ':~' definition `%1$s' does not contain any data() reference;
-        use the ':=' operator (or an equality constraint) for parameters
-        that are a function of other parameters only.",
-        paste(this_lhs, ":~", this_rhs)))
-    }
     dv_data_vars[[i]] <- data_vars
 
     # remaining tokens (data() parts stripped)
     stripped <- lav_dv_expr_strip_data(expr)
     tokens <- setdiff(all.vars(stripped), ".dv.data.")
+
+    # a definition must depend on the data: either directly (data()), or
+    # indirectly, through another ":~" definition (chained definitions)
+    if (length(data_vars) == 0L && !any(tokens %in% dv_lhs)) {
+      lav_msg_stop(gettextf(
+        "the ':~' definition `%1$s' does not contain any data() reference,
+        nor a reference to another ':~' definition; use the ':=' operator
+        (or an equality constraint) for parameters that are a function of
+        other parameters only.",
+        paste(this_lhs, ":~", this_rhs)))
+    }
+
+    # a definition variable that is also an endogenous variable in the
+    # model: the definition conditions on it (the casewise likelihood
+    # treats it as given), while the model also describes it
+    bad <- data_vars[data_vars %in% endo_vnames]
+    if (length(bad) > 0L) {
+      lav_msg_warn(gettextf(
+        "definition variable(s) in `%1$s' are also endogenous (dependent)
+        variables in the model: %2$s; the ':~' definition conditions on
+        their observed values.",
+        paste(this_lhs, ":~", this_rhs), lav_msg_view(bad, "none")))
+    }
 
     # referencing a ':=' defined parameter is not allowed (for now)
     bad <- tokens[tokens %in% def_lhs]
@@ -590,4 +620,87 @@ lav_pt_con_dv <- function(partable) {
   }
 
   dv_function
+}
+
+# the "unmoderated" (base) parameter table: the model without the ":~"
+# definitions, where the host parameters are ordinary free parameters
+# again; backends use it for warm starts, standardization, or as a
+# reference model. The ":~" and "dp" rows are dropped, the host rows are
+# freed (and the $dv column removed), and host rows sharing a label (eg
+# the same definition in several groups) are tied by an explicit equality
+# constraint (as lavaanify() would have done)
+lav_pt_dv_unmoderated <- function(partable) {
+  if (!any(partable$op == ":~")) {
+    return(partable) # nothing to do
+  }
+  as_df <- is.data.frame(partable)
+  partable <- as.list(partable)
+  dv_idx <- which(partable$op == ":~")
+  dv_lhs <- partable$lhs[dv_idx]
+
+  # host rows
+  host_idx <- which(!is.na(partable$dv) & nzchar(partable$dv))
+  partable$free[host_idx] <- 1L
+  partable$ustart[host_idx] <- NA
+
+  # drop the ":~" and "dp" rows, the dv column, and the (fit-specific)
+  # start/est/se columns (the host rows have no scalar value)
+  drop_idx <- which(partable$op %in% c(":~", "dp"))
+  partable <- lapply(partable, function(x) x[-drop_idx])
+  partable$dv <- NULL
+  partable$start <- NULL
+  partable$est <- NULL
+  partable$se <- NULL
+  partable$id <- seq_along(partable$lhs)
+
+  # hosts of the same definition (shared label): add equality constraints
+  if (!is.null(partable$plabel)) {
+    host_idx <- which(partable$label %in% dv_lhs &
+                      !partable$op %in% c("==", "<", ">", ":="))
+    new_con <- list()
+    for (lab in dv_lhs) {
+      this_idx <- host_idx[partable$label[host_idx] == lab]
+      if (length(this_idx) > 1L) {
+        for (o in this_idx[-1L]) {
+          new_con[[length(new_con) + 1L]] <-
+            c(partable$plabel[this_idx[1L]], partable$plabel[o])
+        }
+      }
+    }
+    if (length(new_con) > 0L) {
+      n_new <- length(new_con)
+      n_old <- length(partable$lhs)
+      partable <- lapply(partable, function(x) {
+        if (is.character(x)) {
+          c(x, rep("", n_new))
+        } else {
+          c(x, rep(NA, n_new))
+        }
+      })
+      new_idx <- n_old + seq_len(n_new)
+      partable$id[new_idx] <- new_idx
+      partable$lhs[new_idx] <- vapply(new_con, "[[", "", 1L)
+      partable$op[new_idx] <- "=="
+      partable$rhs[new_idx] <- vapply(new_con, "[[", "", 2L)
+      partable$user[new_idx] <- 2L
+      partable$free[new_idx] <- 0L
+      partable$exo[new_idx] <- 0L
+      partable$block[new_idx] <- 0L
+      for (bl in c("group", "level", "class")) {
+        if (!is.null(partable[[bl]])) {
+          partable[[bl]][new_idx] <-
+            if (is.character(partable[[bl]])) "" else 0L
+        }
+      }
+    }
+  }
+
+  # renumber the free parameters
+  free_idx <- which(partable$free > 0L)
+  partable$free[free_idx] <- seq_along(free_idx)
+
+  if (as_df) {
+    partable <- as.data.frame(partable, stringsAsFactors = FALSE)
+  }
+  partable
 }

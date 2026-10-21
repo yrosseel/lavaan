@@ -146,6 +146,8 @@ lav_lavaan_lavinspect <- function(object,
     #### parameter table ####
   } else if (what == "list") {
     parTable(object)
+  } else if (what %in% c("list.unmoderated", "partable.unmoderated")) {
+    lav_pt_dv_unmoderated(parTable(object))
 
     #### bootstrap coef ####
   } else if (what %in% c("boot", "bootstrap", "boot.coef", "coef.boot")) {

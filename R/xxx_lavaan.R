@@ -326,6 +326,7 @@ lavaan <- function(
   # the extra-observed-variable channel, lavData@aux), but they must NOT
   # enter the model-implied summary statistics
   dv_data_names <- character(0L)
+  dv_data_names_all <- character(0L)
   dv_rhs <- character(0L)
   tmp_con_flat <- attr(flat_model, "constraints")
   if (!is.null(tmp_con_flat) && length(tmp_con_flat) > 0L) {
@@ -351,6 +352,8 @@ lavaan <- function(
         in the data: %s.",
         lav_msg_view(dv_data_names[missing_idx], "none")))
     }
+    # all definition variables (for the case selection in lavData)
+    dv_data_names_all <- dv_data_names
     # variables that are already part of the model are available anyway
     dv_data_names <- setdiff(dv_data_names, unlist(ov_names))
   }
@@ -425,6 +428,7 @@ lavaan <- function(
     ov_names_x       = ov_names_x,
     ov_names_l       = ov_names_l,
     ov_names_aux     = ov_names_aux,
+    ov_names_dv      = dv_data_names_all,
     ordered          = ordered,
     sampling_weights = sampling_weights,
     sample_cov       = sample_cov,

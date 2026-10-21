@@ -720,6 +720,11 @@ lav_options_set <- function(opt = NULL) {
   if (is.null(opt$.rv)) {
     opt$.rv <- FALSE
   }
+
+  # data-defined (":~") parameters? (internal flag, set in step02)
+  if (is.null(opt$.dv)) {
+    opt$.dv <- FALSE
+  }
   if (opt$.rv) {
     # random slopes are only available for two-level models with
     # continuous data, complete data, estimator ML (for now)
@@ -1064,6 +1069,17 @@ lav_options_set <- function(opt = NULL) {
     } else {
       opt$meanstructure <- FALSE
     }
+  }
+
+  # data-defined (":~") parameters require a casewise likelihood, and
+  # therefore (always) a mean structure
+  if (opt$.dv && !opt$meanstructure) {
+    if (meanstructure_false) {
+      lav_msg_warn(gettext(
+        "models with data-defined (:~) parameters require a mean structure;
+         forcing meanstructure = TRUE."))
+    }
+    opt$meanstructure <- TRUE
   }
 
   # force meanstructure = TRUE if either int.lv.free or int.ov.free is TRUE

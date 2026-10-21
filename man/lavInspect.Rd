@@ -673,6 +673,14 @@ Miscellaneous:
         In the case of multiple groups: a list of character vectors.}
     \item{\code{"list"}:}{The parameter table. The same output as given
         by \code{parTable()}.}
+    \item{\code{"list_unmoderated"}:}{The parameter table of the
+        \sQuote{unmoderated} model, for models with data-defined
+        (\code{":~"}) parameters: the \code{":~"} definitions and their
+        component parameters are removed, and the moderated parameters are
+        ordinary free parameters again (see the \sQuote{Data-defined
+        (moderated) parameters} section in \code{\link{model.syntax}}). For
+        models without \code{":~"} definitions, the parameter table is
+        returned unchanged. Alias: \code{"partable_unmoderated"}.}
     \item{\code{"fit"}:}{The fit measures. Aliases: \code{"fitmeasures"},
         \code{"fit_measures"}, \code{"fit_indices"}. The same output as
         given by \code{fitMeasures()}.}
