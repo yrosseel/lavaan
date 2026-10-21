@@ -135,11 +135,11 @@ lav_expand_tokens <- function(modellist,
           the_error <- attr(sub_expanded_strings, "error", TRUE)
           tl <- lav_parse_txtloc(modelsrc, modellist$elem_pos[ppi])
           if (the_error == 1L) {
-            lav_msg_stop(gettext("substring distances not conform for expanding"),
+            lav_msg_stop(gettext("Substring distances not conform for expanding."),
                     tl[1L],
                     footer = tl[2L])
           } else {
-            lav_msg_stop(gettext("string lengths not conform for expanding"),
+            lav_msg_stop(gettext("String lengths not conform for expanding."),
                     tl[1L],
                     footer = tl[2L])
           }
@@ -149,12 +149,19 @@ lav_expand_tokens <- function(modellist,
             nsteps <- this_steps
         } else if (this_steps != nsteps) {
           tl <- lav_parse_txtloc(modelsrc, modellist$elem_pos[ppi])
-          lav_msg_stop(gettext("substring distances not conform for expanding"),
+          lav_msg_stop(gettext("Substring distances not conform for expanding."),
                    tl[1L],
                    footer = tl[2L]
           )
         }
     }
+  }
+  if (nsteps == -1) {
+          tl <- lav_parse_txtloc(modelsrc, modellist$elem_pos[ppi])
+          lav_msg_stop(gettext("No sequence for expanding found."),
+                   tl[1L],
+                   footer = tl[2L]
+          )
   }
   aantal <- max(nsteps - 1L, 0L) # number of intermediate elements
   expnum <- 1L
