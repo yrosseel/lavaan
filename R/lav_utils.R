@@ -658,6 +658,10 @@ lav_adapt_func <- function(envir, dotdotdot, options_ddd) {
     dddnames <- names(dotdotdot)
     dddnewnames <- lav_snake_case(dddnames)
     newargs <- dddnewnames %in% lijst
+    # the formals of the adapted function (the caller), to recognize an
+    # explicit argument that merely repeats its default
+    caller_formals <- tryCatch(formals(sys.function(sys.parent())),
+                               error = function(e) NULL)
     for (j in which(newargs)) {
       # the current name was supplied explicitly as well? then it wins,
       # and the old name (only an alias) is dropped silently: a wrapper
@@ -668,6 +672,25 @@ lav_adapt_func <- function(envir, dotdotdot, options_ddd) {
         !eval(call("missing", as.name(dddnewnames[j])), envir),
         error = function(e) FALSE
       )
+      # ... unless the explicit value is just the default of the formal:
+      # a wrapper that starts from formals() and then sets the old name
+      # (EGAnet: formals(cfa) with sample_cov = NULL next to the user's
+      # sample.cov = S) carries no information in the current name, and
+      # dropping the alias would silently discard the data
+      if (explicit && !is.null(caller_formals) &&
+          dddnewnames[j] %in% names(caller_formals)) {
+        default <- caller_formals[[dddnewnames[j]]]
+        has_default <- !(is.symbol(default) && !nzchar(as.character(default)))
+        if (has_default) {
+          default_value <- tryCatch(eval(default, envir),
+                                    error = function(e) quote(no_default))
+          current_value <- tryCatch(get(dddnewnames[j], envir),
+                                    error = function(e) quote(no_default))
+          if (identical(current_value, default_value)) {
+            explicit <- FALSE
+          }
+        }
+      }
       if (!explicit) {
         assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
       }
