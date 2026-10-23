@@ -1,5 +1,7 @@
 \name{model.syntax}
 \alias{model.syntax}
+\alias{model_syntax}
+\alias{syntax}
 \alias{lavaanify}
 \alias{lavParTable}
 \alias{parseModelString}
@@ -536,7 +538,11 @@ four waves can thus be written as:
  wx[t in 1:4] ~~ wx[t] + wy[t]
  wy[t in 1:4] ~~ wy[t]
  RIx ~~ RIx + RIy
- RIy ~~ RIy}
+ RIy ~~ RIy
+ RIx + RIy ~~ 0*wx1 + 0*wy1}
+The last line fixes the covariances between the random intercepts and the
+within-person components of the first wave to zero. Without it, \code{sem()}
+would free these four covariances among exogenous latent variables.
 Labels are names, and can carry an index as well. A label without an index
 is repeated in every copy, which implies an equality constraint across the
 waves; a label with an index gives one label per wave:
