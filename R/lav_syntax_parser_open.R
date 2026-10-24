@@ -549,6 +549,7 @@ lav_parse_formulas_open <- function(modellist, modelsrc, types) {
                        tl[1L], footer = tl[2L])
         }
         for (k in seq_along(plusjes)) {
+          if (plusjes[k] == opi + 1L) next # skip a '+' immediately after operator
           k0 <- opi + 1L
           k1 <- plusjes[k] - 1L
           if (k > 1L) k0 <- plusjes[k - 1L] + 1L
@@ -1219,6 +1220,7 @@ lav_parse_update_relational <- function(tmpenv, modelsrc, types, op) {
     formule <- lav_parse_sublist(formule,
           setdiff(seq.int(1L, nelem), seq.int(colons[thecol], colons[thecol] + 1L)))
     nelem <- length(formule$elem_type)
+    if (colons[thecol] < opi) opi <- opi - 2L # adapt location of operator if interaction on left hand side
     if (thecol == 1L) {
       colons <- integer(0L)
     } else {
