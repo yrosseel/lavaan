@@ -33,14 +33,19 @@ variables in the model are computed. If \code{"ov"}, model predicted values for
 the indicators of the latent variables in the model are computed. If
 \code{"yhat"}, the estimated values for the observed indicators are computed,
 given the user-specified values for the latent variables provided by the
-\code{eta} argument.  If \code{"fy"}, densities (or probabilities) are computed
-for each observed indicator, given the user-specified values for the latent
-variables provided by the \code{eta} argument.}
+\code{eta} argument. If \code{"resid"}, the casewise residuals (the observed
+values minus the predicted values of the indicators) are computed. If
+\code{"fy"}, densities (or probabilities) are computed for each observed
+indicator, given the user-specified values for the latent variables provided
+by the \code{eta} argument.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
 the Empirical Bayes Modal approach, and \code{"ML"} for the maximum
-likelihood approach. If the model contains residual covariances, the
+likelihood approach. The two pairs are synonyms: with continuous indicators,
+the default \code{"EBM"} gives the regression scores and \code{"ML"} gives
+the Bartlett scores, and with categorical indicators \code{"regression"} and
+\code{"Bartlett"} select the EBM and ML approach respectively. If the model contains residual covariances, the
 indicators that are connected by them are treated jointly: their
 contribution to the likelihood is a (bivariate or multivariate) normal
 probability, computed by a deterministic GHK simulator for blocks of three
@@ -81,10 +86,10 @@ with observed indicators only, and the factor scores of the other factors
 are the model-implied conditional means given these (transformed) factor
 scores: their covariances with the other factors are restored, but their
 variance is smaller than the model-implied one (a warning is issued).
-Note: standard errors (\code{se}) and \code{acov} are not available (yet) if
-\code{transform = TRUE}; if requested, they are ignored with a warning. The
-resulting factor scores are often called correlation-preserving factor
-scores.}
+Standard errors (\code{se}) and \code{acov} are available for the transformed
+factor scores (see \code{se}), and \code{fsm} returns the factor score matrix
+that includes the transformation. The resulting factor scores are often called
+correlation-preserving factor scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
@@ -96,8 +101,10 @@ that are returned (see \code{fsm}). For regression scores this is the
 conditional variance of the factors given the data, for Bartlett scores the
 usual \eqn{(\Lambda' \Theta^{-1} \Lambda)^{-1}}; for transformed scores
 (\code{transform = TRUE}), \eqn{C} includes the transformation, and the
-standard errors are those of the transformed scores. The (naive) standard
-errors are the same for every observation. For categorical data, where the factor scores
+standard errors are those of the transformed scores. These (naive) standard
+errors are the same for every observation with the same missing-data pattern
+(and so for every observation when the data are complete). For categorical
+data, where the factor scores
 are obtained by numerical optimization (\code{method = "EBM"} or
 \code{method = "ML"}), the standard errors are based on the curvature of the
 objective at the optimum (the inverse of its Hessian, a Laplace/observed
@@ -110,8 +117,10 @@ sampling covariance matrix of the factor scores as an attribute. For
 continuous data this is a single matrix per group; for categorical data it is
 a list with one (nfactor x nfactor) matrix per observation.}
 \item{label}{Logical. If TRUE, the columns in the output are labeled.}
-\item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
-           Only for numeric data.}
+\item{fsm}{Logical. If TRUE, return the factor score matrix (the coefficient
+           matrix \eqn{C} that maps the centered indicators onto the factor
+           scores; including the transformation if \code{transform = TRUE})
+           as an attribute. Only for numeric data.}
 \item{mdist}{Logical. If TRUE, the (squared)
 Mahalanobis distances of the factor scores (if \code{type = "lv"}) or
 the casewise residuals (if \code{type = "resid"}) are returned as an
@@ -151,7 +160,10 @@ If \code{"nlminb"} (the default in 0.5), the \code{"nlminb()"} function is used
 for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6),
 the \code{"optim()"} function is used with the BFGS method.}
 \item{eta}{An optional matrix or list, containing latent variable values
-  for each observation. Used for computations when \code{type = "ov"}.}
+  for each observation. Used for computations when \code{type = "ov"},
+  \code{"yhat"}, \code{"resid"} or \code{"fy"}; if not provided, the factor
+  scores are computed first. Ignored (with a warning) if
+  \code{type = "lv"}.}
 \item{parallel}{Character. Only used in the categorical case, where factor
   scores are computed by a per-observation numerical optimization. The options
   are \code{"no"} (serial), \code{"multicore"} (fork-based, not available on
@@ -261,6 +273,12 @@ head(lavPredict(fit, type = "ov"))
 ## for continuous indicators, the (naive) standard errors are the same
 ## for every observation
 fscores <- lavPredict(fit, se = "standard")
+attr(fscores, "se")[[1]]
+
+## correlation-preserving (transformed) factor scores: their sample
+## variance-covariance matrix matches the model-implied one, and their
+## standard errors are those of the transformed scores
+fscores <- lavPredict(fit, transform = TRUE, se = "standard")
 attr(fscores, "se")[[1]]
 
 ## for categorical indicators, the factor scores are obtained by numerical
