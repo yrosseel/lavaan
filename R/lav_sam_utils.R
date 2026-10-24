@@ -2751,10 +2751,19 @@ lav_sam_plugin_apply <- function(step1 = NULL, fit = NULL) {
         }
       }
       t_use <- lo
-      lav_msg_warn(gettextf(
-        "the plug-in correction of the latent correlations was reduced
-         (to %s of its size) to keep the latent covariance matrix
-         positive definite.", sprintf("%.2f", t_use)))
+      # report the reduction with two significant digits, so that a tiny
+      # reduction reads as "by 0.05%" rather than "to 1.00 of its size"
+      if (t_use > 0) {
+        lav_msg_warn(gettextf(
+          "the plug-in correction of the latent correlations was reduced
+           by %s%% to keep the latent covariance matrix positive
+           definite.", format(signif(100 * (1 - t_use), 2L))))
+      } else {
+        lav_msg_warn(gettext(
+          "the plug-in correction of the latent correlations was dropped:
+           no scaled-down version keeps the latent covariance matrix
+           positive definite."))
+      }
     }
     f_full <- 1 + t_use * (f_full - 1)
     veta_new <- veta
