@@ -62,13 +62,11 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
                       ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
-  # check object
-  object <- lav_object_check_version(object)
-  lav_object_casewise_check(object, gettext("lavPredict()"), rv_too = FALSE)
 
   parallel <- match.arg(parallel)
 
-  # catch efaList objects
+  # catch efaList objects (before the object checks below, which need a
+  # single lavaan object)
   if (inherits(object, "efaList")) {
     # kill object$loadings if present
     object[["loadings"]] <- NULL
@@ -82,6 +80,10 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
   }
 
   stopifnot(inherits(object, "lavaan"))
+
+  # check object
+  object <- lav_object_check_version(object)
+  lav_object_casewise_check(object, gettext("lavPredict()"), rv_too = FALSE)
   lavmodel <- object@Model
   lavdata <- object@Data
   lavsamplestats <- object@SampleStats
@@ -117,7 +119,17 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
         "the fsm/mdist/rel/transform/append_data options are not
          supported (yet) for models with random slopes."))
     }
-    se_flag <- !is.null(se) && se != "none"
+    # acov implies se (as elsewhere); the full posterior covariance matrix
+    # of the between-level scores is not returned (only the posterior
+    # standard deviations)
+    acov_flag <- !is.null(acov) && acov != "none"
+    se_flag <- (!is.null(se) && se != "none") || acov_flag
+    if (acov_flag) {
+      lav_msg_warn(gettext(
+        "the full sampling covariance matrix (acov) of the factor scores
+         is not available (yet) for models with random slopes; only the
+         standard errors (se) are returned."))
+    }
     if (se_flag && level == 1L) {
       lav_msg_stop(gettext(
         "standard errors for the level-1 factor scores are not

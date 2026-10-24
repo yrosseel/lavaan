@@ -45,8 +45,8 @@ lav_predict_y_prepare <- function(object,
     } else {
       data_obs <- lavdata@X
       ov_names <- lavdata@ov.names
+      exo <- lavdata@eXo
     }
-    # eXo <- lavdata@eXo
   } else if (is.list(newdata) && !is.data.frame(newdata)) {
     # newdata is provided per group, as a list with one element per group.
     # Elements may be NULL to skip a group. This is useful when the groups
@@ -64,7 +64,7 @@ lav_predict_y_prepare <- function(object,
     }
     ov <- lavdata@ov
     ordered_names <- ov$name[ov$type == "ordered"]
-    data_obs <- ov_names <- vector("list", lavdata@ngroups)
+    data_obs <- ov_names <- exo <- vector("list", lavdata@ngroups)
     for (g in seq_len(lavdata@ngroups)) {
       if (is.null(newdata[[g]])) {
         next # skip this group; data_obs[[g]] stays NULL
@@ -85,6 +85,7 @@ lav_predict_y_prepare <- function(object,
       )
       data_obs[[g]] <- new_data_g@X[[1L]]
       ov_names[[g]] <- new_data_g@ov.names[[1L]]
+      exo[[g]] <- new_data_g@eXo[[1L]]
     }
     group_idx <- which(!vapply(data_obs, is.null, logical(1)))
     if (length(group_idx) == 0L) {
@@ -130,9 +131,23 @@ lav_predict_y_prepare <- function(object,
     }
 
     data_obs <- new_data@X
-    # eXo <- newData@eXo
     ov_names <- new_data@ov.names
+    exo <- new_data@eXo
   } # newdata
+
+  # conditional.x: the exogenous covariates are stored apart from the
+  # (y) data in the eXo slot, and ov.names only lists the y-side variables.
+  # The joint model-implied moments used by lav_predict_y_conditional_mean()
+  # are ordered as c(ov.names, ov.names.x), so append the covariates to the
+  # data and to the names; xnames can then refer to the model's covariates
+  if (lavmodel@conditional.x) {
+    for (g in group_idx) {
+      if (length(exo) >= g && !is.null(exo[[g]])) {
+        data_obs[[g]] <- cbind(data_obs[[g]], exo[[g]])
+        ov_names[[g]] <- c(ov_names[[g]], lavdata@ov.names.x[[g]])
+      }
+    }
+  }
 
   # check ynames
   if (length(ynames) == 0L) {
