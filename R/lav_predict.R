@@ -248,14 +248,10 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (type != "lv") {
       lav_msg_stop(gettext("standard errors only available if type = \"lv\""))
     }
-    # correlation-preserving transformation: no standard errors (yet)
-    if (transform) {
-      lav_msg_warn(gettext(
-        "standard errors (se) and acov are not available (yet) if
-        transform = TRUE; the se/acov arguments are ignored."))
-      se <- "none"
-      acov <- "none"
-    }
+    # NOTE: for transformed (correlation-preserving) factor scores, the
+    # standard errors are those of the transformed scores; see
+    # compute_fscov() in lav_predict_eta_normal() (continuous data) and the
+    # delta-method expression in lav_predict_eta_ebm_ml() (categorical data)
     # NOTE: for categorical data, the standard errors are computed in
     # lav_predict_eta_ebm_ml() from the curvature of the (EBM/ML) objective at
     # the optimum, and so differ from one response pattern to the next.
@@ -1029,28 +1025,24 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
   }
 
-  # method-specific conditional (co)variance of the factor scores, used for the
-  # standard errors and the full sampling covariance matrix (acov)
+  # prediction-error covariance matrix Var(fs - eta) of the factor scores
+  # fs = C (y - mu) + E(eta), used for the standard errors and the full
+  # sampling covariance matrix (acov). For any factor-score coefficient
+  # matrix C:
   #
-  # if 'fsc' (and 'sigma') are provided (higher-order factors, Bartlett only),
-  # the general expression Var(fs - eta) = C Sigma C' - C Lambda Psi -
-  # Psi Lambda' C' + Psi is used instead: the standard expression below
-  # assumes C Lambda = I, which no longer holds for the higher-order rows
-  compute_fscov <- function(lambda, sigma_inv, veta_g,
-                            fsc = NULL, sigma = NULL) {
-    if (bartlett) {
-      # traditional formula uses solve(Lambda' Theta.inv Lambda); we use the
-      # Sigma.inv version (minus Psi) to handle negative/zero variances, with
-      # a pseudo-inverse fallback (lav_predict_solve)
-      if (is.null(fsc)) {
-        lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) - veta_g
-      } else {
-        cl_psi <- fsc %*% lambda %*% veta_g
-        fsc %*% sigma %*% t(fsc) - cl_psi - t(cl_psi) + veta_g
-      }
-    } else {
-      veta_g - veta_g %*% t(lambda) %*% sigma_inv %*% lambda %*% veta_g
-    }
+  #   Var(fs - eta) = C Sigma C' - C Lambda Psi - Psi Lambda' C' + Psi
+  #
+  # For regression scores this reduces to Psi - Psi Lambda' Sigma^-1 Lambda
+  # Psi (the conditional variance of eta given y), for Bartlett scores to
+  # solve(Lambda' Theta^-1 Lambda). The general expression is used for all
+  # scores, because it does not assume C Lambda = I: that assumption fails
+  # for the higher-order rows (Bartlett), and for the transformed
+  # (correlation-preserving) scores, where C is premultiplied by the
+  # transformation matrix. The standard errors then are the root mean
+  # squared prediction errors of the scores that are actually returned.
+  compute_fscov <- function(fsc, sigma, lambda, veta_g) {
+    cl_psi <- fsc %*% lambda %*% veta_g
+    fsc %*% sigma %*% t(fsc) - cl_psi - t(cl_psi) + veta_g
   }
 
   if (is.null(data_obs)) {
@@ -1510,19 +1502,19 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc)) +
           eeta_case_g[mp$case.idx[[p]], , drop = FALSE]
 
-        # SE? (not if transform: the SEs are not transformed (yet), and
-        # they are not returned either -- see the gate below)
-        if (se == "standard" && !transform) {
-          if (is.null(lambda_star_p)) {
-            tmp <- compute_fscov(lambda, sigma_22_inv, veta_g)
-          } else {
-            tmp <- compute_fscov(lambda, sigma_22_inv, veta_g,
-              fsc = fsc_nona, sigma = sigma_hat[[b]][var_idx, var_idx,
-                                                     drop = FALSE]
-            )
-          }
+        # SE? (of the scores as returned: for this pattern, and transformed
+        # if transform = TRUE)
+        if (se == "standard") {
+          tmp <- compute_fscov(
+            fsc = if (bartlett) fsc_nona else fsc,
+            sigma = sigma_hat[[b]][var_idx, var_idx, drop = FALSE],
+            lambda = lambda, veta_g = veta_g
+          )
           tmp_d <- diag(tmp)
           tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
+          # factors whose indicators are all missing in this pattern: the
+          # (Bartlett) scores are NA, and so are their standard errors
+          tmp_d[zero_idx] <- as.numeric(NA)
 
           # all cases in this pattern get the same SEs
           se_g[mp$case.idx[[p]], ] <- matrix(sqrt(tmp_d),
@@ -1596,20 +1588,17 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
 
     # standard error
-    if (se == "standard" && !transform) { # for now
+    if (se == "standard") {
       if (lavdata@missing %in% c("ml", "ml.x") && lavdata@nlevels == 1L) {
         se_1[[g]] <- se_g
         if (acov == "standard") {
           acov_1[[g]] <- acov_g
         }
       } else { # complete data
-        if (is.null(lambda_star_g)) {
-          tmp <- compute_fscov(lambda_g, sigma_inv_g, veta_g)
-        } else {
-          tmp <- compute_fscov(lambda_g, sigma_inv_g, veta_g,
-            fsc = fsc, sigma = sigma_hat[[b]]
-          )
-        }
+        # fsc is the coefficient matrix of the returned scores (transformed
+        # if transform = TRUE)
+        tmp <- compute_fscov(fsc = fsc, sigma = sigma_hat[[b]],
+                             lambda = lambda_g, veta_g = veta_g)
         tmp_d <- diag(tmp)
         tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
         se_1[[g]] <- matrix(sqrt(tmp_d), nrow = 1L)
@@ -2103,6 +2092,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     # under conditional.x the total (marginal) covariance of the
     # transformed scores matches the unconditional V(ETA). The dummy ov.y
     # columns (if any) are left untouched.
+    tmat_g <- NULL
     if (transform && nfac > 0L) {
       reg_idx <- seq_len(nfac)
       dc <- fs[[g]][, reg_idx, drop = FALSE] - eetax[[g]]
@@ -2135,8 +2125,21 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     # the leading columns of an nfac2-wide structure (dummy ov.y columns left
     # as NA) so that the dummy-lv handling in lav_predict_internal() applies
     # identically to the scores and to their standard errors.
+    #
+    # transform: the transformed scores are T (eta_i - E(ETA|x_i)) +
+    # E(ETA|x_i), a linear function of the untransformed scores, so their
+    # (Laplace) sampling covariance is T acov T' (delta method)
     if (se_flag) {
       u_of_case <- match(case_key, case_key[rep_idx]) # case -> unique index
+      if (!is.null(tmat_g)) {
+        res_list <- lapply(res_list, function(r) {
+          r$acov <- tmat_g %*% r$acov %*% t(tmat_g)
+          tmp_d <- diag(r$acov)
+          tmp_d[tmp_d < 0] <- as.numeric(NA)
+          r$se <- sqrt(tmp_d)
+          r
+        })
+      }
       se_rep <- do.call(rbind, lapply(res_list, "[[", "se")) # n_unique x nfac
       se_g <- matrix(as.numeric(NA), n, nfac2)
       se_g[, seq_len(nfac)] <- se_rep[u_of_case, , drop = FALSE]

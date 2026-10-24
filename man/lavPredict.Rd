@@ -88,13 +88,23 @@ scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
-returned as an attribute. For continuous data, the (naive) standard errors are
-the same for every observation. For categorical data, where the factor scores
+returned as an attribute. For continuous data, the standard errors are the
+square roots of the diagonal of the prediction-error covariance matrix
+\eqn{Var(\hat\eta - \eta) = C \Sigma C' - C \Lambda \Psi - \Psi \Lambda' C' +
+\Psi}, where \eqn{C} is the factor score coefficient matrix of the scores
+that are returned (see \code{fsm}). For regression scores this is the
+conditional variance of the factors given the data, for Bartlett scores the
+usual \eqn{(\Lambda' \Theta^{-1} \Lambda)^{-1}}; for transformed scores
+(\code{transform = TRUE}), \eqn{C} includes the transformation, and the
+standard errors are those of the transformed scores. The (naive) standard
+errors are the same for every observation. For categorical data, where the factor scores
 are obtained by numerical optimization (\code{method = "EBM"} or
 \code{method = "ML"}), the standard errors are based on the curvature of the
 objective at the optimum (the inverse of its Hessian, a Laplace/observed
 -information approximation) and therefore differ from one response pattern to
-the next; the result is an (nobs x nfactor) matrix per group.}
+the next; with \code{transform = TRUE}, the sampling covariance matrix of the
+transformed scores is obtained by the delta method (the transformation is
+linear in the scores). The result is an (nobs x nfactor) matrix per group.}
 \item{acov}{Similar to the \code{"se"} argument, but optionally returns the full
 sampling covariance matrix of the factor scores as an attribute. For
 continuous data this is a single matrix per group; for categorical data it is
