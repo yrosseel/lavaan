@@ -355,7 +355,7 @@ sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     \code{conditional_x = TRUE} as well (each block latent variable is
     regressed on all exogenous covariates, MIMIC style), so that the
     measurement parameters live on the same conditional latent-response
-    scale (\code{Var(y*|x) = 1}, delta parameterization) as the joint model.
+    scale (\code{Var(y*|x) = 1}, Delta parameterization) as the joint model.
     An \emph{ordered endogenous} variable in the structural part is
     supported too (with or without covariates): it enters the structural
     model on its latent-response scale, while its thresholds are fixed at

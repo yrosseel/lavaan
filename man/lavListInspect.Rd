@@ -98,8 +98,9 @@ Model features:
         variables were part of the model.}
     \item{\code{"fixed_x"}:}{Logical. \code{TRUE} if the exogenous x-covariates
         are treated as fixed.}
-    \item{\code{"parameterization"}:}{Character. Either \code{"delta"} or
-        \code{"theta"}.}
+    \item{\code{"parameterization"}:}{Character. Either \code{"delta"}
+        (the Delta parameterization) or \code{"theta"} (the Theta
+        parameterization); the stored value is in lower case.}
 }
 
 \describe{

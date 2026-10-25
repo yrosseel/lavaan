@@ -104,9 +104,10 @@ Model features:
      are represented in the parameter table as duplicated free parameters
      (instead of extra rows with \code{op = "=="}). The default is
      \code{FALSE}.}
-    \item{\code{parameterization}:}{Currently only used if data is 
-      categorical. If \code{"delta"}, the delta parameterization is used. 
-      If \code{"theta"}, the theta parameterization is used.}
+    \item{\code{parameterization}:}{Currently only used if data is
+      categorical. If \code{"Delta"} (the default), the Delta
+      parameterization is used. If \code{"Theta"}, the Theta
+      parameterization is used. (The value is case-insensitive.)}
     \item{\code{correlation}:}{Only used for (single-level)
      continuous data. If \code{TRUE}, analyze a correlation matrix (instead
      of a (co)variance matrix). This implies that the residual observed

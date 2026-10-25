@@ -534,8 +534,8 @@ lav_model_pt  <- function(
                          tmp_list$user == 1L)
     if (parameterization == "delta" && length(ord_var_idx) > 0L) {
       lav_msg_warn(gettextf("variances of ordered variables are ignored when
-      parameterization = \"delta\"; please remove them from the model syntax
-      or use parameterization = \"theta\"; variables involved are: %s",
+      parameterization = \"Delta\"; please remove them from the model syntax
+      or use parameterization = \"Theta\"; variables involved are: %s",
       paste(tmp_list$lhs[ord_var_idx], collapse = " ")))
       # force them to be nonfree and set ustart to 1 (new in 0.6-20)
       # later, after we have processes the modifiers
@@ -1517,7 +1517,7 @@ lavaanify <- function(                             # nolint
                       effect_coding = "",
                       conditional_x = FALSE,
                       fixed_x = FALSE,
-                      parameterization = "delta",
+                      parameterization = "Delta",
                       constraints = NULL,
                       ceq_simple = FALSE,
                       auto = FALSE,
@@ -1544,6 +1544,9 @@ lavaanify <- function(                             # nolint
                       ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
+  # the parameterization is documented as "Delta"/"Theta", but compared
+  # in lower case internally (as lavOptions() does)
+  parameterization <- tolower(parameterization)
   lav_model_pt(
               model = model,
               meanstructure = meanstructure,

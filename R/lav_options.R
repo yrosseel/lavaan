@@ -576,7 +576,7 @@ lav_options_set <- function(opt = NULL) {
         } else if (opt$parameterization != "theta") {
           lav_msg_stop(gettext(
             "two-level (D)WLS estimation with categorical data requires
-            parameterization = \"theta\"."))
+            parameterization = \"Theta\"."))
         }
         # - no (continuous) h1 model; the unrestricted statistics come
         #   from the stage-wise (univariate + bivariate) estimation

@@ -19,7 +19,7 @@ lavaanify(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     correlation = FALSE, correlation_delta_free = FALSE,
     composites = TRUE, composites_cov_free = FALSE,
     effect_coding = "", conditional_x = FALSE,
-    fixed_x = FALSE, parameterization = "delta", constraints = NULL,
+    fixed_x = FALSE, parameterization = "Delta", constraints = NULL,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
     auto_fix_first = FALSE, marker = NULL,
     auto_fix_single = FALSE, auto_var = FALSE,
@@ -36,7 +36,7 @@ lavParTable(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     correlation = FALSE, correlation_delta_free = FALSE,
     composites = TRUE, composites_cov_free = FALSE,
     effect_coding = "", conditional_x = FALSE,
-    fixed_x = FALSE, parameterization = "delta", constraints = NULL,
+    fixed_x = FALSE, parameterization = "Delta", constraints = NULL,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
     auto_fix_first = FALSE, marker = NULL,
     auto_fix_single = FALSE, auto_var = FALSE,
@@ -124,8 +124,8 @@ the model for both observed and latent variables.}
     are fixed to their sample values. If \code{FALSE}, they are considered
     random, and the means, variances and covariances are free parameters.}
 \item{parameterization}{Currently only used if data is categorical. If
-    \code{"delta"}, the delta parameterization is used. If \code{"theta"},
-    the theta parameterization is used.}
+    \code{"Delta"}, the Delta parameterization is used. If \code{"Theta"},
+    the Theta parameterization is used. (The value is case-insensitive.)}
 \item{constraints}{Additional (in)equality constraints. See details for
     more information.}
 \item{ceq_simple}{If \code{TRUE}, and no other general constraints are
@@ -315,7 +315,7 @@ There can be seven types of formula-like expressions in the model syntax:
       parameterization, in a multiple group analysis when factor indicators
       are categorical. Note that the interpretation of a scale factor
       depends on the setting: for a categorical variable (under
-      \code{parameterization = "theta"}), it equals the reciprocal
+      \code{parameterization = "Theta"}), it equals the reciprocal
       (\code{1/sd}) of the standard deviation of the latent response
       variable (scaling its covariance matrix down to a correlation
       matrix); for a continuous variable under \code{correlation = TRUE}

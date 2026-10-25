@@ -342,9 +342,9 @@ lav_step02_options <- function(slot_options = NULL,
     if (identical(lavoptions$parameterization, "theta") &&
         any(flat_model$op == "<~")) {
       lav_msg_stop(gettext(
-        "parameterization = \"theta\" is not supported (yet) for models
+        "parameterization = \"Theta\" is not supported (yet) for models
          with composites (the \"<~\" operator); please use the (default)
-         \"delta\" parameterization."))
+         \"Delta\" parameterization."))
     }
 
     # correlation = TRUE with observed product (interaction) terms: the
