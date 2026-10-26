@@ -35,6 +35,16 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
        the SAM approach (yet); consider using sem() instead."))
   }
 
+  # random slopes (rv() modifier): the random-slope likelihood is casewise
+  # (conditional on the covariates in each cluster) and has no moment
+  # structure; the measurement blocks of step 1 can not be isolated, and
+  # the structural model of step 2 can not be fitted to Var(eta)
+  if (!is.null(flat_model$rv) && any(nchar(flat_model$rv) > 0L)) {
+    lav_msg_stop(gettext(
+      "random slopes (defined by the rv() modifier) are not supported by
+       the SAM approach (yet); consider using sem() instead."))
+  }
+
   # remove do.fit option if present
   dotdotdot0$do.fit <- NULL
 
