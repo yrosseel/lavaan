@@ -39,16 +39,32 @@ for the measurement-error variance of the proxies, so the estimates are a
 closed-form function of the sample moments (no raw data are needed: the
 model can also be fitted from \code{sample.cov} and \code{sample.nobs}).
 The measurement-error variances of the indicators are estimated by a
-Spearman-type communality estimator, applied per factor. Factors with
-three or more indicators use the within-factor tetrads; for 2-indicator
-factors the tetrads are formed with external variables (observed model
-variables outside the factor), which requires the factor to be
-correlated with other variables in the model. For a single-indicator
-factor the reliability must come from a residual variance that is fixed
-in the model (as the default lavaan rules do: the residual variance of a
-single indicator is fixed to zero, so the latent variable coincides with
-its indicator), or the residual variances can be supplied directly (see
-\code{js_theta} below).
+Spearman-type communality estimator, applied per factor: the communality
+of an indicator is the average of the tetrads \code{S[i,a] S[i,b] / S[a,b]}
+over pairs of other variables \code{a, b}. Only the tetrads that the
+model structure declares admissible are averaged: a tetrad identifies the
+communality of \code{i} when \code{i} is a \emph{pure} indicator of the
+factor (a single loading, no regressors) and the model implies no
+association between any two of \code{i}, \code{a} and \code{b} other
+than through the factor (the pairs are d-separated by the factor in the
+path diagram). This excludes pairs with a residual covariance, and pairs
+of indicators with cross-loadings or regressors whose extra variables
+are connected without passing through the factor; it keeps, for
+example, a pair of cross-loading indicators when the factor mediates
+between their extra factors. Factors with three or more indicators use
+the admissible within-factor tetrads; when an indicator has none (for
+instance 2-indicator factors), the tetrads are formed with external
+variables (observed model variables outside the factor), which requires
+the factor to be correlated with other variables in the model. This
+also covers a single-indicator factor whose reliability is identified
+through the structural model; by the default lavaan rules, however, the
+residual variance of a single indicator is fixed to zero, and a
+model-fixed residual variance always takes precedence. The residual
+variances can also be supplied directly (see \code{js_theta} below).
+The communality of an indicator with a cross-loading or a regressor is
+not identified by any tetrad; such indicators are never used as
+conditioning proxies (see \code{Details}), so their reliability is not
+needed.
 
 The estimator is selected by setting \code{estimator = "JS"} (scaling) or
 \code{estimator = "JSA"} (aggregated), for example
@@ -97,9 +113,10 @@ converted.
   \item{\code{js_theta}:}{Character. How the measurement-error (residual)
     variances of the indicators are estimated. \code{"spearman"} (the
     default) uses the Spearman-type communality estimator per factor
-    (within-factor tetrads for 3+ indicators; external tetrads for
-    2-indicator factors; model-fixed residual variances for factors with
-    fewer than 3 indicators); \code{"user"} takes the values from
+    (admissible within-factor tetrads; external tetrads when an
+    indicator has none, for instance in 2-indicator factors; model-fixed
+    residual variances take precedence for factors with fewer than 3
+    indicators); \code{"user"} takes the values from
     \code{js_theta_values}.}
   \item{\code{js_theta_values}:}{Named numeric vector. The residual
     variances of the indicators (on the same scale as the analyzed
@@ -198,10 +215,12 @@ their estimated loadings -- the James-Stein analog of dropping
 contaminated instruments in MIIV estimation. Contaminated correlations
 are likewise excluded from the Spearman reliability estimates. The
 residual covariances themselves are estimated in the second stage. This
-requires enough clean indicators: every needed reliability must have at
-least one uncontaminated tetrad, and every equation needs at least one
-clean proxy per latent regressor; an informative error is raised
-otherwise.
+requires enough clean pure indicators: every needed reliability must
+have at least one admissible tetrad, and every equation needs at least
+one clean pure proxy per latent regressor; an informative error is
+raised otherwise. In particular, a scaling indicator with a cross-loading
+or a regressor cannot serve as a proxy for its factor, so the factor
+needs another pure indicator with an estimable reliability.
 }
 
 \subsection{Restrictions}{

@@ -580,20 +580,181 @@ lav_sem_js_contam <- function(lavpartable = NULL, pt_block = NULL, b = 1L,
 }
 
 
+# path diagram of one block as a directed graph with hidden common
+# causes: nodes are the observed variables (ov_names), the latent
+# variables (lv_names), and one hidden node per active (free, or fixed to
+# a nonzero value) covariance between two distinct variables (a
+# bidirected edge lhs <-> rhs is represented as hidden -> lhs,
+# hidden -> rhs). Directed edges: lhs =~ rhs (lhs -> rhs) and lhs ~ rhs
+# (rhs -> lhs). The covariances among the exogenous covariates (exo = 1,
+# fixed at their sample values) count as active.
+#
+# Used to decide, from the MODEL STRUCTURE alone, which Spearman tetrads
+# identify a residual variance (lav_sem_js_sep): the decisions never
+# depend on the data, so the estimation map stays a smooth function of
+# the sample moments
+lav_sem_js_graph <- function(lavpartable = NULL, pt_block = NULL, b = 1L,
+                             ov_names = NULL, lv_names = NULL) {
+  in_b <- pt_block == b
+  nodes <- c(ov_names, lv_names)
+  from <- integer(0L)
+  to <- integer(0L)
+
+  # measurement: factor -> indicator
+  mm_idx <- which(lavpartable$op == "=~" & in_b)
+  if (length(mm_idx) > 0L) {
+    from <- c(from, match(lavpartable$lhs[mm_idx], nodes))
+    to <- c(to, match(lavpartable$rhs[mm_idx], nodes))
+  }
+  # regressions: regressor -> dependent
+  reg_idx <- which(lavpartable$op == "~" & in_b)
+  if (length(reg_idx) > 0L) {
+    from <- c(from, match(lavpartable$rhs[reg_idx], nodes))
+    to <- c(to, match(lavpartable$lhs[reg_idx], nodes))
+  }
+  # active covariances: hidden common cause
+  exo <- if (!is.null(lavpartable$exo)) lavpartable$exo else 0L
+  cov_idx <- which(lavpartable$op == "~~" & in_b &
+    lavpartable$lhs != lavpartable$rhs &
+    (lavpartable$free > 0L | exo == 1L |
+      (!is.na(lavpartable$ustart) & lavpartable$ustart != 0)))
+  if (length(cov_idx) > 0L) {
+    ii <- match(lavpartable$lhs[cov_idx], nodes)
+    jj <- match(lavpartable$rhs[cov_idx], nodes)
+    ok <- !is.na(ii) & !is.na(jj)
+    nh <- sum(ok)
+    if (nh > 0L) {
+      h_idx <- length(nodes) + seq_len(nh)
+      nodes <- c(nodes, paste0(".h", seq_len(nh)))
+      from <- c(from, h_idx, h_idx)
+      to <- c(to, ii[ok], jj[ok])
+    }
+  }
+  ok <- !is.na(from) & !is.na(to)
+  from <- from[ok]
+  to <- to[ok]
+  nn <- length(nodes)
+  parents <- vector("list", nn)
+  children <- vector("list", nn)
+  for (v in seq_len(nn)) {
+    parents[[v]] <- unique(from[to == v])
+    children[[v]] <- unique(to[from == v])
+  }
+  list(nodes = nodes, nnodes = nn, nov = length(ov_names),
+       parents = parents, children = children)
+}
+
+
+# d-connection (Bayes-ball reachability; Shachter 1998): the nodes that
+# are d-connected to 'from' given the conditioning set 'cond' in the graph
+# built by lav_sem_js_graph. For a linear (recursive) model with generic
+# parameter values, two variables are d-separated by a set exactly when
+# their model-implied partial covariance given that set is zero
+lav_sem_js_dconnected <- function(graph = NULL, from = NULL,
+                                  cond = integer(0L)) {
+  nn <- graph$nnodes
+  in_cond <- logical(nn)
+  in_cond[cond] <- TRUE
+  visited_up <- logical(nn)   # visited coming from a child
+  visited_down <- logical(nn) # visited coming from a parent
+  reached <- logical(nn)
+  q_node <- from
+  q_dir <- 1L # 1 = from a child, 2 = from a parent
+  while (length(q_node) > 0L) {
+    v <- q_node[1L]
+    d <- q_dir[1L]
+    q_node <- q_node[-1L]
+    q_dir <- q_dir[-1L]
+    if (d == 1L) {
+      if (visited_up[v]) {
+        next
+      }
+      visited_up[v] <- TRUE
+    } else {
+      if (visited_down[v]) {
+        next
+      }
+      visited_down[v] <- TRUE
+    }
+    if (!in_cond[v]) {
+      reached[v] <- TRUE
+    }
+    pa <- graph$parents[[v]]
+    ch <- graph$children[[v]]
+    if (d == 1L) {
+      # ball arriving from a child: an unobserved node passes it to
+      # its parents and children; an observed node blocks it
+      if (!in_cond[v]) {
+        q_node <- c(q_node, pa, ch)
+        q_dir <- c(q_dir, rep(1L, length(pa)), rep(2L, length(ch)))
+      }
+    } else {
+      # ball arriving from a parent: an unobserved node passes it to
+      # its children; an observed node bounces it back to its parents
+      # (an opened collider)
+      if (!in_cond[v]) {
+        q_node <- c(q_node, ch)
+        q_dir <- c(q_dir, rep(2L, length(ch)))
+      } else {
+        q_node <- c(q_node, pa)
+        q_dir <- c(q_dir, rep(1L, length(pa)))
+      }
+    }
+  }
+  reached[from] <- FALSE
+  reached
+}
+
+
+# admissible tetrad pairs for one factor: a logical nvar x nvar matrix
+# with sep[a, b] = TRUE when the observed variables a and b are both
+# d-connected to the factor and d-separated by it, so that the model
+# implies Cov(a, b | eta_f) = 0 with Cov(a, eta_f) and Cov(b, eta_f)
+# nonzero. For a pure indicator i of eta_f (its only model equation is
+# the loading on eta_f), the Spearman tetrad S_ia S_ib / S_ab then
+# identifies lambda_i^2 Var(eta_f) whenever sep[i, a], sep[i, b] and
+# sep[a, b] all hold -- whether a and b are indicators of eta_f (clean
+# or with cross-loadings whose extra factors are conditionally
+# uncorrelated given eta_f), indicators of other factors, covariates, or
+# endogenous observed variables
+lav_sem_js_sep <- function(graph = NULL, lv_idx = NULL) {
+  nov <- graph$nov
+  sep <- matrix(FALSE, nrow = nov, ncol = nov)
+  if (is.na(lv_idx)) {
+    return(sep)
+  }
+  dcon <- lav_sem_js_dconnected(graph, from = lv_idx)[seq_len(nov)]
+  for (a in which(dcon)) {
+    ra <- lav_sem_js_dconnected(graph, from = a, cond = lv_idx)[seq_len(nov)]
+    sep[a, ] <- dcon & !ra
+    sep[a, a] <- FALSE
+  }
+  sep
+}
+
+
 # Spearman/communality residual variances with tetrad masking: like
 # lav_cfa_theta_spearman (h2_i = mean over tetrads r_ia * r_ib / r_ab),
-# but tetrads that run through a contaminated pair (an active residual
-# covariance) are excluded from the averaging. When a variable has no
-# clean within-factor tetrad left, the tetrads are formed with EXTERNAL
-# variables z instead (Kano-1990 style: any observed model variable
-# outside the factor whose residual is uncorrelated with both members;
-# the formula r_ia * r_iz / r_az identifies the communality through the
-# factor correlations). Returns NA for a variable without any clean
-# tetrad at all. With no contaminated pairs within the factor block,
-# this reproduces lav_cfa_theta_spearman exactly.
+# but only the admissible tetrads are averaged: a tetrad (i; a, b) is
+# admissible when the three pairs (i, a), (i, b) and (a, b) are all
+# admissible, where a pair is admissible when the model implies no
+# association between its members other than through the factor
+# (sep[a, b]; see lav_sem_js_sep), and when i is a pure indicator of the
+# factor (pure[i]). The legacy form (contam) only masks pairs with an
+# active residual covariance (sep = !contam), and treats every indicator
+# as pure. When a variable has no admissible within-factor tetrad left,
+# the tetrads are formed with EXTERNAL variables z instead (Kano-1990
+# style: any observed model variable outside the factor; the formula
+# r_ia * r_iz / r_az identifies the communality through the factor
+# correlations), first pairing an indicator with an external variable
+# and then (external_pairs = TRUE) two external variables -- the latter
+# also covers the reliability of a single indicator identified through
+# the structural model. Returns NA for a variable without any admissible
+# tetrad at all. When all within-factor tetrads are admissible, this
+# reproduces lav_cfa_theta_spearman exactly.
 #
-# s_full/contam cover ALL observed variables of the block; idx is the
-# factor's indicator set; zpool the external candidates.
+# s_full/sep/contam/pure cover ALL observed variables of the block; idx is
+# the factor's indicator set; zpool the external candidates.
 #
 # deriv = TRUE also returns the Jacobian of the theta values with respect
 # to vech(s_full) as the "dtheta" attribute (length(idx) x pstar), using
@@ -602,16 +763,28 @@ lav_sem_js_contam <- function(lavpartable = NULL, pt_block = NULL, b = 1L,
 # lav_sem_js_deriv.R)
 lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
                                              contam = NULL,
+                                             sep = NULL, pure = NULL,
                                              zpool = integer(0L),
+                                             external_pairs = FALSE,
                                              bounds = "wide",
                                              deriv = FALSE) {
   r <- cov2cor(s_full)
   p <- length(idx)
+  nvar <- nrow(s_full)
+  if (is.null(sep)) {
+    sep <- if (is.null(contam)) {
+      matrix(TRUE, nrow = nvar, ncol = nvar)
+    } else {
+      !contam
+    }
+  }
+  if (is.null(pure)) {
+    pure <- rep(TRUE, nvar)
+  }
   out <- rep(as.numeric(NA), p)
   dout <- NULL
   cm <- NULL
   if (deriv) {
-    nvar <- nrow(s_full)
     pstar <- nvar * (nvar + 1L) / 2L
     dout <- matrix(0, nrow = p, ncol = pstar)
     # vech coordinate of the (i, j) entry (lav_mat_vech order)
@@ -621,9 +794,12 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
   }
   for (k in seq_len(p)) {
     i <- idx[k]
+    if (!pure[i]) {
+      next # no tetrad identifies the communality of an impure indicator
+    }
     others <- setdiff(idx, i)
-    # clean within-factor tetrads; tet collects the (a, b) pairs actually
-    # used (for the derivative)
+    # admissible within-factor tetrads; tet collects the (a, b) pairs
+    # actually used (for the derivative)
     vals <- numeric(0L)
     tet <- matrix(0L, nrow = 2L, ncol = 0L)
     if (length(others) >= 2L) {
@@ -631,7 +807,7 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
       for (m in seq_len(ncol(pairs))) {
         a <- pairs[1L, m]
         b <- pairs[2L, m]
-        if (contam[i, a] || contam[i, b] || contam[a, b]) {
+        if (!sep[i, a] || !sep[i, b] || !sep[a, b]) {
           next
         }
         vals <- c(vals, r[i, a] * r[i, b] / r[a, b])
@@ -640,14 +816,15 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
         }
       }
     }
-    # fall back to external tetrads when no clean within-factor tetrad
+    # fall back to external tetrads when no admissible within-factor
+    # tetrad: an indicator paired with an external variable
     if (length(vals) == 0L && length(zpool) > 0L) {
       for (a in others) {
-        if (contam[i, a]) {
+        if (!sep[i, a]) {
           next
         }
         for (z in zpool) {
-          if (contam[i, z] || contam[a, z]) {
+          if (!sep[i, z] || !sep[a, z]) {
             next
           }
           vals <- c(vals, r[i, a] * r[i, z] / r[a, z])
@@ -657,8 +834,23 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
         }
       }
     }
+    # last resort: two external variables
+    if (length(vals) == 0L && external_pairs && length(zpool) >= 2L) {
+      zpairs <- utils::combn(zpool, 2L)
+      for (m in seq_len(ncol(zpairs))) {
+        a <- zpairs[1L, m]
+        b <- zpairs[2L, m]
+        if (!sep[i, a] || !sep[i, b] || !sep[a, b]) {
+          next
+        }
+        vals <- c(vals, r[i, a] * r[i, b] / r[a, b])
+        if (deriv) {
+          tet <- cbind(tet, c(a, b))
+        }
+      }
+    }
     if (length(vals) == 0L) {
-      next # no clean tetrad: NA
+      next # no admissible tetrad: NA
     }
     h2 <- mean(vals)
     clipped <- FALSE
@@ -705,13 +897,20 @@ lav_sem_js_theta_spearman_masked <- function(s_full = NULL, idx = NULL,
 # residual (measurement-error) variances of the observed indicators, needed
 # for the shrinkage (and, for JSA, the aggregation weights); by default the
 # Spearman/communality estimator applied per factor (Burghgraeve et al.,
-# 2021, Appendix B), with contaminated tetrads masked (see
-# lav_sem_js_theta_spearman). Indicators without a clean tetrad get NA;
-# whether that is a problem depends on whether they are needed as a
-# conditioning proxy (checked in lav_sem_js_eq_plans).
+# 2021, Appendix B), averaging only the tetrads that the model structure
+# declares admissible (sep_list: per factor, the pairs of observed
+# variables that are d-separated by the factor; pure_mat: the pure
+# indicators of each factor; see lav_sem_js_sep and
+# lav_sem_js_theta_spearman_masked). Without sep_list, only the pairs
+# with an active residual covariance (contam) are masked. Indicators
+# without an admissible tetrad -- including indicators with
+# cross-loadings or regressors, whose communality no tetrad identifies --
+# get NA; whether that is a problem depends on whether they are needed as
+# a conditioning proxy (checked in lav_sem_js_eq_plans).
 lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
                              lv_names = NULL, lavoptions = NULL,
                              aggregated = FALSE, contam = NULL,
+                             sep_list = NULL, pure_mat = NULL,
                              theta_fixed = NULL, deriv = FALSE) {
   label <- if (aggregated) "JSA" else "JS"
   nvar <- ncol(s)
@@ -745,8 +944,23 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
     # spearman, per factor
     for (f in seq_len(ncol(ind_pat))) {
       idx <- which(ind_pat[, f] != 0)
-      if (length(idx) >= 3L &&
-          (is.null(contam) || !any(contam[idx, idx]))) {
+      # admissible pairs and pure indicators for this factor
+      if (!is.null(sep_list)) {
+        sep_f <- sep_list[[f]]
+      } else if (!is.null(contam)) {
+        sep_f <- !contam
+      } else {
+        sep_f <- matrix(TRUE, nrow = nvar, ncol = nvar)
+      }
+      pure_f <- if (!is.null(pure_mat)) {
+        pure_mat[, f]
+      } else {
+        rep(TRUE, nvar)
+      }
+      # every within-factor tetrad admissible?
+      all_clean <- length(idx) >= 3L && all(pure_f[idx]) &&
+        all(sep_f[idx, idx][upper.tri(sep_f[idx, idx])])
+      if (all_clean) {
         if (!deriv) {
           theta[idx] <- lav_cfa_theta_spearman(s[idx, idx, drop = FALSE],
             bounds = js_theta_bounds
@@ -756,28 +970,25 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
           # when the factor block is clean), but with the derivative
           tf <- lav_sem_js_theta_spearman_masked(
             s_full = s, idx = idx,
-            contam = matrix(FALSE, nrow = nvar, ncol = nvar),
+            sep = matrix(TRUE, nrow = nvar, ncol = nvar),
             zpool = integer(0L),
             bounds = js_theta_bounds, deriv = TRUE
           )
           theta[idx] <- as.numeric(tf)
           dtheta[idx, ] <- attr(tf, "dtheta")
         }
-      } else if (length(idx) >= 2L) {
-        # contaminated within-factor tetrads are masked; when a variable
+      } else if (length(idx) >= 1L) {
+        # inadmissible within-factor tetrads are masked; when a variable
         # has none left -- including the 2-indicator case, which has no
-        # within-factor tetrads at all -- external tetrads take over
-        # (Kano-style, with the observed variables outside the factor in
-        # the z role; this requires the factor to be correlated with
-        # other model variables)
-        contam_f <- if (is.null(contam)) {
-          matrix(FALSE, nrow = nvar, ncol = nvar)
-        } else {
-          contam
-        }
+        # within-factor tetrads at all, and the single-indicator case --
+        # external tetrads take over (Kano-style, with the observed
+        # variables outside the factor in the z role; this requires the
+        # factor to be correlated with other model variables, and the
+        # pairs to be d-separated by the factor)
         tf <- lav_sem_js_theta_spearman_masked(
-          s_full = s, idx = idx, contam = contam_f,
+          s_full = s, idx = idx, sep = sep_f, pure = pure_f,
           zpool = setdiff(seq_len(nvar), idx),
+          external_pairs = !is.null(sep_list),
           bounds = js_theta_bounds, deriv = deriv
         )
         theta[idx] <- as.numeric(tf)
@@ -785,9 +996,10 @@ lav_sem_js_theta <- function(s = NULL, ind_pat = NULL, ov_names = NULL,
           dtheta[idx, ] <- attr(tf, "dtheta")
         }
       }
-      # else (single indicator): only a model-fixed residual variance can
-      # provide the reliability (below); otherwise theta stays NA and an
-      # informative error is raised when the proxy is actually needed
+      # a model-fixed residual variance (below) overrides the tetrad
+      # value for factors with fewer than 3 indicators; when nothing
+      # provides the reliability, theta stays NA and an informative error
+      # is raised when the proxy is actually needed
     }
 
     # residual variances that are FIXED in the model provide the
@@ -922,7 +1134,7 @@ lav_sem_js_eq_plans <- function(eqs_b = NULL, aggregated = FALSE,
       return(TRUE) # fixed value
     }
     m_f <- match(markers[[lv_names[f]]], ov_names)
-    !contam[m_f, v] && !v %in% theta_na
+    single_pat[m_f] && !contam[m_f, v] && !v %in% theta_na
   }
 
   plans <- vector("list", length(eqs_b))
@@ -999,9 +1211,10 @@ lav_sem_js_eq_plans <- function(eqs_b = NULL, aggregated = FALSE,
       if (length(sets[[i]]) == 0L) {
         lav_msg_stop(gettextf(
           "estimator %1$s cannot construct an admissible conditioning proxy
-           for %2$s in the equation for %3$s: no indicator with an
+           for %2$s in the equation for %3$s: no pure indicator with an
            estimable reliability is available (too few indicators without
-           a fixed residual variance, or too many residual covariances).
+           a cross-loading, regressor or fixed residual variance, too many
+           residual covariances, or a scaling indicator that is not pure).
            Consider providing the residual variances directly via
            estimator_args = list(js_theta = \"user\",
            js_theta_values = ...).",
@@ -1076,15 +1289,31 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       )] <- 1
     }
 
-    single_pat <- rowSums(ind_pat != 0) == 1L
     label <- if (aggregated) "JSA" else "JS"
 
-    # residual-covariance (contamination) map + residual variances of the
-    # proxies (per block; contaminated tetrads are masked)
+    # pure indicators: a single loading and no regressors (the only
+    # observed variables that can serve as conditioning proxies, and the
+    # only ones whose residual variance a tetrad identifies)
+    regressed <- ov_names %in% lavpartable$lhs[lavpartable$op == "~" &
+      pt_block == b]
+    pure_mat <- (ind_pat != 0) & (rowSums(ind_pat != 0) == 1L) & !regressed
+    single_pat <- rowSums(pure_mat) == 1L
+
+    # residual-covariance (contamination) map (for the conditioning
+    # sets), the path diagram and the per-factor admissible tetrad pairs
+    # (the pairs of observed variables that the model d-separates by the
+    # factor; the tetrads through other pairs are masked)
     contam <- lav_sem_js_contam(
       lavpartable = lavpartable, pt_block = pt_block, b = b,
       ov_names = ov_names, lavpta = lavpta
     )
+    graph <- lav_sem_js_graph(
+      lavpartable = lavpartable, pt_block = pt_block, b = b,
+      ov_names = ov_names, lv_names = lv_names
+    )
+    sep_list <- lapply(seq_len(nfac), function(f) {
+      lav_sem_js_sep(graph = graph, lv_idx = nvar + f)
+    })
     # residual variances that are FIXED in the model (used for factors
     # with fewer than 3 indicators, where the tetrad estimator is not
     # available)
@@ -1101,6 +1330,7 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       s = s_mat, ind_pat = ind_pat, ov_names = ov_names,
       lv_names = lv_names,
       lavoptions = lavoptions, aggregated = aggregated, contam = contam,
+      sep_list = sep_list, pure_mat = pure_mat,
       theta_fixed = theta_fixed, deriv = record
     )
 
