@@ -71,6 +71,30 @@ lav_sem_js_internal <- function(lavmodel = NULL, lavh1 = NULL,
   eqs <- attr(x, "eqs")
   x <- as.numeric(x)
 
+  # report the equations where the measurement-error correction was
+  # materially truncated (the final pass of each equation decides; a
+  # multiplier within 5 percent of 1 barely moves the estimates and is
+  # not worth a note -- the values are kept in the equations)
+  trunc_eqs <- character(0L)
+  for (eqs_b in eqs) {
+    for (eq in eqs_b) {
+      jl <- eq$js_lambda
+      if (length(jl) > 0L && isTRUE(jl[[length(jl)]]$truncated) &&
+          jl[[length(jl)]]$lambda_star < 0.95) {
+        trunc_eqs <- c(trunc_eqs, eq$lhs_new)
+      }
+    }
+  }
+  if (length(trunc_eqs) > 0L) {
+    lav_msg_note(gettextf(
+      "[%1$s] the measurement-error correction of the proxies was truncated
+       in the equation(s) for %2$s (near-singular disattenuated proxy
+       matrix); the estimates of these equations are shrunk toward least
+       squares. See the js_lambda_floor estimator argument.",
+      if (aggregated) "JSA" else "JS",
+      lav_msg_view(unique(trunc_eqs), "none")))
+  }
+
   # apply bounds (if any)
   if (!is.null(lavpartable$lower)) {
     lower_x <- lavpartable$lower[lavpartable$free > 0 &
@@ -110,6 +134,7 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
                                 free_directed_idx = NULL,
                                 free_undirected_idx = NULL,
                                 aggregated = FALSE,
+                                lambda_frozen = NULL,
                                 record = FALSE) {
   samplestats <- !is.null(vec)
   if (samplestats) {
@@ -134,6 +159,7 @@ lav_sem_js_estimate <- function(vec = NULL, eqs = NULL,
       lavoptions = lavoptions,
       free_directed_idx = free_directed_idx,
       aggregated = aggregated,
+      lambda_frozen = lambda_frozen,
       record = record
     )
     eqs_out <- attr(theta1, "eqs")
@@ -295,6 +321,23 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     vec0 <- lav_implied_to_vec(
       implied = lavh1$implied, lavmodel = lavmodel, drop_list = TRUE
     )
+    # the truncation multipliers of the barrier are frozen at their
+    # values at the estimates (the standard errors condition on them)
+    eqs_lam <- eqs
+    if (!any(vapply(unlist(eqs, recursive = FALSE), function(eq) {
+          !is.null(eq$js_lambda)
+        }, logical(1L)))) {
+      eqs_lam <- attr(lav_sem_js_estimate(
+        vec = NULL, eqs = eqs,
+        lavmodel = lavmodel, lavpartable = lavpartable,
+        lavsamplestats = lavsamplestats, lavh1 = lavh1,
+        lavoptions = lavoptions,
+        free_directed_idx = free_directed_idx,
+        free_undirected_idx = free_undirected_idx,
+        aggregated = aggregated
+      ), "eqs")
+    }
+    lambda_frozen <- lav_sem_js_lambda_frozen(eqs_lam)
     # r = 2 Richardson extrapolation is accurate to ~1e-6 relative here
     # and halves the number of map evaluations (the map itself is smooth)
     jac <- numDeriv::jacobian(
@@ -306,7 +349,8 @@ lav_sem_js_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           lavoptions = lavoptions,
           free_directed_idx = free_directed_idx,
           free_undirected_idx = free_undirected_idx,
-          aggregated = aggregated
+          aggregated = aggregated,
+          lambda_frozen = lambda_frozen
         ))
       },
       x = vec0, method.args = list(r = 2L)
@@ -1088,6 +1132,123 @@ lav_sem_js_weights <- function(s = NULL, theta = NULL) {
 }
 
 
+# Fuller-type barrier for the disattenuated proxy matrix of one equation.
+# The kernel subtracts csmall * diag(errvar) (the measurement-error
+# variances of the latent-regressor proxies) from S_zz. In small samples
+# with two or more latent regressors the difference can be near-singular
+# (or indefinite) even when the population matrix is comfortably positive
+# definite, and the slopes explode. Let lambda be the smallest root of
+# |S_zz - lambda * csmall * diag(errvar)| = 0: the largest multiple of the
+# error variances that can be subtracted before the matrix becomes
+# singular (lambda > 1 means the full correction leaves a positive
+# definite matrix). When lambda - 1 is smaller than a floor, the
+# correction is truncated: the multiplier becomes
+# lambda_star = max(lambda - floor, 0) instead of 1 -- the SAM lambda
+# correction (lav_sam_veta), applied per equation. The floor is, by
+# default ("se"), a noise guard of two standard errors of log(lambda)
+# (delta method over vech(S) with the normal-theory moment covariance;
+# the log scale because lambda is a variance ratio whose sampling error
+# grows with lambda itself, and a reliable proxy with lambda = 25 +/- 15
+# must not trip the gate), i.e. floor = lambda * (1 - exp(-2 se/lambda)),
+# with 1/(n - 1) as minimum: a strict no-op when lambda is comfortably
+# above 1, and shrinkage toward least squares in the samples where the
+# data do not support the full disattenuation. A numeric floor is used
+# as such; "none" disables the barrier.
+#
+# se(lambda): the first-order perturbation of a pencil root is
+# d lambda = v' (dS_zz - lambda dP) v, with v the pencil eigenvector
+# normalized v' P v = 1 (P = csmall * diag(errvar)); with S_zz = U S U'
+# the first term is w' dS w, w = U' v, and dP runs through the tetrad
+# derivative of the proxies' residual variances (dtheta). The derivative
+# of the (JSA) aggregation weights is ignored here: the guard only needs
+# the order of magnitude of the sampling error of lambda.
+lav_sem_js_lambda_star <- function(s_zz = NULL, errvar = NULL, csmall = 1,
+                                   u_mat = NULL, s_mat = NULL,
+                                   dtheta = NULL, sets = NULL, w = NULL,
+                                   n = NULL, lambda_floor = "se") {
+  out <- list(lambda = Inf, lambda_star = 1, floor = as.numeric(NA),
+              se = as.numeric(NA), truncated = FALSE, frozen = FALSE)
+  if (identical(lambda_floor, "none") ||
+      !any(is.finite(errvar) & errvar > 0)) {
+    return(out)
+  }
+  p_mat <- diag(csmall * errvar, nrow = length(errvar))
+  lam <- try(suppressWarnings(lav_mat_sym_diff_smallest_root(
+    m = (s_zz + t(s_zz)) / 2, p = p_mat, vector = TRUE
+  )), silent = TRUE)
+  if (inherits(lam, "try-error") || !is.finite(lam)) {
+    return(out)
+  }
+  out$lambda <- as.numeric(lam)
+  if (is.numeric(lambda_floor)) {
+    floor_val <- lambda_floor
+  } else {
+    # "se": delta-method standard error of lambda
+    v <- attr(lam, "v")
+    se <- as.numeric(NA)
+    if (!is.null(v) && all(is.finite(v)) && !is.null(dtheta)) {
+      wv <- drop(crossprod(u_mat, v))
+      # quadratic part w' dS w in vech(S) coordinates (off-diagonal
+      # cells count twice)
+      quad <- tcrossprod(wv)
+      quad[lower.tri(quad)] <- 2 * quad[lower.tri(quad)]
+      jlam <- lav_mat_vech(quad)
+      # error-variance part: - lambda * csmall * sum_i v_i^2 d errvar_i
+      for (i in which(is.finite(errvar) & errvar > 0)) {
+        set_i <- sets[[i]]
+        w_i <- w[[i]]
+        derr <- colSums(w_i^2 * dtheta[set_i, , drop = FALSE])
+        jlam <- jlam - out$lambda * csmall * v[i]^2 * derr
+      }
+      var_lam <- lav_mat_k_gammant_kt(
+        m_k = matrix(jlam, nrow = 1L), s = s_mat,
+        meanstructure = FALSE, x_idx = integer(0L)
+      ) / n
+      se <- sqrt(max(as.numeric(var_lam), 0))
+    }
+    out$se <- se
+    floor_val <- if (is.finite(se)) {
+      out$lambda * (1 - exp(-2 * se / out$lambda))
+    } else {
+      0
+    }
+    floor_val <- max(floor_val, 1 / (n - 1))
+  }
+  out$floor <- floor_val
+  if (out$lambda < 1 + floor_val) {
+    out$lambda_star <- max(out$lambda - floor_val, 0)
+    out$truncated <- TRUE
+  }
+  out
+}
+
+
+# the truncation multipliers of a (previous) run of the estimation map,
+# as a nested list [[block]][[pass]][[equation]], used to FREEZE them in
+# the replays of the map for the numerical Jacobian (the standard errors
+# condition on lambda_star, as in the SAM lambda correction; the gate
+# itself is a discontinuous function of the moments)
+lav_sem_js_lambda_frozen <- function(eqs = NULL) {
+  if (is.null(eqs)) {
+    return(NULL)
+  }
+  lapply(eqs, function(eqs_b) {
+    pass_ids <- unique(unlist(lapply(eqs_b, function(eq) {
+      names(eq$js_lambda)
+    })))
+    out_b <- vector("list", length(pass_ids))
+    names(out_b) <- pass_ids
+    for (pass_id in pass_ids) {
+      out_b[[pass_id]] <- lapply(eqs_b, function(eq) {
+        jl <- eq$js_lambda[[pass_id]]
+        if (is.null(jl)) NULL else jl$lambda_star
+      })
+    }
+    out_b
+  })
+}
+
+
 # build the per-equation conditioning-set 'plans' for one block: for every
 # latent regressor of every equation, the set of observed variables used as
 # its conditioning proxy. The plans depend only on the MODEL STRUCTURE
@@ -1248,6 +1409,7 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
                                    lavoptions = NULL,
                                    free_directed_idx = NULL,
                                    aggregated = FALSE,
+                                   lambda_frozen = NULL,
                                    record = FALSE) {
   # sample moments
   if (samplestats) {
@@ -1326,13 +1488,27 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       theta_fixed[match(lavpartable$lhs[var_idx], ov_names)] <-
         lavpartable$ustart[var_idx]
     }
+    # barrier for the disattenuated proxy matrices (lav_sem_js_lambda_star);
+    # its default noise guard needs the derivative of the residual
+    # variances
+    lambda_floor <- lavoptions$estimator.args[["js_lambda_floor"]]
+    if (is.null(lambda_floor)) {
+      lambda_floor <- "se"
+    }
+    need_dtheta <- record || identical(lambda_floor, "se")
     theta <- lav_sem_js_theta(
       s = s_mat, ind_pat = ind_pat, ov_names = ov_names,
       lv_names = lv_names,
       lavoptions = lavoptions, aggregated = aggregated, contam = contam,
       sep_list = sep_list, pure_mat = pure_mat,
-      theta_fixed = theta_fixed, deriv = record
+      theta_fixed = theta_fixed, deriv = need_dtheta
     )
+    dtheta <- attr(theta, "dtheta")
+    lf_b <- if (!is.null(lambda_frozen) && length(lambda_frozen) >= b) {
+      lambda_frozen[[b]]
+    } else {
+      NULL
+    }
 
     # small-sample (Efron-Morris) shrinkage factor
     csmall <- (n - 3) / (n - 1)
@@ -1360,6 +1536,8 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
       s_mat = s_mat, m_vec = m_vec, n = n,
       ov_names = ov_names, lv_names = lv_names, markers = markers,
       contam = contam, theta = theta, csmall = csmall,
+      dtheta = dtheta, lambda_floor = lambda_floor,
+      lambda_frozen = lf_b[["p1a"]],
       lambda_mat = lambda_mat, lavpartable = lavpartable,
       lavmodel = lavmodel, x = x,
       record = record, pass_id = "p1a"
@@ -1379,6 +1557,8 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
         s_mat = s_mat, m_vec = m_vec, n = n,
         ov_names = ov_names, lv_names = lv_names, markers = markers,
         contam = contam, theta = theta, csmall = csmall,
+        dtheta = dtheta, lambda_floor = lambda_floor,
+        lambda_frozen = lf_b[["p1b"]],
         lambda_mat = lambda_mat, lavpartable = lavpartable,
         lavmodel = lavmodel, x = x,
         record = record, pass_id = "p1b"
@@ -1405,6 +1585,8 @@ lav_sem_js_stage1_samp <- function(x = NULL, samplestats = FALSE,
         s_mat = s_mat, m_vec = m_vec, n = n,
         ov_names = ov_names, lv_names = lv_names, markers = markers,
         contam = contam, theta = theta, csmall = csmall,
+        dtheta = dtheta, lambda_floor = lambda_floor,
+        lambda_frozen = lf_b[["jsa"]],
         lambda_mat = lambda_mat, lavpartable = lavpartable,
         lavmodel = lavmodel, x = x,
         record = record, pass_id = "jsa"
@@ -1491,6 +1673,8 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
                                 ov_names = NULL, lv_names = NULL,
                                 markers = NULL, contam = NULL,
                                 theta = NULL, csmall = 1,
+                                dtheta = NULL, lambda_floor = "se",
+                                lambda_frozen = NULL,
                                 lambda_mat = NULL, lavpartable = NULL,
                                 lavmodel = NULL, x = NULL,
                                 record = FALSE, pass_id = "p1a") {
@@ -1582,10 +1766,29 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
     s_zz <- u_mat %*% s_mat %*% t(u_mat)
     s_zy <- drop(u_mat %*% s_mat[, y_idx])
 
+    # Fuller-type barrier: the multiplier lambda_star of the error
+    # variances (1 = full correction; see lav_sem_js_lambda_star); frozen
+    # at a previously recorded value in the numerical-Jacobian replays
+    if (!is.null(lambda_frozen) && length(lambda_frozen) >= j &&
+        !is.null(lambda_frozen[[j]])) {
+      lam_info <- list(lambda = as.numeric(NA),
+                       lambda_star = lambda_frozen[[j]],
+                       floor = as.numeric(NA), se = as.numeric(NA),
+                       truncated = lambda_frozen[[j]] < 1, frozen = TRUE)
+    } else {
+      lam_info <- lav_sem_js_lambda_star(
+        s_zz = s_zz, errvar = errvar, csmall = csmall, u_mat = u_mat,
+        s_mat = s_mat, dtheta = dtheta, sets = sets_used, w = w_used,
+        n = n, lambda_floor = lambda_floor
+      )
+    }
+    lambda_star <- lam_info$lambda_star
+    eqs_b[[j]]$js_lambda[[pass_id]] <- lam_info
+
     # G: covariance of the regressors (latent or observed) with Z
     g_mat <- s_zz
     for (i in which(is_lv)) {
-      g_mat[i, i] <- g_mat[i, i] - csmall * errvar[i]
+      g_mat[i, i] <- g_mat[i, i] - lambda_star * csmall * errvar[i]
     }
     if (any(is_lv)) {
       g_mat[is_lv, ] <- g_mat[is_lv, , drop = FALSE] / kappa[is_lv]
@@ -1663,6 +1866,7 @@ lav_sem_js_eqs_pass <- function(eqs_b = NULL, plans = NULL, only = NULL,
         fac = match(eq$rhs, lv_names),
         sets = sets_used, w = w_used, lam = lam_used, w_fb = w_fb,
         u_mat = u_mat, kappa = kappa, errvar = errvar,
+        lambda_star = lambda_star,
         s_zz = s_zz, g_mat = g_mat, amat = amat, bvec = bvec,
         fix_idx = fix_idx, gcol_free = gcol_free,
         b_full = b_full, x_bar = x_bar, y_bar = y_bar

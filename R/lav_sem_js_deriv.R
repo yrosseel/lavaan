@@ -456,12 +456,15 @@ lav_sem_js_deriv_eq <- function(tr = NULL, eq = NULL, s_mat = NULL,
     d_szy[i, ] <- d_szy[i, ] + crossprod(dw, s_y[set])
   }
 
-  # d(G): g0 = s_zz with (lv, lv) diagonal minus csmall * errvar; then rows
-  # scaled by 1 / kappa
+  # d(G): g0 = s_zz with (lv, lv) diagonal minus lambda_star * csmall *
+  # errvar; then rows scaled by 1 / kappa. The barrier multiplier
+  # lambda_star (lav_sem_js_lambda_star) is held fixed at its recorded
+  # value: the standard errors condition on the truncation
   d_g <- d_szz
+  lam_star <- if (!is.null(tr$lambda_star)) tr$lambda_star else 1
   for (i in which(is_lv)) {
     pos_ii <- (i - 1L) * nrhs + i
-    d_g[pos_ii, ] <- d_g[pos_ii, ] - csmall * derr[i, ]
+    d_g[pos_ii, ] <- d_g[pos_ii, ] - lam_star * csmall * derr[i, ]
   }
   # reconstruct the unscaled g0 from the recorded (scaled) g_mat
   g_scaled <- tr$g_mat

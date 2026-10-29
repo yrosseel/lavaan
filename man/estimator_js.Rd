@@ -126,6 +126,14 @@ converted.
     Spearman communality estimates: \code{"wide"} (the default),
     \code{"standard"} or \code{"none"}. In addition, the resulting
     residual variances are always kept within \code{[0, var(y)]}.}
+  \item{\code{js_lambda_floor}:}{Character or numeric. The barrier that
+    keeps the disattenuated proxy matrix of each equation away from
+    singularity (see \code{Details}). \code{"se"} (the default) truncates
+    the measurement-error correction of an equation when the smallest
+    root \code{lambda} of its proxy pencil is not more than two standard
+    errors (on the log scale) above 1, with \code{1/(n-1)} as minimal
+    margin; a nonnegative number is used as a fixed margin on
+    \code{lambda - 1}; \code{"none"} disables the barrier.}
   \item{\code{js_varcov_method}:}{Character. The second-stage method used
     to estimate the residual variances and covariances. One of
     \code{"ULS"}, \code{"GLS"}, \code{"2RLS"}, \code{"RLS"} or
@@ -221,6 +229,38 @@ one clean pure proxy per latent regressor; an informative error is
 raised otherwise. In particular, a scaling indicator with a cross-loading
 or a regressor cannot serve as a proxy for its factor, so the factor
 needs another pure indicator with an estimable reliability.
+}
+
+\subsection{Small samples: the barrier on the disattenuation}{
+
+In every equation, the kernel subtracts the measurement-error variances
+of the proxies from their covariance matrix before solving the normal
+equations (a Fuller-type attenuation correction). With two or more latent
+regressors and small samples, the corrected matrix can be near-singular
+or indefinite even when its population counterpart is comfortably
+positive definite; the slopes of that equation then explode (estimates
+and standard errors of order 10 to 100). The same device as in the local
+SAM approach (the \code{lambda_correction} of \code{\link{sam}}) guards
+against this, per equation: let \code{lambda} be the smallest root of
+\code{|S_zz - lambda * c * Theta_z| = 0}, the largest multiple of the
+error variances that can be subtracted before the matrix becomes
+singular. When \code{lambda - 1} is smaller than a margin, the
+correction is truncated: the error variances are multiplied by
+\code{lambda - margin} (at least 0) instead of 1, which shrinks the
+equation toward ordinary least squares. By default
+(\code{js_lambda_floor = "se"}) the margin is a noise guard of two
+standard errors of \code{log(lambda)} (delta method over the sample
+moments), with \code{1/(n-1)} as minimum: the barrier is an exact no-op
+whenever \code{lambda} is comfortably above 1 (in practice at moderate
+sample sizes), and only engages in the samples where the data do not
+support the full disattenuation. A note reports the equations where the
+multiplier dropped below 0.95; the per-equation values (\code{lambda},
+its standard error, the margin and the multiplier) are stored in the
+fitted object (\code{fit@internal$eqs}, element \code{js_lambda}). The standard
+errors condition on the truncation (the multiplier is held fixed in the
+Jacobian). For an equation with a single latent regressor the pencil
+root is the inverse of the proxy's unreliability, so the barrier engages
+only when the proxy's reliability is not significantly above zero.
 }
 
 \subsection{Restrictions}{

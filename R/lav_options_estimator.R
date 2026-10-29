@@ -20,6 +20,7 @@ lav_options_estimator_args_names <- function() {
     "mgm_varcov", "mgm_gamma", "mgm_jacobian",
     # JS/JSA
     "js_small_sample", "js_theta", "js_theta_bounds", "js_theta_values",
+    "js_lambda_floor",
     "js_varcov_method", "js_gamma", "js_jacobian", "js_mean_structure",
     "js_vcov_gamma_modelbased",
     # IV
@@ -1032,6 +1033,26 @@ lav_options_est_js <- function(opt) {
         "js_theta_bounds value in estimator_args must be either %s.",
         lav_msg_view(c("wide", "standard", "none"), log_sep = "or")))
     }
+  }
+  if (is.null(ea[["js_lambda_floor"]])) {
+    ea$js_lambda_floor <- "se"
+  } else if (is.character(ea[["js_lambda_floor"]]) &&
+             length(ea[["js_lambda_floor"]]) == 1L) {
+    ea$js_lambda_floor <- tolower(ea[["js_lambda_floor"]])
+    if (!ea[["js_lambda_floor"]] %in% c("se", "none")) {
+      lav_msg_stop(gettextf(
+        "js_lambda_floor value in estimator_args must be either %s, or a
+         single nonnegative number.",
+        lav_msg_view(c("se", "none"), log_sep = "or")))
+    }
+  } else if (!(is.numeric(ea[["js_lambda_floor"]]) &&
+               length(ea[["js_lambda_floor"]]) == 1L &&
+               is.finite(ea[["js_lambda_floor"]]) &&
+               ea[["js_lambda_floor"]] >= 0)) {
+    lav_msg_stop(gettextf(
+      "js_lambda_floor value in estimator_args must be either %s, or a
+       single nonnegative number.",
+      lav_msg_view(c("se", "none"), log_sep = "or")))
   }
   js_gamma_user <- !is.null(ea[["js_gamma"]])
   if (is.null(ea[["js_gamma"]])) {
