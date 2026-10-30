@@ -17,8 +17,8 @@ lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            parallel = c("auto", "no", "multicore", "snow"),
            ncpus = NULL, cl = NULL,
            drop_list_single_group = TRUE,
-           mdist_draws = 2000L, local_independence = FALSE,
-           ...)
+           mdist_draws = 2000L, eap_args = list(),
+           local_independence = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -40,10 +40,17 @@ indicator, given the user-specified values for the latent variables provided
 by the \code{eta} argument.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
-In the categorical case, the two options are \code{"EBM"} for
-the Empirical Bayes Modal approach, and \code{"ML"} for the maximum
-likelihood approach. The two pairs are synonyms: with continuous indicators,
-the default \code{"EBM"} gives the regression scores and \code{"ML"} gives
+In the categorical case, the options are \code{"EBM"} for
+the Empirical Bayes Modal approach (the posterior mode, also known as MAP),
+\code{"EAP"} for the Expected A Posteriori approach (the posterior mean,
+obtained by numerical integration; see \code{eap_args}), and \code{"ML"}
+for the maximum likelihood approach. The posterior mean is the Bayes
+estimator under squared loss, so the EAP scores have the smallest mean
+squared error with respect to the true scores; the EBM scores are cheaper
+and coincide with the EAP scores when the posterior is symmetric. The pairs
+are synonyms: with continuous indicators,
+the default \code{"EBM"} (and \code{"EAP"}, since the posterior is then
+normal) gives the regression scores and \code{"ML"} gives
 the Bartlett scores, and with categorical indicators \code{"regression"} and
 \code{"Bartlett"} select the EBM and ML approach respectively. If the model contains residual covariances, the
 indicators that are connected by them are treated jointly: their
@@ -109,7 +116,10 @@ are obtained by numerical optimization (\code{method = "EBM"} or
 \code{method = "ML"}), the standard errors are based on the curvature of the
 objective at the optimum (the inverse of its Hessian, a Laplace/observed
 -information approximation) and therefore differ from one response pattern to
-the next; with \code{transform = TRUE}, the sampling covariance matrix of the
+the next; for \code{method = "EAP"}, they are the posterior standard
+deviations of the latent scores (and \code{acov} returns the posterior
+covariance matrix), obtained from the same numerical integration as the
+scores; with \code{transform = TRUE}, the sampling covariance matrix of the
 transformed scores is obtained by the delta method (the transformation is
 linear in the scores). The result is an (nobs x nfactor) matrix per group.}
 \item{acov}{Similar to the \code{"se"} argument, but optionally returns the full
@@ -188,6 +198,18 @@ the \code{"optim()"} function is used with the BFGS method.}
     the data is ordered categorical: the number of Monte Carlo draws per
     distinct response pattern used to approximate the expected Mahalanobis
     distances.}
+\item{eap_args}{List. Settings for the numerical integration of
+    \code{method = "EAP"} (categorical data only). For every response
+    pattern, the posterior of the latent scores is integrated by an
+    adaptive product Gauss-Hermite rule, centred at the posterior mode and
+    scaled by its Laplace covariance matrix, with \code{nodes} nodes per
+    latent dimension (by default 21, 11 or 7 for models with one, two, or
+    more latent variables). When the product grid would exceed
+    \code{max_grid} (default 5000) nodes, importance sampling from the
+    same normal approximation is used instead, with \code{draws} (default
+    2000) draws and a fixed seed (the random number generator of the
+    session is left untouched). With the defaults, models with up to four
+    latent variables use the quadrature rule.}
 \item{local_independence}{Logical. Only used if (some of) the indicators
     are ordered categorical, and the model contains residual covariances.
     If \code{FALSE} (the default), the indicators that are connected by
@@ -231,6 +253,12 @@ methods, see:
 Skrondal, A., & Rabe-Hesketh, S. (2004). \emph{Generalized latent variable
 modeling: Multilevel, longitudinal, and structural equation models.} Boca
 Raton, FL: Chapman & Hall/CRC.
+
+For the (categorical) Expected A Posteriori (EAP) method, see:
+
+Bock, R. D., & Mislevy, R. J. (1982). Adaptive EAP estimation of ability
+in a microcomputer environment. \emph{Applied Psychological Measurement,
+6}(4), 431-444. \doi{10.1177/014662168200600405}
 
 For the Mahalanobis distances with ordered categorical data
 (\code{mdist = TRUE}), see:

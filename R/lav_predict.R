@@ -58,6 +58,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
                        ncpus = NULL, cl = NULL,
                        drop_list_single_group = TRUE,
                        mdist_draws = 2000L,
+                       eap_args = list(),
                        local_independence = FALSE,
                       ...) {
   dotdotdot <- list(...)
@@ -180,6 +181,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
     parallel = parallel, ncpus = ncpus, cl = cl,
     drop_list_single_group = drop_list_single_group,
     mdist_draws = mdist_draws,
+    eap_args = eap_args,
     local_independence = isTRUE(local_independence)
   )
 
@@ -204,6 +206,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                                parallel = "no", ncpus = NULL, cl = NULL,
                                drop_list_single_group = TRUE,
                                mdist_draws = 2000L,
+                               eap_args = list(),
                                local_independence = FALSE) {
   # Delta-augmented ML correlation mode: absorb the free ~*~ scales
   # into the measurement part (LAMBDA/THETA/NU), so that the whole
@@ -384,7 +387,8 @@ lav_predict_internal <- function(lavmodel = NULL,
       data_obs = data_obs, exo = exo, method = method,
       fsm = fsm, rel = rel, transform = transform, optim_method = optim_method,
       parallel = parallel, ncpus = ncpus, cl = cl,
-      local_independence = local_independence
+      local_independence = local_independence,
+      eap_args = eap_args
     )
 
     # extract fsm here
@@ -886,7 +890,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
                             level = 1L,
                             optim_method = "bfgs",
                             parallel = "no", ncpus = NULL, cl = NULL,
-                            local_independence = FALSE) {
+                            local_independence = FALSE,
+                            eap_args = list()) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavdata <- lavobject@Data
@@ -903,9 +908,15 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
   } else if (method == "bartlett" || method == "bartlet") {
     method <- "ml"
   }
+  # EAP (posterior means): with continuous indicators the posterior is
+  # normal, so its mean is the mode -- the regression scores
+  if (method == "eap" && all(lavdata@ov$type == "numeric")) {
+    method <- "ebm"
+  }
 
-  # at this point, method is either "ebm" (= regression/EB) or "ml" (= Bartlett)
-  if (!method %in% c("ebm", "ml")) {
+  # at this point, method is "ebm" (= regression/EB), "ml" (= Bartlett) or
+  # "eap" (categorical only)
+  if (!method %in% c("ebm", "ml", "eap")) {
     lav_msg_stop(gettextf("unknown method: %s.", method))
   }
 
@@ -926,7 +937,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
       lavmodel = lavmodel, lavdata = lavdata,
       lavsamplestats = lavsamplestats, se = se, acov = acov,
       level = level, data_obs = data_obs, exo = exo,
-      ml = (method == "ml"), transform = transform,
+      ml = (method == "ml"), eap = (method == "eap"),
+      eap_args = eap_args, transform = transform,
       optim_method = optim_method,
       parallel = parallel, ncpus = ncpus, cl = cl,
       local_independence = local_independence
@@ -1661,6 +1673,112 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 #                  enough independent optimisations to amortise the overhead
 #                  (the dedup step often leaves only a handful of unique cases)
 # returns one of "no", "multicore", "snow".
+# settings for the EAP integration (lav_predict_eap_i): the number of
+# Gauss-Hermite nodes per dimension (default: 21, 11 or 7 for one, two,
+# or more latent variables -- the product grid stays small either way),
+# the maximal size of the product grid (default 5000 nodes; beyond it,
+# importance sampling takes over), and the number of importance-sampling
+# draws (default 2000)
+lav_predict_eap_args <- function(eap_args = list()) {
+  if (!is.list(eap_args)) {
+    lav_msg_stop(gettext("eap_args must be a list."))
+  }
+  names(eap_args) <- gsub(".", "_", tolower(names(eap_args)), fixed = TRUE)
+  defaults <- list(nodes = NA_integer_, max_grid = 5000L, draws = 2000L)
+  bad <- setdiff(names(eap_args), names(defaults))
+  if (length(bad) > 0L) {
+    lav_msg_stop(gettextf("unknown element(s) in eap_args: %s.",
+                          lav_msg_view(bad, "none")))
+  }
+  out <- modifyList(defaults, eap_args)
+  for (nm in names(defaults)) {
+    v <- out[[nm]]
+    if (nm == "nodes" && length(v) == 1L && is.na(v)) {
+      next # resolved per dimension in lav_predict_eap_i
+    }
+    if (!is.numeric(v) || length(v) != 1L || !is.finite(v) || v < 1) {
+      lav_msg_stop(gettextf("eap_args$%s must be a single positive number.",
+                            nm))
+    }
+    out[[nm]] <- as.integer(round(v))
+  }
+  out
+}
+
+# posterior mean and covariance matrix of the latent scores of one case
+# (EAP; Bock & Mislevy 1982), by numerical integration of the posterior
+# exp(-f_obj(eta)) over the latent space. The integration is adaptive: it
+# is centred at the posterior mode and scaled by the Laplace covariance
+# (the inverse Hessian at the mode; the prior covariance when that is not
+# available). With eta = mode + sqrt(2) L z, where scale_cov = L L', the
+# product Gauss-Hermite rule gives
+#
+#   E(eta | y) = sum_k p_k eta_k,  p_k propto w_k exp(z_k' z_k - f(eta_k))
+#
+# (the constant 2^(d/2) |L| cancels in the ratio). When the product grid
+# nodes^d exceeds max_grid, importance sampling from the same normal
+# approximation replaces the grid: p_k propto exp(-f(eta_k) + z_k' z_k / 2),
+# with a fixed seed (reproducible scores; the RNG state of the session is
+# left untouched)
+lav_predict_eap_i <- function(f_obj = NULL, mode = NULL, scale_cov = NULL,
+                              prior_cov = NULL, eap_args = list(), ...) {
+  d <- length(mode)
+  # scale: a (regularized) Cholesky factor of the Laplace covariance
+  l_mat <- NULL
+  if (!is.null(scale_cov)) {
+    cs <- try(chol((scale_cov + t(scale_cov)) / 2), silent = TRUE)
+    if (!inherits(cs, "try-error")) {
+      l_mat <- t(cs)
+    }
+  }
+  if (is.null(l_mat)) {
+    l_mat <- t(chol((prior_cov + t(prior_cov)) / 2))
+  }
+
+  nodes <- eap_args$nodes
+  if (is.na(nodes)) {
+    nodes <- if (d == 1L) 21L else if (d == 2L) 11L else 7L
+  }
+  if (nodes^d <= eap_args$max_grid) {
+    # product Gauss-Hermite grid
+    gh <- lav_integration_gauss_hermite(n = nodes, ndim = d, revert = TRUE)
+    z <- gh$x
+    log_w <- log(gh$w) + rowSums(z * z)
+    eta_k <- sweep(sqrt(2) * z %*% t(l_mat), 2L, mode, "+")
+  } else {
+    # importance sampling from N(mode, scale_cov) with a fixed seed
+    seed_old <- NULL
+    if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+      seed_old <- get(".Random.seed", envir = globalenv())
+    }
+    set.seed(20261029L)
+    z <- matrix(rnorm(eap_args$draws * d), ncol = d)
+    if (!is.null(seed_old)) {
+      assign(".Random.seed", seed_old, envir = globalenv())
+    } else {
+      rm(".Random.seed", envir = globalenv())
+    }
+    log_w <- 0.5 * rowSums(z * z)
+    eta_k <- sweep(z %*% t(l_mat), 2L, mode, "+")
+  }
+  log_f <- vapply(seq_len(nrow(eta_k)), function(k) {
+    -f_obj(eta_k[k, ], ...)
+  }, numeric(1L))
+  lw <- log_w + log_f
+  ok <- is.finite(lw)
+  if (!any(ok)) {
+    return(list(eta = mode, acov = matrix(as.numeric(NA), d, d)))
+  }
+  lw <- lw - max(lw[ok])
+  p <- exp(lw)
+  p[!ok] <- 0
+  p <- p / sum(p)
+  eta_mean <- colSums(p * eta_k)
+  dev <- sweep(eta_k, 2L, eta_mean)
+  acov <- crossprod(sqrt(p) * dev)
+  list(eta = eta_mean, acov = acov)
+}
+
 lav_predict_parallel_mode <- function(parallel = "no", ncpus = NULL,
                                       n_tasks = 1L) {
   # number of unique optimisations above which "auto" switches on forking
@@ -1690,13 +1808,22 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
                                    # optional new data
                                    data_obs = NULL, exo = NULL,
                                    se = "none", acov = "none", level = 1L,
-                                   ml = FALSE, transform = FALSE,
+                                   ml = FALSE, eap = FALSE,
+                                   eap_args = list(), transform = FALSE,
                                    optim_method = "bfgs",
                                    parallel = "no", ncpus = NULL, cl = NULL,
                                    local_independence = FALSE) {
   optim_method <- tolower(optim_method)
 
   stopifnot(optim_method %in% c("nlminb", "bfgs"))
+
+  # EAP (posterior means by numerical integration): the posterior mode and
+  # its Laplace covariance (computed below for every case) centre and scale
+  # the integration; see lav_predict_eap_i() for the settings
+  if (eap) {
+    ml <- FALSE
+    eap_args <- lav_predict_eap_args(eap_args)
+  }
 
   # parallelisation: the per-case optimisation below is embarrassingly parallel
   # and fully deterministic (no RNG handling needed). Resolve the number of
@@ -2031,7 +2158,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
           # optimum: f_eta_i is the negative log-posterior (EBM) or negative
           # log-likelihood (ML), so its Hessian at the mode is the inverse of
           # the (Laplace) sampling covariance of the latent scores.
-          if (se_flag) {
+          if (se_flag || eap) {
             hess <- try(stats::optimHess(eta_reg, f_eta_i,
               y_i = y_i, x_i = x_i, mu_i = mu_i, dummy_y = dummy_y
             ), silent = TRUE)
@@ -2043,6 +2170,24 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
                 tmp_d[tmp_d < 0] <- as.numeric(NA) # catch non-pd Hessians
                 se_i <- sqrt(tmp_d)
               }
+            }
+          }
+
+          # EAP: integrate the posterior (centred at the mode, scaled by
+          # the Laplace covariance; the prior covariance when the latter is
+          # not available); the "se" and "acov" are then the posterior
+          # standard deviations and the posterior covariance matrix
+          if (eap) {
+            post <- lav_predict_eap_i(
+              f_obj = f_eta_i, mode = eta_reg,
+              scale_cov = if (all(is.finite(acov_i))) acov_i else NULL,
+              prior_cov = vetax[[g]], eap_args = eap_args,
+              y_i = y_i, x_i = x_i, mu_i = mu_i, dummy_y = dummy_y
+            )
+            eta_reg <- post$eta
+            if (se_flag) {
+              acov_i <- post$acov
+              se_i <- sqrt(pmax(diag(post$acov), 0))
             }
           }
         } else {
