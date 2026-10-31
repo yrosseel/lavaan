@@ -71,6 +71,9 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
   both_idx <- lp$both.idx[[2]]
   nz <- length(between_idx)
   nb <- length(both_idx)
+  # indices in the implied between-level order
+  both_b_idx <- match(both_idx, lp$ov.idx[[2]])
+  between_b_idx <- match(between_idx, lp$ov.idx[[2]])
   zp <- mp$Zp
   if (nz > 0L) {
     y1w <- y1[, -between_idx, drop = FALSE]
@@ -232,18 +235,18 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
     # K_q: w -> t (p2 x nw)
     k_q <- matrix(0, p2, nw)
     if (nb > 0L) {
-      k_q[seq_len(nb), seq_len(nb)] <- diag(nb)
+      k_q[both_b_idx, seq_len(nb)] <- diag(nb)
     }
     if (nzm > 0L) {
       zm_idx <- zmis_q[[zpat2j[j]]]
-      k_q[nb + zm_idx, nb + seq_len(nzm)] <- diag(nzm)
+      k_q[between_b_idx[zm_idx], nb + seq_len(nzm)] <- diag(nzm)
     }
     # that = k_j + K m1
     that <- numeric(p2)
     if (nz > 0L) {
       zrow <- zc[j, ]
       zrow[is.na(zrow)] <- 0
-      that[nb + seq_len(nz)] <- zrow
+      that[between_b_idx] <- zrow
     }
     that <- that + drop(k_q %*% m1)
 
@@ -377,12 +380,12 @@ lav_mvn_cl_mi_h_louis <- function(lavmodel = NULL,
   #   E[d.impl] = E[d.2l] + s0,   E[u.impl] = E[u.2l] - s0
   # (the central second moments are shift-invariant)
   both_idx <- lp$both.idx[[2]]
-  nb <- length(both_idx)
+  both_b_idx <- match(both_idx, lp$ov.idx[[2]])
   s0 <- drop(mu_w)[both_idx]
   estat_mu_w <- drop(estat$Mu.W)
   estat_mu_w[both_idx] <- estat_mu_w[both_idx] + s0
   estat_mu_b <- drop(estat$Mu.B)
-  estat_mu_b[seq_len(nb)] <- estat_mu_b[seq_len(nb)] - s0
+  estat_mu_b[both_b_idx] <- estat_mu_b[both_b_idx] - s0
 
   # 2. Cov[ S_complete | v.obs ] in moment space (-2 logl scale)
   #    (out2 avoids re-converting the same implied moments)
