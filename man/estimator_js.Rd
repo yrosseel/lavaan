@@ -117,7 +117,9 @@ converted.
     indicator has none, for instance in 2-indicator factors; model-fixed
     residual variances take precedence for factors with fewer than 3
     indicators); \code{"user"} takes the values from
-    \code{js_theta_values}.}
+    \code{js_theta_values}. The same estimator (and the same three
+    \code{js_theta*} options) provides the initial residual variances
+    of the \code{estimator = "MGM"} procedure.}
   \item{\code{js_theta_values}:}{Named numeric vector. The residual
     variances of the indicators (on the same scale as the analyzed
     sample moments), used when \code{js_theta = "user"}. This makes it

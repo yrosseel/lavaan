@@ -869,9 +869,13 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     }
 
     # initial estimate for (the diagonal elements of) THETA: Spearman per
-    # factor on the purged matrix (all tetrads are clean after purging);
-    # factors with fewer than 3 indicators -- or factors touching an
-    # unpurged residual covariance or a cross-loading -- use
+    # factor on the purged matrix (all tetrads are clean after purging),
+    # through the dispatcher shared with the JS/JSA estimators
+    # (lav_cfa_theta_pattern, lav_cfa_utils.R; this also honors the
+    # js_theta = "user"/js_theta_bounds options and uses residual
+    # variances that are fixed in the model for factors with fewer than 3
+    # indicators). Factors with fewer than 3 indicators -- or factors
+    # touching an unpurged residual covariance or a cross-loading -- use
     # masked/external tetrads. A single cross-loading ANCHOR cancels out
     # of the tetrad ratio (like the purge anchors), but a pair of
     # cross-loading anchors does not: mask those pairs. The (biased)
@@ -884,20 +888,20 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       both_cross[cross_idx, cross_idx] <- TRUE
     }
     contam_theta <- contam_left | both_cross
-    theta <- numeric(nvar)
-    for (f in seq_len(nfac)) {
-      ov_idx <- which(m_b[, f] == 1L)
-      if (length(ov_idx) >= 3L && !any(ov_idx %in% failed_vars) &&
-          !any(ov_idx %in% cross_idx)) {
-        s_fac <- s_use[ov_idx, ov_idx, drop = FALSE]
-        theta[ov_idx] <- lav_cfa_theta_spearman(s_fac, bounds = "wide")
-      } else {
-        theta[ov_idx] <- lav_sem_js_theta_spearman_masked(
-          s_full = s_use, idx = ov_idx, contam = contam_theta,
-          zpool = setdiff(seq_len(nvar), ov_idx), bounds = "wide"
-        )
-      }
+    theta_fixed <- rep(as.numeric(NA), nvar)
+    var_idx <- which(lavpartable$op == "~~" & pt_block == b &
+      lavpartable$lhs == lavpartable$rhs &
+      lavpartable$free == 0L & !is.na(lavpartable$ustart) &
+      lavpartable$lhs %in% ov_names)
+    if (length(var_idx) > 0L) {
+      theta_fixed[match(lavpartable$lhs[var_idx], ov_names)] <-
+        lavpartable$ustart[var_idx]
     }
+    theta <- as.numeric(lav_cfa_theta_pattern(
+      s = s_use, ind_pat = m_b, ov_names = ov_names, lv_names = lv_names,
+      lavoptions = lavoptions, contam = contam_theta,
+      theta_fixed = theta_fixed
+    ))
     if (anyNA(theta)) {
       lav_msg_stop(gettext(
         "unable to obtain an initial residual-variance estimate for some

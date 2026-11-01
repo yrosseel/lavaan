@@ -7,7 +7,7 @@
 #
 # The chain runs through every ingredient of the map:
 #   (1) the Spearman/communality reliability estimates (dtheta; computed
-#       inside lav_sem_js_theta, see lav_sem_js.R),
+#       inside lav_cfa_theta_pattern, see lav_cfa_utils.R),
 #   (2) the alphamax aggregation weights (generalized-eigenvector
 #       derivative via a bordered system),
 #   (3) the per-equation least-squares solves on the conditional

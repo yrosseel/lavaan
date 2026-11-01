@@ -9,6 +9,25 @@
 
 # YR -- 14 FEB 2020
 
+# Relation to the Spearman/communality estimator (lav_cfa_theta_spearman
+# and the masked version lav_cfa_theta_spearman_masked, both in
+# lav_cfa_utils.R, used by estimator = "JS"/"JSA"/"MGM"): both estimate the
+# residual variance of indicator i as the Schur complement
+#
+#     theta_i = s_ii - s_{i,C} S_{R,C}^{-1} s_{R,i}
+#
+# for a set of m row variables R and m column variables C (not containing
+# i). The Spearman tetrad s_ii - s_ia s_ib / s_ab is the m = 1 case;
+# lav_cfa_theta_spearman averages it over all (admissible) pairs (a, b),
+# whereas PACE uses m = nfactors and a SINGLE partition, chosen greedily
+# (largest remaining |r|). For nfactors = 1, PACE therefore equals the
+# single Spearman tetrad through the most strongly correlated pair among
+# the other variables. The greedy selection is data-dependent (not smooth
+# in the sample moments) and needs no model structure, which is fine for
+# starting values; the JS code needs the opposite (model-based tetrad
+# admissibility, smooth with an analytic Jacobian), so the two are kept
+# separate on purpose.
+
 # - 'fast' version; only (2*nfactors + 1) iterations are needed
 # - scale-invariant (by default)
 # - always assuming unit variances for the factors

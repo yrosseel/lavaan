@@ -98,7 +98,7 @@ lav_noniter_estimate_from_vec <- function(vec = NULL,
 #    for the cross rows, and the model-identity thetas
 #  - factors with fewer than 3 indicators, and factors touching a
 #    cross-loading: the masked/external (Kano) tetrad thetas, via the
-#    embedded derivative of lav_sem_js_theta_spearman_masked()
+#    embedded derivative of lav_cfa_theta_spearman_masked()
 #  - the metric rescale (std.lv, fixed loading c != 1, tied factors):
 #    a closed-form post-composition lambda -> lambda s,
 #    psi -> psi / (s s'), with s = c or s = sqrt(psi_ff / v), pooled
@@ -130,7 +130,7 @@ lav_noniter_estimate_from_vec <- function(vec = NULL,
 # variances and their derivative with respect to the local vech(S).
 # Factors with >= 3 indicators and no cross-loading member use the
 # plain per-factor tetrads; the others use the masked/external tetrads
-# (lav_sem_js_theta_spearman_masked, which carries its own derivative)
+# (lav_cfa_theta_spearman_masked, which carries its own derivative)
 lav_cfa_mgm_jac_theta <- function(s_mat = NULL, m_b = NULL,
                                   cross_idx = integer(0L)) {
   nvar <- nrow(m_b)
@@ -184,7 +184,7 @@ lav_cfa_mgm_jac_theta <- function(s_mat = NULL, m_b = NULL,
       }
     } else {
       # masked/external tetrads (the JS helper carries the derivative)
-      out <- lav_sem_js_theta_spearman_masked(
+      out <- lav_cfa_theta_spearman_masked(
         s_full = s_mat, idx = f_idx, contam = both_cross,
         zpool = setdiff(seq_len(nvar), f_idx), bounds = "wide",
         deriv = TRUE
