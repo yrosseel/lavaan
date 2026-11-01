@@ -1,6 +1,5 @@
 \name{efa}
 \alias{efa}
-\alias{rotation}
 \title{Exploratory Factor Analysis}
 \description{
 Fit one or more Exploratory Factor Analysis (EFA) model(s).}
@@ -130,7 +129,10 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
 }
 \seealso{
     \code{\link{lav_efalist_summary}} for a summary method if the output is
-    of class \code{efaList}. 
+    of class \code{efaList}; \code{\link{esem}} for exploratory structural
+    equation modeling, where one or more sets of exploratory factors (defined
+    with the \code{efa()} modifier in the model syntax) are combined with a
+    structural part, confirmatory factors, or other sets.
 }
 \examples{
 ## The famous Holzinger and Swineford (1939) example
