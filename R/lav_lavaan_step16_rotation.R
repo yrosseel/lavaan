@@ -32,13 +32,9 @@ lav_step16_rotation <- function(lavoptions = NULL,
   # rotation information (per block, per efa set) for lavInspect()
   lavrotation <- NULL
 
-  if (lavmodel@nefa > 0L && !is.null(lavoptions$alignment) &&
-      lavoptions$alignment != "none") {
-    lav_msg_stop(gettext(
-      "alignment is not available for models with efa blocks; use
-       rotation.args = list(mg_agreement = TRUE, ...) instead."))
-  }
-  if (lavmodel@nefa > 0L &&
+  align_flag <- !is.null(lavoptions$alignment) &&
+    lavoptions$alignment != "none" && lavdata@ngroups > 1L
+  if (lavmodel@nefa > 0L && !align_flag &&
     (lavoptions$rotation != "none")) {
     # store unrotated solution in partable
     lavpartable$est.unrotated <- lavpartable$est
@@ -370,11 +366,12 @@ lav_step16_rotation <- function(lavoptions = NULL,
         cat(" done.\n")
       }
     } # vcov
-  } else if (!is.null(lavoptions$alignment) && lavoptions$alignment != "none" &&
-             lavdata@ngroups > 1L) {
-    # alignment of a multiple-group confirmatory model (no rotation): the
+  } else if (align_flag) {
+    # alignment of the confirmatory factors of a multiple-group model: the
     # factor variances and means are chosen to minimize the alignment loss,
-    # the model is rescaled and translated (lav_model_align_x())
+    # the model is rescaled and translated (lav_model_align_x()); efa
+    # blocks, if any, are rotated first (with the agreement rotation) and
+    # the two transformations compose
     if (lavoptions$se == "bootstrap") {
       lav_msg_stop(gettext("se = \"bootstrap\" is not available (yet) for
                             the alignment of a confirmatory model."))
@@ -397,6 +394,26 @@ lav_step16_rotation <- function(lavoptions = NULL,
     )
     lv_names <- al$rotation[[1L]]$alignment$lv_names
 
+    # the efa parameters that are free after the rotation (user = 7/77),
+    # as in the rotation branch above (incl. the aligned efa means)
+    if (lavmodel@nefa > 0L) {
+      mg_int <- lavoptions$rotation.args$mg_agreement_intercepts
+      if (isTRUE(lavoptions$rotation.args$mg_agreement) &&
+          !("loadings" %in% lavoptions$group.equal) &&
+          !is.null(mg_int) && mg_int != "none") {
+        lv_efa <- lav_pt_vnames(lavpartable, type = "lv.efa")
+        efa_int_idx <- which(lavpartable$op == "~1" &
+          lavpartable$lhs %in% lv_efa & lavpartable$free == 0L &
+          lavpartable$user == 0L)
+        if (mg_int == "fixed") {
+          efa_int_idx <- efa_int_idx[lavpartable$group[efa_int_idx] != 1L]
+        }
+        lavpartable$user[efa_int_idx] <- 7L
+      }
+    }
+    efa7_idx <- which((lavpartable$user == 7L | lavpartable$user == 77L) &
+      lavpartable$free == 0L)
+
     # the aligned factor variances (all groups, or all but the first under
     # the reference identification) and means (all groups for "free", all
     # but the first for "fixed") are parameters of the aligned model
@@ -413,7 +430,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
     }
     lavpartable$user[c(var_idx, int_idx)] <- 7L
     lavpartable$free.unrotated <- lavpartable$free
-    user7_idx <- c(var_idx, int_idx)
+    user7_idx <- unique(c(efa7_idx, var_idx, int_idx))
     lavpartable$free[user7_idx] <- 1L
     lavpartable$free[lavpartable$free > 0L] <-
       seq_len(sum(lavpartable$free > 0L))
@@ -446,11 +463,21 @@ lav_step16_rotation <- function(lavoptions = NULL,
       if (lav_verbose()) {
         cat("computing VCOV of the aligned parameters (delta method) ...")
       }
+      # (with efa blocks: the rotation inside the map is warm-started at
+      # its solution, with tightened tolerances, as in the rotation branch)
+      lavoptions_jac <- lavoptions
+      if (lavmodel@nefa > 0L) {
+        lavoptions_jac$rotation.args$gpa_tol <-
+          min(lavoptions$rotation.args$gpa_tol, 1e-10)
+        lavoptions_jac$rotation.args$tol <-
+          min(lavoptions$rotation.args$tol, 1e-10)
+        lavoptions_jac$rotation.args$gpa_algorithm <- "bb"
+      }
       jac <- numDeriv::jacobian(
         func = lav_model_align_x,
         x = x_unrotated, lavmodel = lavmodel_unrot,
-        lavoptions = lavoptions, lavpartable = lavpartable_unrot,
-        init = al$init, type = "user", extra = FALSE,
+        lavoptions = lavoptions_jac, lavpartable = lavpartable_unrot,
+        init = al$init, init_rot = al$H_efa, type = "user", extra = FALSE,
         nobs = lavsamplestats@nobs,
         method.args = list(d = 1e-3, r = 2),
         method = "Richardson"

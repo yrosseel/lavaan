@@ -33,7 +33,11 @@ fit <- cfa(model, data = data, group = "g", std.lv = TRUE,
     non-invariance to be identified. The model must be a multiple-group
     configural model: latent variables with indicators, \code{std.lv =
     TRUE}, a mean structure, free loadings and intercepts in every group,
-    no efa blocks, no equality constraints.}
+    no equality constraints. The model may also contain efa blocks (see
+    \code{\link{esem}}): they are rotated first, with the agreement
+    rotation if \code{rotation_args = list(mg_agreement = TRUE)}, and the
+    confirmatory factors are then aligned on the rotated model; the two
+    transformations act on different factors and compose.}
   \item{\code{alignment.args}}{A list with the settings of the alignment
     loss (snake_case names):
     \code{method} (\code{"loading.alignment"}, the default: the component
@@ -68,7 +72,11 @@ information per group (the aligned variances and means, the loss value,
 convergence), and \code{"rotation_matrix"} the diagonal rescaling.
 Alignment is not available for categorical data, \code{conditional.x =
 TRUE}, multilevel models, or models in which observed variables appear as
-predictors or outcomes in regressions.
+predictors or outcomes in regressions. In a model with efa blocks, the
+efa factors are not aligned by this option but by the agreement rotation
+(\code{mg_agreement_scales}, \code{mg_agreement_intercepts}); the
+rotation information of \code{\link{lavInspect}} then holds both the
+efa sets and the \code{alignment} element.
 }
 \references{
 Asparouhov, T., & Muthen, B. (2014). Multiple-group factor analysis
@@ -80,8 +88,8 @@ Modeling, 30}(2), 169--191.
 }
 \seealso{
 \code{\link{lavTestAlignment}} for the invariance analysis of the aligned
-parameters; \code{\link{esem}} for the alignment of efa blocks
-(\code{rotation_args = list(mg_agreement = TRUE, ...)}).
+parameters (efa and confirmatory); \code{\link{esem}} for the alignment
+of efa blocks (\code{rotation_args = list(mg_agreement = TRUE, ...)}).
 }
 \examples{
 \donttest{

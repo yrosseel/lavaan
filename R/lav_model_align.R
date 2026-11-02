@@ -15,11 +15,6 @@ lav_model_align_lvs <- function(lavmodel = NULL, lavpartable = NULL,
   if (lavmodel@ngroups < 2L) {
     lav_msg_stop(gettext("alignment requires a multiple-group model."))
   }
-  if (lavmodel@nefa > 0L) {
-    lav_msg_stop(gettext(
-      "alignment is not available for models with efa blocks; use
-       rotation.args = list(mg_agreement = TRUE, ...) instead."))
-  }
   if (lavmodel@nblocks > lavmodel@ngroups) {
     lav_msg_stop(gettext("alignment is not available for multilevel models."))
   }
@@ -45,10 +40,17 @@ lav_model_align_lvs <- function(lavmodel = NULL, lavpartable = NULL,
          predictors or outcomes in regressions."))
     }
   }
+  # the aligned factors: the regular latent variables that are not part
+  # of an efa block (the efa factors are handled by the agreement rotation)
   lv_names <- lav_pt_vnames(lavpartable, type = "lv.regular", block = 1L)
+  if (lavmodel@nefa > 0L) {
+    lv_efa <- unique(lavpartable$lhs[lavpartable$op == "=~" &
+      !is.na(lavpartable$efa) & nzchar(lavpartable$efa)])
+    lv_names <- lv_names[!lv_names %in% lv_efa]
+  }
   if (length(lv_names) == 0L) {
-    lav_msg_stop(gettext("alignment requires latent variables with
-                          indicators."))
+    lav_msg_stop(gettext("alignment requires (confirmatory) latent
+                          variables with indicators."))
   }
   # configural identification: variances one, means zero, in every group
   var_idx <- which(lavpartable$op == "~~" & lavpartable$lhs == lavpartable$rhs &
@@ -77,16 +79,36 @@ lav_model_align_lvs <- function(lavmodel = NULL, lavpartable = NULL,
 # lower-level function, needed for numDeriv: the aligned parameters (type)
 # as a function of the configural parameters x. init: list(scales, means)
 # to start from (the solution, for the jacobian); extra = TRUE adds the
-# attribute "extra" (GLIST, H, lv.order, rotation info)
+# attribute "extra" (GLIST, H, lv.order, rotation info). If the model has
+# efa blocks, they are rotated first (lav_model_efa_rotate_x(), with the
+# agreement rotation; init_rot warm-starts it for the jacobian) and the
+# confirmatory factors are aligned on the rotated model: the two
+# transformations act on disjoint factors and compose
 lav_model_align_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                               lavpartable = NULL, init = NULL,
-                              extra = FALSE, type = "free", nobs = NULL) {
+                              init_rot = NULL, extra = FALSE,
+                              type = "free", nobs = NULL) {
   aopts <- lavoptions$alignment.args
   intercepts <- lavoptions$alignment
   ngroups <- lavmodel@ngroups
 
   lavmodel <- lav_model_set_parameters(lavmodel, x = x)
-  glist <- lavmodel@GLIST
+  h_efa <- NULL
+  rotation_efa <- NULL
+  lv_order <- NULL
+  if (lavmodel@nefa > 0L && lavoptions$rotation != "none") {
+    rot <- lav_model_efa_rotate_x(
+      x = x, lavmodel = lavmodel, lavoptions = lavoptions,
+      init_rot = init_rot, extra = TRUE, type = "free", nobs = nobs
+    )
+    rot_extra <- attr(rot, "extra")
+    glist <- rot_extra$GLIST
+    h_efa <- rot_extra$H
+    lv_order <- rot_extra$lv.order
+    rotation_efa <- rot_extra$rotation
+  } else {
+    glist <- lavmodel@GLIST
+  }
   nmat <- lavmodel@nmat
   mm_list <- lapply(seq_len(ngroups), function(g) {
     seq_len(nmat[g]) + cumsum(c(0, nmat))[g]
@@ -164,7 +186,8 @@ lav_model_align_x <- function(x, lavmodel = NULL, lavoptions = NULL,
     a_mat <- a_mat / c_first
   }
 
-  # rescale (H = diag of the scales) and translate every group
+  # rescale (H = diag of the scales) and translate every group; with efa
+  # blocks the rescaling composes with their rotation (disjoint factors)
   h <- vector("list", ngroups)
   rotation_info <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
@@ -178,28 +201,33 @@ lav_model_align_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       mlist <- lav_model_efa_apply_translation(mlist, t_g)
     }
     glist[mm_list[[g]]] <- mlist
-    h[[g]] <- hg
+    h[[g]] <- if (is.null(h_efa)) hg else h_efa[[g]] %*% hg
+    if (extra && !is.null(rotation_efa)) {
+      rotation_info[[g]] <- rotation_efa[[g]]
+    }
     if (extra) {
       scales_g <- c_mat[, g]^2
       names(scales_g) <- lv_names
       means_g <- a_mat[, g]
       names(means_g) <- lv_names
-      rotation_info[[g]] <- list(alignment = list(
+      rotation_info[[g]]$alignment <- list(
         alignment = intercepts, lv_names = lv_names, ov_names = ov_names,
         method = aopts$method, epsilon = aopts$epsilon,
         group_weights = aopts$group_weights,
         identification = identification, std_ov = isTRUE(aopts$std_ov),
         converged = info$converged, criterion = info$method.value,
         variances = scales_g, means = means_g
-      ))
+      )
     }
   }
 
   x_rot <- lav_model_get_parameters(lavmodel, glist = glist, type = type)
   if (extra) {
+    if (is.null(lv_order)) {
+      lv_order <- lapply(seq_len(ngroups), function(g) seq_len(nlv))
+    }
     attr(x_rot, "extra") <- list(
-      GLIST = glist, H = h,
-      lv.order = lapply(seq_len(ngroups), function(g) seq_len(nlv)),
+      GLIST = glist, H = h, H_efa = h_efa, lv.order = lv_order,
       rotation = rotation_info,
       init = list(scales = info$scales, means = info$means)
     )
@@ -217,6 +245,7 @@ lav_model_align <- function(lavmodel = NULL, lavoptions = NULL,
     lavpartable = lavpartable, extra = TRUE, nobs = nobs
   )
   extra <- attr(tmp, "extra")
-  list(GLIST = extra$GLIST, H = extra$H, lv.order = extra$lv.order,
-       rotation = extra$rotation, init = extra$init)
+  list(GLIST = extra$GLIST, H = extra$H, H_efa = extra$H_efa,
+       lv.order = extra$lv.order, rotation = extra$rotation,
+       init = extra$init)
 }

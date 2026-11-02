@@ -36,26 +36,29 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
                           models."))
   }
   aligned_cfa <- !is.null(lavoptions$alignment) &&
-    lavoptions$alignment != "none" && object@Model@nefa == 0L
-  if (!aligned_cfa &&
-      (object@Model@nefa == 0L || lavoptions$rotation == "none" ||
-       !isTRUE(ropts$mg_agreement) ||
-       "loadings" %in% lavoptions$group.equal)) {
+    lavoptions$alignment != "none"
+  aligned_efa <- object@Model@nefa > 0L && lavoptions$rotation != "none" &&
+    isTRUE(ropts$mg_agreement) && !("loadings" %in% lavoptions$group.equal)
+  if (!aligned_cfa && !aligned_efa) {
     lav_msg_stop(gettext("lavTestAlignment() requires efa blocks that were
                           rotated with rotation.args = list(mg_agreement =
                           TRUE), or a confirmatory model with alignment =
                           \"fixed\" or \"free\"."))
   }
+  # the loss settings: those of the agreement rotation for the efa
+  # parameters, those of the confirmatory alignment for the others
+  aopts <- lavoptions$alignment.args
+  copts <- NULL
   if (aligned_cfa) {
-    # the loss settings of the confirmatory alignment, in the names of the
-    # agreement rotation
-    aopts <- lavoptions$alignment.args
-    ropts <- list(
+    copts <- list(
       mg_agreement_method = aopts$method,
       mg_agreement_epsilon = aopts$epsilon,
       mg_agreement_group_weights = aopts$group_weights,
       mg_agreement_intercepts = lavoptions$alignment
     )
+  }
+  if (!aligned_efa) {
+    ropts <- copts
   }
   if (lavoptions$se == "none") {
     lav_msg_stop(gettext("lavTestAlignment() requires standard errors
@@ -73,43 +76,62 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
   if (length(group_label) == 0L) {
     group_label <- as.character(seq_len(ngroups))
   }
+  lv_efa_only <- unique(pt$lhs[pt$op == "=~" & !is.na(pt$efa) &
+                                nzchar(pt$efa)])
+  lv_cfa <- character(0L)
   if (aligned_cfa) {
-    lv_efa <- lav_pt_vnames(pt, type = "lv.regular", block = 1L)
-  } else {
-    lv_efa <- unique(pt$lhs[pt$op == "=~" & !is.na(pt$efa) & nzchar(pt$efa)])
+    lv_cfa <- lav_pt_vnames(pt, type = "lv.regular", block = 1L)
+    lv_cfa <- lv_cfa[!lv_cfa %in% lv_efa_only]
   }
-  ov_efa <- unique(pt$rhs[pt$op == "=~" & pt$lhs %in% lv_efa])
-  align_int <- !is.null(ropts$mg_agreement_intercepts) &&
+  if (!aligned_efa) {
+    lv_efa_only <- character(0L)
+  }
+  lv_efa <- c(lv_efa_only, lv_cfa)
+  ov_efa_only <- unique(pt$rhs[pt$op == "=~" & pt$lhs %in% lv_efa_only])
+  ov_cfa <- unique(pt$rhs[pt$op == "=~" & pt$lhs %in% lv_cfa])
+  ov_efa <- unique(c(ov_efa_only, ov_cfa))
+  align_int_efa <- aligned_efa && !is.null(ropts$mg_agreement_intercepts) &&
     ropts$mg_agreement_intercepts != "none"
 
-  # the parameters: the loadings of the efa blocks, and (if aligned) the
-  # intercepts of their indicators
+  # the parameters: the loadings of the efa blocks and of the aligned
+  # confirmatory factors, and the intercepts of their indicators (those of
+  # the efa indicators only if the efa intercepts were aligned)
   par_idx <- which(pt$op == "=~" & pt$lhs %in% lv_efa & pt$group == 1L)
-  if (align_int) {
+  ov_int <- ov_cfa
+  if (align_int_efa) {
+    ov_int <- unique(c(ov_int, ov_efa_only))
+  }
+  if (length(ov_int) > 0L) {
     par_idx <- c(par_idx,
-                 which(pt$op == "~1" & pt$lhs %in% ov_efa & pt$group == 1L))
+                 which(pt$op == "~1" & pt$lhs %in% ov_int & pt$group == 1L))
   }
   npar <- length(par_idx)
   if (npar == 0L) {
     lav_msg_stop(gettext("no aligned parameters were found."))
   }
 
-  # the loss function of the agreement rotation, for the contributions
-  w_g <- rep(1, ngroups)
-  if (ropts$mg_agreement_group_weights %in% c("nobs", "sqrt.nobs")) {
-    n_g <- unlist(object@SampleStats@nobs)
-    w_g <- n_g / mean(n_g)
-    if (ropts$mg_agreement_group_weights == "sqrt.nobs") {
-      w_g <- sqrt(w_g)
+  # the loss function (for the contributions): per parameter, that of the
+  # agreement rotation (efa parameters) or of the confirmatory alignment
+  n_g <- unlist(object@SampleStats@nobs)
+  loss_of <- function(opts) {
+    w_g <- rep(1, ngroups)
+    if (opts$mg_agreement_group_weights %in% c("nobs", "sqrt.nobs")) {
+      w_g <- n_g / mean(n_g)
+      if (opts$mg_agreement_group_weights == "sqrt.nobs") {
+        w_g <- sqrt(w_g)
+      }
     }
-  }
-  loss_fun <- function(d) {
-    if (ropts$mg_agreement_method == "loading.alignment") {
-      sqrt(sqrt(d * d + ropts$mg_agreement_epsilon))
-    } else {
-      d * d
+    f <- function(d) {
+      if (opts$mg_agreement_method == "loading.alignment") {
+        sqrt(sqrt(d * d + opts$mg_agreement_epsilon))
+      } else {
+        d * d
+      }
     }
+    list(w_g = w_g, f = f)
   }
+  loss_efa <- loss_of(ropts)
+  loss_cfa <- if (!is.null(copts)) loss_of(copts) else loss_efa
 
   # per-group model matrices (for the R-square)
   est <- lavInspect(object, "est")
@@ -209,10 +231,13 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
     noninvariant[i] <- paste(group_label[-set], collapse = " ")
 
     # 4. contribution to the loss, and R-square
+    is_efa <- (op == "=~" && lhs %in% lv_efa_only) ||
+      (op == "~1" && lhs %in% ov_efa_only && !(lhs %in% ov_cfa))
+    lo <- if (is_efa) loss_efa else loss_cfa
     contribution[i] <- sum(vapply(seq_len(ncol(pairs)), function(p) {
       g <- pairs[1L, p]
       h <- pairs[2L, p]
-      w_g[g] * w_g[h] * loss_fun(theta[g] - theta[h])
+      lo$w_g[g] * lo$w_g[h] * lo$f(theta[g] - theta[h])
     }, numeric(1L)))
     theta_bar <- mean(theta)
     if (op == "=~") {

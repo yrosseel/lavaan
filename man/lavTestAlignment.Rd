@@ -4,9 +4,10 @@
 \description{
 Post-estimation invariance analysis of the measurement parameters of a
 multiple-group model with efa blocks that were rotated with the agreement
-rotation (\code{rotation_args = list(mg_agreement = TRUE)}), or of a
+rotation (\code{rotation_args = list(mg_agreement = TRUE)}), of a
 confirmatory model aligned with \code{alignment = "fixed"} or
-\code{"free"} (see \code{\link{alignment}}), following the
+\code{"free"} (see \code{\link{alignment}}), or of a model with both,
+following the
 procedure of the alignment method (Asparouhov and Muthen, 2014). For every
 aligned loading, and for every aligned intercept if the intercepts were
 aligned (\code{mg_agreement_intercepts}), the groups are divided into an
