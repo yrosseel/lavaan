@@ -27,9 +27,11 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                  # algorithm = "gpa", # rotation algorithm
                                  mg_algorithm = "gpa", # agreement algorithm
                                  mg_agreement_method = "procrustes",
+                                 mg_agreement_epsilon = 0.01, # alignment
                                  mg_agreement_weight = 0.5,
                                  mg_agreement_group_weights = NULL,
                                  mg_agreement_scales = "equal", # or "free"
+                                 mg_agreement_rotate = TRUE, # joint rotation
                                  reflect = TRUE, # reflect sign
                                  order_lv_by = "index", # how to order the lv's
                                  pairwise_accelerate = TRUE, # sweep extrap.
@@ -223,10 +225,30 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   if (mg_algorithm == "gpa" && !lav_mat_rotate_is_smooth(method_fname)) {
     mg_algorithm <- "pairwise"
   }
+  # mg_agreement_rotate = FALSE: the per-group (aligned) patterns are kept
+  # and only the scale split is optimized for agreement (the alignment of
+  # the factor variances); with equal scales nothing moves here
+  if (!mg_agreement_rotate) {
+    mg_algorithm <- "scales"
+  }
   if (lav_verbose()) {
     cat("  mg-", mg_algorithm, " + agreement rotation:\n", sep = "")
   }
-  if (mg_algorithm == "gpa") {
+  if (mg_algorithm == "scales") {
+    rot_list <- lav_mat_rotate_scales_mg(
+      a_list = a_list,
+      phi_list = phi_list,
+      orthogonal = orthogonal,
+      method_fname = method_fname,
+      method_args = method_args,
+      mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
+      mg_agreement_weight = mg_agreement_weight,
+      group_weights = mg_agreement_group_weights,
+      scales = mg_agreement_scales,
+      rstarts = rstarts
+    )
+  } else if (mg_algorithm == "gpa") {
     rot_list <- lav_mat_rotate_gpa_mg(
       a_list = a_list,
       phi_list = phi_list,
@@ -234,6 +256,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       method_fname = method_fname,
       method_args = method_args,
       mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
       mg_agreement_weight = mg_agreement_weight,
       group_weights = mg_agreement_group_weights,
       scales = mg_agreement_scales,
@@ -249,6 +272,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       method_fname = method_fname,
       method_args = method_args,
       mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
       mg_agreement_weight = mg_agreement_weight,
       group_weights = mg_agreement_group_weights,
       scales = mg_agreement_scales,
@@ -349,6 +373,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
                                        tol = 1e-8,
                                        mg_agreement_weight = 0.50,
                                        mg_agreement_method = "procrustes",
+                                       mg_agreement_epsilon = 0.01,
                                        group_weights = NULL,
                                        scale = TRUE,
                                        scales = "equal",
@@ -404,6 +429,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     out <- lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
       w = mg_agreement_weight, scale = scale,
       group_weights = group_weights, grad = grad
     )
@@ -449,6 +475,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
         lambda_list = lambda_list, c_mat = c_mat,
         method_fname = method_fname, method_args = method_args,
         mg_agreement_method = mg_agreement_method,
+        mg_agreement_epsilon = mg_agreement_epsilon,
         w = mg_agreement_weight, group_weights = group_weights
       )
       q_current <- as.numeric(objf(lambda_list, grad = FALSE))
@@ -528,15 +555,17 @@ lav_mat_rotate_mg_scales_start <- function(lambda_list) {
 
 # minimize the agreement objective over the scale split, given the rotated
 # (unscaled) loadings: c_gj^2 = ngroups * exp(z_gj) / sum_h exp(z_hj)
-# (positive, mean variance one by construction); analytic gradient
+# (positive, mean variance one by construction), with z_Gj = 0 so that the
+# parametrization has no redundant direction; analytic gradient
 lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
                                             method_fname, method_args,
                                             mg_agreement_method,
+                                            mg_agreement_epsilon = 0.01,
                                             w, group_weights) {
   ngroups <- length(lambda_list)
   m <- nrow(c_mat)
   c_from_z <- function(z) {
-    z <- matrix(z, m, ngroups)
+    z <- cbind(matrix(z, m, ngroups - 1L), 0)
     p <- exp(z - apply(z, 1, max))
     p <- p / rowSums(p)
     sqrt(ngroups * p)
@@ -549,6 +578,7 @@ lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
     as.numeric(lav_mat_rotate_mg_agreement(
       lambda_list = ll, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
       w = w, scale = FALSE, group_weights = group_weights, grad = FALSE
     ))
   }
@@ -561,6 +591,7 @@ lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
     out <- lav_mat_rotate_mg_agreement(
       lambda_list = ll, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
       w = w, scale = FALSE, group_weights = group_weights, grad = TRUE
     )
     gr <- attr(out, "grad")
@@ -569,17 +600,125 @@ lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
     ct <- vapply(seq_len(ngroups), function(g) colSums(ll[[g]] * gr[[g]]),
                  numeric(m))
     ct <- matrix(ct, nrow = m)
-    as.vector(-ct / 2 + p * rowSums(ct) / 2)
+    gz <- -ct / 2 + p * rowSums(ct) / 2
+    as.vector(gz[, -ngroups, drop = FALSE])
   }
-  z0 <- as.vector(log(c_mat * c_mat / ngroups))
+  z0 <- log(c_mat * c_mat / ngroups)
+  z0 <- as.vector(z0[, -ngroups, drop = FALSE] - z0[, ngroups])
   res <- try(nlminb(z0, objz, gradient = gradz,
-                    control = list(iter.max = 500L, rel.tol = 1e-12)),
+                    control = list(iter.max = 1000L, rel.tol = 1e-10)),
              silent = TRUE)
   if (inherits(res, "try-error") || !is.finite(res$objective) ||
       res$objective > objz(z0)) {
+    attr(c_mat, "converged") <- FALSE
     return(c_mat)
   }
-  c_from_z(res$par)
+  out <- c_from_z(res$par)
+  # converged: nlminb says so, or the gradient is small relative to the
+  # objective (nlminb reports "singular convergence" at the optimum when
+  # the relative tolerance is below what the loss allows)
+  attr(out, "converged") <- (res$convergence == 0L ||
+    sqrt(sum(gradz(res$par)^2)) < 1e-5 * max(1, abs(res$objective)))
+  attr(out, "value") <- res$objective
+  out
+}
+
+
+# scales-only agreement (mg_agreement_rotate = FALSE): the per-group
+# rotated and aligned patterns a_list are kept, and only the split of each
+# factor's scale over the groups is optimized (if scales = "free"); this is
+# the alignment of the factor variances given the patterns. Returns the
+# rotation matrices relative to a_list, as the other mg algorithms
+lav_mat_rotate_scales_mg <- function(a_list = NULL,
+                                     phi_list = NULL,
+                                     orthogonal = FALSE,
+                                     method_fname = NULL,
+                                     method_args = list(),
+                                     mg_agreement_weight = 0.50,
+                                     mg_agreement_method = "procrustes",
+                                     mg_agreement_epsilon = 0.01,
+                                     group_weights = NULL,
+                                     scales = "equal",
+                                     rstarts = 0L) {
+  ngroups <- length(a_list)
+  m <- ncol(a_list[[1L]])
+  free_scales <- identical(scales, "free")
+  converged <- TRUE
+  if (free_scales) {
+    # from the equal-SS start, plus rstarts random starts (the alignment
+    # loss has local optima); keep the best
+    c_start <- lav_mat_rotate_mg_scales_start(a_list)
+    c_mat <- NULL
+    for (i in seq_len(rstarts + 1L)) {
+      if (i > 1L) {
+        z <- matrix(rnorm(m * ngroups, sd = 0.5), m, ngroups)
+        p <- exp(z) / rowSums(exp(z))
+        c_start <- sqrt(ngroups * p)
+      }
+      c_i <- lav_mat_rotate_mg_scales_update(
+        lambda_list = a_list, c_mat = c_start,
+        method_fname = method_fname, method_args = method_args,
+        mg_agreement_method = mg_agreement_method,
+        mg_agreement_epsilon = mg_agreement_epsilon,
+        w = mg_agreement_weight, group_weights = group_weights
+      )
+      if (is.null(c_mat) || isTRUE(attr(c_i, "value") < attr(c_mat, "value"))) {
+        c_mat <- c_i
+      }
+    }
+    converged <- isTRUE(attr(c_mat, "converged"))
+    attr(c_mat, "converged") <- NULL
+    attr(c_mat, "value") <- NULL
+    lambda_list <- lapply(seq_len(ngroups), function(g) {
+      t(t(a_list[[g]]) / c_mat[, g])
+    })
+    q_current <- as.numeric(lav_mat_rotate_mg_agreement(
+      lambda_list = lambda_list, method_fname = method_fname,
+      method_args = method_args, mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
+      w = mg_agreement_weight, scale = FALSE,
+      group_weights = group_weights, grad = FALSE
+    ))
+  } else {
+    lambda_list <- a_list
+    q_current <- as.numeric(lav_mat_rotate_mg_agreement(
+      lambda_list = lambda_list, method_fname = method_fname,
+      method_args = method_args, mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
+      w = mg_agreement_weight, scale = TRUE,
+      group_weights = group_weights, grad = FALSE
+    ))
+  }
+  if (!converged) {
+    lav_msg_warn(gettext(
+      "the minimization over the scale split of the agreement rotation
+       did not converge"))
+  }
+
+  rot_list <- vector("list", length = ngroups)
+  for (g in seq_len(ngroups)) {
+    rott_inv <- solve(
+      crossprod(a_list[[g]]),
+      crossprod(a_list[[g]], lambda_list[[g]])
+    )
+    if (orthogonal && !free_scales) {
+      rot_list[[g]] <- rott_inv
+    } else {
+      rot_list[[g]] <- solve(t(rott_inv))
+    }
+  }
+  info <- list(
+    algorithm = "mg-scales",
+    iter = 0L,
+    converged = converged,
+    method.value = q_current
+  )
+  if (free_scales) {
+    info$scales <- c_mat
+  }
+  attr(rot_list, "info") <- info
+
+  rot_list
 }
 
 
@@ -599,6 +738,7 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
                                   gpa_fwindow = 10L,
                                   mg_agreement_weight = 0.50,
                                   mg_agreement_method = "procrustes",
+                                  mg_agreement_epsilon = 0.01,
                                   group_weights = NULL,
                                   scale = TRUE,
                                   scales = "equal",
@@ -634,6 +774,7 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
     lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
+      mg_agreement_epsilon = mg_agreement_epsilon,
       w = mg_agreement_weight, scale = scale,
       group_weights = group_weights, grad = grad
     )

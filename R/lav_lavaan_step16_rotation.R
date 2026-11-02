@@ -226,7 +226,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
           func = lav_model_efa_rotate_x,
           x = x_unrotated, lavmodel = lavmodel_unrot,
           init_rot = lavmodel@H, lavoptions = lavoptions_jac,
-          type = "user", extra = FALSE,
+          type = "user", extra = FALSE, nobs = lavsamplestats@nobs,
           method.args = list(d = 1e-3, r = 2),
           method = "Richardson"
         )

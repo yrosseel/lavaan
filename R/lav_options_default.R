@@ -314,13 +314,16 @@ lav_options_default <- function() {
   elm(c("rotation.args", "mg_agreement"), FALSE, bl = TRUE)
   elm(c("rotation.args", "mg_agreement_weight"), 0.5, nm = "[0, 1]")
   elm(c("rotation.args", "mg_agreement_group_weights"), "equal",
-      chr = c("equal", "nobs"))
+      chr = c("equal", "nobs", "sqrt.nobs"))
   elm(c("rotation.args", "mg_agreement_algorithm"), "gpa",
     chr = c(gpa = "gpa", pairwise = "pairwise", lg = "pairwise"))
   elm(c("rotation.args", "mg_agreement_method"), "procrustes",
-    chr = c("procrustes", "loading.alignment"))
+    chr = c(procrustes = "procrustes", loading.alignment = "loading.alignment",
+            alignment = "loading.alignment", la = "loading.alignment"))
+  elm(c("rotation.args", "mg_agreement_epsilon"), 0.01, nm = "]0, 1]")
   elm(c("rotation.args", "mg_agreement_scales"), "equal",
     chr = c("equal", "free"))
+  elm(c("rotation.args", "mg_agreement_rotate"), TRUE, bl = TRUE)
 
   # full data
   elm("std.ov", FALSE, bl = TRUE)

@@ -169,13 +169,39 @@ are:
   \item{\code{mg_agreement}}{Logical. For multiple-group models only. If
     \code{TRUE}, the rotated solutions of the groups are made as similar as
     possible (see also \code{mg_agreement_weight},
-    \code{mg_agreement_method}, \code{mg_agreement_scales} and
-    \code{mg_agreement_algorithm}).}
-  \item{\code{mg_agreement_group_weights}}{\code{"equal"} (the default)
-    or \code{"nobs"}: whether the groups are weighted by their sample
-    sizes in the agreement criterion (the per-group criteria by the group
-    weight, and each pair of groups in the agreement term by the product
-    of the two weights).}
+    \code{mg_agreement_method}, \code{mg_agreement_epsilon},
+    \code{mg_agreement_group_weights}, \code{mg_agreement_scales},
+    \code{mg_agreement_rotate} and \code{mg_agreement_algorithm}).}
+  \item{\code{mg_agreement_method}}{\code{"procrustes"} (the default)
+    or \code{"loading.alignment"}: the agreement term. Procrustes: the sum
+    of squared differences between the loadings of every pair of groups.
+    Loading alignment: the component loss of the alignment method
+    (Asparouhov and Muthen, 2014), the sum over all pairs and loadings of
+    \eqn{(d^2 + \epsilon)^{1/4}} with \eqn{d} the difference between
+    two loadings and \eqn{\epsilon} = \code{mg_agreement_epsilon}
+    (default 0.01). Small differences are penalized more than
+    proportionally and large ones less, so that the solution has many
+    (nearly) invariant loadings and a few large differences.}
+  \item{\code{mg_agreement_group_weights}}{\code{"equal"} (the default),
+    \code{"nobs"} or \code{"sqrt.nobs"}: whether the groups are weighted
+    by their sample sizes in the agreement criterion (the per-group
+    criteria by the group weight, and each pair of groups in the agreement
+    term by the product of the two weights). With \code{"nobs"} the group
+    weights are proportional to the sample sizes; with \code{"sqrt.nobs"}
+    to their square roots, so that a pair of groups is weighted by the
+    square root of the product of the two sample sizes, as in the
+    alignment method.}
+  \item{\code{mg_agreement_rotate}}{Logical (default \code{TRUE}). If
+    \code{FALSE}, the per-group rotated solutions (aligned to the first
+    group) are kept as they are, and only the split of the scale of each
+    factor over the groups is optimized for agreement (which requires
+    \code{mg_agreement_scales = "free"}; with \code{"equal"} nothing
+    moves). With a (partially specified) target rotation towards a
+    confirmatory pattern, \code{mg_agreement_method =
+    "loading.alignment"}, \code{mg_agreement_weight = 1} and
+    \code{mg_agreement_group_weights = "sqrt.nobs"}, this is the
+    alignment of the factor loadings and variances of Asparouhov and
+    Muthen (2014), without the alignment of the intercepts.}
   \item{\code{mg_agreement_scales}}{\code{"equal"} (the default) or
     \code{"free"}: how the scale of each factor is split over the groups.
     The agreement criterion is evaluated on loadings whose factors have,

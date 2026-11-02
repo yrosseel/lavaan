@@ -587,6 +587,7 @@ lav_mat_rotate_bigeomin <- function(mm_lambda, geomin_epsilon = 0.01, ...,
 lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
                                    method_args = list(),
                                    mg_agreement_method = "procrustes",
+                                   mg_agreement_epsilon = 0.01,
                                    w = 0.5, scale = TRUE,
                                    group_weights = NULL, grad = FALSE) {
   ngroups <- length(lambda_list)
@@ -633,9 +634,34 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       ss_wsum <- ss_wsum + group_weights[g] * sum(lambda_list[[g]]^2)
     }
     a_mg <- w_sum * ss_wsum - sum(lambda_wsum^2)
+  } else if (mg_agreement_method == "loading.alignment") {
+    # the component loss of the alignment method:
+    #   sum_{g < h} omega_g omega_h sum_ij f(lambda_g,ij - lambda_h,ij),
+    #   f(x) = (x^2 + epsilon)^(1/4)
+    # small differences are penalized more than proportionally, large ones
+    # less: the solution has many (near) invariant loadings and a few
+    # large differences
+    a_mg <- 0
+    if (grad) {
+      agr_list <- lapply(lambda_list, function(x) x * 0)
+    }
+    for (g in seq_len(ngroups - 1L)) {
+      for (h in (g + 1L):ngroups) {
+        d <- lambda_list[[g]] - lambda_list[[h]]
+        d2e <- d * d + mg_agreement_epsilon
+        omega <- group_weights[g] * group_weights[h]
+        a_mg <- a_mg + omega * sum(sqrt(sqrt(d2e)))
+        if (grad) {
+          # f'(x) = x / (2 (x^2 + epsilon)^(3/4))
+          fd <- omega * d / (2 * d2e^0.75)
+          agr_list[[g]] <- agr_list[[g]] + fd
+          agr_list[[h]] <- agr_list[[h]] - fd
+        }
+      }
+    }
   } else {
-    lav_msg_stop(gettext(
-      "only mg_agreement_method procrustes is supported for now"))
+    lav_msg_stop(gettextf(
+      "unknown mg_agreement_method: %s", dQuote(mg_agreement_method)))
   }
 
   out <- (w * a_mg) + ((1 - w) * q_mg)
@@ -652,10 +678,14 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
     # gradient with respect to the (scaled) loading matrices
     gt_list <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      # d a_mg / d lambda_g = 2 omega_g sum_{h != g} omega_h (lambda_g -
-      # lambda_h)
-      agr <- 2 * group_weights[g] *
-        (w_sum * lambda_list[[g]] - lambda_wsum)
+      if (mg_agreement_method == "procrustes") {
+        # d a_mg / d lambda_g = 2 omega_g sum_{h != g} omega_h (lambda_g -
+        # lambda_h)
+        agr <- 2 * group_weights[g] *
+          (w_sum * lambda_list[[g]] - lambda_wsum)
+      } else {
+        agr <- agr_list[[g]]
+      }
       gt_list[[g]] <- (1 - w) * group_weights[g] * gq_list[[g]] + w * agr
     }
     if (scale) {

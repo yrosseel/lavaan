@@ -573,17 +573,22 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       }
 
       # group weights for the agreement criterion: proportional to the
-      # sample sizes (scaled to average one), or none
+      # sample sizes (scaled to average one), to their square roots (so
+      # that a pair of groups is weighted by sqrt(n_g n_h), as in the
+      # alignment method), or none
       mg_group_weights <- NULL
-      if (identical(ropts$mg_agreement_group_weights, "nobs")) {
+      if (ropts$mg_agreement_group_weights %in% c("nobs", "sqrt.nobs")) {
         n_g <- unlist(nobs)
         if (length(n_g) != lavmodel@ngroups || any(!is.finite(n_g)) ||
             any(n_g <= 0)) {
-          lav_msg_stop(gettext(
-            "mg_agreement_group_weights = \"nobs\" requires the sample
-             sizes of all groups."))
+          lav_msg_stop(gettextf(
+            "mg_agreement_group_weights = %s requires the sample sizes of
+             all groups.", dQuote(ropts$mg_agreement_group_weights)))
         }
         mg_group_weights <- n_g / mean(n_g)
+        if (ropts$mg_agreement_group_weights == "sqrt.nobs") {
+          mg_group_weights <- sqrt(mg_group_weights)
+        }
       }
 
       # rotate this set
@@ -609,9 +614,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         #ov.var = this.ov.var,
         mg_algorithm = ropts$mg_agreement_algorithm,
         mg_agreement_method = ropts$mg_agreement_method,
+        mg_agreement_epsilon = ropts$mg_agreement_epsilon,
         mg_agreement_weight = ropts$mg_agreement_weight,
         mg_agreement_group_weights = mg_group_weights,
         mg_agreement_scales = ropts$mg_agreement_scales,
+        mg_agreement_rotate = ropts$mg_agreement_rotate,
         pairwise_accelerate = ropts$pairwise_accelerate,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
