@@ -25,7 +25,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                  # std.ov = FALSE, # rescale ov
                                  # ov.var = NULL, # ov variances
                                  # algorithm = "gpa", # rotation algorithm
-                                 mg_algorithm = "pairwise",
+                                 mg_algorithm = "gpa", # agreement algorithm
                                  mg_agreement_method = "procrustes",
                                  mg_agreement_weight = 0.5,
                                  mg_agreement_group_weights = NULL,
@@ -182,6 +182,11 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
 
   # rotate: all groups together + agreement
   # (note: rstarts only affects the per-group initial rotation above)
+  # the gradient projection algorithm needs a smooth criterion; for
+  # simplimax we use the (derivative-free) plane sweeps instead
+  if (mg_algorithm == "gpa" && !lav_mat_rotate_is_smooth(method_fname)) {
+    mg_algorithm <- "pairwise"
+  }
   if (lav_verbose()) {
     cat("  mg-", mg_algorithm, " + agreement rotation:\n", sep = "")
   }

@@ -175,10 +175,11 @@ are:
     sizes in the agreement criterion (the per-group criteria by the group
     weight, and each pair of groups in the agreement term by the product
     of the two weights).}
-  \item{\code{mg_agreement_algorithm}}{\code{"pairwise"} (the default)
-    or \code{"gpa"}: the algorithm for the agreement rotation of all
-    groups together (the plane-sweep algorithm, or the gradient projection
-    algorithm on the rotation matrices of all groups jointly).}
+  \item{\code{mg_agreement_algorithm}}{\code{"gpa"} (the default)
+    or \code{"pairwise"}: the algorithm for the agreement rotation of all
+    groups together (the gradient projection algorithm on the rotation
+    matrices of all groups jointly, or the plane-sweep algorithm). For
+    simplimax, the plane-sweep algorithm is always used.}
   \item{\code{gpa_tol}, \code{tol}, \code{max_iter}, \code{warn},
     \code{verbose}}{Convergence tolerances, the maximum number of
     iterations, and reporting options of the rotation algorithm.
