@@ -290,6 +290,8 @@ lav_options_default <- function() {
     chr = c("mean", "product", "reference"))
   elm(c("alignment.args", "std_ov"), FALSE, bl = TRUE)
   elm(c("alignment.args", "rstarts"), 30L, nm = "[0, 1e+06]")
+  # the reference group: a group number, a group label, or "auto"
+  elm(c("alignment.args", "reference_group"), 1L)
 
   # rotation-args sublist
   elm(c("rotation.args", "orthogonal"), FALSE, bl = TRUE)
@@ -341,6 +343,8 @@ lav_options_default <- function() {
     chr = c("none", "fixed", "free"))
   elm(c("rotation.args", "mg_agreement_identification"), "mean",
     chr = c("mean", "product", "reference"))
+  # the reference group (a group number or a group label)
+  elm(c("rotation.args", "mg_agreement_reference_group"), 1L)
   elm(c("rotation.args", "mg_agreement_std_ov"), FALSE, bl = TRUE)
 
   # full data

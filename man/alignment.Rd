@@ -21,7 +21,8 @@ fit <- cfa(model, data = data, group = "g", std.lv = TRUE,
                                  epsilon = 0.01,
                                  group_weights = "sqrt.nobs",
                                  identification = "reference",
-                                 std_ov = FALSE, rstarts = 30L))
+                                 std_ov = FALSE, rstarts = 30L,
+                                 reference_group = 1L))
 }
 }
 \section{Options}{
@@ -52,9 +53,16 @@ fit <- cfa(model, data = data, group = "g", std.lv = TRUE,
     factor variances is one; \code{"mean"}: their average is one),
     \code{std_ov} (\code{FALSE}; if \code{TRUE}, the loss is evaluated on
     the loadings and intercepts of the indicators standardized over the
-    entire population, as the alignment method does) and \code{rstarts}
+    entire population, as the alignment method does), \code{rstarts}
     (30, the number of random starts of the loss minimization in addition
-    to the start at equal column sums of squares).}
+    to the start at equal column sums of squares) and
+    \code{reference_group} (1, the group with variance one under the
+    \code{"reference"} identification and mean zero under \code{alignment
+    = "fixed"}: a group number, a group label, or \code{"auto"}, which
+    tries every group as the reference of a fixed alignment and keeps the
+    one with the smallest loss, i.e. the most invariant aligned model; with
+    \code{alignment = "free"} the loss does not depend on the reference
+    group and \code{"auto"} keeps the first group).}
 }
 }
 \section{Details}{
@@ -69,10 +77,40 @@ model, with standard errors obtained by the delta method from the
 configural model; \code{se = "bootstrap"} is not available.
 \code{\link{lavInspect}} with \code{"rotation"} returns the alignment
 information per group (the aligned variances and means, the loss value,
-convergence), and \code{"rotation_matrix"} the diagonal rescaling.
-Alignment is not available for categorical data, \code{conditional.x =
-TRUE}, multilevel models, or models in which observed variables appear as
-predictors or outcomes in regressions. In a model with efa blocks, the
+convergence, the reference group, and the loss value of every random
+start in \code{starts}), and \code{"rotation_matrix"} the diagonal
+rescaling.
+
+Two diagnostics are reported as warnings. The loss function has several
+local optima when the best solution was reached by a single random
+start; increase \code{rstarts} and compare the solutions. A free
+alignment of the means (\code{alignment = "free"}) may be poorly
+identified: the overall level of the means of a factor is identified by
+the loss only, and the warning is given when the standard error of the
+average of the group means exceeds the largest standard error of a
+difference between two group means (which is identified by the data).
+This happens with few groups or little non-invariance, as Asparouhov and
+Muthen (2014) describe; use the fixed alignment then.
+For ordered indicators (\code{ordered}), the thresholds take the place of
+the intercepts: every threshold of an indicator is a component of the
+alignment loss, together with the loading of the indicator, and the
+aligned thresholds are the configural thresholds plus the aligned loadings
+times the aligned factor means (the intercepts of ordered indicators stay
+fixed to zero); the model-implied thresholds are unchanged. Continuous and
+ordered indicators can be mixed. Since the loss is not invariant to the
+scale of the indicators, the solution depends on the
+\code{parameterization} (\code{"delta"} or \code{"theta"}) of the
+configural model.
+
+The model may contain exogenous covariates (\code{f ~ x}), with
+\code{conditional.x = TRUE} or \code{FALSE}: the regressions of the
+factors on the covariates transform with the factor scales, and the
+aligned factor means are the intercepts of the factors given the
+covariates (as in Mplus; center the covariates to keep them
+interpretable as means). \code{std_ov = TRUE} is not available with
+\code{conditional.x = TRUE}. Alignment is not available for multilevel
+models, or when an indicator of an aligned factor is itself a predictor
+or an outcome in a regression. In a model with efa blocks, the
 efa factors are not aligned by this option but by the agreement rotation
 (\code{mg_agreement_scales}, \code{mg_agreement_intercepts}); the
 rotation information of \code{\link{lavInspect}} then holds both the

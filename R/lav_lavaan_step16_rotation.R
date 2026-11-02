@@ -34,6 +34,23 @@ lav_step16_rotation <- function(lavoptions = NULL,
 
   align_flag <- !is.null(lavoptions$alignment) &&
     lavoptions$alignment != "none" && lavdata@ngroups > 1L
+  # the reference groups (a number, a label, or "auto" for the alignment
+  # option) as group numbers
+  ref_efa <- 1L
+  ref_cfa <- 1L
+  if (lavdata@ngroups > 1L) {
+    ref_efa <- lav_align_reference_group(
+      lavoptions$rotation.args$mg_agreement_reference_group,
+      ngroups = lavdata@ngroups, group_label = lavdata@group.label)
+    lavoptions$rotation.args$mg_agreement_reference_group <- ref_efa
+    if (align_flag) {
+      ref_cfa <- lav_align_reference_group(
+        lavoptions$alignment.args$reference_group,
+        ngroups = lavdata@ngroups, group_label = lavdata@group.label,
+        allow_auto = TRUE)
+      lavoptions$alignment.args$reference_group <- ref_cfa
+    }
+  }
   if (lavmodel@nefa > 0L && !align_flag &&
     (lavoptions$rotation != "none")) {
     # store unrotated solution in partable
@@ -75,7 +92,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
         lavpartable$lhs %in% lv_efa & lavpartable$free == 0L &
         lavpartable$user == 0L)
       if (mg_int == "fixed") {
-        int_idx <- int_idx[lavpartable$group[int_idx] != 1L]
+        int_idx <- int_idx[lavpartable$group[int_idx] != ref_efa]
       }
       lavpartable$user[int_idx] <- 7L
     }
@@ -393,6 +410,9 @@ lav_step16_rotation <- function(lavoptions = NULL,
       lavpartable = lavpartable, nobs = lavsamplestats@nobs
     )
     lv_names <- al$rotation[[1L]]$alignment$lv_names
+    # the reference group (resolved, if "auto"): also for the jacobian
+    ref_cfa <- al$reference_group
+    lavoptions$alignment.args$reference_group <- ref_cfa
 
     # the efa parameters that are free after the rotation (user = 7/77),
     # as in the rotation branch above (incl. the aligned efa means)
@@ -406,7 +426,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
           lavpartable$lhs %in% lv_efa & lavpartable$free == 0L &
           lavpartable$user == 0L)
         if (mg_int == "fixed") {
-          efa_int_idx <- efa_int_idx[lavpartable$group[efa_int_idx] != 1L]
+          efa_int_idx <- efa_int_idx[lavpartable$group[efa_int_idx] != ref_efa]
         }
         lavpartable$user[efa_int_idx] <- 7L
       }
@@ -421,12 +441,12 @@ lav_step16_rotation <- function(lavoptions = NULL,
       lavpartable$lhs == lavpartable$rhs & lavpartable$lhs %in% lv_names &
       lavpartable$free == 0L)
     if (lavoptions$alignment.args$identification == "reference") {
-      var_idx <- var_idx[lavpartable$group[var_idx] != 1L]
+      var_idx <- var_idx[lavpartable$group[var_idx] != ref_cfa]
     }
     int_idx <- which(lavpartable$op == "~1" & lavpartable$lhs %in% lv_names &
       lavpartable$free == 0L)
     if (lavoptions$alignment == "fixed") {
-      int_idx <- int_idx[lavpartable$group[int_idx] != 1L]
+      int_idx <- int_idx[lavpartable$group[int_idx] != ref_cfa]
     }
     lavpartable$user[c(var_idx, int_idx)] <- 7L
     lavpartable$free.unrotated <- lavpartable$free
@@ -496,6 +516,40 @@ lav_step16_rotation <- function(lavoptions = NULL,
       }
     }
   } # alignment
+
+  # diagnostics of the alignment (efa blocks with mg_agreement, and the
+  # confirmatory alignment): local optima of the random starts, and the
+  # identification of a free alignment of the means
+  if (!is.null(lavrotation) && lavdata@ngroups > 1L) {
+    mg_int <- lavoptions$rotation.args$mg_agreement_intercepts
+    efa_aligned <- lavmodel@nefa > 0L && lavoptions$rotation != "none" &&
+      isTRUE(lavoptions$rotation.args$mg_agreement) &&
+      !("loadings" %in% lavoptions$group.equal)
+    for (set in lavrotation[[1L]]) {
+      if (efa_aligned && !is.null(set$scales_starts)) {
+        lav_align_check_starts(set$scales_starts,
+                               what = "agreement rotation (scales and means)")
+      }
+    }
+    if (align_flag) {
+      lav_align_check_starts(lavrotation[[1L]]$alignment$starts,
+                             what = "alignment")
+    }
+    se_ok <- !is.null(lavvcov$vcov) && !is.null(lavpartable$se) &&
+      !lavoptions$se %in% c("none", "external", "two.step")
+    if (se_ok && efa_aligned && !is.null(mg_int) && mg_int == "free") {
+      lav_align_check_free_means(
+        lavpartable, lavvcov$vcov,
+        lv_names = lav_pt_vnames(lavpartable, type = "lv.efa"),
+        what = "mg_agreement_intercepts = \"free\"")
+    }
+    if (se_ok && align_flag && lavoptions$alignment == "free") {
+      lav_align_check_free_means(
+        lavpartable, lavvcov$vcov,
+        lv_names = lavrotation[[1L]]$alignment$lv_names,
+        what = "alignment = \"free\"")
+    }
+  }
 
   list(
     lavpartable = lavpartable,

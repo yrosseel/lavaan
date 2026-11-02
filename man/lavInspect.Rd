@@ -516,7 +516,14 @@ level), or a single element if there is only one block and
         \code{mg_agreement_scales} tells how the scale of each factor was
         split over the groups (see \code{\link{esem}}); with the alignment
         of the intercepts (\code{mg_agreement_intercepts}), \code{means}
-        holds the aligned factor means of the group. Alias:
+        holds the aligned factor means of the group;
+        \code{mg_agreement_reference_group} is the reference group, and
+        \code{scales_starts} (scales-only mode) the loss value and
+        convergence of every random start over the scales and means. For
+        a model with \code{alignment = "fixed"} or \code{"free"} (see
+        \code{\link{alignment}}), the \code{alignment} element holds the
+        aligned variances and means of the group, the loss value, the
+        reference group and the random starts. Alias:
         \code{"rotation_info"}.}
     \item{\code{"rotation_matrix"}:}{List. Per block, the rotation matrix
         \eqn{H} for all latent variables of the block (the identity for

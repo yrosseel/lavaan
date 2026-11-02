@@ -9,8 +9,9 @@ confirmatory model aligned with \code{alignment = "fixed"} or
 \code{"free"} (see \code{\link{alignment}}), or of a model with both,
 following the
 procedure of the alignment method (Asparouhov and Muthen, 2014). For every
-aligned loading, and for every aligned intercept if the intercepts were
-aligned (\code{mg_agreement_intercepts}), the groups are divided into an
+aligned loading, and for every aligned intercept (or threshold, for an
+ordered indicator) if the intercepts were aligned
+(\code{mg_agreement_intercepts}), the groups are divided into an
 (approximately) invariant set and the non-invariant groups.}
 \usage{
 lavTestAlignment(object, p_connect = 0.01, p_set = 0.001, max_iter = 100L)
@@ -44,7 +45,7 @@ detected). (3) The average over the final invariant set, the non-invariant
 groups, the contribution of the parameter to the agreement (loss) function
 of the rotation, and an R-square are reported. The R-square is the
 proportion of the across-group variance of the unaligned parameter (the
-loading with a unit-variance factor, or the intercept with a zero factor
+loading with a unit-variance factor, or the intercept (threshold) with a zero factor
 mean) that is explained by the group differences in factor variances and
 means (Asparouhov and Muthen, 2014, eqs. 13 and 14); it is only computed
 with three or more groups. A value close to one means that the group

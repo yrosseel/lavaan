@@ -102,8 +102,12 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
     ov_int <- unique(c(ov_int, ov_efa_only))
   }
   if (length(ov_int) > 0L) {
+    # the intercepts (free; those of ordered indicators are fixed to zero)
+    # and the thresholds of the ordered indicators
     par_idx <- c(par_idx,
-                 which(pt$op == "~1" & pt$lhs %in% ov_int & pt$group == 1L))
+                 which(pt$op == "~1" & pt$lhs %in% ov_int & pt$group == 1L &
+                       pt$free > 0L),
+                 which(pt$op == "|" & pt$lhs %in% ov_int & pt$group == 1L))
   }
   npar <- length(par_idx)
   if (npar == 0L) {
@@ -232,7 +236,7 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
 
     # 4. contribution to the loss, and R-square
     is_efa <- (op == "=~" && lhs %in% lv_efa_only) ||
-      (op == "~1" && lhs %in% ov_efa_only && !(lhs %in% ov_cfa))
+      (op %in% c("~1", "|") && lhs %in% ov_efa_only && !(lhs %in% ov_cfa))
     lo <- if (is_efa) loss_efa else loss_cfa
     contribution[i] <- sum(vapply(seq_len(ncol(pairs)), function(p) {
       g <- pairs[1L, p]
@@ -249,10 +253,12 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
       theta_0 <- theta * sd_g
       resid <- sd_g * (theta - theta_bar)
     } else {
-      # unaligned intercept: nu + lambda alpha; residual: the aligned
-      # intercept minus the mean
+      # unaligned intercept: nu + lambda alpha (threshold: tau - lambda
+      # alpha); residual: the aligned value minus the mean
+      sign_op <- if (op == "|") -1 else 1
       theta_0 <- vapply(seq_len(ngroups), function(g) {
-        theta[g] + sum(est[[g]]$lambda[lhs, lv_efa] * est[[g]]$alpha[lv_efa, 1L])
+        theta[g] + sign_op *
+          sum(est[[g]]$lambda[lhs, lv_efa] * est[[g]]$alpha[lv_efa, 1L])
       }, numeric(1L))
       resid <- theta - theta_bar
     }

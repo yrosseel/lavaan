@@ -36,6 +36,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                                    # "fixed" / "free"
                                  mg_agreement_identification = "mean",
                                  nu_list = NULL, # intercepts (alignment)
+                                 nu_row_idx = NULL, # their rows of lambda
+                                 reference_group = 1L, # the reference group
                                  std_ov = FALSE, # per-group pre-rotation
                                  ov_var_list = NULL, # ov variances per group
                                  reflect = TRUE, # reflect sign
@@ -103,6 +105,33 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       method.value = 0
     )
     return(res)
+  }
+
+  # the reference group (variance one under the "reference" identification,
+  # mean zero under "fixed" intercepts, the target of the reordering of
+  # the factors): the engines take the first group as the reference, so the
+  # groups are permuted on entry and the results are permuted back on exit
+  reference_group <- as.integer(reference_group)
+  if (length(reference_group) != 1L || is.na(reference_group) ||
+      reference_group < 1L || reference_group > ngroups) {
+    lav_msg_stop(gettextf(
+      "reference_group must be a group number between 1 and %d.", ngroups))
+  }
+  group_ord <- c(reference_group, seq_len(ngroups)[-reference_group])
+  if (reference_group != 1L) {
+    a_list <- a_list[group_ord]
+    if (!is.null(init_rot_list)) {
+      init_rot_list <- init_rot_list[group_ord]
+    }
+    if (!is.null(nu_list)) {
+      nu_list <- nu_list[group_ord]
+    }
+    if (!is.null(ov_var_list)) {
+      ov_var_list <- ov_var_list[group_ord]
+    }
+    if (!is.null(mg_agreement_group_weights)) {
+      mg_agreement_group_weights <- mg_agreement_group_weights[group_ord]
+    }
   }
 
   # method
@@ -227,7 +256,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       tol = tol,
       keep_rep = keep_rep,
       max_iter = max_iter,
-      group = g
+      group = group_ord[g]
     )
     group_info[[g]] <- list(
       algorithm = res0$algorithm, converged = res0$converged,
@@ -281,7 +310,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       scales = mg_agreement_scales,
       identification = engine_identification,
       intercepts = mg_agreement_intercepts,
-      nu_list = nu_list,
+      nu_list = nu_list, nu_row_idx = nu_row_idx,
       rstarts = rstarts
     )
   } else if (mg_algorithm == "gpa") {
@@ -298,7 +327,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       scales = mg_agreement_scales,
       identification = engine_identification,
       intercepts = mg_agreement_intercepts,
-      nu_list = nu_list,
+      nu_list = nu_list, nu_row_idx = nu_row_idx,
       gpa_tol = gpa_tol,
       max_iter = max_iter
     )
@@ -317,7 +346,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       scales = mg_agreement_scales,
       identification = engine_identification,
       intercepts = mg_agreement_intercepts,
-      nu_list = nu_list,
+      nu_list = nu_list, nu_row_idx = nu_row_idx,
       accelerate = pairwise_accelerate,
       gpa_tol = gpa_tol,
       tol = tol,
@@ -410,6 +439,17 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
     mg_agreement_identification = mg_agreement_identification,
     meanList = mean_list
   )
+  # back to the original order of the groups
+  if (reference_group != 1L) {
+    inv_ord <- order(group_ord)
+    for (nm in c("lambdaList", "rotList", "orderList", "group_info",
+                 "meanList")) {
+      if (!is.null(res[[nm]])) {
+        res[[nm]] <- res[[nm]][inv_ord]
+      }
+    }
+  }
+  res$reference_group <- reference_group
 
   # add method info
   res <- c(res, info)
@@ -448,6 +488,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
                                        identification = "mean",
                                        intercepts = "none",
                                        nu_list = NULL,
+                                       nu_row_idx = NULL,
                                        max_iter = 1000L) {
   ngroups <- length(a_list)
 
@@ -514,7 +555,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
       w = mg_agreement_weight, scale = scale,
       identification = identification,
       group_weights = group_weights,
-      nu_list = nu_list, mean_list = mean_list, grad = grad
+      nu_list = nu_list, nu_row_idx = nu_row_idx, mean_list = mean_list, grad = grad
     )
     if (free_scales && grad && !is.null(attr(out, "grad"))) {
       gr <- attr(out, "grad")
@@ -561,7 +602,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
         mg_agreement_epsilon = mg_agreement_epsilon,
         w = mg_agreement_weight, group_weights = group_weights,
         free_scales = free_scales, identification = identification,
-        nu_list = nu_list, a_mat = a_mat,
+        nu_list = nu_list, nu_row_idx = nu_row_idx, a_mat = a_mat,
         mean_fixed_first = (intercepts == "fixed")
       )
       a_mat <- attr(c_mat, "a_mat")
@@ -676,6 +717,7 @@ lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
                                             free_scales = TRUE,
                                             identification = "mean",
                                             nu_list = NULL, a_mat = NULL,
+                                            nu_row_idx = NULL,
                                             mean_fixed_first = TRUE) {
   ngroups <- length(lambda_list)
   m <- ncol(lambda_list[[1L]])
@@ -727,7 +769,7 @@ lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       mg_agreement_epsilon = mg_agreement_epsilon,
       w = w, scale = FALSE, group_weights = group_weights,
-      nu_list = nu_list, mean_list = mean_list, grad = grad
+      nu_list = nu_list, nu_row_idx = nu_row_idx, mean_list = mean_list, grad = grad
     )
     attr(out, "ll") <- ll
     attr(out, "c") <- u$c
@@ -827,6 +869,7 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
                                      identification = "mean",
                                      intercepts = "none",
                                      nu_list = NULL,
+                                     nu_row_idx = NULL,
                                      rstarts = 0L,
                                      c_init = NULL, # warm start (scales)
                                      a_init = NULL) { # warm start (means)
@@ -850,6 +893,10 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
       a_start <- a_init
     }
     c_mat <- NULL
+    # the value and convergence of every start (the multimodality
+    # diagnostic of lavInspect(, "rotation"))
+    start_value <- rep(Inf, rstarts + 1L)
+    start_converged <- logical(rstarts + 1L)
     for (i in seq_len(rstarts + 1L)) {
       if (i > 1L) {
         if (free_scales) {
@@ -870,9 +917,13 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
         mg_agreement_epsilon = mg_agreement_epsilon,
         w = mg_agreement_weight, group_weights = group_weights,
         free_scales = free_scales, identification = identification,
-        nu_list = nu_list, a_mat = a_start,
+        nu_list = nu_list, nu_row_idx = nu_row_idx, a_mat = a_start,
         mean_fixed_first = (intercepts == "fixed")
       )
+      if (!is.null(attr(c_i, "value"))) {
+        start_value[i] <- attr(c_i, "value")
+      }
+      start_converged[i] <- isTRUE(attr(c_i, "converged"))
       if (is.null(c_mat) || isTRUE(attr(c_i, "value") < attr(c_mat, "value"))) {
         c_mat <- c_i
       }
@@ -928,6 +979,9 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
   if (align_means) {
     info$means <- a_mat
   }
+  if (free_scales || align_means) {
+    info$starts <- list(value = start_value, converged = start_converged)
+  }
   attr(rot_list, "info") <- info
 
   rot_list
@@ -957,6 +1011,7 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
                                   identification = "mean",
                                   intercepts = "none",
                                   nu_list = NULL,
+                                  nu_row_idx = NULL,
                                   max_iter = 10000L) {
   ngroups <- length(a_list)
   m <- ncol(a_list[[1L]])
@@ -1010,7 +1065,7 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
       w = mg_agreement_weight, scale = scale,
       identification = identification,
       group_weights = group_weights,
-      nu_list = nu_list, mean_list = mean_list, grad = grad
+      nu_list = nu_list, nu_row_idx = nu_row_idx, mean_list = mean_list, grad = grad
     )
   }
   # gradient with respect to the factor means (masked)

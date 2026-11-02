@@ -16,8 +16,12 @@
 # translate a subset of the latent variables by t (a vector over all lv's,
 # zero for the others): eta' = eta + t. The model-implied moments are
 # unchanged when alpha' = alpha + (I - B) t and nu' = nu - lambda t. Used
-# by the alignment of the intercepts (mg_agreement_intercepts)
-lav_model_efa_apply_translation <- function(mlist = NULL, t_vec = NULL) {
+# by the alignment of the intercepts (mg_agreement_intercepts). For an
+# ordered indicator (th_idx: the indicator of every threshold, zero for the
+# continuous ones) the intercept stays zero and the thresholds shift by
+# +lambda t instead (the implied thresholds are tau - nu - lambda alpha)
+lav_model_efa_apply_translation <- function(mlist = NULL, t_vec = NULL,
+                                            th_idx = NULL) {
   if (!is.null(mlist$alpha)) {
     shift <- t_vec
     if (!is.null(mlist$beta)) {
@@ -26,9 +30,39 @@ lav_model_efa_apply_translation <- function(mlist = NULL, t_vec = NULL) {
     mlist$alpha <- mlist$alpha + shift
   }
   if (!is.null(mlist$nu)) {
-    mlist$nu <- mlist$nu - as.numeric(mlist$lambda %*% t_vec)
+    shift_ov <- as.numeric(mlist$lambda %*% t_vec)
+    th_ov <- integer(0L)
+    if (!is.null(mlist$tau) && !is.null(th_idx)) {
+      th_ov <- th_idx[th_idx > 0L]
+      mlist$tau[, 1L] <- mlist$tau[, 1L] + shift_ov[th_ov]
+      shift_ov[unique(th_ov)] <- 0
+    }
+    mlist$nu <- mlist$nu - shift_ov
   }
   mlist
+}
+
+# the intercept-like parameters of a set of indicators (the rows ov_idx of
+# lambda): the intercepts of the continuous indicators and the thresholds
+# of the ordered ones (with the sign reversed), with the row of lambda every
+# entry belongs to (row_idx, relative to ov_idx). The translation eta' =
+# eta + t shifts the intercepts by -lambda t and the thresholds by +lambda
+# t, so -tau transforms like nu, and the alignment loss (symmetric in the
+# sign of a difference) treats both alike
+lav_model_efa_intercepts <- function(mlist = NULL, ov_idx = NULL,
+                                     th_idx = NULL) {
+  nu <- as.numeric(mlist$nu[ov_idx, 1L])
+  row_idx <- seq_along(ov_idx)
+  if (is.null(th_idx) || length(th_idx) == 0L || is.null(mlist$tau)) {
+    return(list(values = nu, row_idx = row_idx))
+  }
+  th_ov <- th_idx[th_idx > 0L]
+  ord_flag <- ov_idx %in% th_ov
+  sel <- which(th_ov %in% ov_idx)
+  list(
+    values = c(nu[!ord_flag], -1 * as.numeric(mlist$tau[sel, 1L])),
+    row_idx = c(row_idx[!ord_flag], match(th_ov[sel], ov_idx))
+  )
 }
 
 lav_model_efa_apply_hg <- function(mlist = NULL, hg = NULL) {
@@ -46,6 +80,12 @@ lav_model_efa_apply_hg <- function(mlist = NULL, hg = NULL) {
   # 4. alpha
   if (!is.null(mlist$alpha)) {
     mlist$alpha <- t(hg) %*% mlist$alpha
+  }
+
+  # 5. gamma (conditional.x: the regressions of the latent variables on
+  #    the exogenous covariates transform like alpha)
+  if (!is.null(mlist$gamma)) {
+    mlist$gamma <- t(hg) %*% mlist$gamma
   }
 
   mlist
@@ -258,6 +298,9 @@ lav_model_efa_rotation_info <- function(res = NULL, set_name = NULL,
     out$mg_agreement_scales <- res$mg_agreement_scales
     out$mg_agreement_intercepts <- res$mg_agreement_intercepts
     out$mg_agreement_identification <- res$mg_agreement_identification
+    out$mg_agreement_reference_group <- res$reference_group
+    # the random starts over the scales and means (scales-only mode)
+    out$scales_starts <- res$starts
     if (!is.null(res$meanList)) {
       means <- res$meanList[[group]]
       names(means) <- lv_names
@@ -587,6 +630,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
             "mg_agreement_std_ov = TRUE requires the sample sizes of all
              groups."))
         }
+        if (lavmodel@conditional.x) {
+          lav_msg_stop(gettext(
+            "mg_agreement_std_ov = TRUE is not available with conditional.x =
+             TRUE."))
+        }
         ov_var_list <- vector("list", length = lavmodel@ngroups)
         mu_list <- vector("list", length = lavmodel@ngroups)
         for (g in seq_len(lavmodel@ngroups)) {
@@ -614,6 +662,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
       # intercept alignment: the intercepts of the indicators of this set
       nu_list <- NULL
+      nu_row_idx <- NULL
       if (ropts$mg_agreement_intercepts != "none") {
         nu_list <- vector("list", length = lavmodel@ngroups)
         for (g in seq_len(lavmodel@ngroups)) {
@@ -625,11 +674,6 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
               "the alignment of the intercepts (mg_agreement_intercepts)
                requires a mean structure (meanstructure = TRUE)."))
           }
-          if (lavmodel@categorical || lavmodel@conditional.x) {
-            lav_msg_stop(gettext(
-              "the alignment of the intercepts (mg_agreement_intercepts) is
-               not available for categorical data or conditional.x = TRUE."))
-          }
           dummy_idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
                          lavmodel@ov.x.dummy.ov.idx[[g]])
           if (length(intersect(ov_idx, dummy_idx)) > 0L) {
@@ -638,9 +682,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                not available when an indicator of an efa block is also a
                predictor or an outcome in a regression."))
           }
-          nu_list[[g]] <- as.numeric(mlist_g$nu[ov_idx, 1L])
+          # the intercepts and (for ordered indicators) the thresholds
+          nu_g <- lav_model_efa_intercepts(mlist_g, ov_idx,
+                                           th_idx = lavmodel@th.idx[[g]])
+          nu_list[[g]] <- nu_g$values
+          nu_row_idx <- nu_g$row_idx # assumed equal across groups!
           if (!is.null(sd_pooled)) {
-            nu_list[[g]] <- nu_list[[g]] / sd_pooled
+            nu_list[[g]] <- nu_list[[g]] / sd_pooled[nu_row_idx]
           }
         }
       }
@@ -723,6 +771,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mg_agreement_intercepts = ropts$mg_agreement_intercepts,
         mg_agreement_identification = ropts$mg_agreement_identification,
         nu_list = nu_list,
+        nu_row_idx = nu_row_idx,
+        reference_group = ropts$mg_agreement_reference_group,
         std_ov = isTRUE(ropts$mg_agreement_std_ov),
         ov_var_list = ov_var_list,
         pairwise_accelerate = ropts$pairwise_accelerate,
@@ -745,7 +795,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       if (ropts$mg_agreement_scales != "free") {
         ss_list <- lapply(res$lambdaList, function(x) colSums(x * x))
         ss_ave <- lav_mat_rotate_mg_ss_ref(ss_list,
-                                           ropts$mg_agreement_identification)
+                                           ropts$mg_agreement_identification,
+                                           ropts$mg_agreement_reference_group)
         for (g in seq_len(lavmodel@ngroups)) {
           scale_g <- sqrt(ss_list[[g]] / ss_ave)
           res$rotList[[g]] <- t(t(res$rotList[[g]]) * scale_g)
@@ -796,7 +847,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       # when alpha' = alpha + (I - B) t and nu' = nu - lambda t
       t_g <- mean_1[[g]]
       if (any(t_g != 0)) {
-        mlist <- lav_model_efa_apply_translation(mlist, t_g)
+        mlist <- lav_model_efa_apply_translation(mlist, t_g,
+                                                 th_idx = lavmodel@th.idx[[g]])
       }
 
       glist[mm_in_group] <- mlist

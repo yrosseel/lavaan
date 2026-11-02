@@ -586,11 +586,12 @@ lav_mat_rotate_bigeomin <- function(mm_lambda, geomin_epsilon = 0.01, ...,
 # with c_hj = sum_i gt_h[i, j] lambda_tilde_h[i, j]
 # the common column sum of squares of the equal-scale rescaling: the
 # group average, the geometric mean or the first group's
-lav_mat_rotate_mg_ss_ref <- function(ss_list, identification = "mean") {
+lav_mat_rotate_mg_ss_ref <- function(ss_list, identification = "mean",
+                                     reference_group = 1L) {
   switch(identification,
     mean = Reduce("+", ss_list) / length(ss_list),
     product = exp(Reduce("+", lapply(ss_list, log)) / length(ss_list)),
-    reference = ss_list[[1L]]
+    reference = ss_list[[reference_group]]
   )
 }
 
@@ -602,6 +603,7 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
                                    identification = "mean",
                                    group_weights = NULL,
                                    nu_list = NULL, mean_list = NULL,
+                                   nu_row_idx = NULL,
                                    grad = FALSE) {
   ngroups <- length(lambda_list)
   lambda_orig <- lambda_list
@@ -611,8 +613,13 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
   # intercept alignment: nu_list are the (unrotated) intercepts of the
   # indicators, mean_list the factor means; the aligned intercepts are
   # nu_g - lambda_g mean_g (lambda_g the scaled loadings), and the
-  # agreement term is applied to them as well
+  # agreement term is applied to them as well. nu_row_idx maps every entry
+  # of nu_list to a row of lambda (several entries per row for the
+  # thresholds of an ordered indicator; the default is one per row)
   align_means <- !is.null(nu_list) && !is.null(mean_list)
+  if (align_means && is.null(nu_row_idx)) {
+    nu_row_idx <- seq_len(nrow(lambda_list[[1L]]))
+  }
 
   # 0. rescale, so all columns have the same sum-of-squares: the group
   #    average (identification = "mean"), the geometric mean ("product")
@@ -688,7 +695,8 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
   a_nu <- 0
   if (align_means) {
     nu_list <- lapply(seq_len(ngroups), function(g) {
-      as.numeric(nu_list[[g]] - lambda_list[[g]] %*% mean_list[[g]])
+      as.numeric(nu_list[[g]] -
+        lambda_list[[g]][nu_row_idx, , drop = FALSE] %*% mean_list[[g]])
     })
     if (grad) {
       gn_list <- lapply(nu_list, function(x) x * 0)
@@ -741,8 +749,12 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
         agr <- agr_list[[g]]
       }
       if (align_means) {
-        # d a_nu / d lambda_g = - gn_g mean_g'
-        agr <- agr - tcrossprod(gn_list[[g]], mean_list[[g]])
+        # d a_nu / d lambda_g = - gn_g mean_g' (summed over the entries
+        # that share a row of lambda)
+        gn_rows <- rowsum(tcrossprod(gn_list[[g]], mean_list[[g]]),
+                          group = nu_row_idx, reorder = TRUE)
+        row_set <- as.integer(rownames(gn_rows))
+        agr[row_set, ] <- agr[row_set, , drop = FALSE] - gn_rows
       }
       gt_list[[g]] <- (1 - w) * group_weights[g] * gq_list[[g]] + w * agr
     }
@@ -769,7 +781,8 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
     if (align_means) {
       # gradient with respect to the factor means: - w lambda_g' gn_g
       attr(out, "grad_mean") <- lapply(seq_len(ngroups), function(g) {
-        -1 * w * as.numeric(crossprod(lambda_list[[g]], gn_list[[g]]))
+        -1 * w * as.numeric(crossprod(
+          lambda_list[[g]][nu_row_idx, , drop = FALSE], gn_list[[g]]))
       })
     }
   }

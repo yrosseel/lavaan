@@ -215,7 +215,18 @@ are:
     alignment loss directly in that metric is degenerate). With equal
     scales, the common column sum of squares is the group average, the
     geometric mean, or the first group's.}
-  \item{\code{mg_agreement_std_ov}}{Logical (default \code{FALSE}). If
+  \item{\code{mg_agreement_reference_group}}{The reference group of the
+    agreement rotation (default 1): a group number or a group label. Its
+    factor variances are one under \code{mg_agreement_identification =
+    "reference"}, its factor means are zero under
+    \code{mg_agreement_intercepts = "fixed"}, and the factors of the other
+    groups are matched to its factors. In the scales-only mode
+    (\code{mg_agreement_rotate = FALSE}) a warning is given when the best
+    solution was reached by a single random start (local optima), and with
+    \code{mg_agreement_intercepts = "free"} when the alignment of the means
+    is poorly identified (see \code{\link{alignment}}).}
+  \item{\code{mg_agreement_std_ov}}{Logical (default \code{FALSE}; not
+    available with \code{conditional.x = TRUE}). If
     \code{TRUE}, the agreement objective (and the per-group rotation that
     provides its starting point) is evaluated on the loadings of the
     indicators standardized over the entire population (the model-implied
@@ -225,8 +236,9 @@ are:
     representation.}
   \item{\code{mg_agreement_intercepts}}{\code{"none"} (the default),
     \code{"fixed"} or \code{"free"}: the alignment of the intercepts
-    (requires a mean structure; not available for categorical data or
-    \code{conditional.x = TRUE}). The means of the efa factors become
+    (requires a mean structure; with exogenous covariates, the aligned
+    factor means are the intercepts of the factors given the covariates).
+    The means of the efa factors become
     variables of the agreement objective (\code{"fixed"}: zero in the
     first group; \code{"free"}: free in every group, which needs more
     than two groups and some non-invariance to be identified), and the
@@ -235,7 +247,11 @@ are:
     with the loadings. The rotated model is translated accordingly (the
     factor means and the intercepts change, the model-implied moments do
     not); the aligned factor means are parameters of the rotated model,
-    with standard errors.}
+    with standard errors. For ordered indicators, the thresholds take the
+    place of the intercepts: every threshold is a component of the
+    agreement term, and the aligned thresholds are the unrotated
+    thresholds plus the loadings times the factor means (the intercepts
+    of ordered indicators stay fixed to zero).}
   \item{\code{mg_agreement_scales}}{\code{"equal"} (the default) or
     \code{"free"}: how the scale of each factor is split over the groups.
     The agreement criterion is evaluated on loadings whose factors have,
