@@ -85,7 +85,18 @@ lav_efa_get_loadings <- function(object, ...) {
 # determine the column order for a (rotated or unrotated) loading matrix,
 # according to 'order_lv_by': "sumofsquares", "index" (Asparouhov & Muthen
 # 2009, Appendix D) or "none". Returns an integer permutation vector.
-lav_efa_order_idx <- function(mm_lambda = NULL, order_lv_by = "index") {
+#
+# general_first = TRUE (bifactor rotation: the first column is the general
+# factor by construction) keeps the first column in place and applies the
+# ordering rule to the remaining (specific) factors only
+lav_efa_order_idx <- function(mm_lambda = NULL, order_lv_by = "index",
+                              general_first = FALSE) {
+  if (general_first && ncol(mm_lambda) > 1L) {
+    order_idx <- lav_efa_order_idx(mm_lambda[, -1L, drop = FALSE],
+      order_lv_by = order_lv_by, general_first = FALSE
+    )
+    return(c(1L, order_idx + 1L))
+  }
   if (order_lv_by == "sumofsquares") {
     l2 <- mm_lambda * mm_lambda
     order_idx <- base::order(colSums(l2), decreasing = TRUE)
@@ -144,10 +155,22 @@ lav_efa_permutations <- function(m = 1L) {
 }
 
 # return the optimal order of the column for lambda_target
+#
+# general_first = TRUE (bifactor rotation) keeps the first column (the
+# general factor) in place and permutes the remaining columns only
 lav_efa_find_best_order <- function(lambda_ref = NULL, lambda_target = NULL,
-                                    crit = "rmse") {
+                                    crit = "rmse", general_first = FALSE) {
   m <- ncol(lambda_ref)
   stopifnot(ncol(lambda_target) == m)
+
+  if (general_first && m > 1L) {
+    order_idx <- lav_efa_find_best_order(
+      lambda_ref = lambda_ref[, -1L, drop = FALSE],
+      lambda_target = lambda_target[, -1L, drop = FALSE],
+      crit = crit, general_first = FALSE
+    )
+    return(c(1L, order_idx + 1L))
+  }
 
   # all possible permutations
   perm <- lav_efa_permutations(m)
@@ -178,7 +201,12 @@ lav_efa_find_best_order <- function(lambda_ref = NULL, lambda_target = NULL,
 # non-zero (+1 or -1) entry per row/column. Applying it as an extra 'rotation'
 # transforms all factor-related model matrices consistently (see
 # lav_efa_bootstrap_align_coef()).
-lav_efa_align_signed_perm <- function(lambda = NULL, lambda_ref = NULL) {
+#
+# general_first = TRUE (bifactor rotation): the first column is the general
+# factor and is never permuted (only its sign is aligned); the signed
+# permutation search runs over the remaining (specific) factors only
+lav_efa_align_signed_perm <- function(lambda = NULL, lambda_ref = NULL,
+                                      general_first = FALSE) {
   m <- ncol(lambda)
   stopifnot(ncol(lambda_ref) == m)
 
@@ -186,6 +214,17 @@ lav_efa_align_signed_perm <- function(lambda = NULL, lambda_ref = NULL) {
   if (m < 2L) {
     s <- if (sum(lambda * lambda_ref) < 0) -1 else 1
     return(matrix(s, 1L, 1L))
+  }
+
+  if (general_first) {
+    tt <- matrix(0, m, m)
+    tt[1L, 1L] <- if (sum(lambda[, 1L] * lambda_ref[, 1L]) < 0) -1 else 1
+    tt[-1L, -1L] <- lav_efa_align_signed_perm(
+      lambda = lambda[, -1L, drop = FALSE],
+      lambda_ref = lambda_ref[, -1L, drop = FALSE],
+      general_first = FALSE
+    )
+    return(tt)
   }
 
   # all possible column permutations

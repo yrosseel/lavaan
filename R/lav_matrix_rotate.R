@@ -356,8 +356,15 @@ lav_mat_rotate <- function(a = NULL, # original matrix
     }
   }
 
-  # 4.b reorder the columns
-  order_idx <- lav_efa_order_idx(mm_lambda, order_lv_by)
+  # 4.b reorder the columns; for a bifactor rotation, the first column is
+  #     the general factor and stays in place: the ordering rule is applied
+  #     to the specific factors only
+  bifactor_flag <- method %in% c(
+    "bi-geomin", "bigeomin", "bi-quartimin", "biquartimin"
+  )
+  order_idx <- lav_efa_order_idx(mm_lambda, order_lv_by,
+    general_first = bifactor_flag
+  )
 
   # do the same in PHI
   mm_lambda <- mm_lambda[, order_idx, drop = FALSE]

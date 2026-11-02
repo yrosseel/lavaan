@@ -51,8 +51,12 @@ lav_efa_bootstrap_lambda_list <- function(lavmodel = NULL, glist = NULL) {
 # the rotated factors (loadings, factor (co)variances, structural coefficients,
 # factor means) is transformed consistently. This makes the approach valid for
 # ESEM (factors embedded in a larger structural model), not just plain EFA.
+#
+# general_first = TRUE (bifactor rotation): the first factor of each set is
+# the general factor and is never permuted (see lav_efa_align_signed_perm())
 lav_efa_bootstrap_align_coef <- function(lavmodel = NULL, lavpartable = NULL,
-                                         ref_lambda = NULL) {
+                                         ref_lambda = NULL,
+                                         general_first = FALSE) {
   glist <- lavmodel@GLIST
   for (g in seq_len(lavmodel@nblocks)) {
     mm_in_group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
@@ -70,7 +74,9 @@ lav_efa_bootstrap_align_coef <- function(lavmodel = NULL, lavpartable = NULL,
       ov_idx <- lavmodel@ov.efa.idx[[g]][[set]]
       lv_idx <- lavmodel@lv.efa.idx[[g]][[set]]
       lambda_b <- mlist$lambda[ov_idx, lv_idx, drop = FALSE]
-      tt <- lav_efa_align_signed_perm(lambda = lambda_b, lambda_ref = ref)
+      tt <- lav_efa_align_signed_perm(
+        lambda = lambda_b, lambda_ref = ref, general_first = general_first
+      )
       hg[lv_idx, lv_idx] <- tt
       changed <- TRUE
     }

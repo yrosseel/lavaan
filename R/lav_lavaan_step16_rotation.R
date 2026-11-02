@@ -140,7 +140,11 @@ lav_step16_rotation <- function(lavoptions = NULL,
       efa_ref <- list(
         ref_lambda = ref_lambda,
         npar = length(free_idx),
-        names = lav_pt_labels(lavpartable, type = "free")
+        names = lav_pt_labels(lavpartable, type = "free"),
+        # bifactor rotation: the general factor stays the first factor
+        general_first = tolower(lavoptions$rotation) %in% c(
+          "bi-geomin", "bigeomin", "bi-quartimin", "biquartimin"
+        )
       )
 
       # run the bootstrap on the unrotated model

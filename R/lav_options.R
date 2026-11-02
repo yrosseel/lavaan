@@ -1777,13 +1777,8 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
-  # override if bifactor
-  if (any(opt$rotation == c(
-    "bi-geomin", "bigeomin", "bi-quartimin",
-    "biquartimin"
-  ))) {
-    opt$rotation.args$order_lv_by <- "none"
-  }
+  # (bifactor rotation: order_lv_by is applied to the specific factors only;
+  # the general factor stays in the first column -- see lav_mat_rotate())
 
   # no standard errors for promax (for now)...
   if (opt$rotation == "promax") {

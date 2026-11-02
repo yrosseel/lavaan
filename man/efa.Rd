@@ -50,7 +50,9 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    \code{algorithm = "gpa"} (or \code{"pairwise"}), \code{rstarts = 30},
    \code{gpa_tol = 1e-05}, \code{tol = 1e-08}, \code{max_iter = 10000L},
    \code{warn = FALSE}, \code{verbose = FALSE}, \code{reflect = TRUE},
-   \code{order_lv_by = "index"} (or \code{"sumofsquares"} or \code{"none"}).
+   \code{order_lv_by = "index"} (or \code{"sumofsquares"} or \code{"none"};
+   for bifactor rotation, the general factor always stays in the first
+   position and the ordering rule is applied to the specific factors only).
    Since version 0.7-2 (and similar to version 2026.6 of the GPArotation
    package), the gradient projection algorithm determines the step size
    using the Barzilai-Borwein method, combined with a non-monotone line

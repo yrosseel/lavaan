@@ -149,7 +149,9 @@ are:
     \code{"index"} (the default; the factor whose largest loading is on the
     earliest indicator comes first), \code{"sumofsquares"} or
     \code{"none"}. For target rotation, the order is always \code{"none"}
-    (the order of the columns of the target matrix).}
+    (the order of the columns of the target matrix). For bifactor rotation,
+    the general factor always stays in the first position, and the ordering
+    rule is applied to the specific factors only.}
   \item{\code{mg_agreement}}{Logical. For multiple-group models only. If
     \code{TRUE}, the rotated solutions of the groups are made as similar as
     possible (see also \code{mg_agreement_weight},

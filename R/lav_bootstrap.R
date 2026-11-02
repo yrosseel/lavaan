@@ -528,7 +528,8 @@ lav_bootstrap_internal <- function(object = NULL,
           # factors (sign + order) to the original solution (see #376)
           out <- try(lav_efa_bootstrap_align_coef(
             lavmodel = fit_boot@Model, lavpartable = fit_boot@ParTable,
-            ref_lambda = efa_reference$ref_lambda
+            ref_lambda = efa_reference$ref_lambda,
+            general_first = isTRUE(efa_reference$general_first)
           ), silent = TRUE)
           if (inherits(out, "try-error")) {
             if (show_progress) {

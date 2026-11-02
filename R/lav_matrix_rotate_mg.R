@@ -101,6 +101,11 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   method <- tmp_resolve$method
   method_fname <- tmp_resolve$method_fname
   method_args <- tmp_resolve$method_args
+  # bifactor rotation: the first column is the general factor and stays in
+  # place when the groups are aligned to the first group
+  bifactor_flag <- method %in% c(
+    "bi-geomin", "bigeomin", "bi-quartimin", "biquartimin"
+  )
 
   # set orthogonal option
   if (missing(orthogonal)) {
@@ -154,7 +159,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       # reorder factors to align with the first group
       order_idx <- lav_efa_find_best_order(
         lambda_ref = a_list[[1]],
-        lambda_target = res0$mm_lambda
+        lambda_target = res0$mm_lambda,
+        general_first = bifactor_flag
       )
       a_list[[g]] <- res0$mm_lambda[, order_idx, drop = FALSE]
       order_list[[g]] <- order_idx
