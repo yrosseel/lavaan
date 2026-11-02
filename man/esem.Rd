@@ -175,9 +175,19 @@ are:
     sizes in the agreement criterion (the per-group criteria by the group
     weight, and each pair of groups in the agreement term by the product
     of the two weights).}
+  \item{\code{mg_agreement_algorithm}}{\code{"pairwise"} (the default)
+    or \code{"gpa"}: the algorithm for the agreement rotation of all
+    groups together (the plane-sweep algorithm, or the gradient projection
+    algorithm on the rotation matrices of all groups jointly).}
   \item{\code{gpa_tol}, \code{tol}, \code{max_iter}, \code{warn},
     \code{verbose}}{Convergence tolerances, the maximum number of
-    iterations, and reporting options of the rotation algorithm.}
+    iterations, and reporting options of the rotation algorithm.
+    \code{gpa_tol} (default \code{1e-05}) is the tolerance on the
+    projected gradient of the criterion, used by both algorithms;
+    \code{tol} (default \code{1e-08}) is the tolerance on the change of the
+    criterion between sweeps, used only by the derivative-free plane search
+    of the pairwise algorithm (simplimax, or a criterion without a
+    gradient).}
 }
 A complete list (with defaults) is given in the description of the
 \code{rotation} argument of \code{\link{efa}}.

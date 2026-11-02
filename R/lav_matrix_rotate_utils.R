@@ -142,6 +142,23 @@ lav_mat_rotate_is_smooth <- function(method_fname = NULL) {
   !identical(method_fname, "lav_mat_rotate_simplimax")
 }
 
+# is the criterion, restricted to a plane rotation by angle t (orthogonal
+# rotation), of the form a + b cos(4t) + c sin(4t)? This holds for the
+# criteria that are quartic polynomials in the loadings whose cross-column
+# terms only involve plane-invariant quantities: the orthomax family
+# (quartimax, varimax, ...), the Crawford-Ferguson family, oblimin and
+# quartimin. For these, two evaluations give the exact plane minimizer
+# (see lav_mat_rotate_pairwise_core()). Not biquartimin: its general
+# factor is excluded from the criterion, so a plane that involves the
+# first column is not of this form
+lav_mat_rotate_is_plane_quartic <- function(method_fname = NULL) {
+  method_fname %in% c(
+    "lav_mat_rotate_orthomax", "lav_mat_rotate_quartimax",
+    "lav_mat_rotate_varimax", "lav_mat_rotate_cf",
+    "lav_mat_rotate_oblimin", "lav_mat_rotate_quartimin"
+  )
+}
+
 # resolve the rotation criterion shared by lav_mat_rotate() and
 # lav_mat_rotate_mg(): map the (already lower-cased) method name to its gradient
 # function ('method_fname'), fill in the method-specific cf_gamma for the

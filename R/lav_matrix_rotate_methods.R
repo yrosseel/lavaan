@@ -620,17 +620,19 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
   }
   q_mg <- sum(group_weights * q_group)
 
-  # 2. agreement (generalized procrustes) across all groups
+  # 2. agreement (generalized procrustes) across all groups:
+  #    sum_{g < h} omega_g omega_h ||lambda_g - lambda_h||^2
+  #      = (sum_g omega_g) (sum_g omega_g ||lambda_g||^2)
+  #        - ||sum_g omega_g lambda_g||^2
   if (mg_agreement_method == "procrustes") {
-    a_mg <- 0
-    pairs <- utils::combn(seq_len(ngroups), 2L)
-    for (p in seq_len(ncol(pairs))) {
-      g1 <- pairs[1L, p]
-      g2 <- pairs[2L, p]
-      diff <- (lambda_list[[g1]] - lambda_list[[g2]])
-      diff2 <- diff * diff
-      a_mg <- a_mg + group_weights[g1] * group_weights[g2] * sum(diff2)
+    w_sum <- sum(group_weights)
+    lambda_wsum <- group_weights[1L] * lambda_list[[1L]]
+    ss_wsum <- group_weights[1L] * sum(lambda_list[[1L]]^2)
+    for (g in seq_len(ngroups)[-1L]) {
+      lambda_wsum <- lambda_wsum + group_weights[g] * lambda_list[[g]]
+      ss_wsum <- ss_wsum + group_weights[g] * sum(lambda_list[[g]]^2)
     }
+    a_mg <- w_sum * ss_wsum - sum(lambda_wsum^2)
   } else {
     lav_msg_stop(gettext(
       "only mg_agreement_method procrustes is supported for now"))
@@ -648,10 +650,6 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       return(out)
     }
     # gradient with respect to the (scaled) loading matrices
-    lambda_wsum <- Reduce("+", lapply(seq_len(ngroups), function(h) {
-      group_weights[h] * lambda_list[[h]]
-    }))
-    w_sum <- sum(group_weights)
     gt_list <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
       # d a_mg / d lambda_g = 2 omega_g sum_{h != g} omega_h (lambda_g -

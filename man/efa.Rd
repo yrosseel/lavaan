@@ -49,7 +49,10 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    \code{"cureton.mulaik"} or \code{"none"}), \code{std_ov = TRUE},
    \code{algorithm = "gpa"} (or \code{"pairwise"}),
    \code{pairwise_accelerate = TRUE}, \code{rstarts = 30},
-   \code{gpa_tol = 1e-05}, \code{tol = 1e-08}, \code{max_iter = 10000L},
+   \code{gpa_tol = 1e-05} (tolerance on the projected gradient, for both
+   algorithms), \code{tol = 1e-08} (tolerance on the change of the
+   criterion, derivative-free pairwise search only),
+   \code{max_iter = 10000L},
    \code{warn = FALSE}, \code{verbose = FALSE}, \code{reflect = TRUE},
    \code{order_lv_by = "index"} (or \code{"sumofsquares"} or \code{"none"};
    for bifactor rotation, the general factor always stays in the first

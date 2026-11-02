@@ -746,6 +746,7 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
     lambda_list = list(mm_lambda), phi_list = list(phi),
     orthogonal = orthogonal, objf = objf,
     use_grad = lav_mat_rotate_is_smooth(method_fname),
+    plane_quartic = lav_mat_rotate_is_plane_quartic(method_fname),
     accelerate = accelerate,
     gpa_tol = gpa_tol, tol = tol, max_iter = max_iter
   )
@@ -795,6 +796,11 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
 # - the directional derivative g0 of the objective along a plane rotation
 #   is an inner product of the current gradient with the plane direction,
 #   so it costs nothing; planes with |g0| below skip_tol are skipped
+# - for an orthogonal rotation with a criterion whose plane objective is
+#   a + b cos(4t) + c sin(4t) (plane_quartic = TRUE; the orthomax,
+#   Crawford-Ferguson and oblimin families, see
+#   lav_mat_rotate_is_plane_quartic()), the exact plane minimizer follows
+#   from the values at t = 0 and t = +/- pi/8 (three evaluations per plane)
 # - otherwise the plane objective is minimized along the plane by a
 #   safeguarded secant (Illinois) iteration on the directional derivative:
 #   a first (Newton) trial step from the curvature remembered for this
@@ -827,6 +833,7 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
                                          orthogonal = FALSE,
                                          objf = NULL,
                                          use_grad = TRUE,
+                                         plane_quartic = FALSE,
                                          accelerate = TRUE,
                                          gpa_tol = 1e-5,
                                          tol = 1e-8,
@@ -834,6 +841,8 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
                                          plane_max_eval = 12L) {
   ngroups <- length(lambda_list)
   m <- ncol(lambda_list[[1L]])
+
+  plane_quartic <- plane_quartic && orthogonal
 
   # starting point + cumulative transformation per group (for the
   # sweep-level extrapolation): lambda_g = lambda_0_g %*% m_g, and
@@ -981,6 +990,28 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
           )
         }
 
+        best <- NULL
+        if (plane_quartic) {
+          # the plane objective is a + b cos(4t) + c sin(4t): the value and
+          # the derivative at t = 0 (both known: a + b and 4c) and the value
+          # at t = pi/8 (a + c) give a, b, c; the minimizer is
+          # 4t = atan2(c, b) + pi
+          lambda_list[[g]] <- plane_apply(mm_lambda, c1, c2, pi / 8)$mm_lambda
+          f_plus <- as.numeric(objf(lambda_list, grad = FALSE))
+          neval <- neval + 1L
+          c_q <- g0 / 4
+          a_q <- f_plus - c_q
+          b_q <- q_current - a_q
+          t_q <- (atan2(c_q, b_q) + pi) / 4
+          t_q <- ((t_q + pi / 4) %% (pi / 2)) - pi / 4
+          ps <- eval_t(t_q)
+          neval <- neval + 1L
+          if (is.finite(ps$q) && ps$q < q_current) {
+            best <- ps
+          }
+          # curvature at the minimizer: 16 sqrt(b^2 + c^2)
+          curv_pl[pl, g] <- 16 * sqrt(b_q * b_q + c_q * c_q)
+        } else {
         # 1. first trial step: Newton step from the remembered curvature,
         #    or a fixed fraction of the maximal step in the descent direction
         curv <- curv_pl[pl, g]
@@ -996,7 +1027,6 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
         pa <- list(t = 0, q = q_current, g = g0)
         pb <- eval_t(t1)
         neval <- neval + 1L
-        best <- NULL
         if (is.finite(pb$q) && pb$q < q_current) {
           best <- pb
         }
@@ -1057,6 +1087,7 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
         if (is.finite(pb$g) && is.finite(pa$g) && abs(pb$t - pa$t) > 0) {
           curv_pl[pl, g] <- (pb$g - pa$g) / (pb$t - pa$t)
         }
+        } # secant plane search
 
         # 4. accept the best evaluated point (if it improves the objective)
         if (is.null(best) || !(best$q < q_current)) {

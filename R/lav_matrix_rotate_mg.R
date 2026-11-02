@@ -180,26 +180,41 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
     }
   } # group
 
-  # rotate: mg-pairwise + agreement
+  # rotate: all groups together + agreement
   # (note: rstarts only affects the per-group initial rotation above)
   if (lav_verbose()) {
-    cat("  mg-pairwise + agreement rotation:\n")
+    cat("  mg-", mg_algorithm, " + agreement rotation:\n", sep = "")
   }
-  rot_list <- lav_mat_rotate_pairwise_mg(
-    a_list = a_list,
-    phi_list = phi_list,
-    orthogonal = orthogonal,
-    random_rot = FALSE,
-    method_fname = method_fname,
-    method_args = method_args,
-    mg_agreement_method = mg_agreement_method,
-    mg_agreement_weight = mg_agreement_weight,
-    group_weights = mg_agreement_group_weights,
-    accelerate = pairwise_accelerate,
-    gpa_tol = gpa_tol,
-    tol = tol,
-    max_iter = max_iter
-  )
+  if (mg_algorithm == "gpa") {
+    rot_list <- lav_mat_rotate_gpa_mg(
+      a_list = a_list,
+      phi_list = phi_list,
+      orthogonal = orthogonal,
+      method_fname = method_fname,
+      method_args = method_args,
+      mg_agreement_method = mg_agreement_method,
+      mg_agreement_weight = mg_agreement_weight,
+      group_weights = mg_agreement_group_weights,
+      gpa_tol = gpa_tol,
+      max_iter = max_iter
+    )
+  } else {
+    rot_list <- lav_mat_rotate_pairwise_mg(
+      a_list = a_list,
+      phi_list = phi_list,
+      orthogonal = orthogonal,
+      random_rot = FALSE,
+      method_fname = method_fname,
+      method_args = method_args,
+      mg_agreement_method = mg_agreement_method,
+      mg_agreement_weight = mg_agreement_weight,
+      group_weights = mg_agreement_group_weights,
+      accelerate = pairwise_accelerate,
+      gpa_tol = gpa_tol,
+      tol = tol,
+      max_iter = max_iter
+    )
+  }
   info <- attr(rot_list, "info")
   attr(rot_list, "info") <- NULL
   lambda_list <- vector("list", length = ngroups)
@@ -377,4 +392,226 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
   attr(rot_list, "info") <- info
 
   rot_list
+}
+
+
+# gradient projection algorithm for the multiple-group agreement objective
+# (lav_mat_rotate_mg_agreement()): the rotation matrices of all groups are
+# updated jointly, with the Barzilai-Borwein step size and the non-monotone
+# line search of lav_mat_rotate_gpa(). a_list/phi_list are the per-group
+# (pre-rotated) loading matrices and their factor correlations, as for
+# lav_mat_rotate_pairwise_mg(); returns the list of rotation matrices
+# relative to a_list (attribute "info" as for the other algorithms)
+lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
+                                  phi_list = NULL, # factor correlations
+                                  orthogonal = FALSE,
+                                  method_fname = NULL, # crit function
+                                  method_args = list(), # method args
+                                  gpa_tol = 1e-5,
+                                  gpa_fwindow = 10L,
+                                  mg_agreement_weight = 0.50,
+                                  mg_agreement_method = "procrustes",
+                                  group_weights = NULL,
+                                  scale = TRUE,
+                                  max_iter = 10000L) {
+  ngroups <- length(a_list)
+  m <- ncol(a_list[[1L]])
+  if (is.null(phi_list) || orthogonal) {
+    phi_list <- rep(list(diag(m)), ngroups)
+  }
+
+  # GPA parametrization: lambda_g = astar_g %*% solve(t(rot_g)), with
+  # rot_g' rot_g = phi_g; we start at rot_g = chol(phi_g), so that
+  # lambda_g = a_g at the start
+  rot_list <- lapply(phi_list, chol)
+  astar_list <- lapply(seq_len(ngroups), function(g) {
+    a_list[[g]] %*% t(rot_list[[g]])
+  })
+
+  objf <- function(lambda_list, grad = FALSE) {
+    lav_mat_rotate_mg_agreement(
+      lambda_list = lambda_list, method_fname = method_fname,
+      method_args = method_args, mg_agreement_method = mg_agreement_method,
+      w = mg_agreement_weight, scale = scale,
+      group_weights = group_weights, grad = grad
+    )
+  }
+  rotate_all <- function(rot_list) {
+    lapply(seq_len(ngroups), function(g) {
+      if (orthogonal) {
+        astar_list[[g]] %*% rot_list[[g]]
+      } else {
+        t(solve(rot_list[[g]], t(astar_list[[g]])))
+      }
+    })
+  }
+  # gradient of the objective with respect to rot_g, from the gradient gq
+  # with respect to lambda_g
+  grad_all <- function(rot_list, lambda_list, gq_list) {
+    lapply(seq_len(ngroups), function(g) {
+      if (orthogonal) {
+        crossprod(astar_list[[g]], gq_list[[g]])
+      } else {
+        -1 * solve(t(rot_list[[g]]), crossprod(gq_list[[g]], lambda_list[[g]]))
+      }
+    })
+  }
+  # projection onto the tangent space of the orthogonal/normal matrices
+  project_all <- function(rot_list, grad_list) {
+    lapply(seq_len(ngroups), function(g) {
+      rot <- rot_list[[g]]
+      grad <- grad_list[[g]]
+      if (orthogonal) {
+        mm <- crossprod(rot, grad)
+        grad - rot %*% ((mm + t(mm)) / 2)
+      } else {
+        grad - t(t(rot) * colSums(rot * grad))
+      }
+    })
+  }
+
+  lambda_list <- rotate_all(rot_list)
+  q_1 <- objf(lambda_list, grad = TRUE)
+  gq_list <- attr(q_1, "grad")
+  if (is.null(gq_list)) {
+    lav_msg_stop(gettext(
+      "mg_agreement_algorithm = \"gpa\" requires a rotation criterion with
+       a gradient."))
+  }
+  q_current <- as.numeric(q_1)
+  grad_list <- grad_all(rot_list, lambda_list, gq_list)
+
+  alpha <- 1
+  f_hist <- numeric(max_iter + 1L)
+  rot_prev <- NULL
+  gp_prev <- NULL
+  converged <- FALSE
+  degenerate <- FALSE
+  for (iter in seq_len(max_iter + 1L)) {
+    gp_list <- project_all(rot_list, grad_list)
+    frob <- sqrt(sum(unlist(gp_list)^2))
+    f_hist[iter] <- q_current
+    if (lav_verbose()) {
+      cat(
+        "  iter = ", sprintf("%4d", iter - 1L),
+        " Q = ", sprintf("%13.11f", q_current),
+        " frob.log10 = ", sprintf("%10.7f", log10(frob)),
+        " alpha = ", sprintf("%9.7f", alpha), "\n"
+      )
+    }
+    if (frob < gpa_tol) {
+      converged <- TRUE
+      break
+    }
+
+    # Barzilai-Borwein step size (over all groups jointly)
+    if (!is.null(rot_prev)) {
+      d_rot <- unlist(rot_list) - unlist(rot_prev)
+      d_gp <- unlist(gp_list) - unlist(gp_prev)
+      if (sum(d_gp * d_gp) > 0) {
+        alpha_new <- sum(d_rot * d_rot) / abs(sum(d_rot * d_gp))
+        if (is.finite(alpha_new)) {
+          alpha <- alpha_new
+        }
+        alpha <- max(1e-10, min(alpha, 20))
+      }
+    } else {
+      alpha <- 2 * alpha
+    }
+
+    # non-monotone line search
+    target_f <- max(f_hist[max(1L, iter - gpa_fwindow + 1L):iter])
+    accepted <- FALSE
+    for (i in seq_len(11L)) {
+      rott_list <- vector("list", ngroups)
+      for (g in seq_len(ngroups)) {
+        x <- rot_list[[g]] - alpha * gp_list[[g]]
+        if (orthogonal) {
+          svd_out <- svd(x)
+          rott_list[[g]] <- svd_out$u %*% t(svd_out$v)
+        } else {
+          v <- 1 / sqrt(colSums(x * x))
+          rott_list[[g]] <- x %*% diag(v, nrow = m)
+        }
+      }
+      lambda_t <- tryCatch(rotate_all(rott_list), error = function(e) NULL)
+      if (is.null(lambda_t)) {
+        alpha <- alpha / 2
+        next
+      }
+      q_new <- objf(lambda_t, grad = TRUE)
+      if (is.finite(q_new) &&
+          as.numeric(q_new) < target_f - 0.5 * frob * frob * alpha) {
+        accepted <- TRUE
+        break
+      }
+      alpha <- alpha / 2
+    }
+    if (!accepted) {
+      # no acceptable step: stop here (not converged)
+      break
+    }
+
+    rot_prev <- rot_list
+    gp_prev <- gp_list
+    rot_list <- rott_list
+    lambda_list <- lambda_t
+    q_current <- as.numeric(q_new)
+    gq_list <- attr(q_new, "grad")
+
+    # oblique: collapsed factors?
+    if (!orthogonal) {
+      for (g in seq_len(ngroups)) {
+        phi_g <- crossprod(rot_list[[g]])
+        if (max(abs(phi_g[lower.tri(phi_g)])) > 1 - 1e-6) {
+          degenerate <- TRUE
+        }
+      }
+      if (degenerate) {
+        break
+      }
+    }
+    grad_list <- tryCatch(grad_all(rot_list, lambda_list, gq_list),
+      error = function(e) NULL)
+    if (is.null(grad_list)) {
+      break
+    }
+  } # iter
+
+  if (degenerate) {
+    converged <- FALSE
+    q_current <- Inf
+    lav_msg_warn(gettext(
+      "the multiple-group agreement rotation is degenerate: two or more
+       factors have collapsed."))
+  } else if (!converged) {
+    lav_msg_warn(gettextf(
+      "mg-gpa rotation algorithm did not converge after %s iterations",
+      iter - 1L
+    ))
+  }
+
+  # rotation matrices relative to a_list (as lav_mat_rotate_pairwise_mg())
+  rot_out <- vector("list", length = ngroups)
+  for (g in seq_len(ngroups)) {
+    rott_inv <- solve(
+      crossprod(a_list[[g]]),
+      crossprod(a_list[[g]], lambda_list[[g]])
+    )
+    if (orthogonal) {
+      rot_out[[g]] <- rott_inv
+    } else {
+      rot_out[[g]] <- solve(t(rott_inv))
+    }
+  }
+
+  attr(rot_out, "info") <- list(
+    algorithm = "mg-gpa",
+    iter = iter - 1L,
+    converged = converged,
+    degenerate = degenerate,
+    method.value = q_current
+  )
+
+  rot_out
 }

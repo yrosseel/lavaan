@@ -316,7 +316,7 @@ lav_options_default <- function() {
   elm(c("rotation.args", "mg_agreement_group_weights"), "equal",
       chr = c("equal", "nobs"))
   elm(c("rotation.args", "mg_agreement_algorithm"), "pairwise",
-    chr = c("pairwise", "lg"))
+    chr = c(pairwise = "pairwise", gpa = "gpa", lg = "pairwise"))
   elm(c("rotation.args", "mg_agreement_method"), "procrustes",
     chr = c("procrustes", "loading.alignment"))
 
