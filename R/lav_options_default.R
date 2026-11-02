@@ -278,6 +278,19 @@ lav_options_default <- function() {
   ))
   elm("rotation.se", "bordered", chr = c("delta", "bordered"))
 
+  # alignment of a multiple-group confirmatory model
+  elm("alignment", "none", chr = c("none", "fixed", "free"))
+  elm(c("alignment.args", "method"), "loading.alignment",
+    chr = c(procrustes = "procrustes", loading.alignment = "loading.alignment",
+            alignment = "loading.alignment", la = "loading.alignment"))
+  elm(c("alignment.args", "epsilon"), 0.01, nm = "]0, 1]")
+  elm(c("alignment.args", "group_weights"), "sqrt.nobs",
+    chr = c("equal", "nobs", "sqrt.nobs"))
+  elm(c("alignment.args", "identification"), "reference",
+    chr = c("mean", "product", "reference"))
+  elm(c("alignment.args", "std_ov"), FALSE, bl = TRUE)
+  elm(c("alignment.args", "rstarts"), 30L, nm = "[0, 1e+06]")
+
   # rotation-args sublist
   elm(c("rotation.args", "orthogonal"), FALSE, bl = TRUE)
   elm(c("rotation.args", "row_weights"), "default", chr = c(

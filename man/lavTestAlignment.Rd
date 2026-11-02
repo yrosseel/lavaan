@@ -4,7 +4,9 @@
 \description{
 Post-estimation invariance analysis of the measurement parameters of a
 multiple-group model with efa blocks that were rotated with the agreement
-rotation (\code{rotation_args = list(mg_agreement = TRUE)}), following the
+rotation (\code{rotation_args = list(mg_agreement = TRUE)}), or of a
+confirmatory model aligned with \code{alignment = "fixed"} or
+\code{"free"} (see \code{\link{alignment}}), following the
 procedure of the alignment method (Asparouhov and Muthen, 2014). For every
 aligned loading, and for every aligned intercept if the intercepts were
 aligned (\code{mg_agreement_intercepts}), the groups are divided into an
@@ -15,7 +17,8 @@ lavTestAlignment(object, p_connect = 0.01, p_set = 0.001, max_iter = 100L)
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}: a
     multiple-group model with efa blocks, rotated with
-    \code{rotation_args = list(mg_agreement = TRUE)}, with standard
+    \code{rotation_args = list(mg_agreement = TRUE)}, or a confirmatory
+    model with \code{alignment = "fixed"} or \code{"free"}, with standard
     errors.}
 \item{p_connect}{Numeric. Two groups are \sQuote{connected} when the
     p-value of the pairwise test of equality of their parameter exceeds this
@@ -62,8 +65,9 @@ Asparouhov, T., & Muthen, B. (2014). Multiple-group factor analysis
 alignment. \emph{Structural Equation Modeling, 21}(4), 495--508.
 }
 \seealso{
+\code{\link{alignment}} for the alignment of a confirmatory model;
 \code{\link{esem}} for the rotation options of the agreement rotation,
-including the alignment of the loadings and the intercepts.
+including the alignment of the loadings and the intercepts of efa blocks.
 }
 \examples{
 \donttest{

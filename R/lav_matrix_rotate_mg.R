@@ -827,7 +827,9 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
                                      identification = "mean",
                                      intercepts = "none",
                                      nu_list = NULL,
-                                     rstarts = 0L) {
+                                     rstarts = 0L,
+                                     c_init = NULL, # warm start (scales)
+                                     a_init = NULL) { # warm start (means)
   ngroups <- length(a_list)
   m <- ncol(a_list[[1L]])
   free_scales <- identical(scales, "free")
@@ -836,10 +838,17 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
   lambda_list <- a_list
   a_mat <- NULL
   if (free_scales || align_means) {
-    # from the equal-SS start (and zero means), plus rstarts random starts
-    # (the alignment loss has local optima); keep the best
+    # from the equal-SS start (and zero means) -- or the warm start, if
+    # given -- plus rstarts random starts (the alignment loss has local
+    # optima); keep the best
     c_start <- lav_mat_rotate_mg_scales_start(a_list, identification)
     a_start <- if (align_means) matrix(0, m, ngroups) else NULL
+    if (!is.null(c_init)) {
+      c_start <- c_init
+    }
+    if (align_means && !is.null(a_init)) {
+      a_start <- a_init
+    }
     c_mat <- NULL
     for (i in seq_len(rstarts + 1L)) {
       if (i > 1L) {

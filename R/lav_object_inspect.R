@@ -1552,8 +1552,10 @@ lav_inspect_rotation <- function(object, what = "rotation",
                                  add_labels = TRUE,
                                  drop_list_single_group = FALSE) {
   lavmodel <- object@Model
-  if (lavmodel@nefa == 0L || is.null(object@Options$rotation) ||
-      object@Options$rotation == "none") {
+  aligned <- !is.null(object@Options$alignment) &&
+    object@Options$alignment != "none"
+  if (!aligned && (lavmodel@nefa == 0L || is.null(object@Options$rotation) ||
+      object@Options$rotation == "none")) {
     lav_msg_stop(gettext(
       "no rotation was applied: the model contains no efa blocks, or
        rotation = \"none\"."))

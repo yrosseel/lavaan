@@ -54,6 +54,10 @@ lav_object_baseline <- function(object = NULL,
   # model is a plain covariance-metric independence model (free variances,
   # no ~*~ rows; the samplestats live in the full moment space), so drop
   # the correlation machinery for this fit
+  # the baseline model is never aligned (no latent variables)
+  if (!is.null(lavoptions$alignment)) {
+    lavoptions$alignment <- "none"
+  }
   if (isTRUE(lavoptions$.correlation.ml)) {
     lavoptions$correlation <- FALSE
     lavoptions$.correlation.ml <- FALSE

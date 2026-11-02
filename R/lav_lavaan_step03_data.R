@@ -191,6 +191,12 @@ lav_step03_data <- function(slot_data = NULL,
   #   lavoptions$start <- "simple"
   # }
 
+  # alignment of a confirmatory model needs more than one group
+  if (!is.null(lavoptions$alignment) && lavoptions$alignment != "none" &&
+      lavdata@ngroups < 2L) {
+    lav_msg_stop(gettext("alignment requires a multiple-group model."))
+  }
+
   # multiple-group agreement rotation (rotation.args$mg_agreement): the
   # "bordered" rotation standard errors border the information matrix with
   # the per-group rotation constraints, which the joint (agreement) rotation

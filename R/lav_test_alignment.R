@@ -35,11 +35,27 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
     lav_msg_stop(gettext("lavTestAlignment() is not available for multilevel
                           models."))
   }
-  if (object@Model@nefa == 0L || lavoptions$rotation == "none" ||
-      !isTRUE(ropts$mg_agreement) || "loadings" %in% lavoptions$group.equal) {
+  aligned_cfa <- !is.null(lavoptions$alignment) &&
+    lavoptions$alignment != "none" && object@Model@nefa == 0L
+  if (!aligned_cfa &&
+      (object@Model@nefa == 0L || lavoptions$rotation == "none" ||
+       !isTRUE(ropts$mg_agreement) ||
+       "loadings" %in% lavoptions$group.equal)) {
     lav_msg_stop(gettext("lavTestAlignment() requires efa blocks that were
                           rotated with rotation.args = list(mg_agreement =
-                          TRUE)."))
+                          TRUE), or a confirmatory model with alignment =
+                          \"fixed\" or \"free\"."))
+  }
+  if (aligned_cfa) {
+    # the loss settings of the confirmatory alignment, in the names of the
+    # agreement rotation
+    aopts <- lavoptions$alignment.args
+    ropts <- list(
+      mg_agreement_method = aopts$method,
+      mg_agreement_epsilon = aopts$epsilon,
+      mg_agreement_group_weights = aopts$group_weights,
+      mg_agreement_intercepts = lavoptions$alignment
+    )
   }
   if (lavoptions$se == "none") {
     lav_msg_stop(gettext("lavTestAlignment() requires standard errors
@@ -57,7 +73,11 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
   if (length(group_label) == 0L) {
     group_label <- as.character(seq_len(ngroups))
   }
-  lv_efa <- unique(pt$lhs[pt$op == "=~" & !is.na(pt$efa) & nzchar(pt$efa)])
+  if (aligned_cfa) {
+    lv_efa <- lav_pt_vnames(pt, type = "lv.regular", block = 1L)
+  } else {
+    lv_efa <- unique(pt$lhs[pt$op == "=~" & !is.na(pt$efa) & nzchar(pt$efa)])
+  }
   ov_efa <- unique(pt$rhs[pt$op == "=~" & pt$lhs %in% lv_efa])
   align_int <- !is.null(ropts$mg_agreement_intercepts) &&
     ropts$mg_agreement_intercepts != "none"
