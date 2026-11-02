@@ -74,7 +74,9 @@ moments are unchanged (the factor covariances, the regressions among the
 factors, the factor intercepts). The aligned factor variances and means
 (except those fixed by the identification) are parameters of the aligned
 model, with standard errors obtained by the delta method from the
-configural model; \code{se = "bootstrap"} is not available.
+configural model, or by the bootstrap (\code{se = "bootstrap"}: every
+bootstrap sample is refit and aligned with the same settings, and the
+variability of the aligned parameters is used).
 \code{\link{lavInspect}} with \code{"rotation"} returns the alignment
 information per group (the aligned variances and means, the loss value,
 convergence, the reference group, and the loss value of every random

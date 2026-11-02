@@ -1,3 +1,30 @@
+# free scale split of the agreement rotation (mg_agreement_scales =
+# "free"): the efa factor variances (fixed to one in the unrotated model)
+# are parameters of the rotated model, like the efa factor means under the
+# alignment of the intercepts; mark them as user = 7 (all groups, or all
+# but the reference group under the "reference" identification), so that
+# they are freed along with the other rotated parameters (and covered by
+# the bootstrap)
+lav_step16_mark_efa_variances <- function(lavpartable = NULL,
+                                          lavoptions = NULL,
+                                          lavdata = NULL,
+                                          ref_efa = 1L) {
+  ropts <- lavoptions$rotation.args
+  if (lavdata@ngroups > 1L && isTRUE(ropts$mg_agreement) &&
+      !("loadings" %in% lavoptions$group.equal) &&
+      identical(ropts$mg_agreement_scales, "free")) {
+    lv_efa <- lav_pt_vnames(lavpartable, type = "lv.efa")
+    v_idx <- which(lavpartable$op == "~~" &
+      lavpartable$lhs == lavpartable$rhs & lavpartable$lhs %in% lv_efa &
+      lavpartable$free == 0L & lavpartable$user == 0L)
+    if (identical(ropts$mg_agreement_identification, "reference")) {
+      v_idx <- v_idx[lavpartable$group[v_idx] != ref_efa]
+    }
+    lavpartable$user[v_idx] <- 7L
+  }
+  lavpartable
+}
+
 lav_step16_rotation <- function(lavoptions = NULL,
                                        lavmodel = NULL,
                                        lavpartable = NULL,
@@ -96,6 +123,8 @@ lav_step16_rotation <- function(lavoptions = NULL,
       }
       lavpartable$user[int_idx] <- 7L
     }
+    lavpartable <- lav_step16_mark_efa_variances(lavpartable, lavoptions,
+                                                 lavdata, ref_efa)
     user7_idx <- which((lavpartable$user == 7L | lavpartable$user == 77L) &
       lavpartable$free == 0L)
     lavpartable$free[user7_idx] <- 1L
@@ -389,10 +418,6 @@ lav_step16_rotation <- function(lavoptions = NULL,
     # the model is rescaled and translated (lav_model_align_x()); efa
     # blocks, if any, are rotated first (with the agreement rotation) and
     # the two transformations compose
-    if (lavoptions$se == "bootstrap") {
-      lav_msg_stop(gettext("se = \"bootstrap\" is not available (yet) for
-                            the alignment of a confirmatory model."))
-    }
     if (nrow(lavmodel@con.jac) > 0L) {
       lav_msg_stop(gettext("alignment is not available for models with
                             equality or inequality constraints."))
@@ -430,6 +455,8 @@ lav_step16_rotation <- function(lavoptions = NULL,
         }
         lavpartable$user[efa_int_idx] <- 7L
       }
+      lavpartable <- lav_step16_mark_efa_variances(lavpartable, lavoptions,
+                                                   lavdata, ref_efa)
     }
     efa7_idx <- which((lavpartable$user == 7L | lavpartable$user == 77L) &
       lavpartable$free == 0L)
@@ -477,9 +504,62 @@ lav_step16_rotation <- function(lavoptions = NULL,
       cat(" done.\n")
     }
 
+    # bootstrap standard errors: every bootstrap sample is refit from the
+    # configural model and aligned (the replicate runs step 16 with the
+    # same options, the reference group resolved), the efa factors (if
+    # any) are matched in sign and order to the original solution, and
+    # the variability of the aligned parameters is used (as for the
+    # rotated solution above, see github #376)
+    if (lavoptions$se == "bootstrap") {
+      if (lav_verbose()) {
+        cat("computing bootstrap VCOV for the aligned solution ...")
+      }
+      ref_lambda <- lav_efa_bootstrap_lambda_list(lavmodel = lavmodel)
+      free_idx <- which(lavpartable$free > 0L & !duplicated(lavpartable$free))
+      efa_ref <- list(
+        ref_lambda = ref_lambda,
+        npar = length(free_idx),
+        names = lav_pt_labels(lavpartable, type = "free"),
+        general_first = tolower(lavoptions$rotation) %in% c(
+          "bi-geomin", "bigeomin", "bi-quartimin", "biquartimin"
+        )
+      )
+      coef_boot <- lav_efa_bootstrap_run(
+        lavmodel = lavmodel_unrot, lavpartable = lavpartable_unrot,
+        lavsamplestats = lavsamplestats, lavoptions = lavoptions,
+        lavdata = lavdata, efa_ref = efa_ref
+      )
+      nfailed <- length(attr(coef_boot, "error.idx"))
+      if (nfailed > 0L) {
+        lav_msg_warn(gettextf(
+          "%s bootstrap runs failed or did not converge.", nfailed))
+      }
+      notok <- length(attr(coef_boot, "nonadmissible"))
+      if (notok > 0L) {
+        lav_msg_warn(gettextf(
+          "%s bootstrap runs resulted in nonadmissible solutions.", notok))
+      }
+      tmp_boot <- lav_efa_bootstrap_vcov(
+        coef_boot = coef_boot, lavmodel = lavmodel, lavpartable = lavpartable,
+        lavoptions = lavoptions
+      )
+      lavpartable$se <- tmp_boot$se
+      lavboot <- list(coef = tmp_boot$coef)
+      vcov1 <- tmp_boot$vcov
+      attributes(vcov1) <- attributes(vcov1)["dim"]
+      lavvcov <- list(
+        se = lavoptions$se,
+        information = lavoptions$information[1],
+        vcov = vcov1
+      )
+      if (lav_verbose()) {
+        cat(" done.\n")
+      }
+    }
+
     # vcov of the aligned parameters: the delta method through the
     # alignment map, warm-started at the solution
-    if (!lavoptions$se %in% c("none", "external", "two.step")) {
+    if (!lavoptions$se %in% c("none", "bootstrap", "external", "two.step")) {
       if (lav_verbose()) {
         cat("computing VCOV of the aligned parameters (delta method) ...")
       }

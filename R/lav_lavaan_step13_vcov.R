@@ -34,9 +34,15 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
   # if lavpartable not "external" or "none" or "twostep"
   #     lavpartable$se <- lav_model_vcov_se(...)
 
+  # the bootstrap of an aligned model (lavoptions$alignment) is deferred to
+  # step 16 as well: each sample is refit from the configural model and
+  # aligned there
+  align_boot <- lavoptions$se == "bootstrap" &&
+    !is.null(lavoptions$alignment) && lavoptions$alignment != "none" &&
+    lavdata@ngroups > 1L
   vcov_1 <- NULL
   if (lavoptions$se != "none" && lavoptions$se != "external" &&
-    lavoptions$se != "twostep" &&
+    lavoptions$se != "twostep" && !align_boot &&
     (lavmodel@nefa == 0L ||
      (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
      (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
