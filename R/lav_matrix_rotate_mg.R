@@ -28,8 +28,10 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                  mg_algorithm = "pairwise",
                                  mg_agreement_method = "procrustes",
                                  mg_agreement_weight = 0.5,
+                                 mg_agreement_group_weights = NULL,
                                  reflect = TRUE, # reflect sign
                                  order_lv_by = "index", # how to order the lv's
+                                 pairwise_accelerate = TRUE, # sweep extrap.
                                  gpa_tol = 0.00001, # stopping tol (gradient)
                                  tol = 1e-07, # stopping tol others
                                  keep_rep = FALSE, # store replications
@@ -153,6 +155,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       std_ov = FALSE,
       ov_var = NULL,
       algorithm = "pairwise",
+      pairwise_accelerate = pairwise_accelerate,
       reflect = reflect,
       order_lv_by = order_lv_by,
       gpa_tol = gpa_tol,
@@ -191,6 +194,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
     method_args = method_args,
     mg_agreement_method = mg_agreement_method,
     mg_agreement_weight = mg_agreement_weight,
+    group_weights = mg_agreement_group_weights,
+    accelerate = pairwise_accelerate,
     gpa_tol = gpa_tol,
     tol = tol,
     max_iter = max_iter
@@ -277,10 +282,12 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
                                        random_rot = FALSE,
                                        method_fname = NULL, # crit function
                                        method_args = list(), # method args
+                                       accelerate = TRUE,
                                        gpa_tol = 1e-5,
                                        tol = 1e-8,
                                        mg_agreement_weight = 0.50,
                                        mg_agreement_method = "procrustes",
+                                       group_weights = NULL,
                                        scale = TRUE,
                                        max_iter = 1000L) {
   ngroups <- length(a_list)
@@ -317,7 +324,8 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
-      w = mg_agreement_weight, scale = scale, grad = grad
+      w = mg_agreement_weight, scale = scale,
+      group_weights = group_weights, grad = grad
     )
   }
 
@@ -325,6 +333,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     lambda_list = lambda_list, phi_list = psi_list,
     orthogonal = orthogonal, objf = objf,
     use_grad = lav_mat_rotate_is_smooth(method_fname),
+    accelerate = accelerate,
     gpa_tol = gpa_tol, tol = tol, max_iter = max_iter
   )
   lambda_list <- res$lambda_list

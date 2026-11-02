@@ -417,7 +417,8 @@ lav_standardize_prepare_x <- function(x, lavobject, rotation = FALSE) {
       lavoptions = lavobject@Options,
       init_rot = lavmodel@H,
       type = "user",
-      extra = TRUE
+      extra = TRUE,
+      nobs = lavobject@SampleStats@nobs
     )
     glist <- attr(est_rot, "extra")$glist
     attributes(est_rot) <- NULL

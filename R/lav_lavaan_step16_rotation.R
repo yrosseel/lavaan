@@ -50,7 +50,8 @@ lav_step16_rotation <- function(lavoptions = NULL,
     lavpartable_unrotated <- lavpartable
     efa_out <- lav_model_efa_rotate(
       lavmodel = lavmodel,
-      lavoptions = lavoptions
+      lavoptions = lavoptions,
+      nobs = lavsamplestats@nobs
     )
 
     # adapt partable:

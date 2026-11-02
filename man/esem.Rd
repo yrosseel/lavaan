@@ -139,6 +139,11 @@ are:
     rotation algorithm. Default: \code{30}.}
   \item{\code{algorithm}}{\code{"gpa"} (gradient projection, the default) or
     \code{"pairwise"}.}
+  \item{\code{pairwise_accelerate}}{Logical. If \code{TRUE} (the default),
+    the pairwise algorithm extrapolates the solution across sweeps (an
+    Aitken-type step along the last sweep displacement, accepted only if it
+    lowers the criterion), which reduces the number of sweeps on slowly
+    converging problems.}
   \item{\code{gpa_algorithm}}{Step size strategy of the gradient projection
     algorithm: \code{"bb"} (Barzilai-Borwein with a non-monotone line
     search, the default), \code{"cayley"} (orthogonal rotation only) or
@@ -165,6 +170,11 @@ are:
     \code{TRUE}, the rotated solutions of the groups are made as similar as
     possible (see also \code{mg_agreement_weight},
     \code{mg_agreement_method} and \code{mg_agreement_algorithm}).}
+  \item{\code{mg_agreement_group_weights}}{\code{"equal"} (the default)
+    or \code{"nobs"}: whether the groups are weighted by their sample
+    sizes in the agreement criterion (the per-group criteria by the group
+    weight, and each pair of groups in the agreement term by the product
+    of the two weights).}
   \item{\code{gpa_tol}, \code{tol}, \code{max_iter}, \code{warn},
     \code{verbose}}{Convergence tolerances, the maximum number of
     iterations, and reporting options of the rotation algorithm.}

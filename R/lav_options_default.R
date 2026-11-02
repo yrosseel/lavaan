@@ -297,6 +297,8 @@ lav_options_default <- function() {
   elm(c("rotation.args", "target_mask"), matrix(0, 0L, 0L), oklen = c(0, 1e+32))
   elm(c("rotation.args", "rstarts"), 30L, nm = "[0, 1e+07]")
   elm(c("rotation.args", "algorithm"), "gpa", chr = c("gpa", "pairwise"))
+  # pairwise algorithm: sweep-level extrapolation
+  elm(c("rotation.args", "pairwise_accelerate"), TRUE, bl = TRUE)
   elm(c("rotation.args", "reflect"), TRUE, bl = TRUE)
   elm(c("rotation.args", "order_lv_by"), "index",
       chr = c("sumofsquares", "index", "none"))
@@ -311,6 +313,8 @@ lav_options_default <- function() {
   elm(c("rotation.args", "max_iter"), 10000L, nm = "[0, 1e+12]")
   elm(c("rotation.args", "mg_agreement"), FALSE, bl = TRUE)
   elm(c("rotation.args", "mg_agreement_weight"), 0.5, nm = "[0, 1]")
+  elm(c("rotation.args", "mg_agreement_group_weights"), "equal",
+      chr = c("equal", "nobs"))
   elm(c("rotation.args", "mg_agreement_algorithm"), "pairwise",
     chr = c("pairwise", "lg"))
   elm(c("rotation.args", "mg_agreement_method"), "procrustes",

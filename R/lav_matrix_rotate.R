@@ -28,6 +28,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
                               std_ov = FALSE, # rescale ov
                               ov_var = NULL, # ov variances
                               algorithm = "gpa", # rotation algorithm
+                              pairwise_accelerate = TRUE, # sweep extrapolation
                               reflect = TRUE, # reflect sign
                               order_lv_by = "index", # how to order the lv's
                               gpa_tol = 0.00001, # stopping tol gpa
@@ -214,6 +215,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
             init_rot = init_rot,
             method_fname = method_fname,
             method_args = method_args,
+            accelerate = pairwise_accelerate,
             gpa_tol = gpa_tol,
             tol = tol,
             max_iter = max_iter
@@ -278,6 +280,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
         init_rot = init_rot,
         method_fname = method_fname,
         method_args = method_args,
+        accelerate = pairwise_accelerate,
         gpa_tol = gpa_tol,
         tol = tol,
         max_iter = max_iter
@@ -707,6 +710,7 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
                                     init_rot = NULL,
                                     method_fname = NULL, # crit function
                                     method_args = list(), # method args
+                                    accelerate = TRUE,
                                     gpa_tol = 1e-5,
                                     tol = 1e-8,
                                     max_iter = 1000L) {
@@ -742,6 +746,7 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
     lambda_list = list(mm_lambda), phi_list = list(phi),
     orthogonal = orthogonal, objf = objf,
     use_grad = lav_mat_rotate_is_smooth(method_fname),
+    accelerate = accelerate,
     gpa_tol = gpa_tol, tol = tol, max_iter = max_iter
   )
   mm_lambda <- res$lambda_list[[1L]]
@@ -802,6 +807,15 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
 #   gpa_tol; the plane directions span the tangent space of the orthogonal
 #   (or normal) matrices, so this is the same projected-gradient criterion
 #   as used by the GPA algorithm
+# - sweep-level acceleration (accelerate = TRUE): plane sweeps converge
+#   linearly, so after each sweep the cumulative transformation matrix
+#   M_k (lambda_k = lambda_0 M_k, per group) is extrapolated along the
+#   last sweep displacement, M_k + s (M_k - M_{k-1}), with the Aitken
+#   factor s = r / (1 - r) estimated from the contraction ratio r of the
+#   last two displacements; the extrapolated point is projected back onto
+#   the manifold (orthogonal: polar projection; oblique: unit-variance
+#   factors) and accepted only if it lowers the objective (one extra
+#   evaluation per sweep)
 #
 # Derivative-free fallback (use_grad = FALSE, or no gradient available):
 # Brent's method (optimize()) per plane, as in the original algorithm;
@@ -813,12 +827,23 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
                                          orthogonal = FALSE,
                                          objf = NULL,
                                          use_grad = TRUE,
+                                         accelerate = TRUE,
                                          gpa_tol = 1e-5,
                                          tol = 1e-8,
                                          max_iter = 1000L,
                                          plane_max_eval = 12L) {
   ngroups <- length(lambda_list)
   m <- ncol(lambda_list[[1L]])
+
+  # starting point + cumulative transformation per group (for the
+  # sweep-level extrapolation): lambda_g = lambda_0_g %*% m_g, and
+  # phi_g = m_g^-1 phi_0_g m_g^-T
+  lambda_0 <- lambda_list
+  phi_0 <- phi_list
+  m_list <- rep(list(diag(m)), ngroups)
+  m_prev <- NULL # m_list at the end of the previous sweep
+  d_prev_norm <- NA_real_ # norm of the previous sweep displacement
+  n_extrap <- 0L
 
   # planes whose directional derivative is below skip_tol are left alone;
   # convergence is declared at gpa_tol (so that the final sweep still
@@ -923,6 +948,8 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
           t <- out$minimum
           step <- plane_apply(mm_lambda, c1, c2, t, phi12 = phi12)
           lambda_list[[g]] <- step$mm_lambda
+          m_list[[g]] <- plane_apply(m_list[[g]], c1, c2, t,
+            phi12 = phi12)$mm_lambda
           if (!orthogonal) {
             phi_list[[g]] <- phi_update(phi_list[[g]], c1, c2, t, step$gam)
           }
@@ -1037,6 +1064,8 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
           next
         }
         lambda_list[[g]] <- best$mm_lambda
+        m_list[[g]] <- plane_apply(m_list[[g]], c1, c2, best$t,
+          phi12 = phi12)$mm_lambda
         q_current <- best$q
         grad_list <- best$grad
         n_accepted <- n_accepted + 1L
@@ -1079,10 +1108,90 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
       converged <- TRUE
       break
     }
+
+    # sweep-level extrapolation (gradient path only)
+    if (use_grad && accelerate) {
+      if (!is.null(m_prev)) {
+        d_list <- lapply(seq_len(ngroups), function(g) {
+          m_list[[g]] - m_prev[[g]]
+        })
+        d_norm <- sqrt(sum(unlist(d_list)^2))
+        ratio <- if (is.finite(d_prev_norm) && d_prev_norm > 0) {
+          d_norm / d_prev_norm
+        } else {
+          NA_real_
+        }
+        if (is.finite(ratio) && ratio > 0.05 && ratio < 0.98) {
+          s_fac <- min(ratio / (1 - ratio), 20)
+          lambda_e <- lambda_list
+          phi_e <- phi_list
+          m_e <- m_list
+          ok <- TRUE
+          for (g in seq_len(ngroups)) {
+            m_g <- m_list[[g]] + s_fac * d_list[[g]]
+            if (orthogonal) {
+              # polar projection onto the orthogonal matrices
+              svd_out <- try(svd(m_g), silent = TRUE)
+              if (inherits(svd_out, "try-error")) {
+                ok <- FALSE
+                break
+              }
+              m_g <- svd_out$u %*% t(svd_out$v)
+              phi_g <- phi_0[[g]]
+            } else {
+              # rescale the factors to unit variance
+              m_inv <- try(solve(m_g), silent = TRUE)
+              if (inherits(m_inv, "try-error")) {
+                ok <- FALSE
+                break
+              }
+              phi_g <- m_inv %*% phi_0[[g]] %*% t(m_inv)
+              d_g <- 1 / sqrt(diag(phi_g))
+              if (any(!is.finite(d_g))) {
+                ok <- FALSE
+                break
+              }
+              m_g <- t(t(m_g) / d_g)
+              phi_g <- t(t(phi_g * d_g) * d_g)
+            }
+            m_e[[g]] <- m_g
+            phi_e[[g]] <- phi_g
+            lambda_e[[g]] <- lambda_0[[g]] %*% m_g
+          }
+          if (ok) {
+            q_e <- objf(lambda_e, grad = TRUE)
+            neval <- neval + 1L
+            if (is.finite(q_e) && as.numeric(q_e) < q_current &&
+                !is.null(attr(q_e, "grad"))) {
+              lambda_list <- lambda_e
+              phi_list <- phi_e
+              m_list <- m_e
+              q_current <- as.numeric(q_e)
+              grad_list <- attr(q_e, "grad")
+              n_extrap <- n_extrap + 1L
+              if (lav_verbose()) {
+                cat(
+                  "  iter = ", sprintf("%4d", iter), " (extrapolated, s = ",
+                  sprintf("%5.2f", s_fac), ") Q = ",
+                  sprintf("%13.11f", q_current), "\n", sep = ""
+                )
+              }
+              # restart the displacement history from the new point
+              m_prev <- NULL
+              d_prev_norm <- NA_real_
+              next
+            }
+          }
+        }
+        d_prev_norm <- d_norm
+      }
+      m_prev <- m_list
+    }
   } # iter
 
   list(
     lambda_list = lambda_list, phi_list = phi_list,
-    q = q_current, iter = iter, converged = converged, neval = neval
+    q = q_current, iter = iter, converged = converged, neval = neval,
+    n_extrap = n_extrap
   )
 }

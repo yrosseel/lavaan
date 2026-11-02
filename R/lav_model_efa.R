@@ -125,7 +125,10 @@ lav_model_efa_block_theta <- function(lavmodel = NULL, mlist = NULL, g = 1L) {
 }
 
 # rotate solution
-lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
+# nobs: the (effective) sample sizes per group; only needed for the
+# multiple-group agreement rotation with mg_agreement_group_weights = "nobs"
+lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL,
+                                 nobs = NULL) {
 
   # sanity check
   if (lavmodel@nefa == 0L || lavoptions$rotation == "none") {
@@ -142,7 +145,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
   # rotate, extract information from 'extra' attribute
   tmp <- lav_model_efa_rotate_x(
     x = x_orig, lavmodel = lavmodel,
-    lavoptions = lavoptions, extra = TRUE
+    lavoptions = lavoptions, extra = TRUE, nobs = nobs
   )
   extra <- attr(tmp, "extra")
   attr(tmp, "extra") <- NULL
@@ -160,7 +163,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
 # lower-level function, needed for numDeriv
 lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                                    init_rot = NULL, extra = FALSE,
-                                   type = "free") {
+                                   type = "free", nobs = NULL) {
   # extract rotation options from lavoptions
   method <- lavoptions$rotation
   if (method == "none") {
@@ -300,6 +303,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
           std_ov = ropts$std_ov,
           ov_var = this_ov_var,
           algorithm = ropts$algorithm,
+          pairwise_accelerate = ropts$pairwise_accelerate,
           reflect = ropts$reflect,
           order_lv_by = ropts$order_lv_by,
           gpa_tol = ropts$gpa_tol,
@@ -419,6 +423,20 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         cat("\n")
       }
 
+      # group weights for the agreement criterion: proportional to the
+      # sample sizes (scaled to average one), or none
+      mg_group_weights <- NULL
+      if (identical(ropts$mg_agreement_group_weights, "nobs")) {
+        n_g <- unlist(nobs)
+        if (length(n_g) != lavmodel@ngroups || any(!is.finite(n_g)) ||
+            any(n_g <= 0)) {
+          lav_msg_stop(gettext(
+            "mg_agreement_group_weights = \"nobs\" requires the sample
+             sizes of all groups."))
+        }
+        mg_group_weights <- n_g / mean(n_g)
+      }
+
       # rotate this set
       res <- lav_mat_rotate_mg(
         a_list = alist_1,
@@ -443,6 +461,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mg_algorithm = ropts$mg_agreement_algorithm,
         mg_agreement_method = ropts$mg_agreement_method,
         mg_agreement_weight = ropts$mg_agreement_weight,
+        mg_agreement_group_weights = mg_group_weights,
+        pairwise_accelerate = ropts$pairwise_accelerate,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
         gpa_tol = ropts$gpa_tol,
