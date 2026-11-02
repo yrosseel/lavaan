@@ -223,8 +223,9 @@ lav_mat_rotate <- function(a = NULL, # original matrix
         }
         info <- attr(rot, "info")
         attr(rot, "info") <- NULL
-        c(info$method.value, lav_mat_vec(rot))
-      }, error = function(e) c(Inf, rep(NA_real_, m * m)))
+        c(info$method.value, info$iter, as.numeric(isTRUE(info$converged)),
+          lav_mat_vec(rot))
+      }, error = function(e) c(Inf, NA_real_, 0, rep(NA_real_, m * m)))
 
       if (lav_verbose()) {
         cat(
@@ -249,11 +250,18 @@ lav_mat_rotate <- function(a = NULL, # original matrix
         n_bad, rstarts
       ))
     }
-    rot <- matrix(rep_1[-1, best_idx], nrow = m, ncol = m)
+    rot <- matrix(rep_1[-(1:3), best_idx], nrow = m, ncol = m)
+    # algorithm information of the best start; REP has one column per
+    # start: the criterion value, the number of iterations, the
+    # convergence flag (0/1) and the vectorized rotation matrix
+    info <- list(
+      algorithm = algorithm,
+      iter = as.integer(rep_1[2, best_idx]),
+      converged = isTRUE(rep_1[3, best_idx] == 1),
+      method.value = rep_1[1, best_idx]
+    )
     if (keep_rep) {
-      info <- list(method.value = rep_1[1, best_idx], REP = rep_1)
-    } else {
-      info <- list(method.value = rep_1[1, best_idx])
+      info$REP <- rep_1
     }
   } else if (algorithm != "none") {
     # initial rotation matrix

@@ -26,6 +26,14 @@ lav_step09_model <- function(slot_model = NULL,
     if (lav_verbose()) {
       cat("lavmodel           ...")
     }
+    # regressions among the factors of the same efa block are not
+    # identified: warn (once; lav_model() is called again in step 16)
+    if (lav_pt_nefa(lavpartable) > 0L) {
+      lav_model_efa_check_regressions(
+        lavpartable = lavpartable,
+        efa_values = lav_pt_efa_values(lavpartable)
+      )
+    }
     lavmodel <- lav_model(
       lavpartable = lavpartable,
       lavoptions = lavoptions,

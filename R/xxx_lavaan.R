@@ -915,6 +915,9 @@ lavaan <- function(
   if (!is.null(temp$lavboot)) {
     lavboot <- temp$lavboot
   }
+  # rotation information (per block, per efa set), stored in the @internal
+  # slot below (see lavInspect(fit, "rotation"))
+  lavrotation <- temp$lavrotation
 
   timing <- lav_add_timing(timing, "rotation")
 
@@ -941,6 +944,11 @@ lavaan <- function(
     start_time0    = start_time0,
     lav_monte_carlo = lav_monte_carlo
   )
+
+  # ----------- rotation information (efa blocks only) ----------
+  if (!is.null(lavrotation)) {
+    out@internal$rotation <- lavrotation
+  }
 
   # ----------- fit.by.level (multilevel only) ----------
   # fit the partially saturated models (one per level), providing

@@ -139,6 +139,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   # factor correlations of the per-group solutions: the starting point of
   # the agreement sweep below (oblique rotation; identity if orthogonal)
   phi_list <- vector("list", length = ngroups)
+  # per-group information about the initial rotation (for lavInspect())
+  group_info <- vector("list", length = ngroups)
   for (g in seq_len(ngroups)) {
     if (lav_verbose()) {
       cat("  group = ", g, "\n")
@@ -160,8 +162,14 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       order_lv_by = order_lv_by,
       gpa_tol = gpa_tol,
       tol = tol,
+      keep_rep = keep_rep,
       max_iter = max_iter,
       group = g
+    )
+    group_info[[g]] <- list(
+      algorithm = res0$algorithm, converged = res0$converged,
+      iter = res0$iter, method.value = res0$method.value,
+      REP = res0$REP
     )
     if (g > 1L) {
       # reorder factors to align with the first group
@@ -272,7 +280,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   # 6. return results as a list
   res <- list(
     lambdaList = lambda_list, rotList = rot_list,
-    orderList = order_list,
+    orderList = order_list, group_info = group_info,
     orthogonal = orthogonal, method = method,
     method_args = method_args, row_weights = "none"
   )

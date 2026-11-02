@@ -29,6 +29,8 @@ lav_step16_rotation <- function(lavoptions = NULL,
   # bootstrap results for the rotated solution (filled in below if
   # se = "bootstrap"); NULL means 'use whatever step 13 produced'
   lavboot <- NULL
+  # rotation information (per block, per efa set) for lavInspect()
+  lavrotation <- NULL
 
   if (lavmodel@nefa > 0L &&
     (lavoptions$rotation != "none")) {
@@ -82,6 +84,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
     lavmodel@H <- efa_out$H
     lavmodel@lv.order <- efa_out$lv.order
     lavmodel@GLIST <- efa_out$GLIST
+    lavrotation <- efa_out$rotation
 
     # add con.jac information (if any)
     lavmodel@con.lambda <- lavmodel_unrot@con.lambda
@@ -350,6 +353,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
     lavpartable = lavpartable,
     lavmodel    = lavmodel,
     lavvcov     = lavvcov,
-    lavboot     = lavboot
+    lavboot     = lavboot,
+    lavrotation = lavrotation
   )
 }

@@ -540,6 +540,34 @@ lav_lavaan_lavinspect <- function(object,
       drop_list_single_group = drop_list_single_group)
 
 
+    #### rotation (efa blocks) ####
+  } else if (what == "rotation" || what == "rotation.info") {
+    lav_inspect_rotation(object, what = "rotation",
+      add_labels = add_labels,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "rotation.matrix" || what == "rot") {
+    lav_inspect_rotation(object, what = "rotation.matrix",
+      add_labels = add_labels,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "lv.order" || what == "rotation.order") {
+    lav_inspect_rotation(object, what = "lv.order",
+      add_labels = add_labels,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "rotation.criterion" || what == "rotation.value") {
+    lav_inspect_rotation(object, what = "rotation.criterion",
+      add_labels = add_labels,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "rotation.converged") {
+    lav_inspect_rotation(object, what = "rotation.converged",
+      add_labels = add_labels,
+      drop_list_single_group = drop_list_single_group)
+  } else if (what == "rotation.starts" || what == "rotation.rstarts" ||
+    what == "rotation.random.starts") {
+    lav_inspect_rotation(object, what = "rotation.starts",
+      add_labels = add_labels,
+      drop_list_single_group = drop_list_single_group)
+
+
     #### constraints ####
   } else if (what == "constraints" || what == "con") {
     lav_inspect_con(object,
@@ -1515,6 +1543,77 @@ lav_inspect_case_idx <- function(object,
 #    return.value
 # }
 #
+
+# rotation information (efa blocks): per block (group x level), and -- for
+# everything except the rotation matrix H and the factor order -- per efa
+# set. The per-set information is collected during the rotation (step 16)
+# and stored in object@internal$rotation (see lav_model_efa_rotation_info())
+lav_inspect_rotation <- function(object, what = "rotation",
+                                 add_labels = TRUE,
+                                 drop_list_single_group = FALSE) {
+  lavmodel <- object@Model
+  if (lavmodel@nefa == 0L || is.null(object@Options$rotation) ||
+      object@Options$rotation == "none") {
+    lav_msg_stop(gettext(
+      "no rotation was applied: the model contains no efa blocks, or
+       rotation = \"none\"."))
+  }
+  nblocks <- lavmodel@nblocks
+
+  if (what == "rotation.matrix" || what == "lv.order") {
+    # from the lavModel slots (available since 0.6-4)
+    if (what == "rotation.matrix") {
+      out <- lavmodel@H
+    } else {
+      out <- lavmodel@lv.order
+    }
+    if (length(out) != nblocks) {
+      lav_msg_stop(gettext("rotation information is not available for this
+                            object."))
+    }
+    if (add_labels) {
+      for (g in seq_len(nblocks)) {
+        mm_in_group <- (seq_len(lavmodel@nmat[g]) +
+                        cumsum(c(0, lavmodel@nmat))[g])
+        lambda_mm <- mm_in_group[which(names(lavmodel@GLIST[mm_in_group]) ==
+                                       "lambda")[1L]]
+        lv_names <- lavmodel@dimNames[[lambda_mm]][[2L]]
+        if (what == "rotation.matrix" &&
+            length(lv_names) == ncol(out[[g]])) {
+          dimnames(out[[g]]) <- list(lv_names, lv_names)
+        } else if (what == "lv.order" &&
+                   length(lv_names) == length(out[[g]])) {
+          names(out[[g]]) <- lv_names
+        }
+      }
+    }
+  } else {
+    info <- object@internal$rotation
+    if (is.null(info) || length(info) != nblocks) {
+      lav_msg_stop(gettext("rotation information is not available for this
+                            object (fitted with an older version of
+                            lavaan?)."))
+    }
+    out <- lapply(info, function(block) {
+      if (what == "rotation") {
+        block
+      } else if (what == "rotation.criterion") {
+        vapply(block, function(x) as.numeric(x$criterion), numeric(1L))
+      } else if (what == "rotation.converged") {
+        vapply(block, function(x) isTRUE(x$converged), logical(1L))
+      } else if (what == "rotation.starts") {
+        lapply(block, function(x) x$starts)
+      }
+    })
+  }
+
+  if (nblocks == 1L && drop_list_single_group) {
+    out <- out[[1L]]
+  } else if (length(object@Data@block.label) == nblocks) {
+    names(out) <- object@Data@block.label
+  }
+  out
+}
 
 # cluster info
 lav_inspect_cl_info <- function(

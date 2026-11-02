@@ -482,6 +482,76 @@ Optimizer information:
     \item{\code{"npar"}:}{Integer. Number of free parameters (ignoring constraints).}
 }
 
+Rotation information (only if the model contains efa blocks and a rotation
+was applied; the output is a list with one element per block (group and/or
+level), or a single element if there is only one block and
+\code{drop_list_single_group = TRUE}):
+
+\describe{
+    \item{\code{"rotation"}:}{List. Per block, a list with one element per
+        efa block (named by the efa block label), containing all available
+        information about the rotation of that set of factors: the names of
+        the factors and indicators (\code{lv_names}, \code{ov_names}), the
+        rotation \code{method}, whether the rotation was \code{orthogonal},
+        the row weights, the \code{algorithm}, whether the algorithm
+        \code{converged}, the number of \code{iterations}, the value of the
+        rotation \code{criterion} at the solution, the rotation matrix
+        \code{rot} (rows: the unrotated factors; columns: the rotated
+        factors in their final order; the rotated loadings are
+        \code{A \%*\% rot} for an orthogonal rotation and
+        \code{A \%*\% solve(t(rot))} for an oblique rotation, with
+        \code{A} the unrotated loadings), the covariance matrix \code{phi}
+        of the rotated factors (a correlation matrix, except when
+        \code{mg_agreement = TRUE}, see \code{"rotation_matrix"} below),
+        the column permutation \code{order} applied
+        to the rotated solution (\code{order[k]} is the column of the
+        rotated solution placed in position \code{k}; see
+        \code{order_lv_by}), and the random starts (\code{starts}, see
+        \code{"rotation_starts"} below). For a multiple-group model with
+        \code{mg_agreement = TRUE}, \code{criterion}, \code{converged} and
+        \code{iterations} refer to the joint (agreement) rotation, while
+        \code{group_criterion}, \code{group_converged},
+        \code{group_iterations} and \code{starts} refer to the per-group
+        rotation that provided its starting point. Alias:
+        \code{"rotation_info"}.}
+    \item{\code{"rotation_matrix"}:}{List. Per block, the rotation matrix
+        \eqn{H} for all latent variables of the block (the identity for
+        the latent variables outside the efa blocks): the rotated model
+        matrices are \code{lambda \%*\% solve(t(H))},
+        \code{t(H) \%*\% psi \%*\% H}, \code{t(H) \%*\% beta \%*\% solve(t(H))}
+        and \code{t(H) \%*\% alpha}, where \code{lambda}, \code{psi},
+        \code{beta} and \code{alpha} are the unrotated model matrices (see
+        \code{"est_unrotated"}). The column permutation and the sign
+        reflections are included in \eqn{H}; for a multiple-group model
+        with \code{mg_agreement = TRUE}, so is the rescaling of the rotated
+        factors to equal column sums of squares across groups (which is why
+        the factor variances are not one in that case).
+        Alias: \code{"rot"}.}
+    \item{\code{"lv_order"}:}{List. Per block, an integer vector with the
+        order of the latent variables after rotation: element \code{k} is
+        the index of the column of the rotated solution that was placed in
+        position \code{k} (see the \code{order_lv_by} option).
+        Alias: \code{"rotation_order"}.}
+    \item{\code{"rotation_criterion"}:}{List. Per block, a numeric vector
+        with the value of the rotation criterion at the solution, one per
+        efa block. Alias: \code{"rotation_value"}.}
+    \item{\code{"rotation_converged"}:}{List. Per block, a logical vector
+        indicating whether the rotation algorithm converged, one per efa
+        block.}
+    \item{\code{"rotation_starts"}:}{List. Per block and per efa block, the
+        results of the random starts of the rotation algorithm (see the
+        \code{rstarts} option): \code{value} is the vector with the value
+        of the rotation criterion at the end of each run (\code{Inf} for a
+        run that failed or ended in a degenerate solution),
+        \code{iterations} and \code{converged} the number of iterations and
+        the convergence flag of each run, and \code{rot} the list with the
+        corresponding rotation matrices (before the sign reflection and the
+        column reordering). The run with the smallest
+        value provided the solution. Comparing the values reveals whether
+        the criterion has several local minima. \code{NULL} if no random
+        starts were used. Alias: \code{"rotation_rstarts"}.}
+}
+
 Gradient, Hessian, observed, expected and first.order information matrices:
 
 \describe{

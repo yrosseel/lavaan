@@ -112,6 +112,138 @@ lav_model_efa_check_target <- function(ropts = NULL, lavpartable = NULL,
   invisible(NULL)
 }
 
+# warn for regressions among the latent variables of the same efa block: the
+# factors of a block are rotated jointly, and their relations are already
+# determined by the rotation (the factor correlations), so such a
+# regression coefficient is not identified (it stays at its starting value
+# and the rotated solution shows a factor covariance instead). Called once
+# from step 9 (lav_lavaan_step09_model()), before the model is estimated.
+lav_model_efa_check_regressions <- function(lavpartable = NULL,
+                                            efa_values = NULL) {
+  reg_idx <- which(lavpartable$op == "~")
+  if (length(reg_idx) == 0L) {
+    return(invisible(NULL))
+  }
+  bad <- character(0L)
+  for (set in efa_values) {
+    set_lv <- unique(lavpartable$lhs[lavpartable$op == "=~" &
+      lavpartable$efa == set])
+    this_idx <- reg_idx[lavpartable$lhs[reg_idx] %in% set_lv &
+      lavpartable$rhs[reg_idx] %in% set_lv]
+    if (length(this_idx) > 0L) {
+      bad <- c(bad, unique(paste(lavpartable$lhs[this_idx], "~",
+        lavpartable$rhs[this_idx])))
+    }
+  }
+  if (length(bad) > 0L) {
+    lav_msg_warn(gettextf(
+      "the model contains regressions among latent variables of the same
+       efa block (%s). The relations among the factors of an efa block are
+       determined by the rotation, and these regression coefficients are
+       not identified; their estimates are not meaningful.",
+      lav_msg_view(bad, log_sep = "none")))
+  }
+  invisible(NULL)
+}
+
+# the names of the latent variables of the full block-g LAMBDA (as built by
+# lav_model_efa_block_lambda(): the dummy latent variables are removed), and
+# of its rows (the observed variables)
+lav_model_efa_block_lv_names <- function(lavmodel = NULL, mlist = NULL,
+                                         g = 1L) {
+  mm_in_group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
+  lambda_mm <- mm_in_group[which(names(mlist) == "lambda")[1L]]
+  lv_names <- lavmodel@dimNames[[lambda_mm]][[2L]]
+  dummy_idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                 lavmodel@ov.x.dummy.lv.idx[[g]])
+  if (length(dummy_idx) > 0L) {
+    lv_names <- lv_names[-dummy_idx]
+  }
+  lv_names
+}
+lav_model_efa_block_ov_names <- function(lavmodel = NULL, mlist = NULL,
+                                         g = 1L) {
+  mm_in_group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
+  lambda_mm <- mm_in_group[which(names(mlist) == "lambda")[1L]]
+  lavmodel@dimNames[[lambda_mm]][[1L]]
+}
+
+# collect the rotation information of one efa set (one block) in a list,
+# from the result of lav_mat_rotate() (single group) or lav_mat_rotate_mg()
+# (multiple groups + agreement; 'group' selects the group). This is what
+# lavInspect(fit, "rotation") returns (per block, per efa set).
+#
+# rot: the rotation matrix T of the set (rows: the unrotated factors,
+#   columns: the rotated factors, in their final order), such that
+#   LAMBDA = A %*% T (orthogonal) or A %*% solve(t(T)) (oblique)
+# phi: the factor correlation matrix of the rotated factors (T'T)
+# order: the column permutation (order_lv_by) applied to the rotated
+#   solution: order[k] is the column of the rotated solution that was
+#   placed in position k
+# starts: the random starts (rotation.args$rstarts): the criterion value
+#   at the end of each run, and the corresponding rotation matrix
+#   (before reflection and reordering); a failed run has value Inf
+lav_model_efa_rotation_info <- function(res = NULL, set_name = NULL,
+                                        lv_names = NULL, ov_names = NULL,
+                                        group = NULL) {
+  m <- length(lv_names)
+  mg_flag <- !is.null(group)
+  if (mg_flag) {
+    rot <- res$rotList[[group]]
+    order_idx <- res$orderList[[group]]
+    ginfo <- res$group_info[[group]]
+    rep_mat <- ginfo$REP
+  } else {
+    rot <- res$ROT
+    order_idx <- res$order.idx
+    rep_mat <- res$REP
+  }
+  dimnames(rot) <- list(lv_names, lv_names)
+  # the covariance matrix of the rotated factors (a correlation matrix,
+  # except in the multiple-group agreement case, where the column
+  # rescaling is folded into rot)
+  phi <- crossprod(rot)
+  dimnames(phi) <- list(lv_names, lv_names)
+  starts <- NULL
+  if (!is.null(rep_mat)) {
+    # one column per start: value, iterations, converged, vec(rot)
+    rep_mat <- as.matrix(rep_mat)
+    starts <- list(
+      value = rep_mat[1L, ],
+      iterations = as.integer(rep_mat[2L, ]),
+      converged = rep_mat[3L, ] == 1,
+      rot = lapply(seq_len(ncol(rep_mat)), function(i) {
+        matrix(rep_mat[-(1:3), i], nrow = m, ncol = m)
+      })
+    )
+  }
+  out <- list(
+    efa = set_name,
+    lv_names = lv_names,
+    ov_names = ov_names,
+    method = res$method,
+    orthogonal = res$orthogonal,
+    row_weights = res$row_weights,
+    algorithm = res$algorithm,
+    converged = res$converged,
+    iterations = res$iter,
+    criterion = res$method.value,
+    rot = rot,
+    phi = phi,
+    order = order_idx,
+    starts = starts
+  )
+  if (mg_flag) {
+    # the joint (agreement) rotation started from a per-group rotation:
+    # its criterion value, convergence and random starts are per group
+    out$mg_agreement <- TRUE
+    out$group_criterion <- ginfo$method.value
+    out$group_converged <- ginfo$converged
+    out$group_iterations <- ginfo$iter
+  }
+  out
+}
+
 # reconstruct the full block-g THETA from a block's model matrices (filling in
 # the dummy observed variables). Used by the rotation routines below.
 lav_model_efa_block_theta <- function(lavmodel = NULL, mlist = NULL, g = 1L) {
@@ -150,7 +282,8 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL,
   extra <- attr(tmp, "extra")
   attr(tmp, "extra") <- NULL
 
-  out <- list(GLIST = extra$GLIST, H = extra$H, lv.order = extra$lv.order)
+  out <- list(GLIST = extra$GLIST, H = extra$H, lv.order = extra$lv.order,
+              rotation = extra$rotation)
 
   # restore warn/verbose settings
   lav_warn(current_warn)
@@ -180,6 +313,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   # H per block
   h <- vector("list", lavmodel@nblocks)
   order_1 <- vector("list", lavmodel@nblocks)
+  # rotation information per block and per efa set (only if extra = TRUE;
+  # stored in the @internal slot of the lavaan object, see lavInspect())
+  rotation_info <- vector("list", lavmodel@nblocks)
 
   # new in 0.7-1 -- three options:
   # 1. rotate per group (default)
@@ -310,9 +446,20 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
           gpa_algorithm = ropts$gpa_algorithm,
           gpa_fwindow = ropts$gpa_fwindow,
           tol = ropts$tol,
+          keep_rep = extra,
           max_iter = ropts$max_iter,
           group = g
         )
+
+        # collect rotation information for this set
+        if (extra) {
+          lv_names_g <- lav_model_efa_block_lv_names(lavmodel, mlist, g)
+          ov_names_g <- lav_model_efa_block_ov_names(lavmodel, mlist, g)
+          rotation_info[[g]][[set_name]] <- lav_model_efa_rotation_info(
+            res = res, set_name = set_name,
+            lv_names = lv_names_g[lv_idx], ov_names = ov_names_g[ov_idx]
+          )
+        }
 
         # extract rotation matrix (note, in Asp & Muthen, 2009; this is H')
         # note: as of 0.6-6, order.idx has already been applied to ROT,
@@ -355,6 +502,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         glist[mm_in_group] <- mlist
         h[[g]] <- hg
         order_1[[g]] <- lv_order
+        rotation_info[[g]] <- rotation_info[[1L]]
       }
     }
 
@@ -467,14 +615,42 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         order_lv_by = ropts$order_lv_by,
         gpa_tol = ropts$gpa_tol,
         tol = ropts$tol,
+        keep_rep = extra,
         max_iter = ropts$max_iter
       )
+      # rescale the rotated factors of this set so that the sum of squares
+      # per column is the same for all groups (the agreement criterion is
+      # evaluated on such rescaled loadings; the scale moves into psi).
+      # The rescaling is folded into the rotation matrices, so that H is
+      # the complete transformation and lambda, psi, beta and alpha stay
+      # consistent (before 0.7-3, lambda and psi were rescaled afterwards,
+      # beta and alpha were not, and the non-efa factors were rescaled too)
+      ss_list <- lapply(res$lambdaList, function(x) colSums(x * x))
+      ss_ave <- Reduce("+", ss_list) / length(ss_list)
+      for (g in seq_len(lavmodel@ngroups)) {
+        scale_g <- sqrt(ss_list[[g]] / ss_ave)
+        res$rotList[[g]] <- t(t(res$rotList[[g]]) * scale_g)
+      }
       for (g in seq_len(lavmodel@ngroups)) {
         # fill in optimal rotation for this set, for this group
         h[[g]][lv_idx, lv_idx] <- res$rotList[[g]]
 
         # keep track of possible re-orderings
         order_1[[g]][lv_idx] <- lv_idx[res$orderList[[g]]]
+
+        # collect rotation information for this set, for this group
+        if (extra) {
+          mm_in_group <- (seq_len(lavmodel@nmat[g]) +
+                          cumsum(c(0, lavmodel@nmat))[g])
+          mlist <- glist[mm_in_group]
+          lv_names_g <- lav_model_efa_block_lv_names(lavmodel, mlist, g)
+          ov_names_g <- lav_model_efa_block_ov_names(lavmodel, mlist, g)
+          rotation_info[[g]][[set_name]] <- lav_model_efa_rotation_info(
+            res = res, set_name = set_name,
+            lv_names = lv_names_g[lv_idx], ov_names = ov_names_g[ov_idx],
+            group = g
+          )
+        }
       }
     } # set
 
@@ -484,35 +660,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       mlist <- glist[mm_in_group]
       hg <- h[[g]]
 
-      # rotate all the SEM parameters (lambda, psi, beta, alpha)
+      # rotate all the SEM parameters (lambda, psi, beta, alpha); the
+      # rescaling to equal column sums of squares across groups is part
+      # of hg (see above)
       mlist <- lav_model_efa_apply_hg(mlist, hg)
 
       glist[mm_in_group] <- mlist
     }
-
-    # rescale lambda again, so that sum-of-squares per columns is the same
-    # for all groups
-    lambda_list <- glist[names(glist) == "lambda"]
-    psi_list    <- glist[names(glist) == "psi"]
-
-    ss_list <- lapply(lambda_list, function(x) colSums(x^2))
-    ss_ave <- Reduce("+", ss_list) / length(ss_list)
-    scale_factor <- vector("list", length = ncol(lambda_list[[1]]))
-    for (g in seq_len(lavmodel@ngroups)) {
-      scale_factor[[g]] <- (sqrt(ss_list[[g]]) / sqrt(ss_ave))
-      lambda_list[[g]] <- t(t(lambda_list[[g]]) / scale_factor[[g]])
-    }
-
-    # rescale psiList accordingly
-    for (g in seq_len(lavmodel@ngroups)) {
-      psi_list[[g]] <- (diag(scale_factor[[g]]) %*% psi_list[[g]] %*%
-                        diag(scale_factor[[g]]))
-    }
-
-    # put back in GLIST
-    glist[names(glist) == "lambda"] <- lambda_list
-    glist[names(glist) == "psi"]    <- psi_list
-
   } # option 3
 
   # extract all rotated parameter estimates
@@ -520,7 +674,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
   # extra?
   if (extra) {
-    attr(x_rot, "extra") <- list(GLIST = glist, H = h, lv.order = order_1)
+    attr(x_rot, "extra") <- list(GLIST = glist, H = h, lv.order = order_1,
+                                 rotation = rotation_info)
   }
 
   # return rotated parameter estimates as a vector
