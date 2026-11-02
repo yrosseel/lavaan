@@ -319,6 +319,8 @@ lav_options_default <- function() {
     chr = c(gpa = "gpa", pairwise = "pairwise", lg = "pairwise"))
   elm(c("rotation.args", "mg_agreement_method"), "procrustes",
     chr = c("procrustes", "loading.alignment"))
+  elm(c("rotation.args", "mg_agreement_scales"), "equal",
+    chr = c("equal", "free"))
 
   # full data
   elm("std.ov", FALSE, bl = TRUE)

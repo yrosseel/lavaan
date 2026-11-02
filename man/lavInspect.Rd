@@ -512,7 +512,9 @@ level), or a single element if there is only one block and
         \code{iterations} refer to the joint (agreement) rotation, while
         \code{group_criterion}, \code{group_converged},
         \code{group_iterations} and \code{starts} refer to the per-group
-        rotation that provided its starting point. Alias:
+        rotation that provided its starting point, and
+        \code{mg_agreement_scales} tells how the scale of each factor was
+        split over the groups (see \code{\link{esem}}). Alias:
         \code{"rotation_info"}.}
     \item{\code{"rotation_matrix"}:}{List. Per block, the rotation matrix
         \eqn{H} for all latent variables of the block (the identity for

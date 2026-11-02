@@ -169,12 +169,28 @@ are:
   \item{\code{mg_agreement}}{Logical. For multiple-group models only. If
     \code{TRUE}, the rotated solutions of the groups are made as similar as
     possible (see also \code{mg_agreement_weight},
-    \code{mg_agreement_method} and \code{mg_agreement_algorithm}).}
+    \code{mg_agreement_method}, \code{mg_agreement_scales} and
+    \code{mg_agreement_algorithm}).}
   \item{\code{mg_agreement_group_weights}}{\code{"equal"} (the default)
     or \code{"nobs"}: whether the groups are weighted by their sample
     sizes in the agreement criterion (the per-group criteria by the group
     weight, and each pair of groups in the agreement term by the product
     of the two weights).}
+  \item{\code{mg_agreement_scales}}{\code{"equal"} (the default) or
+    \code{"free"}: how the scale of each factor is split over the groups.
+    The agreement criterion is evaluated on loadings whose factors have,
+    on average over the groups, unit variance. With \code{"equal"}, the
+    loadings are rescaled so that the sum of squares of every column is the
+    same in all groups; the group-specific factor variances follow from the
+    rotation. With \code{"free"}, the split is part of the agreement
+    objective (the multigroup factor rotation of De Roover and Vermunt,
+    2019): the factor variances are free, subject to a mean of one across
+    groups. Only for criteria that are bounded below when the loadings of a
+    factor are scaled up (oblimin with \code{oblimin_gamma = 0}, quartimin,
+    geomin, the Crawford-Ferguson family, target, pst, simplimax, bi-quartimin
+    and bi-geomin). Note that the oblimin criterion of lavaan is half the
+    one used in that paper, so that their weight \eqn{w} corresponds to
+    \code{mg_agreement_weight = w / (2 - w)}.}
   \item{\code{mg_agreement_algorithm}}{\code{"gpa"} (the default)
     or \code{"pairwise"}: the algorithm for the agreement rotation of all
     groups together (the gradient projection algorithm on the rotation

@@ -237,6 +237,7 @@ lav_model_efa_rotation_info <- function(res = NULL, set_name = NULL,
     # the joint (agreement) rotation started from a per-group rotation:
     # its criterion value, convergence and random starts are per group
     out$mg_agreement <- TRUE
+    out$mg_agreement_scales <- res$mg_agreement_scales
     out$group_criterion <- ginfo$method.value
     out$group_converged <- ginfo$converged
     out$group_iterations <- ginfo$iter
@@ -610,6 +611,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mg_agreement_method = ropts$mg_agreement_method,
         mg_agreement_weight = ropts$mg_agreement_weight,
         mg_agreement_group_weights = mg_group_weights,
+        mg_agreement_scales = ropts$mg_agreement_scales,
         pairwise_accelerate = ropts$pairwise_accelerate,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
@@ -625,11 +627,15 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       # the complete transformation and lambda, psi, beta and alpha stay
       # consistent (before 0.7-3, lambda and psi were rescaled afterwards,
       # beta and alpha were not, and the non-efa factors were rescaled too)
-      ss_list <- lapply(res$lambdaList, function(x) colSums(x * x))
-      ss_ave <- Reduce("+", ss_list) / length(ss_list)
-      for (g in seq_len(lavmodel@ngroups)) {
-        scale_g <- sqrt(ss_list[[g]] / ss_ave)
-        res$rotList[[g]] <- t(t(res$rotList[[g]]) * scale_g)
+      # With mg_agreement_scales = "free", the scales were part of the
+      # objective and are already in the rotation matrices
+      if (ropts$mg_agreement_scales != "free") {
+        ss_list <- lapply(res$lambdaList, function(x) colSums(x * x))
+        ss_ave <- Reduce("+", ss_list) / length(ss_list)
+        for (g in seq_len(lavmodel@ngroups)) {
+          scale_g <- sqrt(ss_list[[g]] / ss_ave)
+          res$rotList[[g]] <- t(t(res$rotList[[g]]) * scale_g)
+        }
       }
       for (g in seq_len(lavmodel@ngroups)) {
         # fill in optimal rotation for this set, for this group
