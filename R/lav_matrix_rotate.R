@@ -214,6 +214,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
             init_rot = init_rot,
             method_fname = method_fname,
             method_args = method_args,
+            gpa_tol = gpa_tol,
             tol = tol,
             max_iter = max_iter
           )
@@ -277,6 +278,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
         init_rot = init_rot,
         method_fname = method_fname,
         method_args = method_args,
+        gpa_tol = gpa_tol,
         tol = tol,
         max_iter = max_iter
       )
@@ -687,185 +689,68 @@ lav_mat_rotate_gpa <- function(a = NULL, # original matrix
 }
 
 
-# pairwise rotation algorithm with direct line search
+# pairwise (plane) rotation algorithm
 #
-# based on Kaiser's (1959) algorithm and Jennrich and Sampson (1966) algorithm
-# but to make it generic, a line search is used; inspired by Browne 2001
+# based on Kaiser's (1959) algorithm and Jennrich and Sampson (1966)
+# algorithm, made generic (any criterion) as in Browne (2001)
 #
-# - orthogonal: rotate one pair of columns (=plane) at a time
-# - oblique: rotate 1 factor in one pair of columns (=plane) at a time
+# - orthogonal: rotate one pair of columns (= plane) at a time
+# - oblique: rotate 1 factor in one pair of columns (= plane) at a time
 #            note: in the oblique case, (1,2) is not the same as (2,1)
-# - BUT use optimize() to find the optimal angle (for each plane)
-#   (see Browne, 2001, page 130)
-# - repeat until the changes in the f() criterion are below tol
+# - new in 0.7-3: the plane minimizations use the gradient of the
+#   criterion (see lav_mat_rotate_pairwise_core()); the derivative-free
+#   line search (optimize()) is only used for a non-smooth criterion
+#   (simplimax) or a criterion without a gradient
 #
-
 lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
-                                       orthogonal = FALSE,
-                                       init_rot = NULL,
-                                       method_fname = NULL, # crit function
-                                       method_args = list(), # method args
-                                       tol = 1e-8,
-                                       max_iter = 1000L) {
+                                    orthogonal = FALSE,
+                                    init_rot = NULL,
+                                    method_fname = NULL, # crit function
+                                    method_args = list(), # method args
+                                    gpa_tol = 1e-5,
+                                    tol = 1e-8,
+                                    max_iter = 1000L) {
   # number of columns
   m <- ncol(a)
 
   # initial mm_lambda + PHI
   if (is.null(init_rot)) {
     mm_lambda <- a
-    if (!orthogonal) {
-      phi <- diag(m)
-    }
+    phi <- diag(m)
+  } else if (orthogonal) {
+    mm_lambda <- a %*% init_rot
+    phi <- diag(m)
   } else {
-    if (orthogonal) {
-      mm_lambda <- a %*% init_rot
-    } else {
-      mm_lambda <- t(solve(init_rot, t(a)))
-      phi <- crossprod(init_rot)
-    }
+    mm_lambda <- t(solve(init_rot, t(a)))
+    phi <- crossprod(init_rot)
   }
 
-  # using the current mm_lambda, evaluate the user-specified
-  # rotation criterion; return Q (the criterion) only
-  q_current <- do.call(method_fname, c(
-    list(mm_lambda = mm_lambda),
-    method_args, list(grad = FALSE)
-  ))
-
-  # if verbose, print
-  if (lav_verbose()) {
-    cat(
-      "  iter = ", sprintf("%4d", 0),
-      " Q = ", sprintf("%13.11f", q_current), "\n"
-    )
-  }
-
-  # plane combinations
-  if (orthogonal) {
-    plane <- utils::combn(m, 2)
-  } else {
-    tmp <- utils::combn(m, 2)
-    plane <- cbind(tmp, tmp[c(2, 1), , drop = FALSE])
-  }
-
-  # define objective function -- orthogonal
-  # note: 'a' is the *current* loading matrix for this plane sweep (passed in by
-  # optimize() below), not the original unrotated matrix of the same name in the
-  # enclosing function.
-  objf_orth <- function(theta = 0, a = NULL, col1 = 0L, col2 = 0L) {
-    # construct ROT
-    rot <- lav_mat_givens_orth(m, col1, col2, theta)
-
-    # rotate
-    mm_lambda <- a %*% rot
-
-    # evaluate criterion
-    q_1 <- do.call(method_fname, c(
-      list(mm_lambda = mm_lambda),
-      method_args, list(grad = FALSE)
+  # objective: the criterion (and its gradient) for a 1-element list
+  objf <- function(lambda_list, grad = FALSE) {
+    q <- do.call(method_fname, c(
+      list(mm_lambda = lambda_list[[1L]]),
+      method_args, list(grad = grad)
     ))
-
-    q_1
+    if (grad) {
+      gq <- attr(q, "grad")
+      attr(q, "grad") <- if (is.null(gq)) NULL else list(gq)
+    }
+    q
   }
 
-  # define objective function -- oblique
-  objf_obliq <- function(delta = 0, a = NULL, col1 = 0L, col2 = 0L,
-                         phi12 = 0) {
-    # construct ROT
-    rot <- lav_mat_givens_obliq(m, col1, col2, delta, phi12)
-
-    # rotate
-    mm_lambda <- a %*% rot
-
-    # evaluate criterion
-    q_1 <- do.call(method_fname, c(
-      list(mm_lambda = mm_lambda),
-      method_args, list(grad = FALSE)
-    ))
-    q_1
-  }
-
-  # start iterations
-  converged <- FALSE
-  q_old <- q_current
-  for (iter in seq_len(max_iter)) {
-    # rotate - one cycle
-    for (pl in seq_len(ncol(plane))) {
-      # choose plane
-      col1 <- plane[1, pl]
-      col2 <- plane[2, pl]
-
-      # optimize
-      if (orthogonal) {
-        out <- optimize(
-          f = objf_orth, interval = c(-pi / 4, +pi / 4),
-          a = mm_lambda, col1 = col1, col2 = col2,
-          maximum = FALSE, tol = .Machine$double.eps^0.25
-        )
-        # best rotation - for this plane
-        theta <- out$minimum
-
-        # construct ROT
-        rot <- lav_mat_givens_orth(m, col1, col2, theta)
-      } else {
-        phi12 <- phi[col1, col2]
-        out <- optimize(
-          f = objf_obliq, interval = c(-1, +1),
-          a = mm_lambda, col1 = col1, col2 = col2,
-          phi12 = phi12,
-          maximum = FALSE, tol = .Machine$double.eps^0.25
-        )
-
-        # best rotation - for this plane
-        delta <- out$minimum
-
-        # construct ROT (rot[col1, col1] == gamma, the PHI scaling factor)
-        rot <- lav_mat_givens_obliq(m, col1, col2, delta, phi12)
-        gamma <- rot[col1, col1]
-      }
-
-      # rotate
-      mm_lambda <- mm_lambda %*% rot
-
-      if (!orthogonal) {
-        # rotate PHI
-        phi[col1, ] <- (1 / gamma) * phi[col1, ] + (delta / gamma) * phi[col2, ]
-        phi[, col1] <- phi[col1, ]
-        phi[col1, col1] <- 1
-      }
-    } # all planes
-
-    # check for convergence
-    q_current <- do.call(method_fname, c(
-      list(mm_lambda = mm_lambda),
-      method_args, list(grad = FALSE)
-    ))
-
-    # absolute change in Q
-    diff <- abs(q_old - q_current)
-
-    # if verbose, print
-    if (lav_verbose()) {
-      cat(
-        "  iter = ", sprintf("%4d", iter),
-        " Q = ", sprintf("%13.11f", q_current),
-        " change = ", sprintf("%13.11f", diff), "\n"
-      )
-    }
-
-    if (diff < tol) {
-      converged <- TRUE
-      break
-    } else {
-      q_old <- q_current
-    }
-  } # iter
+  res <- lav_mat_rotate_pairwise_core(
+    lambda_list = list(mm_lambda), phi_list = list(phi),
+    orthogonal = orthogonal, objf = objf,
+    use_grad = lav_mat_rotate_is_smooth(method_fname),
+    gpa_tol = gpa_tol, tol = tol, max_iter = max_iter
+  )
+  mm_lambda <- res$lambda_list[[1L]]
 
   # warn if no convergence
-  if (!converged) {
+  if (!res$converged) {
     lav_msg_warn(gettextf(
       "pairwise rotation algorithm did not converge after %s iterations",
-      max_iter
+      res$iter
     ))
   }
 
@@ -881,12 +766,323 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
   # algorithm information
   info <- list(
     algorithm = "pairwise",
-    iter = iter,
-    converged = converged,
-    method.value = q_current
+    iter = res$iter,
+    converged = res$converged,
+    method.value = res$q
   )
 
   attr(rot, "info") <- info
 
   rot
+}
+
+
+# plane-sweep engine shared by lav_mat_rotate_pairwise() (single group) and
+# lav_mat_rotate_pairwise_mg() (multiple groups + agreement criterion)
+#
+# lambda_list: the current loading matrices (one per group); phi_list: the
+# corresponding factor correlation matrices (oblique rotation only);
+# objf(lambda_list, grad): the objective, with (if grad = TRUE) the
+# attribute "grad" holding the list of gradients with respect to each
+# loading matrix, or NULL when no gradient is available
+#
+# Gradient-driven version (the default for a smooth criterion):
+# - the directional derivative g0 of the objective along a plane rotation
+#   is an inner product of the current gradient with the plane direction,
+#   so it costs nothing; planes with |g0| below skip_tol are skipped
+# - otherwise the plane objective is minimized along the plane by a
+#   safeguarded secant (Illinois) iteration on the directional derivative:
+#   a first (Newton) trial step from the curvature remembered for this
+#   plane, bracket expansion until the derivative changes sign, then
+#   secant steps; every evaluation yields the objective AND its gradient,
+#   so a plane typically costs 3 to 6 evaluations instead of the 15 to 25
+#   of a derivative-free line search; the best evaluated point is taken,
+#   and only if it improves the objective
+# - convergence: the largest |g0| over all planes (and groups) below
+#   gpa_tol; the plane directions span the tangent space of the orthogonal
+#   (or normal) matrices, so this is the same projected-gradient criterion
+#   as used by the GPA algorithm
+#
+# Derivative-free fallback (use_grad = FALSE, or no gradient available):
+# Brent's method (optimize()) per plane, as in the original algorithm;
+# convergence when the change in the objective over a sweep is below tol.
+# This is the path for a non-smooth criterion (simplimax), where the
+# derivative-based iteration can stall at a kink
+lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
+                                         phi_list = NULL,
+                                         orthogonal = FALSE,
+                                         objf = NULL,
+                                         use_grad = TRUE,
+                                         gpa_tol = 1e-5,
+                                         tol = 1e-8,
+                                         max_iter = 1000L,
+                                         plane_max_eval = 12L) {
+  ngroups <- length(lambda_list)
+  m <- ncol(lambda_list[[1L]])
+
+  # planes whose directional derivative is below skip_tol are left alone;
+  # convergence is declared at gpa_tol (so that the final sweep still
+  # polishes the planes between skip_tol and gpa_tol)
+  skip_tol <- gpa_tol / 100
+
+  # plane combinations
+  if (orthogonal) {
+    plane <- utils::combn(m, 2L)
+  } else {
+    tmp <- utils::combn(m, 2L)
+    plane <- cbind(tmp, tmp[c(2L, 1L), , drop = FALSE])
+  }
+  nplanes <- ncol(plane)
+
+  # largest plane step (angle, or shear)
+  t_max <- if (orthogonal) pi / 4 else 1
+
+  # apply a plane rotation to the two affected columns only; returns the
+  # updated matrix and (oblique) the scaling factor gamma of column c1
+  plane_apply <- function(mm_lambda, c1, c2, t, phi12 = 0) {
+    l1 <- mm_lambda[, c1]
+    l2 <- mm_lambda[, c2]
+    if (orthogonal) {
+      cs <- cos(t)
+      sn <- sin(t)
+      mm_lambda[, c1] <- cs * l1 - sn * l2
+      mm_lambda[, c2] <- sn * l1 + cs * l2
+      gam <- 1
+    } else {
+      gam <- sqrt(abs(1 + 2 * t * phi12 + t * t))
+      mm_lambda[, c1] <- gam * l1
+      mm_lambda[, c2] <- l2 - t * l1
+    }
+    list(mm_lambda = mm_lambda, gam = gam)
+  }
+
+  # directional derivative of the objective along the plane at step t,
+  # given the gradient gq at that point and the columns l1/l2 BEFORE the
+  # step
+  plane_deriv <- function(gq, l1, l2, c1, c2, t, phi12 = 0, gam = 1) {
+    if (orthogonal) {
+      cs <- cos(t)
+      sn <- sin(t)
+      sum(gq[, c1] * (-sn * l1 - cs * l2)) + sum(gq[, c2] * (cs * l1 - sn * l2))
+    } else {
+      sum(gq[, c1] * l1) * (phi12 + t) / gam - sum(gq[, c2] * l1)
+    }
+  }
+
+  # oblique: update PHI of group g after a plane step
+  phi_update <- function(phi, c1, c2, t, gam) {
+    phi[c1, ] <- (1 / gam) * phi[c1, ] + (t / gam) * phi[c2, ]
+    phi[, c1] <- phi[c1, ]
+    phi[c1, c1] <- 1
+    phi
+  }
+
+  # initial objective (+ gradients)
+  q_0 <- objf(lambda_list, grad = use_grad)
+  grad_list <- attr(q_0, "grad")
+  use_grad <- use_grad && !is.null(grad_list)
+  q_current <- as.numeric(q_0)
+  neval <- 1L
+
+  if (lav_verbose()) {
+    cat(
+      "  iter = ", sprintf("%4d", 0L),
+      " Q = ", sprintf("%13.11f", q_current), "\n"
+    )
+  }
+
+  # per-plane (and per-group) curvature estimates (NA = unknown)
+  curv_pl <- matrix(as.numeric(NA), nrow = nplanes, ncol = ngroups)
+
+  converged <- FALSE
+  for (iter in seq_len(max_iter)) {
+    q_old <- q_current
+    g_max <- 0
+    n_accepted <- 0L
+
+    for (g in seq_len(ngroups)) {
+      for (pl in seq_len(nplanes)) {
+        c1 <- plane[1L, pl]
+        c2 <- plane[2L, pl]
+        mm_lambda <- lambda_list[[g]]
+        l1 <- mm_lambda[, c1]
+        l2 <- mm_lambda[, c2]
+        phi12 <- if (orthogonal) 0 else phi_list[[g]][c1, c2]
+
+        if (!use_grad) {
+          # derivative-free: Brent's method on the plane objective
+          objf_plane <- function(t) {
+            lambda_list[[g]] <- plane_apply(mm_lambda, c1, c2, t,
+              phi12 = phi12)$mm_lambda
+            as.numeric(objf(lambda_list, grad = FALSE))
+          }
+          out <- optimize(
+            f = objf_plane, interval = c(-t_max, t_max),
+            maximum = FALSE, tol = .Machine$double.eps^0.25
+          )
+          t <- out$minimum
+          step <- plane_apply(mm_lambda, c1, c2, t, phi12 = phi12)
+          lambda_list[[g]] <- step$mm_lambda
+          if (!orthogonal) {
+            phi_list[[g]] <- phi_update(phi_list[[g]], c1, c2, t, step$gam)
+          }
+          next
+        }
+
+        # directional derivative at the current point (free)
+        g0 <- plane_deriv(grad_list[[g]], l1, l2, c1, c2, t = 0,
+          phi12 = phi12, gam = 1)
+        g_max <- max(g_max, abs(g0))
+        if (abs(g0) < skip_tol) {
+          next
+        }
+
+        # evaluate the objective (+ gradient) and the directional
+        # derivative at plane step t
+        eval_t <- function(t) {
+          step <- plane_apply(mm_lambda, c1, c2, t, phi12 = phi12)
+          lambda_list[[g]] <- step$mm_lambda
+          q_t <- objf(lambda_list, grad = TRUE)
+          gq <- attr(q_t, "grad")
+          list(
+            t = t, q = as.numeric(q_t), grad = gq, gam = step$gam,
+            mm_lambda = step$mm_lambda,
+            g = if (is.null(gq)) NA_real_ else {
+              plane_deriv(gq[[g]], l1, l2, c1, c2, t = t,
+                phi12 = phi12, gam = step$gam)
+            }
+          )
+        }
+
+        # 1. first trial step: Newton step from the remembered curvature,
+        #    or a fixed fraction of the maximal step in the descent direction
+        curv <- curv_pl[pl, g]
+        if (is.finite(curv) && curv > 0) {
+          t1 <- -g0 / curv
+        } else {
+          t1 <- -sign(g0) * 0.1 * t_max
+        }
+        t1 <- max(-t_max, min(t_max, t1))
+        if (abs(t1) < 1e-6) {
+          t1 <- -sign(g0) * 1e-6
+        }
+        pa <- list(t = 0, q = q_current, g = g0)
+        pb <- eval_t(t1)
+        neval <- neval + 1L
+        best <- NULL
+        if (is.finite(pb$q) && pb$q < q_current) {
+          best <- pb
+        }
+        n_ev <- 1L
+
+        # 2. bracket: expand (doubling) until the derivative changes sign
+        while (is.finite(pb$g) && sign(pb$g) == sign(g0) &&
+               abs(pb$t) < t_max && n_ev < plane_max_eval) {
+          pa <- pb
+          t_new <- max(-t_max, min(t_max, 2 * pb$t))
+          pb <- eval_t(t_new)
+          neval <- neval + 1L
+          n_ev <- n_ev + 1L
+          if (is.finite(pb$q) && (is.null(best) || pb$q < best$q)) {
+            best <- pb
+          }
+        }
+
+        # 3. secant (Illinois) iterations on the directional derivative
+        #    within the bracket [pa, pb]
+        if (is.finite(pb$g) && sign(pb$g) != sign(pa$g)) {
+          side <- 0L
+          while (n_ev < plane_max_eval) {
+            if (abs(pb$g) < skip_tol || abs(pa$g) < skip_tol ||
+                abs(pb$t - pa$t) < 1e-10) {
+              break
+            }
+            t_s <- (pa$t * pb$g - pb$t * pa$g) / (pb$g - pa$g)
+            if (!is.finite(t_s)) {
+              break
+            }
+            ps <- eval_t(t_s)
+            neval <- neval + 1L
+            n_ev <- n_ev + 1L
+            if (!is.finite(ps$q) || !is.finite(ps$g)) {
+              break
+            }
+            if (is.null(best) || ps$q < best$q) {
+              best <- ps
+            }
+            if (sign(ps$g) == sign(pb$g)) {
+              pb <- ps
+              if (side == -1L) {
+                pa$g <- pa$g / 2
+              }
+              side <- -1L
+            } else {
+              pa <- ps
+              if (side == 1L) {
+                pb$g <- pb$g / 2
+              }
+              side <- 1L
+            }
+          }
+        }
+
+        # remember the curvature for the next sweep
+        if (is.finite(pb$g) && is.finite(pa$g) && abs(pb$t - pa$t) > 0) {
+          curv_pl[pl, g] <- (pb$g - pa$g) / (pb$t - pa$t)
+        }
+
+        # 4. accept the best evaluated point (if it improves the objective)
+        if (is.null(best) || !(best$q < q_current)) {
+          lambda_list[[g]] <- mm_lambda
+          next
+        }
+        lambda_list[[g]] <- best$mm_lambda
+        q_current <- best$q
+        grad_list <- best$grad
+        n_accepted <- n_accepted + 1L
+        if (!orthogonal) {
+          phi_list[[g]] <- phi_update(phi_list[[g]], c1, c2, best$t, best$gam)
+        }
+      } # planes
+    } # groups
+
+    if (!use_grad) {
+      q_current <- as.numeric(objf(lambda_list, grad = FALSE))
+      neval <- neval + 1L
+    }
+    diff <- abs(q_old - q_current)
+
+    if (lav_verbose()) {
+      cat(
+        "  iter = ", sprintf("%4d", iter),
+        " Q = ", sprintf("%13.11f", q_current),
+        " change = ", sprintf("%13.11f", diff),
+        if (use_grad) paste0(" max|g| = ", sprintf("%10.3e", g_max)) else "",
+        "\n"
+      )
+    }
+
+    if (!is.finite(diff)) {
+      # something went wrong ... bail out
+      break
+    }
+    if (use_grad) {
+      if (g_max < gpa_tol) {
+        converged <- TRUE
+        break
+      }
+      if (n_accepted == 0L) {
+        # no plane could improve the objective: stop here
+        break
+      }
+    } else if (diff < tol) {
+      converged <- TRUE
+      break
+    }
+  } # iter
+
+  list(
+    lambda_list = lambda_list, phi_list = phi_list,
+    q = q_current, iter = iter, converged = converged, neval = neval
+  )
 }

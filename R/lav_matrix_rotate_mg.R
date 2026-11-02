@@ -30,7 +30,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                  mg_agreement_weight = 0.5,
                                  reflect = TRUE, # reflect sign
                                  order_lv_by = "index", # how to order the lv's
-                                 # gpa.tol = 0.00001, # stopping tol gpa
+                                 gpa_tol = 0.00001, # stopping tol (gradient)
                                  tol = 1e-07, # stopping tol others
                                  keep_rep = FALSE, # store replications
                                  max_iter = 10000L) { # max iterations
@@ -134,6 +134,9 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   # 0. initialize: rotate each group separately + reorder
   alist_orig <- a_list
   order_list <- vector("list", length = ngroups)
+  # factor correlations of the per-group solutions: the starting point of
+  # the agreement sweep below (oblique rotation; identity if orthogonal)
+  phi_list <- vector("list", length = ngroups)
   for (g in seq_len(ngroups)) {
     if (lav_verbose()) {
       cat("  group = ", g, "\n")
@@ -152,6 +155,7 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       algorithm = "pairwise",
       reflect = reflect,
       order_lv_by = order_lv_by,
+      gpa_tol = gpa_tol,
       tol = tol,
       max_iter = max_iter,
       group = g
@@ -165,9 +169,11 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       )
       a_list[[g]] <- res0$mm_lambda[, order_idx, drop = FALSE]
       order_list[[g]] <- order_idx
+      phi_list[[g]] <- res0$PHI[order_idx, order_idx, drop = FALSE]
     } else {
       a_list[[g]] <- res0$mm_lambda
       order_list[[g]] <- res0$order.idx
+      phi_list[[g]] <- res0$PHI
     }
   } # group
 
@@ -178,12 +184,14 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   }
   rot_list <- lav_mat_rotate_pairwise_mg(
     a_list = a_list,
+    phi_list = phi_list,
     orthogonal = orthogonal,
     random_rot = FALSE,
     method_fname = method_fname,
     method_args = method_args,
     mg_agreement_method = mg_agreement_method,
     mg_agreement_weight = mg_agreement_weight,
+    gpa_tol = gpa_tol,
     tol = tol,
     max_iter = max_iter
   )
@@ -251,31 +259,42 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
 }
 
 
-# pairwise rotation algorithm with direct line search
-# (see lav_mat_rotate_pairwise()
+# pairwise (plane) rotation algorithm for multiple groups + an agreement
+# criterion: the plane sweeps (over all groups) are run by the engine
+# shared with the single-group algorithm (lav_mat_rotate_pairwise_core(),
+# in lav_matrix_rotate.R), driven by the gradient of the agreement
+# objective (lav_mat_rotate_mg_agreement(grad = TRUE))
 #
-# but adapted to handle multiple groups + an agreement criterion
+# phi_list: the factor correlation matrices that go with a_list (oblique
+# rotation). The starting matrices are the per-group rotated solutions, so
+# their factors are correlated; starting the oblique plane sweeps from an
+# identity matrix instead (as before 0.7-3) mis-normalizes the factors
+# (the rotated solution then had factor variances different from one)
 #
 lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
-                                          orthogonal = FALSE,
-                                          random_rot = FALSE,
-                                          method_fname = NULL, # crit function
-                                          method_args = list(), # method args
-                                          tol = 1e-8,
-                                          mg_agreement_weight = 0.50,
-                                          mg_agreement_method = "procrustes",
-                                          scale = TRUE,
-                                          max_iter = 1000L) {
-  # first group is 'A'
-  a <- a_list[[1]]
+                                       phi_list = NULL, # factor correlations
+                                       orthogonal = FALSE,
+                                       random_rot = FALSE,
+                                       method_fname = NULL, # crit function
+                                       method_args = list(), # method args
+                                       gpa_tol = 1e-5,
+                                       tol = 1e-8,
+                                       mg_agreement_weight = 0.50,
+                                       mg_agreement_method = "procrustes",
+                                       scale = TRUE,
+                                       max_iter = 1000L) {
   ngroups <- length(a_list)
 
   # number of columns
-  m <- ncol(a)
+  m <- ncol(a_list[[1L]])
 
   # initial LAMBDA + PSI
   lambda_list <- a_list
-  psi_list <- rep(list(diag(m)), ngroups)
+  if (is.null(phi_list) || orthogonal) {
+    psi_list <- rep(list(diag(m)), ngroups)
+  } else {
+    psi_list <- phi_list
+  }
 
   # random initial rotation?
   if (random_rot) {
@@ -284,177 +303,37 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
       if (orthogonal) {
         lambda_list[[g]] <- a_list[[g]] %*% init_rot
       } else {
+        # lambda = a %*% solve(t(init_rot)): the factors transform as
+        # init_rot^-1 f, so PSI becomes init_rot^-1 PSI init_rot^-T
+        # (= t(init_rot) PSI init_rot for an orthogonal init_rot)
         lambda_list[[g]] <- t(solve(init_rot, t(a_list[[g]])))
-        psi_list[[g]] <- crossprod(init_rot)
+        psi_list[[g]] <- t(init_rot) %*% psi_list[[g]] %*% init_rot
       }
     }
   }
 
-  # using the current LAMBDA, evaluate the user-specified
-  # rotation criterion; return Q (the criterion) only
-  q_current <- lav_mat_rotate_mg_agreement(
-    lambda_list = lambda_list, method_fname = method_fname,
-    method_args = method_args,
-    mg_agreement_method = mg_agreement_method,
-    w = mg_agreement_weight, scale = scale
+  # objective: the agreement criterion (+ per-group gradients)
+  objf <- function(lambda_list, grad = FALSE) {
+    lav_mat_rotate_mg_agreement(
+      lambda_list = lambda_list, method_fname = method_fname,
+      method_args = method_args, mg_agreement_method = mg_agreement_method,
+      w = mg_agreement_weight, scale = scale, grad = grad
+    )
+  }
+
+  res <- lav_mat_rotate_pairwise_core(
+    lambda_list = lambda_list, phi_list = psi_list,
+    orthogonal = orthogonal, objf = objf,
+    use_grad = lav_mat_rotate_is_smooth(method_fname),
+    gpa_tol = gpa_tol, tol = tol, max_iter = max_iter
   )
-
-  # if verbose, print
-  if (lav_verbose()) {
-    q_mg <- attr(q_current, "Q.mg")
-    a_mg <- attr(q_current, "A.mg")
-    cat(
-      "  iter = ", sprintf("%4d", 0),
-      " Q = ", sprintf("%13.11f", q_current),
-      " Q.rot = ", sprintf("%13.11f", q_mg),
-      " Q.agr = ", sprintf("%13.11f", a_mg), "\n"
-    )
-  }
-
-  # plane combinations
-  if (orthogonal) {
-    plane <- utils::combn(m, 2)
-  } else {
-    tmp <- utils::combn(m, 2)
-    plane <- cbind(tmp, tmp[c(2, 1), , drop = FALSE])
-  }
-
-  # define objective function -- orthogonal
-  objf_orth <- function(g = 1L, theta = 0, a = NULL, col1 = 0L, col2 = 0L) {
-    # construct ROT
-    rot <- lav_mat_givens_orth(m, col1, col2, theta)
-
-    # rotate
-    lambda_list[[g]] <- a %*% rot
-
-    # evaluate criterion
-    q_1 <- lav_mat_rotate_mg_agreement(
-      lambda_list = lambda_list, method_fname = method_fname,
-      method_args = method_args, mg_agreement_method = mg_agreement_method,
-      w = mg_agreement_weight, scale = scale
-    )
-
-    q_1
-  }
-
-  # define objective function -- oblique
-  # ('a' is the current loading matrix for group g, passed in by optimize())
-  objf_obliq <- function(g = 1, delta = 0, a = NULL, col1 = 0L, col2 = 0L,
-                         psi12 = 0) {
-    # construct ROT
-    rot <- lav_mat_givens_obliq(m, col1, col2, delta, psi12)
-
-    # rotate
-    lambda_list[[g]] <- a %*% rot
-
-    # evaluate criterion
-    q_1 <- lav_mat_rotate_mg_agreement(
-      lambda_list = lambda_list, method_fname = method_fname,
-      method_args = method_args, mg_agreement_method = mg_agreement_method,
-      w = mg_agreement_weight, scale = scale
-    )
-
-    q_1
-  }
-
-  # start iterations
-  converged <- FALSE
-  q_old <- q_current
-  for (iter in seq_len(max_iter)) {
-    # for each group
-    for (g in seq_len(ngroups)) {
-      # rotate - one cycle
-      for (pl in seq_len(ncol(plane))) {
-        # choose plane
-        col1 <- plane[1, pl]
-        col2 <- plane[2, pl]
-
-        # optimize
-        if (orthogonal) {
-          out <- optimize(
-            f = objf_orth, interval = c(-pi / 4, +pi / 4),
-            g = g,
-            a = lambda_list[[g]], col1 = col1, col2 = col2,
-            maximum = FALSE, tol = .Machine$double.eps^0.25
-          )
-          # best rotation - for this plane
-          theta <- out$minimum
-
-          # construct ROT
-          rot <- lav_mat_givens_orth(m, col1, col2, theta)
-        } else {
-          psi12 <- psi_list[[g]][col1, col2]
-          out <- optimize(
-            f = objf_obliq, interval = c(-1, +1),
-            g = g,
-            a = lambda_list[[g]], col1 = col1, col2 = col2,
-            psi12 = psi12,
-            maximum = FALSE, tol = .Machine$double.eps^0.25
-          )
-
-          # best rotation - for this plane
-          delta <- out$minimum
-
-          # construct ROT (rot[col1, col1] == gamma, the PSI scaling factor)
-          rot <- lav_mat_givens_obliq(m, col1, col2, delta, psi12)
-          gamma <- rot[col1, col1]
-        }
-
-        # rotate
-        lambda_list[[g]] <- lambda_list[[g]] %*% rot
-
-        if (!orthogonal) {
-          mm_psi <- psi_list[[g]]
-          # rotate PSI
-          mm_psi[col1, ] <- (1 / gamma) * mm_psi[col1, ] +
-            (delta / gamma) * mm_psi[col2, ]
-          mm_psi[, col1] <- mm_psi[col1, ]
-          mm_psi[col1, col1] <- 1
-          psi_list[[g]] <- mm_psi
-        }
-      } # all planes
-    } # ngroups
-
-    # check for convergence
-    q_current <- lav_mat_rotate_mg_agreement(
-      lambda_list = lambda_list, method_fname = method_fname,
-      method_args = method_args, mg_agreement_method = mg_agreement_method,
-      w = mg_agreement_weight, scale = scale
-    )
-
-    # absolute change in Q
-    diff <- abs(q_old - q_current)
-
-    # if verbose, print
-    if (lav_verbose()) {
-      q_mg <- attr(q_current, "Q.mg")
-      a_mg <- attr(q_current, "A.mg")
-      cat(
-        "  iter = ", sprintf("%4d", iter),
-        " Q = ", sprintf("%13.11f", q_current),
-        " Q.rot = ", sprintf("%13.11f", q_mg),
-        " Q.agr = ", sprintf("%13.11f", a_mg),
-        " change = ", sprintf("%13.11f", diff), "\n"
-      )
-    }
-
-    if (!is.finite(diff)) {
-      # something went wrong ... bail out
-      lav_msg_warn(gettextf("mg-pairwise rotation algorithm failed!"))
-      break
-    } else if (diff < tol) {
-      converged <- TRUE
-      break
-    } else {
-      q_old <- q_current
-    }
-  } # iter
+  lambda_list <- res$lambda_list
 
   # warn if no convergence
-  if (!converged) {
+  if (!res$converged) {
     lav_msg_warn(gettextf(
       "mg-pairwise rotation algorithm did not converge after %s iterations",
-      max_iter
+      res$iter
     ))
   }
 
@@ -481,9 +360,9 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
   # algorithm information
   info <- list(
     algorithm = "mg-pairwise",
-    iter = iter,
-    converged = converged,
-    method.value = q_current
+    iter = res$iter,
+    converged = res$converged,
+    method.value = res$q
   )
 
   attr(rot_list, "info") <- info

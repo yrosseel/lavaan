@@ -569,29 +569,45 @@ lav_mat_rotate_bigeomin <- function(mm_lambda, geomin_epsilon = 0.01, ...,
 }
 
 # multiple group rotation + agreement
+#
+# grad = TRUE adds the attribute "grad": the list of gradients of the
+# objective with respect to each (unscaled) loading matrix. With scale =
+# TRUE the chain rule runs through the column rescaling: with
+# lambda_tilde_g = lambda_g D_g, D_g = diag(sqrt(ss_ave / ss_g)), and
+# gt_g the gradient with respect to lambda_tilde_g,
+#   d/d lambda_g[k, j] = s_gj gt_g[k, j]
+#                        + lambda_g[k, j] (sum_h c_hj / (G ss_ave_j)
+#                                          - c_gj / ss_gj)
+# with c_hj = sum_i gt_h[i, j] lambda_tilde_h[i, j]
 lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
                                    method_args = list(),
                                    mg_agreement_method = "procrustes",
-                                   w = 0.5, scale = TRUE) {
+                                   w = 0.5, scale = TRUE, grad = FALSE) {
   ngroups <- length(lambda_list)
+  lambda_orig <- lambda_list
 
   # 0. rescale, so all columns have the same (average) sum-of-squares
   if (scale) {
     ss_list <- lapply(lambda_list, function(x) colSums(x * x))
     ss_ave <- Reduce("+", ss_list) / length(ss_list)
+    s_list <- lapply(ss_list, function(x) sqrt(ss_ave / x))
     for (g in seq_len(ngroups)) {
-      lambda_list[[g]] <- t(t(lambda_list[[g]]) /
-        sqrt(ss_list[[g]]) * sqrt(ss_ave))
+      lambda_list[[g]] <- t(t(lambda_list[[g]]) * s_list[[g]])
     }
   }
 
   # 1. simple structure crit for each group
   q_group <- numeric(ngroups)
+  gq_list <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
-    q_group[g] <- do.call(method_fname, c(
+    q_g <- do.call(method_fname, c(
       list(mm_lambda = lambda_list[[g]]),
-      method_args, list(grad = FALSE)
+      method_args, list(grad = grad)
     ))
+    if (grad) {
+      gq_list[[g]] <- attr(q_g, "grad")
+    }
+    q_group[g] <- as.numeric(q_g)
   }
   # FIXME: should we 'weight' the groups, based on sample size?
   q_mg <- sum(q_group)
@@ -617,6 +633,36 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
 
   attr(out, "Q.mg") <- q_mg
   attr(out, "A.mg") <- a_mg
+
+  if (grad) {
+    if (any(vapply(gq_list, is.null, logical(1L)))) {
+      # criterion without a gradient
+      attr(out, "grad") <- NULL
+      return(out)
+    }
+    # gradient with respect to the (scaled) loading matrices
+    lambda_sum <- Reduce("+", lambda_list)
+    gt_list <- vector("list", ngroups)
+    for (g in seq_len(ngroups)) {
+      # d a_mg / d lambda_g = 2 sum_{h != g} (lambda_g - lambda_h)
+      agr <- 2 * (ngroups * lambda_list[[g]] - lambda_sum)
+      gt_list[[g]] <- (1 - w) * gq_list[[g]] + w * agr
+    }
+    if (scale) {
+      # chain rule through the column rescaling
+      c_mat <- vapply(seq_len(ngroups), function(h) {
+        colSums(gt_list[[h]] * lambda_list[[h]])
+      }, numeric(ncol(lambda_sum)))
+      c_mat <- matrix(c_mat, ncol = ngroups)
+      c_sum <- rowSums(c_mat)
+      for (g in seq_len(ngroups)) {
+        gt_list[[g]] <- t(t(gt_list[[g]]) * s_list[[g]]) +
+          t(t(lambda_orig[[g]]) *
+            (c_sum / (ngroups * ss_ave) - c_mat[, g] / ss_list[[g]]))
+      }
+    }
+    attr(out, "grad") <- gt_list
+  }
 
   out
 }

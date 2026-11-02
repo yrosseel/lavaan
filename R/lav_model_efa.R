@@ -445,7 +445,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mg_agreement_weight = ropts$mg_agreement_weight,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
-        #gpa.tol = ropts$gpa_tol,
+        gpa_tol = ropts$gpa_tol,
         tol = ropts$tol,
         max_iter = ropts$max_iter
       )

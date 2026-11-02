@@ -109,8 +109,13 @@ orthogonal and an oblique version:
 }
 The rotation is found by minimizing the criterion with the gradient
 projection algorithm (\code{algorithm = "gpa"}, the default) or with a
-pairwise algorithm (\code{algorithm = "pairwise"}), starting from a number of
-random starts (\code{rstarts}, default 30) to avoid local minima.
+pairwise algorithm (\code{algorithm = "pairwise"}; one pair of factors at a
+time, each plane minimized exactly using the gradient of the criterion, or
+by a derivative-free search for simplimax), starting from a number of
+random starts (\code{rstarts}, default 30) to avoid local minima. Both
+algorithms stop when the projected gradient of the criterion falls below
+\code{gpa_tol}. The pairwise algorithm is also used for the multiple-group
+agreement rotation (\code{mg_agreement = TRUE}).
 }
 
 \subsection{Rotation options}{

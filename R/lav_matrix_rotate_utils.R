@@ -135,6 +135,13 @@ lav_mat_givens_obliq <- function(m = 2L, col1 = 1L, col2 = 2L, delta = 0,
   rot
 }
 
+# is the rotation criterion (given by its function name) smooth? The
+# gradient-driven plane steps of the pairwise algorithm are only used for a
+# smooth criterion; simplimax (a sorted-loadings criterion) is not
+lav_mat_rotate_is_smooth <- function(method_fname = NULL) {
+  !identical(method_fname, "lav_mat_rotate_simplimax")
+}
+
 # resolve the rotation criterion shared by lav_mat_rotate() and
 # lav_mat_rotate_mg(): map the (already lower-cased) method name to its gradient
 # function ('method_fname'), fill in the method-specific cf_gamma for the
