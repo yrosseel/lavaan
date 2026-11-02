@@ -68,7 +68,10 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    Other options are specific for a particular rotation criterion:
    \code{geomin_epsilon = 0.001}, \code{orthomax_gamma = 1},
    \code{promax_kappa = 4},
-   \code{cf_gamma = 0}, and \code{oblimin_gamma = 0}.
+   \code{cf_gamma = 0}, \code{oblimin_gamma = 0}, and \code{simplimax_k = 0}
+   (the number of loadings that simplimax drives to zero; \code{0} means
+   \eqn{p(m-1)}, with \eqn{p} the number of indicators and \eqn{m} the
+   number of factors).
 
    For the target rotation methods (\code{target.strict}, \code{target} and
    \code{pst}), the \code{target} option (and, for \code{pst}, the optional

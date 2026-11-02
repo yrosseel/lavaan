@@ -289,6 +289,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
             cf_gamma       = ropts$cf_gamma,
             oblimin_gamma  = ropts$oblimin_gamma,
             promax_kappa   = ropts$promax_kappa,
+            simplimax_k    = ropts$simplimax_k,
             target         = this_target,
             target_mask    = this_target_mask
           ),
@@ -429,6 +430,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
           cf_gamma       = ropts$cf_gamma,
           oblimin_gamma  = ropts$oblimin_gamma,
           promax_kappa   = ropts$promax_kappa,
+          simplimax_k    = ropts$simplimax_k,
           target         = this_target,
           target_mask    = this_target_mask
         ),
@@ -519,6 +521,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     cf_gamma = ropts$cf_gamma,
     oblimin_gamma = ropts$oblimin_gamma,
     promax_kappa = ropts$promax_kappa,
+    simplimax_k  = ropts$simplimax_k,
     target = ropts$target,
     target_mask = ropts$target_mask
   )

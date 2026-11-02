@@ -431,8 +431,16 @@ lav_mat_rotate_tandem2 <- function(mm_lambda, ..., grad = FALSE) {
 # may be viewed as partially specified target rotation with
 # dynamically chosen weights
 #
-lav_mat_rotate_simplimax <- function(mm_lambda = NULL, k = nrow(mm_lambda),
-                                        ..., grad = FALSE) {
+# simplimax_k = 0 (the default) means k = p * (m - 1), the number of zero
+# loadings under perfect simple structure (following GPArotation >= 2026.8;
+# the old default was k = p); rotation.args = list(simplimax_k = ) sets k
+lav_mat_rotate_simplimax <- function(mm_lambda = NULL, simplimax_k = 0L,
+                                     ..., grad = FALSE) {
+  k <- as.integer(simplimax_k)
+  if (length(k) == 0L || is.na(k) || k < 1L) {
+    k <- nrow(mm_lambda) * (ncol(mm_lambda) - 1L)
+  }
+  k <- max(1L, min(k, length(mm_lambda)))
   l2 <- mm_lambda * mm_lambda
 
   # 'k' smallest element of L2

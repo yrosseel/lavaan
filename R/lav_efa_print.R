@@ -176,6 +176,10 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
     } else if (x$rotation == "promax") {
       c1 <- c(c1, "Promax kappa")
       c2 <- c(c2, x$rotation.args$promax_kappa)
+    } else if (x$rotation == "simplimax") {
+      c1 <- c(c1, "Simplimax k")
+      k <- x$rotation.args$simplimax_k
+      c2 <- c(c2, if (is.null(k) || k < 1L) "p(m-1)" else k)
     }
 
     # rotation algorithm

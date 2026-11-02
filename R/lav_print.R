@@ -1233,6 +1233,10 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       } else if (rotation$rotation == "promax") {
         c1 <- c(c1, "Promax kappa")
         c2 <- c(c2, rotation$rotation.args$promax_kappa)
+      } else if (rotation$rotation == "simplimax") {
+        c1 <- c(c1, "Simplimax k")
+        k <- rotation$rotation.args$simplimax_k
+        c2 <- c(c2, if (is.null(k) || k < 1L) "p(m-1)" else k)
       }
 
       # rotation algorithm

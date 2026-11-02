@@ -89,8 +89,10 @@ orthogonal and an oblique version:
     criteria that are typically used for orthogonal rotation.
   \item \code{"oblimin"} (with \code{oblimin_gamma}), \code{"quartimin"},
     \code{"geomin"} (with \code{geomin_epsilon}), \code{"oblimax"},
-    \code{"simplimax"}, \code{"bentler"}: criteria that are typically used
-    for oblique rotation.
+    \code{"simplimax"} (making the \eqn{p(m-1)} smallest loadings as
+    close to zero as possible, as in GPArotation 2026.8 and later),
+    \code{"bentler"}: criteria that are typically used for oblique
+    rotation.
   \item \code{"cf"} (Crawford-Ferguson, with \code{cf_gamma}), and its
     special cases \code{"cf-quartimax"}, \code{"cf-varimax"},
     \code{"cf-equamax"}, \code{"cf-parsimax"} and \code{"cf-facparsim"}.
@@ -137,9 +139,11 @@ are:
     search, the default), \code{"cayley"} (orthogonal rotation only) or
     \code{"legacy"}. See \code{\link{efa}} for \code{gpa_fwindow}.}
   \item{\code{geomin_epsilon}, \code{orthomax_gamma}, \code{oblimin_gamma},
-    \code{cf_gamma}, \code{promax_kappa}}{Tuning constants of the
-    corresponding criteria. Defaults: \code{0.001}, \code{1}, \code{0},
-    \code{0} and \code{4}.}
+    \code{cf_gamma}, \code{promax_kappa}, \code{simplimax_k}}{Tuning
+    constants of the corresponding criteria. Defaults: \code{0.001},
+    \code{1}, \code{0}, \code{0}, \code{4} and \code{0}, where
+    \code{simplimax_k = 0} means that the \eqn{p(m-1)} smallest loadings
+    are driven to zero.}
   \item{\code{target}, \code{target_mask}}{The target matrix (and optional
     mask) for the target rotation methods; see below.}
   \item{\code{reflect}}{Logical. If \code{TRUE} (the default), the sign of

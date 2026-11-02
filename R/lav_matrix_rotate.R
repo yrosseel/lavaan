@@ -17,6 +17,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
                                 cf_gamma = 0,
                                 oblimin_gamma = 0,
                                 promax_kappa = 4,
+                                simplimax_k = 0L,
                                 target = matrix(0, 0, 0),
                                 target_mask = matrix(0, 0, 0)
                               ),

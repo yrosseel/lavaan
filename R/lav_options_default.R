@@ -290,6 +290,9 @@ lav_options_default <- function() {
   elm(c("rotation.args", "cf_gamma"), 0, nm = "[0, 1]")
   elm(c("rotation.args", "oblimin_gamma"), 0, nm = "[0, 1000]")
   elm(c("rotation.args", "promax_kappa"), 4, nm = "[0, 1000]")
+  # simplimax: number of loadings driven to zero; 0 = p * (m - 1)
+  elm(c("rotation.args", "simplimax_k"), 0L, nm = "[0, 1e+07]",
+      num2int = TRUE)
   elm(c("rotation.args", "target"), matrix(0, 0L, 0L), oklen = c(0, 1e+32))
   elm(c("rotation.args", "target_mask"), matrix(0, 0L, 0L), oklen = c(0, 1e+32))
   elm(c("rotation.args", "rstarts"), 30L, nm = "[0, 1e+07]")
