@@ -13,6 +13,24 @@
 # The general formulas below hold for any invertible 'hg'. For an orthonormal
 # signed-permutation 'hg' (as used by the bootstrap alignment) they reduce to
 # lambda %*% hg, t(hg) %*% beta %*% hg, etc., since solve(t(hg)) == hg.
+# translate a subset of the latent variables by t (a vector over all lv's,
+# zero for the others): eta' = eta + t. The model-implied moments are
+# unchanged when alpha' = alpha + (I - B) t and nu' = nu - lambda t. Used
+# by the alignment of the intercepts (mg_agreement_intercepts)
+lav_model_efa_apply_translation <- function(mlist = NULL, t_vec = NULL) {
+  if (!is.null(mlist$alpha)) {
+    shift <- t_vec
+    if (!is.null(mlist$beta)) {
+      shift <- shift - as.numeric(mlist$beta %*% t_vec)
+    }
+    mlist$alpha <- mlist$alpha + shift
+  }
+  if (!is.null(mlist$nu)) {
+    mlist$nu <- mlist$nu - as.numeric(mlist$lambda %*% t_vec)
+  }
+  mlist
+}
+
 lav_model_efa_apply_hg <- function(mlist = NULL, hg = NULL) {
   # 1. lambda
   mlist$lambda <- t(solve(hg, t(mlist$lambda)))
@@ -238,6 +256,12 @@ lav_model_efa_rotation_info <- function(res = NULL, set_name = NULL,
     # its criterion value, convergence and random starts are per group
     out$mg_agreement <- TRUE
     out$mg_agreement_scales <- res$mg_agreement_scales
+    out$mg_agreement_intercepts <- res$mg_agreement_intercepts
+    if (!is.null(res$meanList)) {
+      means <- res$meanList[[group]]
+      names(means) <- lv_names
+      out$means <- means
+    }
     out$group_criterion <- ginfo$method.value
     out$group_converged <- ginfo$converged
     out$group_iterations <- ginfo$iter
@@ -317,6 +341,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   # rotation information per block and per efa set (only if extra = TRUE;
   # stored in the @internal slot of the lavaan object, see lavInspect())
   rotation_info <- vector("list", lavmodel@nblocks)
+
+  # the aligned factor means per group (intercept alignment), zero if none
+  mean_1 <- vector("list", length = lavmodel@ngroups)
 
   # new in 0.7-1 -- three options:
   # 1. rotate per group (default)
@@ -520,9 +547,10 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
       lambda_list[[g]] <- lambda_g
 
-      # prepare H and ORDER
+      # prepare H, ORDER and the factor means
       h[[g]] <- diag(ncol(lambda_g))
       order_1[[g]] <- seq_len(ncol(lambda_g))
+      mean_1[[g]] <- numeric(ncol(lambda_g))
     } # group
 
     # fill in optimal rotation for each set
@@ -543,6 +571,36 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       alist_1 <- lapply(lambda_list,
         function(x) x[ov_idx, lv_idx, drop = FALSE])
       this_ov_var <- NULL
+
+      # intercept alignment: the intercepts of the indicators of this set
+      nu_list <- NULL
+      if (ropts$mg_agreement_intercepts != "none") {
+        nu_list <- vector("list", length = lavmodel@ngroups)
+        for (g in seq_len(lavmodel@ngroups)) {
+          mm_in_group <- (seq_len(lavmodel@nmat[g]) +
+                          cumsum(c(0, lavmodel@nmat))[g])
+          mlist_g <- glist[mm_in_group]
+          if (is.null(mlist_g$nu)) {
+            lav_msg_stop(gettext(
+              "the alignment of the intercepts (mg_agreement_intercepts)
+               requires a mean structure (meanstructure = TRUE)."))
+          }
+          if (lavmodel@categorical || lavmodel@conditional.x) {
+            lav_msg_stop(gettext(
+              "the alignment of the intercepts (mg_agreement_intercepts) is
+               not available for categorical data or conditional.x = TRUE."))
+          }
+          dummy_idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
+                         lavmodel@ov.x.dummy.ov.idx[[g]])
+          if (length(intersect(ov_idx, dummy_idx)) > 0L) {
+            lav_msg_stop(gettext(
+              "the alignment of the intercepts (mg_agreement_intercepts) is
+               not available when an indicator of an efa block is also a
+               predictor or an outcome in a regression."))
+          }
+          nu_list[[g]] <- as.numeric(mlist_g$nu[ov_idx, 1L])
+        }
+      }
 
       # per-set target/target_mask? (named list, keyed by efa block label)
       set_name <- names(lavmodel@lv.efa.idx[[1]])[set]
@@ -619,6 +677,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mg_agreement_group_weights = mg_group_weights,
         mg_agreement_scales = ropts$mg_agreement_scales,
         mg_agreement_rotate = ropts$mg_agreement_rotate,
+        mg_agreement_intercepts = ropts$mg_agreement_intercepts,
+        nu_list = nu_list,
         pairwise_accelerate = ropts$pairwise_accelerate,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
@@ -651,6 +711,12 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         # keep track of possible re-orderings
         order_1[[g]][lv_idx] <- lv_idx[res$orderList[[g]]]
 
+        # the aligned factor means of this set (translation, applied
+        # after the rotation below)
+        if (!is.null(res$meanList)) {
+          mean_1[[g]][lv_idx] <- res$meanList[[g]]
+        }
+
         # collect rotation information for this set, for this group
         if (extra) {
           mm_in_group <- (seq_len(lavmodel@nmat[g]) +
@@ -677,6 +743,14 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       # rescaling to equal column sums of squares across groups is part
       # of hg (see above)
       mlist <- lav_model_efa_apply_hg(mlist, hg)
+
+      # intercept alignment: translate the (rotated) efa factors by their
+      # aligned means t: eta' = eta + t keeps the model-implied moments
+      # when alpha' = alpha + (I - B) t and nu' = nu - lambda t
+      t_g <- mean_1[[g]]
+      if (any(t_g != 0)) {
+        mlist <- lav_model_efa_apply_translation(mlist, t_g)
+      }
 
       glist[mm_in_group] <- mlist
     }

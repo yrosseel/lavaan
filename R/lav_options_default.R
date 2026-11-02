@@ -324,6 +324,8 @@ lav_options_default <- function() {
   elm(c("rotation.args", "mg_agreement_scales"), "equal",
     chr = c("equal", "free"))
   elm(c("rotation.args", "mg_agreement_rotate"), TRUE, bl = TRUE)
+  elm(c("rotation.args", "mg_agreement_intercepts"), "none",
+    chr = c("none", "fixed", "free"))
 
   # full data
   elm("std.ov", FALSE, bl = TRUE)

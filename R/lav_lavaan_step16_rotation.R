@@ -60,6 +60,23 @@ lav_step16_rotation <- function(lavoptions = NULL,
     # - change 'free' column to reflect that user = 7/77 parameters are free
     # - save unrotated free column in free.unrotated
     lavpartable$free.unrotated <- lavpartable$free
+    # intercept alignment: the aligned factor means of the efa factors
+    # (fixed to zero in the unrotated model) are parameters of the rotated
+    # model, like the efa factor (co)variances; mark them as user = 7
+    # (all groups for "free", all but the first group for "fixed")
+    mg_int <- lavoptions$rotation.args$mg_agreement_intercepts
+    if (lavdata@ngroups > 1L && isTRUE(lavoptions$rotation.args$mg_agreement) &&
+        !("loadings" %in% lavoptions$group.equal) &&
+        !is.null(mg_int) && mg_int != "none") {
+      lv_efa <- lav_pt_vnames(lavpartable, type = "lv.efa")
+      int_idx <- which(lavpartable$op == "~1" &
+        lavpartable$lhs %in% lv_efa & lavpartable$free == 0L &
+        lavpartable$user == 0L)
+      if (mg_int == "fixed") {
+        int_idx <- int_idx[lavpartable$group[int_idx] != 1L]
+      }
+      lavpartable$user[int_idx] <- 7L
+    }
     user7_idx <- which((lavpartable$user == 7L | lavpartable$user == 77L) &
       lavpartable$free == 0L)
     lavpartable$free[user7_idx] <- 1L

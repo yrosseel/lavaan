@@ -589,12 +589,19 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
                                    mg_agreement_method = "procrustes",
                                    mg_agreement_epsilon = 0.01,
                                    w = 0.5, scale = TRUE,
-                                   group_weights = NULL, grad = FALSE) {
+                                   group_weights = NULL,
+                                   nu_list = NULL, mean_list = NULL,
+                                   grad = FALSE) {
   ngroups <- length(lambda_list)
   lambda_orig <- lambda_list
   if (is.null(group_weights)) {
     group_weights <- rep(1, ngroups)
   }
+  # intercept alignment: nu_list are the (unrotated) intercepts of the
+  # indicators, mean_list the factor means; the aligned intercepts are
+  # nu_g - lambda_g mean_g (lambda_g the scaled loadings), and the
+  # agreement term is applied to them as well
+  align_means <- !is.null(nu_list) && !is.null(mean_list)
 
   # 0. rescale, so all columns have the same (average) sum-of-squares
   if (scale) {
@@ -664,10 +671,44 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       "unknown mg_agreement_method: %s", dQuote(mg_agreement_method)))
   }
 
-  out <- (w * a_mg) + ((1 - w) * q_mg)
+  # 2b. agreement of the aligned intercepts (same loss, same weights)
+  a_nu <- 0
+  if (align_means) {
+    nu_list <- lapply(seq_len(ngroups), function(g) {
+      as.numeric(nu_list[[g]] - lambda_list[[g]] %*% mean_list[[g]])
+    })
+    if (grad) {
+      gn_list <- lapply(nu_list, function(x) x * 0)
+    }
+    for (g in seq_len(ngroups - 1L)) {
+      for (h in (g + 1L):ngroups) {
+        d <- nu_list[[g]] - nu_list[[h]]
+        omega <- group_weights[g] * group_weights[h]
+        if (mg_agreement_method == "procrustes") {
+          a_nu <- a_nu + omega * sum(d * d)
+          if (grad) {
+            fd <- 2 * omega * d
+          }
+        } else {
+          d2e <- d * d + mg_agreement_epsilon
+          a_nu <- a_nu + omega * sum(sqrt(sqrt(d2e)))
+          if (grad) {
+            fd <- omega * d / (2 * d2e^0.75)
+          }
+        }
+        if (grad) {
+          gn_list[[g]] <- gn_list[[g]] + fd
+          gn_list[[h]] <- gn_list[[h]] - fd
+        }
+      }
+    }
+  }
+
+  out <- (w * (a_mg + a_nu)) + ((1 - w) * q_mg)
 
   attr(out, "Q.mg") <- q_mg
-  attr(out, "A.mg") <- a_mg
+  attr(out, "A.mg") <- a_mg + a_nu
+  attr(out, "A.nu") <- a_nu
 
   if (grad) {
     if (any(vapply(gq_list, is.null, logical(1L)))) {
@@ -686,6 +727,10 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       } else {
         agr <- agr_list[[g]]
       }
+      if (align_means) {
+        # d a_nu / d lambda_g = - gn_g mean_g'
+        agr <- agr - tcrossprod(gn_list[[g]], mean_list[[g]])
+      }
       gt_list[[g]] <- (1 - w) * group_weights[g] * gq_list[[g]] + w * agr
     }
     if (scale) {
@@ -702,6 +747,12 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       }
     }
     attr(out, "grad") <- gt_list
+    if (align_means) {
+      # gradient with respect to the factor means: - w lambda_g' gn_g
+      attr(out, "grad_mean") <- lapply(seq_len(ngroups), function(g) {
+        -1 * w * as.numeric(crossprod(lambda_list[[g]], gn_list[[g]]))
+      })
+    }
   }
 
   out

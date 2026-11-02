@@ -171,7 +171,8 @@ are:
     possible (see also \code{mg_agreement_weight},
     \code{mg_agreement_method}, \code{mg_agreement_epsilon},
     \code{mg_agreement_group_weights}, \code{mg_agreement_scales},
-    \code{mg_agreement_rotate} and \code{mg_agreement_algorithm}).}
+    \code{mg_agreement_rotate}, \code{mg_agreement_intercepts} and
+    \code{mg_agreement_algorithm}).}
   \item{\code{mg_agreement_method}}{\code{"procrustes"} (the default)
     or \code{"loading.alignment"}: the agreement term. Procrustes: the sum
     of squared differences between the loadings of every pair of groups.
@@ -201,7 +202,21 @@ are:
     "loading.alignment"}, \code{mg_agreement_weight = 1} and
     \code{mg_agreement_group_weights = "sqrt.nobs"}, this is the
     alignment of the factor loadings and variances of Asparouhov and
-    Muthen (2014), without the alignment of the intercepts.}
+    Muthen (2014); add \code{mg_agreement_intercepts = "fixed"} for the
+    alignment of the intercepts.}
+  \item{\code{mg_agreement_intercepts}}{\code{"none"} (the default),
+    \code{"fixed"} or \code{"free"}: the alignment of the intercepts
+    (requires a mean structure; not available for categorical data or
+    \code{conditional.x = TRUE}). The means of the efa factors become
+    variables of the agreement objective (\code{"fixed"}: zero in the
+    first group; \code{"free"}: free in every group, which needs more
+    than two groups and some non-invariance to be identified), and the
+    aligned intercepts of the indicators, the unrotated intercepts minus
+    the loadings times the factor means, enter the agreement term along
+    with the loadings. The rotated model is translated accordingly (the
+    factor means and the intercepts change, the model-implied moments do
+    not); the aligned factor means are parameters of the rotated model,
+    with standard errors.}
   \item{\code{mg_agreement_scales}}{\code{"equal"} (the default) or
     \code{"free"}: how the scale of each factor is split over the groups.
     The agreement criterion is evaluated on loadings whose factors have,

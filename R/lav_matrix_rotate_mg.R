@@ -32,6 +32,9 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                  mg_agreement_group_weights = NULL,
                                  mg_agreement_scales = "equal", # or "free"
                                  mg_agreement_rotate = TRUE, # joint rotation
+                                 mg_agreement_intercepts = "none", # or
+                                                   # "fixed" / "free"
+                                 nu_list = NULL, # intercepts (alignment)
                                  reflect = TRUE, # reflect sign
                                  order_lv_by = "index", # how to order the lv's
                                  pairwise_accelerate = TRUE, # sweep extrap.
@@ -46,6 +49,20 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   # mean variance one across groups, as in multigroup factor rotation)
   mg_agreement_scales <- match.arg(mg_agreement_scales, c("equal", "free"))
   free_scales <- mg_agreement_scales == "free"
+  # intercept alignment: the factor means are extra variables of the
+  # agreement objective ("fixed": zero in the first group; "free": free
+  # in every group), and the intercepts of the indicators (nu_list) are
+  # aligned along with the loadings
+  mg_agreement_intercepts <- match.arg(mg_agreement_intercepts,
+                                       c("none", "fixed", "free"))
+  if (mg_agreement_intercepts != "none" && is.null(nu_list)) {
+    lav_msg_stop(gettext(
+      "the alignment of the intercepts (mg_agreement_intercepts) requires
+       the intercepts of the indicators (nu_list)."))
+  }
+  if (mg_agreement_intercepts == "none") {
+    nu_list <- NULL
+  }
 
   # check Alist
   if (!is.list(a_list)) {
@@ -246,6 +263,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       mg_agreement_weight = mg_agreement_weight,
       group_weights = mg_agreement_group_weights,
       scales = mg_agreement_scales,
+      intercepts = mg_agreement_intercepts,
+      nu_list = nu_list,
       rstarts = rstarts
     )
   } else if (mg_algorithm == "gpa") {
@@ -260,6 +279,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       mg_agreement_weight = mg_agreement_weight,
       group_weights = mg_agreement_group_weights,
       scales = mg_agreement_scales,
+      intercepts = mg_agreement_intercepts,
+      nu_list = nu_list,
       gpa_tol = gpa_tol,
       max_iter = max_iter
     )
@@ -276,6 +297,8 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
       mg_agreement_weight = mg_agreement_weight,
       group_weights = mg_agreement_group_weights,
       scales = mg_agreement_scales,
+      intercepts = mg_agreement_intercepts,
+      nu_list = nu_list,
       accelerate = pairwise_accelerate,
       gpa_tol = gpa_tol,
       tol = tol,
@@ -284,6 +307,12 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
   }
   info <- attr(rot_list, "info")
   attr(rot_list, "info") <- NULL
+  # the aligned factor means (per group), if any
+  mean_list <- NULL
+  if (!is.null(info$means)) {
+    mean_list <- lapply(seq_len(ngroups), function(g) info$means[, g])
+    info$means <- NULL
+  }
   lambda_list <- vector("list", length = ngroups)
   for (g in seq_len(ngroups)) {
     a <- a_list[[g]]
@@ -340,7 +369,9 @@ lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
     orderList = order_list, group_info = group_info,
     orthogonal = orthogonal, method = method,
     method_args = method_args, row_weights = "none",
-    mg_agreement_scales = mg_agreement_scales
+    mg_agreement_scales = mg_agreement_scales,
+    mg_agreement_intercepts = mg_agreement_intercepts,
+    meanList = mean_list
   )
 
   # add method info
@@ -377,6 +408,8 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
                                        group_weights = NULL,
                                        scale = TRUE,
                                        scales = "equal",
+                                       intercepts = "none",
+                                       nu_list = NULL,
                                        max_iter = 1000L) {
   ngroups <- length(a_list)
 
@@ -386,10 +419,16 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
   # free scale split: the plane sweeps (given the scales) alternate with
   # a minimization over the scales (given the rotations); the objective
   # is then evaluated on lambda_g diag(1/c_g) without the equal-SS
-  # rescaling
+  # rescaling. The same alternation handles the factor means of the
+  # intercept alignment
   free_scales <- identical(scales, "free")
   if (free_scales) {
     scale <- FALSE
+  }
+  align_means <- intercepts != "none" && !is.null(nu_list)
+  a_mat <- NULL
+  if (align_means) {
+    a_mat <- matrix(0, m, ngroups)
   }
 
   # initial LAMBDA + PSI
@@ -426,12 +465,17 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
         t(t(lambda_list[[g]]) / c_mat[, g])
       })
     }
+    mean_list <- NULL
+    if (align_means) {
+      mean_list <- lapply(seq_len(ngroups), function(g) a_mat[, g])
+    }
     out <- lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       mg_agreement_epsilon = mg_agreement_epsilon,
       w = mg_agreement_weight, scale = scale,
-      group_weights = group_weights, grad = grad
+      group_weights = group_weights,
+      nu_list = nu_list, mean_list = mean_list, grad = grad
     )
     if (free_scales && grad && !is.null(attr(out, "grad"))) {
       gr <- attr(out, "grad")
@@ -442,7 +486,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     out
   }
 
-  if (!free_scales) {
+  if (!free_scales && !align_means) {
     res <- lav_mat_rotate_pairwise_core(
       lambda_list = lambda_list, phi_list = psi_list,
       orthogonal = orthogonal, objf = objf,
@@ -476,8 +520,12 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
         method_fname = method_fname, method_args = method_args,
         mg_agreement_method = mg_agreement_method,
         mg_agreement_epsilon = mg_agreement_epsilon,
-        w = mg_agreement_weight, group_weights = group_weights
+        w = mg_agreement_weight, group_weights = group_weights,
+        free_scales = free_scales, nu_list = nu_list, a_mat = a_mat,
+        mean_fixed_first = (intercepts == "fixed")
       )
+      a_mat <- attr(c_mat, "a_mat")
+      attr(c_mat, "a_mat") <- NULL
       q_current <- as.numeric(objf(lambda_list, grad = FALSE))
       if (lav_verbose()) {
         cat(
@@ -492,9 +540,11 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
       }
     }
     # the rotated (and scaled) loadings
-    lambda_list <- lapply(seq_len(ngroups), function(g) {
-      t(t(lambda_list[[g]]) / c_mat[, g])
-    })
+    if (free_scales) {
+      lambda_list <- lapply(seq_len(ngroups), function(g) {
+        t(t(lambda_list[[g]]) / c_mat[, g])
+      })
+    }
   }
 
   # warn if no convergence
@@ -535,6 +585,9 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
   if (free_scales) {
     info$scales <- c_mat
   }
+  if (align_means) {
+    info$means <- a_mat
+  }
 
   attr(rot_list, "info") <- info
 
@@ -561,64 +614,113 @@ lav_mat_rotate_mg_scales_update <- function(lambda_list, c_mat,
                                             method_fname, method_args,
                                             mg_agreement_method,
                                             mg_agreement_epsilon = 0.01,
-                                            w, group_weights) {
+                                            w, group_weights,
+                                            free_scales = TRUE,
+                                            nu_list = NULL, a_mat = NULL,
+                                            mean_fixed_first = TRUE) {
   ngroups <- length(lambda_list)
-  m <- nrow(c_mat)
-  c_from_z <- function(z) {
-    z <- cbind(matrix(z, m, ngroups - 1L), 0)
-    p <- exp(z - apply(z, 1, max))
-    p <- p / rowSums(p)
-    sqrt(ngroups * p)
+  m <- ncol(lambda_list[[1L]])
+  align_means <- !is.null(nu_list) && !is.null(a_mat)
+  if (align_means) {
+    a_free <- if (mean_fixed_first) seq_len(ngroups)[-1L] else seq_len(ngroups)
+  } else {
+    a_free <- integer(0L)
   }
-  objz <- function(z) {
-    c_new <- c_from_z(z)
-    ll <- lapply(seq_len(ngroups), function(g) {
-      t(t(lambda_list[[g]]) / c_new[, g])
-    })
-    as.numeric(lav_mat_rotate_mg_agreement(
-      lambda_list = ll, method_fname = method_fname,
-      method_args = method_args, mg_agreement_method = mg_agreement_method,
-      mg_agreement_epsilon = mg_agreement_epsilon,
-      w = w, scale = FALSE, group_weights = group_weights, grad = FALSE
-    ))
+  n_z <- if (free_scales) m * (ngroups - 1L) else 0L
+  n_a <- m * length(a_free)
+
+  unpack <- function(x) {
+    c_new <- c_mat
+    if (free_scales) {
+      z <- cbind(matrix(x[seq_len(n_z)], m, ngroups - 1L), 0)
+      p <- exp(z - apply(z, 1, max))
+      p <- p / rowSums(p)
+      c_new <- sqrt(ngroups * p)
+    }
+    a_new <- a_mat
+    if (align_means) {
+      a_new[, a_free] <- matrix(x[n_z + seq_len(n_a)], m, length(a_free))
+    }
+    list(c = c_new, a = a_new)
   }
-  gradz <- function(z) {
-    c_new <- c_from_z(z)
-    p <- c_new * c_new / ngroups
+  evalx <- function(x, grad = FALSE) {
+    u <- unpack(x)
     ll <- lapply(seq_len(ngroups), function(g) {
-      t(t(lambda_list[[g]]) / c_new[, g])
+      t(t(lambda_list[[g]]) / u$c[, g])
     })
+    mean_list <- NULL
+    if (align_means) {
+      mean_list <- lapply(seq_len(ngroups), function(g) u$a[, g])
+    }
     out <- lav_mat_rotate_mg_agreement(
       lambda_list = ll, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       mg_agreement_epsilon = mg_agreement_epsilon,
-      w = w, scale = FALSE, group_weights = group_weights, grad = TRUE
+      w = w, scale = FALSE, group_weights = group_weights,
+      nu_list = nu_list, mean_list = mean_list, grad = grad
     )
-    gr <- attr(out, "grad")
-    # ctilde_gj = (lambda_g' grad_g)_jj; dF/dz_hj = -ctilde_hj/2 +
-    # p_hj sum_g ctilde_gj / 2
-    ct <- vapply(seq_len(ngroups), function(g) colSums(ll[[g]] * gr[[g]]),
-                 numeric(m))
-    ct <- matrix(ct, nrow = m)
-    gz <- -ct / 2 + p * rowSums(ct) / 2
-    as.vector(gz[, -ngroups, drop = FALSE])
+    attr(out, "ll") <- ll
+    attr(out, "c") <- u$c
+    out
   }
-  z0 <- log(c_mat * c_mat / ngroups)
-  z0 <- as.vector(z0[, -ngroups, drop = FALSE] - z0[, ngroups])
-  res <- try(nlminb(z0, objz, gradient = gradz,
+  objx <- function(x) {
+    as.numeric(evalx(x, grad = FALSE))
+  }
+  gradx <- function(x) {
+    out <- evalx(x, grad = TRUE)
+    gx <- numeric(0L)
+    if (free_scales) {
+      ll <- attr(out, "ll")
+      c_new <- attr(out, "c")
+      p <- c_new * c_new / ngroups
+      gr <- attr(out, "grad")
+      # ctilde_gj = (lambda_g' grad_g)_jj; dF/dz_hj = -ctilde_hj/2 +
+      # p_hj sum_g ctilde_gj / 2
+      ct <- vapply(seq_len(ngroups), function(g) colSums(ll[[g]] * gr[[g]]),
+                   numeric(m))
+      ct <- matrix(ct, nrow = m)
+      gz <- -ct / 2 + p * rowSums(ct) / 2
+      gx <- c(gx, as.vector(gz[, -ngroups, drop = FALSE]))
+    }
+    if (align_means) {
+      gm <- matrix(unlist(attr(out, "grad_mean")), m, ngroups)
+      gx <- c(gx, as.vector(gm[, a_free, drop = FALSE]))
+    }
+    gx
+  }
+
+  x0 <- numeric(0L)
+  if (free_scales) {
+    z0 <- log(c_mat * c_mat / ngroups)
+    x0 <- c(x0, as.vector(z0[, -ngroups, drop = FALSE] - z0[, ngroups]))
+  }
+  if (align_means) {
+    x0 <- c(x0, as.vector(a_mat[, a_free, drop = FALSE]))
+  }
+  if (length(x0) == 0L) {
+    attr(c_mat, "a_mat") <- a_mat
+    attr(c_mat, "converged") <- TRUE
+    attr(c_mat, "value") <- objx(x0)
+    return(c_mat)
+  }
+  res <- try(nlminb(x0, objx, gradient = gradx,
                     control = list(iter.max = 1000L, rel.tol = 1e-10)),
              silent = TRUE)
   if (inherits(res, "try-error") || !is.finite(res$objective) ||
-      res$objective > objz(z0)) {
+      res$objective > objx(x0)) {
+    attr(c_mat, "a_mat") <- a_mat
     attr(c_mat, "converged") <- FALSE
+    attr(c_mat, "value") <- objx(x0)
     return(c_mat)
   }
-  out <- c_from_z(res$par)
+  u <- unpack(res$par)
+  out <- u$c
+  attr(out, "a_mat") <- u$a
   # converged: nlminb says so, or the gradient is small relative to the
   # objective (nlminb reports "singular convergence" at the optimum when
   # the relative tolerance is below what the loss allows)
   attr(out, "converged") <- (res$convergence == 0L ||
-    sqrt(sum(gradz(res$par)^2)) < 1e-5 * max(1, abs(res$objective)))
+    sqrt(sum(gradx(res$par)^2)) < 1e-5 * max(1, abs(res$objective)))
   attr(out, "value") <- res$objective
   out
 }
@@ -639,48 +741,61 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
                                      mg_agreement_epsilon = 0.01,
                                      group_weights = NULL,
                                      scales = "equal",
+                                     intercepts = "none",
+                                     nu_list = NULL,
                                      rstarts = 0L) {
   ngroups <- length(a_list)
   m <- ncol(a_list[[1L]])
   free_scales <- identical(scales, "free")
+  align_means <- intercepts != "none" && !is.null(nu_list)
   converged <- TRUE
-  if (free_scales) {
-    # from the equal-SS start, plus rstarts random starts (the alignment
-    # loss has local optima); keep the best
+  lambda_list <- a_list
+  a_mat <- NULL
+  if (free_scales || align_means) {
+    # from the equal-SS start (and zero means), plus rstarts random starts
+    # (the alignment loss has local optima); keep the best
     c_start <- lav_mat_rotate_mg_scales_start(a_list)
+    a_start <- if (align_means) matrix(0, m, ngroups) else NULL
     c_mat <- NULL
     for (i in seq_len(rstarts + 1L)) {
       if (i > 1L) {
-        z <- matrix(rnorm(m * ngroups, sd = 0.5), m, ngroups)
-        p <- exp(z) / rowSums(exp(z))
-        c_start <- sqrt(ngroups * p)
+        if (free_scales) {
+          z <- matrix(rnorm(m * ngroups, sd = 0.5), m, ngroups)
+          p <- exp(z) / rowSums(exp(z))
+          c_start <- sqrt(ngroups * p)
+        }
+        if (align_means) {
+          a_start <- matrix(rnorm(m * ngroups, sd = 0.5), m, ngroups)
+          if (intercepts == "fixed") {
+            a_start[, 1L] <- 0
+          }
+        }
       }
       c_i <- lav_mat_rotate_mg_scales_update(
         lambda_list = a_list, c_mat = c_start,
         method_fname = method_fname, method_args = method_args,
         mg_agreement_method = mg_agreement_method,
         mg_agreement_epsilon = mg_agreement_epsilon,
-        w = mg_agreement_weight, group_weights = group_weights
+        w = mg_agreement_weight, group_weights = group_weights,
+        free_scales = free_scales, nu_list = nu_list, a_mat = a_start,
+        mean_fixed_first = (intercepts == "fixed")
       )
       if (is.null(c_mat) || isTRUE(attr(c_i, "value") < attr(c_mat, "value"))) {
         c_mat <- c_i
       }
     }
     converged <- isTRUE(attr(c_mat, "converged"))
+    q_current <- attr(c_mat, "value")
+    a_mat <- attr(c_mat, "a_mat")
     attr(c_mat, "converged") <- NULL
     attr(c_mat, "value") <- NULL
-    lambda_list <- lapply(seq_len(ngroups), function(g) {
-      t(t(a_list[[g]]) / c_mat[, g])
-    })
-    q_current <- as.numeric(lav_mat_rotate_mg_agreement(
-      lambda_list = lambda_list, method_fname = method_fname,
-      method_args = method_args, mg_agreement_method = mg_agreement_method,
-      mg_agreement_epsilon = mg_agreement_epsilon,
-      w = mg_agreement_weight, scale = FALSE,
-      group_weights = group_weights, grad = FALSE
-    ))
+    attr(c_mat, "a_mat") <- NULL
+    if (free_scales) {
+      lambda_list <- lapply(seq_len(ngroups), function(g) {
+        t(t(a_list[[g]]) / c_mat[, g])
+      })
+    }
   } else {
-    lambda_list <- a_list
     q_current <- as.numeric(lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
@@ -691,8 +806,8 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
   }
   if (!converged) {
     lav_msg_warn(gettext(
-      "the minimization over the scale split of the agreement rotation
-       did not converge"))
+      "the minimization over the scale split (and the factor means) of the
+       agreement rotation did not converge"))
   }
 
   rot_list <- vector("list", length = ngroups)
@@ -715,6 +830,9 @@ lav_mat_rotate_scales_mg <- function(a_list = NULL,
   )
   if (free_scales) {
     info$scales <- c_mat
+  }
+  if (align_means) {
+    info$means <- a_mat
   }
   attr(rot_list, "info") <- info
 
@@ -742,11 +860,26 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
                                   group_weights = NULL,
                                   scale = TRUE,
                                   scales = "equal",
+                                  intercepts = "none",
+                                  nu_list = NULL,
                                   max_iter = 10000L) {
   ngroups <- length(a_list)
   m <- ncol(a_list[[1L]])
   if (is.null(phi_list) || orthogonal) {
     phi_list <- rep(list(diag(m)), ngroups)
+  }
+
+  # intercept alignment: the factor means a_mat (m x ngroups) are extra
+  # (unconstrained) variables; "fixed" keeps the first group at zero
+  align_means <- intercepts != "none" && !is.null(nu_list)
+  a_mat <- NULL
+  a_mask <- NULL
+  if (align_means) {
+    a_mat <- matrix(0, m, ngroups)
+    a_mask <- matrix(1, m, ngroups)
+    if (intercepts == "fixed") {
+      a_mask[, 1L] <- 0
+    }
   }
 
   # free scale split: the scales c_gj (m x ngroups) are extra variables,
@@ -770,14 +903,24 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
     a_list[[g]] %*% t(rot_list[[g]])
   })
 
-  objf <- function(lambda_list, grad = FALSE) {
+  objf <- function(lambda_list, a_mat = NULL, grad = FALSE) {
+    mean_list <- NULL
+    if (align_means) {
+      mean_list <- lapply(seq_len(ngroups), function(g) a_mat[, g])
+    }
     lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       mg_agreement_epsilon = mg_agreement_epsilon,
       w = mg_agreement_weight, scale = scale,
-      group_weights = group_weights, grad = grad
+      group_weights = group_weights,
+      nu_list = nu_list, mean_list = mean_list, grad = grad
     )
+  }
+  # gradient with respect to the factor means (masked)
+  grad_means <- function(q_val) {
+    gm <- matrix(unlist(attr(q_val, "grad_mean")), m, ngroups)
+    gm * a_mask
   }
   rotate_all <- function(rot_list, c_mat = NULL) {
     lapply(seq_len(ngroups), function(g) {
@@ -834,7 +977,7 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
   }
 
   lambda_list <- rotate_all(rot_list, c_mat)
-  q_1 <- objf(lambda_list, grad = TRUE)
+  q_1 <- objf(lambda_list, a_mat, grad = TRUE)
   gq_list <- attr(q_1, "grad")
   if (is.null(gq_list)) {
     lav_msg_stop(gettext(
@@ -843,6 +986,10 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
   }
   q_current <- as.numeric(q_1)
   grad_list <- grad_all(rot_list, lambda_list, gq_list, c_mat)
+  ga <- NULL
+  if (align_means) {
+    ga <- grad_means(q_1)
+  }
 
   alpha <- 1
   f_hist <- numeric(max_iter + 1L)
@@ -851,6 +998,8 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
   c_prev <- NULL
   gpc_prev <- NULL
   gpc <- NULL
+  a_prev <- NULL
+  ga_prev <- NULL
   converged <- FALSE
   degenerate <- FALSE
   for (iter in seq_len(max_iter + 1L)) {
@@ -858,7 +1007,7 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
     if (free_scales) {
       gpc <- grad_scales(lambda_list, gq_list, c_mat)
     }
-    frob <- sqrt(sum(unlist(gp_list)^2) + sum(gpc^2))
+    frob <- sqrt(sum(unlist(gp_list)^2) + sum(gpc^2) + sum(ga^2))
     f_hist[iter] <- q_current
     if (lav_verbose()) {
       cat(
@@ -875,8 +1024,10 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
 
     # Barzilai-Borwein step size (over all groups jointly)
     if (!is.null(rot_prev)) {
-      d_rot <- c(unlist(rot_list) - unlist(rot_prev), c_mat - c_prev)
-      d_gp <- c(unlist(gp_list) - unlist(gp_prev), gpc - gpc_prev)
+      d_rot <- c(unlist(rot_list) - unlist(rot_prev), c_mat - c_prev,
+                 a_mat - a_prev)
+      d_gp <- c(unlist(gp_list) - unlist(gp_prev), gpc - gpc_prev,
+                ga - ga_prev)
       if (sum(d_gp * d_gp) > 0) {
         alpha_new <- sum(d_rot * d_rot) / abs(sum(d_rot * d_gp))
         if (is.finite(alpha_new)) {
@@ -913,13 +1064,17 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
         }
         c_t <- x_c * sqrt(ngroups / rowSums(x_c * x_c))
       }
+      a_t <- NULL
+      if (align_means) {
+        a_t <- a_mat - alpha * ga
+      }
       lambda_t <- tryCatch(rotate_all(rott_list, c_t),
                            error = function(e) NULL)
       if (is.null(lambda_t)) {
         alpha <- alpha / 2
         next
       }
-      q_new <- objf(lambda_t, grad = TRUE)
+      q_new <- objf(lambda_t, a_t, grad = TRUE)
       if (is.finite(q_new) &&
           as.numeric(q_new) < target_f - 0.5 * frob * frob * alpha) {
         accepted <- TRUE
@@ -936,11 +1091,17 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
     gp_prev <- gp_list
     c_prev <- c_mat
     gpc_prev <- gpc
+    a_prev <- a_mat
+    ga_prev <- ga
     rot_list <- rott_list
     c_mat <- c_t
+    a_mat <- a_t
     lambda_list <- lambda_t
     q_current <- as.numeric(q_new)
     gq_list <- attr(q_new, "grad")
+    if (align_means) {
+      ga <- grad_means(q_new)
+    }
 
     # oblique: collapsed factors?
     if (!orthogonal) {
@@ -999,6 +1160,9 @@ lav_mat_rotate_gpa_mg <- function(a_list = NULL, # original matrices
   )
   if (free_scales) {
     info$scales <- c_mat
+  }
+  if (align_means) {
+    info$means <- a_mat
   }
   attr(rot_out, "info") <- info
 

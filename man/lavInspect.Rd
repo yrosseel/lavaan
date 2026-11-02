@@ -514,7 +514,9 @@ level), or a single element if there is only one block and
         \code{group_iterations} and \code{starts} refer to the per-group
         rotation that provided its starting point, and
         \code{mg_agreement_scales} tells how the scale of each factor was
-        split over the groups (see \code{\link{esem}}). Alias:
+        split over the groups (see \code{\link{esem}}); with the alignment
+        of the intercepts (\code{mg_agreement_intercepts}), \code{means}
+        holds the aligned factor means of the group. Alias:
         \code{"rotation_info"}.}
     \item{\code{"rotation_matrix"}:}{List. Per block, the rotation matrix
         \eqn{H} for all latent variables of the block (the identity for
