@@ -1262,6 +1262,28 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         substring(tmp_txt, 2),
         sep = ""
       ))
+
+      # multiple-group agreement rotation (keywords: first letter upper
+      # case, the rest lower case)
+      if (isTRUE(rotation$mg_agreement)) {
+        ra <- rotation$rotation.args
+        c1 <- c(c1, "Agreement rotation (weight)")
+        c2 <- c(c2, paste0(lav_print_capitalize(ra$mg_agreement_method),
+                           " (", ra$mg_agreement_weight, ")"))
+        c1 <- c(c1, "Agreement scales / intercepts")
+        c2 <- c(c2, paste(lav_print_capitalize(ra$mg_agreement_scales), "/",
+                          lav_print_capitalize(ra$mg_agreement_intercepts)))
+        c1 <- c(c1, "Scale identification (ref. group)")
+        tmp <- lav_print_capitalize(ra$mg_agreement_identification)
+        if (!is.null(rotation$reference_group) &&
+            (ra$mg_agreement_identification == "reference" ||
+             ra$mg_agreement_intercepts == "fixed")) {
+          tmp <- paste0(tmp, " (", rotation$reference_group, ")")
+        }
+        c2 <- c(c2, tmp)
+        c1 <- c(c1, "Group weights")
+        c2 <- c(c2, lav_print_capitalize(ra$mg_agreement_group_weights))
+      }
     }
 
     # format c1/c2
@@ -1277,6 +1299,31 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     rownames(m) <- rep(" ", nrow(m))
 
     # print
+    write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
+  }
+
+  # alignment of a confirmatory model
+  if (!is.null(y$alignment)) {
+    cat("\n")
+    aa <- y$alignment$alignment.args
+    c1 <- c("Alignment", "Alignment loss (epsilon)", "Group weights",
+            "Scale identification (ref. group)", "Random starts",
+            "Standardized metric")
+    tmp <- lav_print_capitalize(aa$identification)
+    if (!is.null(y$alignment$reference_group)) {
+      tmp <- paste0(tmp, " (", y$alignment$reference_group, ")")
+    }
+    c2 <- c(lav_print_capitalize(y$alignment$alignment),
+            paste0(lav_print_capitalize(aa$method), " (", aa$epsilon, ")"),
+            lav_print_capitalize(aa$group_weights), tmp,
+            as.character(aa$rstarts),
+            if (isTRUE(aa$std_ov)) "TRUE" else "FALSE")
+    c1 <- format(c1, width = 33L)
+    c2 <- format(c2, width = 18L + max(0, (nd - 3L)) * 4L,
+                 justify = "right")
+    m <- cbind(c1, c2, deparse.level = 0)
+    colnames(m) <- rep("", ncol(m))
+    rownames(m) <- rep(" ", nrow(m))
     write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
   }
 
@@ -1766,4 +1813,14 @@ lav_print_psi <- function(x, nd = 3L, alpha_level = 0.01, x_se = NULL) {
 
   # print
   print(y, quote = FALSE)
+}
+
+# keywords in the summary header: first letter upper case, the rest lower
+# case (only TRUE and FALSE are printed in capitals)
+lav_print_capitalize <- function(x = NULL) {
+  if (is.null(x) || length(x) == 0L) {
+    return("")
+  }
+  x <- tolower(as.character(x))
+  paste0(toupper(substring(x, 1L, 1L)), substring(x, 2L))
 }

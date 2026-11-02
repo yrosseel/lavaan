@@ -321,6 +321,40 @@ lav_object_summary <- function(object, header = TRUE,
             rotation.args = object@Options$rotation.args
           )
       }
+      # 3b. multiple-group agreement rotation and alignment: the reference
+      # group (as a label) comes from the rotation information of step 16
+      rot_blk <- object@internal$rotation
+      rot_blk <- if (length(rot_blk) > 0L) rot_blk[[1L]] else NULL
+      ref_label <- function(ref) {
+        if (is.null(ref) || !is.numeric(ref)) {
+          return(NULL)
+        }
+        glab <- object@Data@group.label
+        if (length(glab) >= ref) glab[ref] else as.character(ref)
+      }
+      if (!is.null(res$rotation) && object@Data@ngroups > 1L &&
+          object@Options$rotation != "none" &&
+          isTRUE(object@Options$rotation.args$mg_agreement) &&
+          !("loadings" %in% object@Options$group.equal)) {
+        res$rotation$mg_agreement <- TRUE
+        blk_names <- names(rot_blk)
+        if (is.null(blk_names)) {
+          blk_names <- rep("", length(rot_blk))
+        }
+        set_idx <- which(blk_names != "alignment")
+        if (length(set_idx) > 0L) {
+          res$rotation$reference_group <-
+            ref_label(rot_blk[[set_idx[1L]]]$mg_agreement_reference_group)
+        }
+      }
+      if (!is.null(object@Options$alignment) &&
+          object@Options$alignment != "none" && object@Data@ngroups > 1L) {
+        res$alignment <- list(
+          alignment = object@Options$alignment,
+          alignment.args = object@Options$alignment.args,
+          reference_group = ref_label(rot_blk$alignment$reference_group)
+        )
+      }
 
       # 4. summarize lavdata
       res$data <- lav_data_summary_short(object@Data)
