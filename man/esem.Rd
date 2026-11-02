@@ -238,7 +238,10 @@ default (\code{rotation_se = "bordered"}), the information matrix is
 augmented with the rotation constraints; alternatively,
 \code{rotation_se = "delta"} applies the delta method to the (numerical)
 Jacobian of the rotation. Both methods give the same results up to numerical
-precision. When \code{se = "bootstrap"} is requested, the rotation is applied
+precision. For the multiple-group agreement rotation (\code{mg_agreement =
+TRUE}), the rotation constraints of the bordered method are not those of the
+joint rotation, and the delta method is always used (\code{rotation_se} is
+set to \code{"delta"}). When \code{se = "bootstrap"} is requested, the rotation is applied
 to every bootstrap sample, and the rotated factors are aligned (reordered and
 reflected) to the original solution; see \code{\link{bootstrapLavaan}}. Robust
 standard errors (for example, \code{estimator = "MLR"}) are supported as

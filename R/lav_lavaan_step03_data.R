@@ -191,6 +191,20 @@ lav_step03_data <- function(slot_data = NULL,
   #   lavoptions$start <- "simple"
   # }
 
+  # multiple-group agreement rotation (rotation.args$mg_agreement): the
+  # "bordered" rotation standard errors border the information matrix with
+  # the per-group rotation constraints, which the joint (agreement) rotation
+  # does not satisfy; use the delta method (the numerical jacobian of the
+  # full rotation map) instead. Decided here, as soon as the number of
+  # groups is known, because step 13 must then compute the unrotated vcov
+  if (lavdata@ngroups > 1L &&
+      lavoptions$rotation != "none" &&
+      isTRUE(lavoptions$rotation.args$mg_agreement) &&
+      !("loadings" %in% lavoptions$group.equal) &&
+      lavoptions$rotation.se == "bordered") {
+    lavoptions$rotation.se <- "delta"
+  }
+
   list(
     lavdata    = lavdata,
     lavoptions = lavoptions
