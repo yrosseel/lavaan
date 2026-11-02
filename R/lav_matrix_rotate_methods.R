@@ -584,11 +584,22 @@ lav_mat_rotate_bigeomin <- function(mm_lambda, geomin_epsilon = 0.01, ...,
 #                        + lambda_g[k, j] (sum_h c_hj / (G ss_ave_j)
 #                                          - c_gj / ss_gj)
 # with c_hj = sum_i gt_h[i, j] lambda_tilde_h[i, j]
+# the common column sum of squares of the equal-scale rescaling: the
+# group average, the geometric mean or the first group's
+lav_mat_rotate_mg_ss_ref <- function(ss_list, identification = "mean") {
+  switch(identification,
+    mean = Reduce("+", ss_list) / length(ss_list),
+    product = exp(Reduce("+", lapply(ss_list, log)) / length(ss_list)),
+    reference = ss_list[[1L]]
+  )
+}
+
 lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
                                    method_args = list(),
                                    mg_agreement_method = "procrustes",
                                    mg_agreement_epsilon = 0.01,
                                    w = 0.5, scale = TRUE,
+                                   identification = "mean",
                                    group_weights = NULL,
                                    nu_list = NULL, mean_list = NULL,
                                    grad = FALSE) {
@@ -603,10 +614,12 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
   # agreement term is applied to them as well
   align_means <- !is.null(nu_list) && !is.null(mean_list)
 
-  # 0. rescale, so all columns have the same (average) sum-of-squares
+  # 0. rescale, so all columns have the same sum-of-squares: the group
+  #    average (identification = "mean"), the geometric mean ("product")
+  #    or the first group's ("reference")
   if (scale) {
     ss_list <- lapply(lambda_list, function(x) colSums(x * x))
-    ss_ave <- Reduce("+", ss_list) / length(ss_list)
+    ss_ave <- lav_mat_rotate_mg_ss_ref(ss_list, identification)
     s_list <- lapply(ss_list, function(x) sqrt(ss_ave / x))
     for (g in seq_len(ngroups)) {
       lambda_list[[g]] <- t(t(lambda_list[[g]]) * s_list[[g]])
@@ -741,9 +754,15 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       c_mat <- matrix(c_mat, ncol = ngroups)
       c_sum <- rowSums(c_mat)
       for (g in seq_len(ngroups)) {
+        # d log(ss_ref) / d lambda_g = 2 lambda_g * fac_g
+        fac_g <- switch(identification,
+          mean = 1 / (ngroups * ss_ave),
+          product = 1 / (ngroups * ss_list[[g]]),
+          reference = if (g == 1L) 1 / ss_list[[1L]] else 0
+        )
         gt_list[[g]] <- t(t(gt_list[[g]]) * s_list[[g]]) +
           t(t(lambda_orig[[g]]) *
-            (c_sum / (ngroups * ss_ave) - c_mat[, g] / ss_list[[g]]))
+            (c_sum * fac_g - c_mat[, g] / ss_list[[g]]))
       }
     }
     attr(out, "grad") <- gt_list

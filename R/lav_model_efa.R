@@ -257,6 +257,7 @@ lav_model_efa_rotation_info <- function(res = NULL, set_name = NULL,
     out$mg_agreement <- TRUE
     out$mg_agreement_scales <- res$mg_agreement_scales
     out$mg_agreement_intercepts <- res$mg_agreement_intercepts
+    out$mg_agreement_identification <- res$mg_agreement_identification
     if (!is.null(res$meanList)) {
       means <- res$meanList[[group]]
       names(means) <- lv_names
@@ -572,6 +573,45 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         function(x) x[ov_idx, lv_idx, drop = FALSE])
       this_ov_var <- NULL
 
+      # mg_agreement_std_ov: the agreement objective (and the per-group
+      # pre-rotation) on the loadings of the standardized indicators,
+      # standardized over the entire population (the model-implied
+      # variances and means of the groups pooled by sample size); the
+      # rotation matrices, scales and means are the same in both metrics
+      ov_var_list <- NULL
+      sd_pooled <- NULL
+      if (isTRUE(ropts$mg_agreement_std_ov)) {
+        n_g <- unlist(nobs)
+        if (length(n_g) != lavmodel@ngroups || any(!is.finite(n_g))) {
+          lav_msg_stop(gettext(
+            "mg_agreement_std_ov = TRUE requires the sample sizes of all
+             groups."))
+        }
+        ov_var_list <- vector("list", length = lavmodel@ngroups)
+        mu_list <- vector("list", length = lavmodel@ngroups)
+        for (g in seq_len(lavmodel@ngroups)) {
+          mm_in_group <- (seq_len(lavmodel@nmat[g]) +
+                          cumsum(c(0, lavmodel@nmat))[g])
+          mlist_g <- glist[mm_in_group]
+          lambda_g <- lav_model_efa_block_lambda(lavmodel, mlist_g, g)
+          theta_g <- lav_model_efa_block_theta(lavmodel, mlist_g, g)
+          sigma_g <- lambda_g %*% mlist_g$psi %*% t(lambda_g) + theta_g
+          ov_var_list[[g]] <- diag(sigma_g)[ov_idx]
+          mu_list[[g]] <- if (is.null(mlist_g$nu)) {
+            numeric(length(ov_idx))
+          } else {
+            as.numeric(mlist_g$nu[ov_idx, 1L])
+          }
+        }
+        w_n <- n_g / sum(n_g)
+        mu_pooled <- Reduce("+", Map("*", mu_list, w_n))
+        var_pooled <- Reduce("+", Map(function(v, mu, w) {
+          w * (v + (mu - mu_pooled)^2)
+        }, ov_var_list, mu_list, w_n))
+        sd_pooled <- sqrt(var_pooled)
+        alist_1 <- lapply(alist_1, function(x) x / sd_pooled)
+      }
+
       # intercept alignment: the intercepts of the indicators of this set
       nu_list <- NULL
       if (ropts$mg_agreement_intercepts != "none") {
@@ -599,6 +639,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                predictor or an outcome in a regression."))
           }
           nu_list[[g]] <- as.numeric(mlist_g$nu[ov_idx, 1L])
+          if (!is.null(sd_pooled)) {
+            nu_list[[g]] <- nu_list[[g]] / sd_pooled
+          }
         }
       }
 
@@ -678,7 +721,10 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mg_agreement_scales = ropts$mg_agreement_scales,
         mg_agreement_rotate = ropts$mg_agreement_rotate,
         mg_agreement_intercepts = ropts$mg_agreement_intercepts,
+        mg_agreement_identification = ropts$mg_agreement_identification,
         nu_list = nu_list,
+        std_ov = isTRUE(ropts$mg_agreement_std_ov),
+        ov_var_list = ov_var_list,
         pairwise_accelerate = ropts$pairwise_accelerate,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
@@ -698,7 +744,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       # objective and are already in the rotation matrices
       if (ropts$mg_agreement_scales != "free") {
         ss_list <- lapply(res$lambdaList, function(x) colSums(x * x))
-        ss_ave <- Reduce("+", ss_list) / length(ss_list)
+        ss_ave <- lav_mat_rotate_mg_ss_ref(ss_list,
+                                           ropts$mg_agreement_identification)
         for (g in seq_len(lavmodel@ngroups)) {
           scale_g <- sqrt(ss_list[[g]] / ss_ave)
           res$rotList[[g]] <- t(t(res$rotList[[g]]) * scale_g)

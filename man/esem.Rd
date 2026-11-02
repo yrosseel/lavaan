@@ -171,7 +171,8 @@ are:
     possible (see also \code{mg_agreement_weight},
     \code{mg_agreement_method}, \code{mg_agreement_epsilon},
     \code{mg_agreement_group_weights}, \code{mg_agreement_scales},
-    \code{mg_agreement_rotate}, \code{mg_agreement_intercepts} and
+    \code{mg_agreement_rotate}, \code{mg_agreement_intercepts},
+    \code{mg_agreement_identification}, \code{mg_agreement_std_ov} and
     \code{mg_agreement_algorithm}).}
   \item{\code{mg_agreement_method}}{\code{"procrustes"} (the default)
     or \code{"loading.alignment"}: the agreement term. Procrustes: the sum
@@ -204,6 +205,24 @@ are:
     alignment of the factor loadings and variances of Asparouhov and
     Muthen (2014); add \code{mg_agreement_intercepts = "fixed"} for the
     alignment of the intercepts.}
+  \item{\code{mg_agreement_identification}}{\code{"mean"} (the default),
+    \code{"product"} or \code{"reference"}: how the overall scale of each
+    factor is identified in the agreement rotation. The factor variances
+    average to one across groups, have a product of one, or the variance in
+    the first group is one. With free scales, \code{"reference"} is the
+    solution of the product identification re-expressed with variance one
+    in the first group, as the alignment method reports it (optimizing the
+    alignment loss directly in that metric is degenerate). With equal
+    scales, the common column sum of squares is the group average, the
+    geometric mean, or the first group's.}
+  \item{\code{mg_agreement_std_ov}}{Logical (default \code{FALSE}). If
+    \code{TRUE}, the agreement objective (and the per-group rotation that
+    provides its starting point) is evaluated on the loadings of the
+    indicators standardized over the entire population (the model-implied
+    variances and means of the groups, pooled by sample size), as the
+    alignment method does. The rotation matrices, scales and factor means
+    are the same in both metrics, so only the solution changes, not its
+    representation.}
   \item{\code{mg_agreement_intercepts}}{\code{"none"} (the default),
     \code{"fixed"} or \code{"free"}: the alignment of the intercepts
     (requires a mean structure; not available for categorical data or
