@@ -299,7 +299,7 @@ lav_options_default <- function() {
   elm(c("rotation.args", "orthogonal"), FALSE, bl = TRUE)
   elm(c("rotation.args", "row_weights"), "default", chr = c(
     default = "default", kaiser = "kaiser", none = "none",
-    cureton.mulaik = "cm", cm = "cm"))
+    cureton.mulaik = "cureton.mulaik", cm = "cureton.mulaik"))
   elm(c("rotation.args", "std_ov"), TRUE, bl = TRUE)
   elm(c("rotation.args", "geomin_epsilon"), 0.001, nm = "]0, 1.00]")
   # was 0.01 < 0.6-10

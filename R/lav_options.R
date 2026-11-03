@@ -207,6 +207,22 @@ lav_options_set <- function(opt = NULL) {
         optname %in% c("rotation", "em", "em.h1", "gn")) {
         new_args <- lav_snake_case(new_args)
       }
+      # a preset of the agreement rotation given inside the rotation list,
+      # eg rotation = list("oblimin", mg_agreement = "mgfr"): expand it on
+      # the user-supplied arguments only, so that explicit values win
+      if (optname == "rotation" && is.character(new_args$mg_agreement)) {
+        tmp <- list(rotation.args = new_args)
+        if (!is.null(new_value)) {
+          tmp$rotation <- new_value
+        }
+        tmp <- lav_options_mg_agreement_preset(tmp)
+        new_value <- tmp$rotation
+        new_args <- tmp$rotation.args
+        if (!is.null(tmp$meanstructure) &&
+          identical(opt$meanstructure, "default")) {
+          opt$meanstructure <- tmp$meanstructure
+        }
+      }
       # merge the user-supplied arguments into the (default) OPT.args, so
       # arguments that were not specified keep their default value. This
       # mirrors the recursive modifyList() merge that happens when OPT.args
@@ -222,6 +238,32 @@ lav_options_set <- function(opt = NULL) {
 
   if (is.list(opt$rotation.args)) {
     opt$rotation.args <- lav_snake_case(opt$rotation.args)
+  }
+  # a preset of the agreement rotation that was not expanded earlier (a
+  # character mg_agreement handed to lav_options_set() directly, as part of
+  # a complete list of options): only the values that differ from their
+  # defaults count as user-supplied, and those win over the preset values
+  if (is.list(opt$rotation.args) &&
+    is.character(opt$rotation.args$mg_agreement)) {
+    opt_default <- get("opt_default", lavaan_cache_env)
+    ropts <- opt$rotation.args
+    def_ropts <- opt_default$rotation.args
+    user_flag <- vapply(names(ropts), function(nm) {
+      !identical(ropts[[nm]], def_ropts[[nm]])
+    }, logical(1L))
+    user_opt <- list(rotation.args = ropts[user_flag])
+    if (!identical(opt$rotation, opt_default$rotation)) {
+      user_opt$rotation <- opt$rotation
+    }
+    if (!identical(opt$meanstructure, "default")) {
+      user_opt$meanstructure <- opt$meanstructure
+    }
+    user_opt <- lav_options_mg_agreement_preset(user_opt)
+    opt$rotation.args <- modifyList(ropts, user_opt$rotation.args)
+    opt$rotation <- user_opt$rotation
+    if (!is.null(user_opt$meanstructure)) {
+      opt$meanstructure <- user_opt$meanstructure
+    }
   }
   if (is.list(opt$em.args)) {
     opt$em.args <- lav_snake_case(opt$em.args)
@@ -1659,13 +1701,6 @@ lav_options_set <- function(opt = NULL) {
   # transform names rotation.args to snake_case
   opt$rotation.args <- lav_snake_case(opt$rotation.args)
 
-  # a preset of the agreement rotation that was not expanded in step 02
-  # (a character mg_agreement handed to lav_options_set() directly): the
-  # preset values replace the current ones
-  if (is.character(opt$rotation.args$mg_agreement)) {
-    opt <- lav_options_mg_agreement_preset(opt, override = TRUE)
-  }
-
   # force orthogonal for some rotation algorithms
   if (any(opt$rotation == c(
     "varimax", "entropy", "mccammon",
@@ -2007,10 +2042,10 @@ lav_options_set <- function(opt = NULL) {
 # presets of the multiple-group agreement rotation:
 # rotation.args = list(mg_agreement = "mgfr") or "alignment". The preset
 # fills in the mg_agreement_* options (and the rotation criterion and the
-# mean structure) that the user did not supply (override = FALSE: opt is
-# the list of user-supplied arguments), or replaces them (override = TRUE:
-# opt is the complete list of options). On return, mg_agreement is TRUE
-# and mg_agreement_preset records the preset.
+# mean structure) that the user did not supply: opt is the list of
+# user-supplied arguments, and explicit values always win over the preset
+# values. On return, mg_agreement is TRUE and mg_agreement_preset records
+# the preset.
 #
 # "mgfr": the multigroup factor rotation of De Roover and Vermunt (2019):
 #   a joint oblimin rotation with the generalized procrustes agreement
@@ -2023,7 +2058,7 @@ lav_options_set <- function(opt = NULL) {
 #   indicators), followed by the alignment of the factor variances and
 #   means (fixed alignment: variance one and mean zero in the first group)
 #   under the relative-difference loss, with the sqrt(n_g n_h) pair weights
-lav_options_mg_agreement_preset <- function(opt = list(), override = FALSE) {
+lav_options_mg_agreement_preset <- function(opt = list()) {
   ropts <- opt$rotation.args
   if (!is.list(ropts)) {
     return(opt)
@@ -2067,13 +2102,9 @@ lav_options_mg_agreement_preset <- function(opt = list(), override = FALSE) {
     )
     top <- list(rotation = "geomin", meanstructure = TRUE)
   }
-  if (override) {
-    ropts <- modifyList(ropts, vals)
-  } else {
-    # the user-supplied values win
-    ropts <- modifyList(vals, ropts)
-    opt <- modifyList(top, opt)
-  }
+  # the user-supplied values win
+  ropts <- modifyList(vals, ropts)
+  opt <- modifyList(top, opt)
   ropts$mg_agreement <- TRUE
   ropts$mg_agreement_preset <- preset
   opt$rotation.args <- ropts

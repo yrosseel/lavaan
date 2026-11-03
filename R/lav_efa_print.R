@@ -200,11 +200,7 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
 
     # Row weights
     c1 <- c(c1, "Row weights")
-    tmp_txt <- x$rotation.args$row_weights
-    c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
-      substring(tmp_txt, 2),
-      sep = ""
-    ))
+    c2 <- c(c2, lav_print_row_weights(x$rotation.args$row_weights))
   }
 
   # format c1/c2

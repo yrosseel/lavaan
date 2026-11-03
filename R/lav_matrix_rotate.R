@@ -170,10 +170,11 @@ lav_mat_rotate <- function(a = NULL, # original matrix
     weights <- rep(1.0, p)
   } else if (row_weights == "kaiser") {
     weights <- lav_mat_rotate_kaiser_weights(a)
-  } else if (row_weights == "cureton-mulaik") {
+  } else if (row_weights %in% c("cureton.mulaik", "cureton-mulaik", "cm")) {
     weights <- lav_mat_rotate_cm_weights(a)
   } else {
-    lav_msg_stop(gettext("row_weights can be none, kaiser or cureton-mulaik"))
+    lav_msg_stop(gettextf("row_weights can be %s.",
+      lav_msg_view(c("none", "kaiser", "cureton.mulaik"), "or")))
   }
   a <- a * weights
 

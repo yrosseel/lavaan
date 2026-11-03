@@ -193,7 +193,10 @@ are:
     with \code{meanstructure = TRUE}) under the relative-difference loss
     (\code{mg_agreement_method = "relative.alignment"}) with the
     \code{"sqrt.nobs"} group weights. The preset used is recorded in
-    \code{mg_agreement_preset}.}
+    \code{mg_agreement_preset}. A preset may be given in
+    \code{rotation.args} or inside the \code{rotation} list (for example
+    \code{rotation = list("oblimin", mg_agreement = "mgfr")}); the other
+    values in that list win over the preset values either way.}
   \item{\code{mg_agreement_preset}}{\code{"none"} (the default),
     \code{"mgfr"} or \code{"alignment"}: the preset of the agreement
     rotation (see \code{mg_agreement}); set by giving the preset as the

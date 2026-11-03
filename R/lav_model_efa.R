@@ -1051,11 +1051,12 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         weights <- rep(1.0, p)
       } else if (ropts$row_weights == "kaiser") {
         weights <- lav_mat_rotate_kaiser_weights(a)
-      } else if (ropts$row_weights == "cureton-mulaik") {
+      } else if (ropts$row_weights %in%
+        c("cureton.mulaik", "cureton-mulaik", "cm")) {
         weights <- lav_mat_rotate_cm_weights(a)
       } else {
-        lav_msg_stop(gettextf("row_weights can be",
-          lav_msg_view(c("none", "kaiser", "cureton-mulaik"), "or")))
+        lav_msg_stop(gettextf("row_weights can be %s.",
+          lav_msg_view(c("none", "kaiser", "cureton.mulaik"), "or")))
       }
       a <- a * weights
 

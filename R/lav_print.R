@@ -1258,11 +1258,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
       # Row weights
       c1 <- c(c1, "Row weights")
-      tmp_txt <- rotation$rotation.args$row_weights
-      c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
-        substring(tmp_txt, 2),
-        sep = ""
-      ))
+      c2 <- c(c2, lav_print_row_weights(rotation$rotation.args$row_weights))
 
       # multiple-group agreement rotation (keywords: first letter upper
       # case, the rest lower case)
@@ -1829,4 +1825,15 @@ lav_print_capitalize <- function(x = NULL) {
   }
   x <- tolower(as.character(x))
   paste0(toupper(substring(x, 1L, 1L)), substring(x, 2L))
+}
+
+# the row_weights keyword of the rotation
+lav_print_row_weights <- function(x = NULL) {
+  if (is.null(x) || length(x) == 0L) {
+    return("")
+  }
+  if (tolower(x) %in% c("cureton.mulaik", "cureton-mulaik", "cm")) {
+    return("Cureton-Mulaik")
+  }
+  lav_print_capitalize(x)
 }
