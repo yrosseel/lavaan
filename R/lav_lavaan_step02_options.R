@@ -365,6 +365,29 @@ lav_step02_options <- function(slot_options = NULL,
       }
     }
 
+    # a rotation requested (rotation = or rotation.args =) for a model
+    # without efa() blocks: there is nothing to rotate, and the request is
+    # ignored (an explicit rotation = "none" is fine)
+    efa_flag <- !is.null(flat_model$efa) && any(nchar(flat_model$efa) > 0L)
+    # (note: [["rotation"]], as $rotation would partially match
+    # rotation.args)
+    if (!efa_flag && !is.null(dotdotdot[["rotation"]]) &&
+        !identical(tolower(lavoptions$rotation), "none")) {
+      lav_msg_warn(gettext(
+        "the rotation= argument is ignored, because the model contains no
+         efa() blocks. Use the efa() modifier in the model syntax (for
+         example efa(\"block1\")*f1 =~ x1 + x2 + x3) to request a rotated
+         (exploratory) solution."))
+    } else if (!efa_flag && is.null(dotdotdot[["rotation"]]) &&
+               !is.null(dotdotdot[["rotation.args"]]) &&
+               length(dotdotdot[["rotation.args"]]) > 0L) {
+      lav_msg_warn(gettext(
+        "the rotation.args= argument is ignored, because the model contains
+         no efa() blocks. Use the efa() modifier in the model syntax (for
+         example efa(\"block1\")*f1 =~ x1 + x2 + x3) to request a rotated
+         (exploratory) solution."))
+    }
+
     # sample_cov looks like a correlation matrix (all variances are 1), but
     # the user did not say whether a correlation structure is intended:
     # warn (an explicit correlation = FALSE silences this)

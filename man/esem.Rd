@@ -77,8 +77,10 @@ of the model, the rotation does not depend on the regressions.
 
 \subsection{Rotation methods}{
 The rotation method is selected by the \code{rotation} argument (the default
-is \code{"geomin"}). It applies to all sets in the model. By default, the
-rotation is oblique; an orthogonal rotation is requested by setting the
+is \code{"geomin"}). It applies to all sets in the model; for a model
+without \code{efa()} sets there is nothing to rotate, and an explicit
+\code{rotation} (or \code{rotation_args}) argument is ignored with a
+warning. By default, the rotation is oblique; an orthogonal rotation is requested by setting the
 \code{orthogonal} element of \code{rotation_args} to \code{TRUE}. The
 following criteria are available; most of them are available in both an
 orthogonal and an oblique version:
