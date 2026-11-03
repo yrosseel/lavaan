@@ -134,7 +134,10 @@ are:
   \item{\code{std_ov}}{Logical. If \code{TRUE} (the default), the rotation
     is carried out on the loadings in the standardized (correlation) metric
     of the indicators; the result is transformed back to the original
-    metric.}
+    metric. In the agreement rotation of a multiple-group model
+    (\code{mg_agreement = TRUE}) this applies to the per-group rotation
+    that provides the starting point; the agreement objective itself is
+    evaluated in the original metric (see \code{mg_agreement_std_ov}).}
   \item{\code{rstarts}}{Integer. The number of random starts for the
     rotation algorithm. Default: \code{30}.}
   \item{\code{algorithm}}{\code{"gpa"} (gradient projection, the default) or
@@ -174,8 +177,9 @@ are:
     \code{mg_agreement_rotate}, \code{mg_agreement_intercepts},
     \code{mg_agreement_identification}, \code{mg_agreement_std_ov} and
     \code{mg_agreement_algorithm}).}
-  \item{\code{mg_agreement_method}}{\code{"procrustes"} (the default)
-    or \code{"loading.alignment"}: the agreement term. Procrustes: the sum
+  \item{\code{mg_agreement_method}}{\code{"procrustes"} (the default),
+    \code{"loading.alignment"} or \code{"relative.alignment"}: the
+    agreement term. Procrustes: the sum
     of squared differences between the loadings of every pair of groups.
     Loading alignment: the component loss of the alignment method
     (Asparouhov and Muthen, 2014), the sum over all pairs and loadings of
@@ -183,7 +187,17 @@ are:
     two loadings and \eqn{\epsilon} = \code{mg_agreement_epsilon}
     (default 0.01). Small differences are penalized more than
     proportionally and large ones less, so that the solution has many
-    (nearly) invariant loadings and a few large differences.}
+    (nearly) invariant loadings and a few large differences. Relative
+    alignment: the same component loss, but on relative differences: a
+    loading enters as \eqn{\log(\lambda^2 + \epsilon)/2}{log(lambda^2 + epsilon)/2}, so that
+    \eqn{d} is the log ratio of two loadings (damped to zero for
+    loadings near zero), and a difference between two intercepts (see
+    \code{mg_agreement_intercepts}) is divided by the scale of the
+    indicator (the average over the two groups of
+    \eqn{\sqrt{\sum_j \lambda_{ij}^2 + \epsilon}}{sqrt(sum_j lambda_ij^2 + epsilon)}). This loss is
+    (nearly) invariant to the scale of the indicators, and reproduces the
+    factor variances and means of the alignment of Mplus, which the
+    raw-difference loss does not.}
   \item{\code{mg_agreement_group_weights}}{\code{"equal"} (the default),
     \code{"nobs"} or \code{"sqrt.nobs"}: whether the groups are weighted
     by their sample sizes in the agreement criterion (the per-group
@@ -227,11 +241,10 @@ are:
     is poorly identified (see \code{\link{alignment}}).}
   \item{\code{mg_agreement_std_ov}}{Logical (default \code{FALSE}; not
     available with \code{conditional.x = TRUE}). If
-    \code{TRUE}, the agreement objective (and the per-group rotation that
-    provides its starting point) is evaluated on the loadings of the
-    indicators standardized over the entire population (the model-implied
-    variances and means of the groups, pooled by sample size), as the
-    alignment method does. The rotation matrices, scales and factor means
+    \code{TRUE}, the agreement objective is evaluated on the loadings of
+    the indicators standardized over the entire population (the
+    model-implied variances and means of the groups, pooled by sample
+    size), as the alignment method does. The rotation matrices, scales and factor means
     are the same in both metrics, so only the solution changes, not its
     representation.}
   \item{\code{mg_agreement_intercepts}}{\code{"none"} (the default),

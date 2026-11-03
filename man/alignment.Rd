@@ -43,7 +43,13 @@ fit <- cfa(model, data = data, group = "g", std.lv = TRUE,
     loss (snake_case names):
     \code{method} (\code{"loading.alignment"}, the default: the component
     loss \eqn{(d^2 + \epsilon)^{1/4}} summed over all pairs of groups and
-    all loadings and intercepts; or \code{"procrustes"}: squared
+    all loadings and intercepts, with \eqn{d} the difference between the
+    two parameters; \code{"relative.alignment"}: the same loss on
+    relative differences, a loading entering as \eqn{\log(\lambda^2 +
+    \epsilon)/2}{log(lambda^2 + epsilon)/2} and an intercept difference divided by the scale of
+    the indicator, see \code{mg_agreement_method} in \code{\link{esem}};
+    this is the loss that reproduces the alignment of Mplus; or
+    \code{"procrustes"}: squared
     differences), \code{epsilon} (0.01), \code{group_weights}
     (\code{"sqrt.nobs"}, the default: a pair of groups is weighted by the
     square root of the product of their sample sizes; \code{"nobs"} or

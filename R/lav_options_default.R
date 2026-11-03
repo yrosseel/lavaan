@@ -282,7 +282,9 @@ lav_options_default <- function() {
   elm("alignment", "none", chr = c("none", "fixed", "free"))
   elm(c("alignment.args", "method"), "loading.alignment",
     chr = c(procrustes = "procrustes", loading.alignment = "loading.alignment",
-            alignment = "loading.alignment", la = "loading.alignment"))
+            alignment = "loading.alignment", la = "loading.alignment",
+            relative.alignment = "relative.alignment",
+            relative = "relative.alignment"))
   elm(c("alignment.args", "epsilon"), 0.01, nm = "]0, 1]")
   elm(c("alignment.args", "group_weights"), "sqrt.nobs",
     chr = c("equal", "nobs", "sqrt.nobs"))
@@ -334,7 +336,9 @@ lav_options_default <- function() {
     chr = c(gpa = "gpa", pairwise = "pairwise", lg = "pairwise"))
   elm(c("rotation.args", "mg_agreement_method"), "procrustes",
     chr = c(procrustes = "procrustes", loading.alignment = "loading.alignment",
-            alignment = "loading.alignment", la = "loading.alignment"))
+            alignment = "loading.alignment", la = "loading.alignment",
+            relative.alignment = "relative.alignment",
+            relative = "relative.alignment"))
   elm(c("rotation.args", "mg_agreement_epsilon"), 0.01, nm = "]0, 1]")
   elm(c("rotation.args", "mg_agreement_scales"), "equal",
     chr = c("equal", "free"))

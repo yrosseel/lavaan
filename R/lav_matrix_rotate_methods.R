@@ -661,28 +661,53 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       ss_wsum <- ss_wsum + group_weights[g] * sum(lambda_list[[g]]^2)
     }
     a_mg <- w_sum * ss_wsum - sum(lambda_wsum^2)
-  } else if (mg_agreement_method == "loading.alignment") {
+  } else if (mg_agreement_method %in% c("loading.alignment",
+                                        "relative.alignment")) {
     # the component loss of the alignment method:
-    #   sum_{g < h} omega_g omega_h sum_ij f(lambda_g,ij - lambda_h,ij),
+    #   sum_{g < h} omega_g omega_h sum_ij f(d_ij),
     #   f(x) = (x^2 + epsilon)^(1/4)
+    # with d the difference between the two loadings ("loading.alignment")
+    # or between the transformed loadings t(lambda) = log(lambda^2 +
+    # epsilon) / 2 ("relative.alignment": the log ratio of the two loadings
+    # when both are well above sqrt(epsilon), damped to zero for near-zero
+    # loadings; the loss is then invariant to the scale of the indicators)
     # small differences are penalized more than proportionally, large ones
     # less: the solution has many (near) invariant loadings and a few
     # large differences
+    relative <- mg_agreement_method == "relative.alignment"
+    if (relative) {
+      t_list <- lapply(lambda_list, function(x) {
+        0.5 * log(x * x + mg_agreement_epsilon)
+      })
+      if (grad) {
+        # dt / dlambda = lambda / (lambda^2 + epsilon)
+        dt_list <- lapply(lambda_list, function(x) {
+          x / (x * x + mg_agreement_epsilon)
+        })
+      }
+    } else {
+      t_list <- lambda_list
+    }
     a_mg <- 0
     if (grad) {
       agr_list <- lapply(lambda_list, function(x) x * 0)
     }
     for (g in seq_len(ngroups - 1L)) {
       for (h in (g + 1L):ngroups) {
-        d <- lambda_list[[g]] - lambda_list[[h]]
+        d <- t_list[[g]] - t_list[[h]]
         d2e <- d * d + mg_agreement_epsilon
         omega <- group_weights[g] * group_weights[h]
         a_mg <- a_mg + omega * sum(sqrt(sqrt(d2e)))
         if (grad) {
           # f'(x) = x / (2 (x^2 + epsilon)^(3/4))
           fd <- omega * d / (2 * d2e^0.75)
-          agr_list[[g]] <- agr_list[[g]] + fd
-          agr_list[[h]] <- agr_list[[h]] - fd
+          if (relative) {
+            agr_list[[g]] <- agr_list[[g]] + fd * dt_list[[g]]
+            agr_list[[h]] <- agr_list[[h]] - fd * dt_list[[h]]
+          } else {
+            agr_list[[g]] <- agr_list[[g]] + fd
+            agr_list[[h]] <- agr_list[[h]] - fd
+          }
         }
       }
     }
@@ -691,13 +716,22 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       "unknown mg_agreement_method: %s", dQuote(mg_agreement_method)))
   }
 
-  # 2b. agreement of the aligned intercepts (same loss, same weights)
+  # 2b. agreement of the aligned intercepts (same loss, same weights);
+  #     with "relative.alignment" the difference between two intercepts
+  #     is divided by the scale of the indicator: the average over the two
+  #     groups of the (damped) norm of its row of loadings
   a_nu <- 0
   if (align_means) {
     nu_list <- lapply(seq_len(ngroups), function(g) {
       as.numeric(nu_list[[g]] -
         lambda_list[[g]][nu_row_idx, , drop = FALSE] %*% mean_list[[g]])
     })
+    relative <- mg_agreement_method == "relative.alignment"
+    if (relative) {
+      r_list <- lapply(lambda_list, function(x) {
+        sqrt(rowSums(x * x) + mg_agreement_epsilon)
+      })
+    }
     if (grad) {
       gn_list <- lapply(nu_list, function(x) x * 0)
     }
@@ -711,10 +745,29 @@ lav_mat_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
             fd <- 2 * omega * d
           }
         } else {
+          if (relative) {
+            s_gh <- ((r_list[[g]] + r_list[[h]]) / 2)[nu_row_idx]
+            d <- d / s_gh
+          }
           d2e <- d * d + mg_agreement_epsilon
           a_nu <- a_nu + omega * sum(sqrt(sqrt(d2e)))
           if (grad) {
             fd <- omega * d / (2 * d2e^0.75)
+            if (relative) {
+              # through the row scales: d/d s_i = - f'(d) d / s_i (summed
+              # over the entries that share a row), and
+              # d s_i / d lambda_g[i, ] = lambda_g[i, ] / (2 r_g[i])
+              ds <- rowsum(-fd * d / s_gh, group = nu_row_idx,
+                           reorder = TRUE)
+              row_set <- as.integer(rownames(ds))
+              for (k in c(g, h)) {
+                agr_list[[k]][row_set, ] <-
+                  agr_list[[k]][row_set, , drop = FALSE] +
+                  lambda_list[[k]][row_set, , drop = FALSE] *
+                  (as.numeric(ds) / (2 * r_list[[k]][row_set]))
+              }
+              fd <- fd / s_gh
+            }
           }
         }
         if (grad) {

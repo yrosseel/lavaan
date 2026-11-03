@@ -126,13 +126,15 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
       }
     }
     f <- function(d) {
-      if (opts$mg_agreement_method == "loading.alignment") {
-        sqrt(sqrt(d * d + opts$mg_agreement_epsilon))
-      } else {
+      if (opts$mg_agreement_method == "procrustes") {
         d * d
+      } else {
+        sqrt(sqrt(d * d + opts$mg_agreement_epsilon))
       }
     }
-    list(w_g = w_g, f = f)
+    list(w_g = w_g, f = f,
+         relative = opts$mg_agreement_method == "relative.alignment",
+         epsilon = opts$mg_agreement_epsilon)
   }
   loss_efa <- loss_of(ropts)
   loss_cfa <- if (!is.null(copts)) loss_of(copts) else loss_efa
@@ -238,10 +240,33 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
     is_efa <- (op == "=~" && lhs %in% lv_efa_only) ||
       (op %in% c("~1", "|") && lhs %in% ov_efa_only && !(lhs %in% ov_cfa))
     lo <- if (is_efa) loss_efa else loss_cfa
+    theta_c <- theta
+    scale_c <- rep(1, ngroups)
+    if (lo$relative) {
+      # the relative loss: the loadings enter as log(lambda^2 + eps)/2,
+      # an intercept difference is divided by the average over the pair of
+      # the (damped) norm of the row of loadings of the indicator (over
+      # the factors of its efa block, or over all factors for a
+      # confirmatory indicator)
+      if (op == "=~") {
+        theta_c <- 0.5 * log(theta * theta + lo$epsilon)
+      } else {
+        lv_row <- if (is_efa) {
+          unique(pt$lhs[pt$op == "=~" & pt$rhs == lhs &
+                        pt$lhs %in% lv_efa_only])
+        } else {
+          colnames(est[[1L]]$lambda)
+        }
+        scale_c <- vapply(seq_len(ngroups), function(g) {
+          sqrt(sum(est[[g]]$lambda[lhs, lv_row]^2) + lo$epsilon)
+        }, numeric(1L))
+      }
+    }
     contribution[i] <- sum(vapply(seq_len(ncol(pairs)), function(p) {
       g <- pairs[1L, p]
       h <- pairs[2L, p]
-      lo$w_g[g] * lo$w_g[h] * lo$f(theta[g] - theta[h])
+      d <- (theta_c[g] - theta_c[h]) / ((scale_c[g] + scale_c[h]) / 2)
+      lo$w_g[g] * lo$w_g[h] * lo$f(d)
     }, numeric(1L)))
     theta_bar <- mean(theta)
     if (op == "=~") {

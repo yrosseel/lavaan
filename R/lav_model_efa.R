@@ -608,13 +608,31 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         next
       }
 
-      # note: single-factor sets and std.ov are not (yet) supported in the
-      # multigroup rotation + agreement path; this_ov_var is always NULL here
+      # note: single-factor sets are not (yet) supported in the multigroup
+      # rotation + agreement path; this_ov_var is always NULL here
 
       # unrotated 'A' for this set
       alist_1 <- lapply(lambda_list,
         function(x) x[ov_idx, lv_idx, drop = FALSE])
       this_ov_var <- NULL
+
+      # std_ov: the per-group pre-rotation is done on the loadings of the
+      # standardized indicators, as in the single-group path (the implied
+      # variances of the indicators of this set: the unrotated loadings
+      # times their transpose plus theta, per group); the agreement
+      # objective itself is evaluated on the unstandardized loadings (or
+      # on the pooled-standardized ones, see mg_agreement_std_ov)
+      pre_var_list <- NULL
+      if (ropts$std_ov) {
+        pre_var_list <- lapply(seq_len(lavmodel@ngroups), function(g) {
+          mm_in_group <- (seq_len(lavmodel@nmat[g]) +
+                          cumsum(c(0, lavmodel@nmat))[g])
+          theta_g <- lav_model_efa_block_theta(lavmodel, glist[mm_in_group],
+                                               g)
+          diag(tcrossprod(alist_1[[g]]) +
+               theta_g[ov_idx, ov_idx, drop = FALSE])
+        })
+      }
 
       # mg_agreement_std_ov: the agreement objective (and the per-group
       # pre-rotation) on the loadings of the standardized indicators,
@@ -658,6 +676,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         }, ov_var_list, mu_list, w_n))
         sd_pooled <- sqrt(var_pooled)
         alist_1 <- lapply(alist_1, function(x) x / sd_pooled)
+        if (!is.null(pre_var_list)) {
+          # the pre-rotation standardizes per group: relative to the
+          # pooled standardization already applied
+          pre_var_list <- lapply(pre_var_list, function(v) v / var_pooled)
+        }
       }
 
       # intercept alignment: the intercepts of the indicators of this set
@@ -773,8 +796,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         nu_list = nu_list,
         nu_row_idx = nu_row_idx,
         reference_group = ropts$mg_agreement_reference_group,
-        std_ov = isTRUE(ropts$mg_agreement_std_ov),
-        ov_var_list = ov_var_list,
+        std_ov = !is.null(pre_var_list),
+        ov_var_list = pre_var_list,
         pairwise_accelerate = ropts$pairwise_accelerate,
         reflect = ropts$reflect,
         order_lv_by = ropts$order_lv_by,
