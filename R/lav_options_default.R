@@ -328,7 +328,10 @@ lav_options_default <- function() {
   elm(c("rotation.args", "verbose"), FALSE, bl = TRUE)
   elm(c("rotation.args", "jac_init_rot"), TRUE, bl = TRUE)
   elm(c("rotation.args", "max_iter"), 10000L, nm = "[0, 1e+12]")
-  elm(c("rotation.args", "mg_agreement"), FALSE, bl = TRUE)
+  elm(c("rotation.args", "mg_agreement"), FALSE, bl = TRUE,
+    chr = c(mgfr = "mgfr", alignment = "alignment"))
+  elm(c("rotation.args", "mg_agreement_preset"), "none",
+    chr = c(none = "none", mgfr = "mgfr", alignment = "alignment"))
   elm(c("rotation.args", "mg_agreement_weight"), 0.5, nm = "[0, 1]")
   elm(c("rotation.args", "mg_agreement_group_weights"), "equal",
       chr = c("equal", "nobs", "sqrt.nobs"))

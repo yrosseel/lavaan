@@ -1659,6 +1659,13 @@ lav_options_set <- function(opt = NULL) {
   # transform names rotation.args to snake_case
   opt$rotation.args <- lav_snake_case(opt$rotation.args)
 
+  # a preset of the agreement rotation that was not expanded in step 02
+  # (a character mg_agreement handed to lav_options_set() directly): the
+  # preset values replace the current ones
+  if (is.character(opt$rotation.args$mg_agreement)) {
+    opt <- lav_options_mg_agreement_preset(opt, override = TRUE)
+  }
+
   # force orthogonal for some rotation algorithms
   if (any(opt$rotation == c(
     "varimax", "entropy", "mccammon",
@@ -1993,5 +2000,82 @@ lav_options_set <- function(opt = NULL) {
     str(opt)
   }
 
+  opt
+}
+
+
+# presets of the multiple-group agreement rotation:
+# rotation.args = list(mg_agreement = "mgfr") or "alignment". The preset
+# fills in the mg_agreement_* options (and the rotation criterion and the
+# mean structure) that the user did not supply (override = FALSE: opt is
+# the list of user-supplied arguments), or replaces them (override = TRUE:
+# opt is the complete list of options). On return, mg_agreement is TRUE
+# and mg_agreement_preset records the preset.
+#
+# "mgfr": the multigroup factor rotation of De Roover and Vermunt (2019):
+#   a joint oblimin rotation with the generalized procrustes agreement
+#   term, free factor scales (mean variance one), equal group weights; the
+#   lavaan weight 1/3 corresponds to the unweighted ".50GP + .50O"
+#   criterion recommended in that paper (lavaan's oblimin is half the
+#   paper's, so w_lavaan = w / (2 - w))
+# "alignment": the alignment of Mplus (Asparouhov and Muthen, 2014) for an
+#   ESEM: a per-group geomin rotation (epsilon 0.01, standardized
+#   indicators), followed by the alignment of the factor variances and
+#   means (fixed alignment: variance one and mean zero in the first group)
+#   under the relative-difference loss, with the sqrt(n_g n_h) pair weights
+lav_options_mg_agreement_preset <- function(opt = list(), override = FALSE) {
+  ropts <- opt$rotation.args
+  if (!is.list(ropts)) {
+    return(opt)
+  }
+  preset <- ropts$mg_agreement
+  if (!is.character(preset)) {
+    preset <- ropts$mg_agreement_preset
+    if (is.null(preset) || preset == "none") {
+      return(opt)
+    }
+  }
+  preset <- tolower(preset)
+  if (!preset %in% c("mgfr", "alignment")) {
+    lav_msg_stop(gettextf(
+      "unknown mg_agreement preset %s; valid presets are %s.",
+      dQuote(preset), lav_msg_view(c("mgfr", "alignment"), "none")))
+  }
+  if (preset == "mgfr") {
+    vals <- list(
+      mg_agreement_method = "procrustes",
+      mg_agreement_weight = 1 / 3,
+      mg_agreement_scales = "free",
+      mg_agreement_rotate = TRUE,
+      mg_agreement_intercepts = "none",
+      mg_agreement_identification = "mean",
+      mg_agreement_group_weights = "equal"
+    )
+    top <- list(rotation = "oblimin")
+  } else {
+    vals <- list(
+      mg_agreement_method = "relative.alignment",
+      mg_agreement_epsilon = 0.01,
+      mg_agreement_weight = 1,
+      mg_agreement_scales = "free",
+      mg_agreement_rotate = FALSE,
+      mg_agreement_intercepts = "fixed",
+      mg_agreement_identification = "reference",
+      mg_agreement_group_weights = "sqrt.nobs",
+      geomin_epsilon = 0.01,
+      std_ov = TRUE
+    )
+    top <- list(rotation = "geomin", meanstructure = TRUE)
+  }
+  if (override) {
+    ropts <- modifyList(ropts, vals)
+  } else {
+    # the user-supplied values win
+    ropts <- modifyList(vals, ropts)
+    opt <- modifyList(top, opt)
+  }
+  ropts$mg_agreement <- TRUE
+  ropts$mg_agreement_preset <- preset
+  opt$rotation.args <- ropts
   opt
 }

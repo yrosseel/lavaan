@@ -169,14 +169,35 @@ are:
     (the order of the columns of the target matrix). For bifactor rotation,
     the general factor always stays in the first position, and the ordering
     rule is applied to the specific factors only.}
-  \item{\code{mg_agreement}}{Logical. For multiple-group models only. If
-    \code{TRUE}, the rotated solutions of the groups are made as similar as
-    possible (see also \code{mg_agreement_weight},
+  \item{\code{mg_agreement}}{Logical or character. For multiple-group
+    models only. If \code{TRUE}, the rotated solutions of the groups are
+    made as similar as possible (see also \code{mg_agreement_weight},
     \code{mg_agreement_method}, \code{mg_agreement_epsilon},
     \code{mg_agreement_group_weights}, \code{mg_agreement_scales},
     \code{mg_agreement_rotate}, \code{mg_agreement_intercepts},
     \code{mg_agreement_identification}, \code{mg_agreement_std_ov} and
-    \code{mg_agreement_algorithm}).}
+    \code{mg_agreement_algorithm}). Two presets fill in these options
+    (and the rotation criterion and the mean structure) for the user, who
+    may still override any of them explicitly: \code{"mgfr"} is the
+    multigroup factor rotation of De Roover and Vermunt (2019), a joint
+    oblimin rotation of all groups with the generalized procrustes
+    agreement term, free factor scales (mean variance one) and equal
+    group weights (\code{mg_agreement_weight = 1/3}, which is the
+    unweighted combination of the procrustes and oblimin criteria
+    recommended in that paper, as lavaan's oblimin is half theirs);
+    \code{"alignment"} is the alignment of Mplus for an ESEM (Asparouhov
+    and Muthen, 2014): a per-group geomin rotation (\code{geomin_epsilon
+    = 0.01}, standardized indicators) followed by the alignment of the
+    factor variances and means (fixed alignment: variance one and mean
+    zero in the first group, \code{mg_agreement_intercepts = "fixed"},
+    with \code{meanstructure = TRUE}) under the relative-difference loss
+    (\code{mg_agreement_method = "relative.alignment"}) with the
+    \code{"sqrt.nobs"} group weights. The preset used is recorded in
+    \code{mg_agreement_preset}.}
+  \item{\code{mg_agreement_preset}}{\code{"none"} (the default),
+    \code{"mgfr"} or \code{"alignment"}: the preset of the agreement
+    rotation (see \code{mg_agreement}); set by giving the preset as the
+    value of \code{mg_agreement}.}
   \item{\code{mg_agreement_method}}{\code{"procrustes"} (the default),
     \code{"loading.alignment"} or \code{"relative.alignment"}: the
     agreement term. Procrustes: the sum
@@ -372,6 +393,13 @@ Psychology, 10}, 85--110.
 
 Browne, M. W. (2001). An overview of analytic rotation in exploratory factor
 analysis. \emph{Multivariate Behavioral Research, 36}(1), 111--150.
+
+Asparouhov, T., & Muthen, B. (2014). Multiple-group factor analysis
+alignment. \emph{Structural Equation Modeling, 21}(4), 495--508.
+
+De Roover, K., & Vermunt, J. K. (2019). On the exploratory road to
+unraveling factor loading non-invariance: A new multigroup rotation
+approach. \emph{Structural Equation Modeling, 26}(6), 905--923.
 }
 \examples{
 ## 1. a single set of three exploratory factors (this is equivalent to

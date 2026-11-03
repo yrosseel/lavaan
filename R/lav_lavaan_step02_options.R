@@ -109,6 +109,9 @@ lav_step02_options <- function(slot_options = NULL,
     # modifyList
     if (is.list(dotdotdot$rotation.args)) {
       dotdotdot$rotation.args <- lav_snake_case(dotdotdot$rotation.args)
+      # presets of the agreement rotation (mg_agreement = "mgfr" or
+      # "alignment"): fill in what the user did not supply
+      dotdotdot <- lav_options_mg_agreement_preset(dotdotdot)
     }
     if (is.list(dotdotdot$em.args)) {
       dotdotdot$em.args <- lav_snake_case(dotdotdot$em.args)

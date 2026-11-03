@@ -1283,6 +1283,11 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         c2 <- c(c2, tmp)
         c1 <- c(c1, "Group weights")
         c2 <- c(c2, lav_print_capitalize(ra$mg_agreement_group_weights))
+        if (!is.null(ra$mg_agreement_preset) &&
+            ra$mg_agreement_preset != "none") {
+          c1 <- c(c1, "Agreement preset")
+          c2 <- c(c2, lav_print_capitalize(ra$mg_agreement_preset))
+        }
       }
     }
 

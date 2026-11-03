@@ -580,6 +580,9 @@ lav_object_check_version <- function(object = NULL) {
     new_options$rotation.args$mg_agreement_crit <- "procrustes"
 
   }
+  if (is.null(new_options$rotation.args$mg_agreement_preset)) {
+    new_options$rotation.args$mg_agreement_preset <- "none"
+  }
   if (is.null(new_options$rotation.args$mg_agreement_weight)) {
     new_options$rotation.args$mg_agreement_weight <- 0.5
   }
