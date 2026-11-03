@@ -371,13 +371,7 @@ lav_step02_options <- function(slot_options = NULL,
     if (is.null(data) && !is.null(sample_cov) && is.null(sample_th) &&
         is.null(dotdotdot$correlation) && !isTRUE(opt$correlation) &&
         !opt$.categorical && tolower(estimator) != "catml") {
-      cov_list <- if (is.list(sample_cov)) sample_cov else list(sample_cov)
-      unit_var <- vapply(cov_list, function(S) {
-        is.matrix(S) && is.numeric(S) && nrow(S) > 1L &&
-          all(is.finite(diag(S))) &&
-          all(abs(diag(S) - 1) < sqrt(.Machine$double.eps))
-      }, logical(1L))
-      if (length(unit_var) > 0L && all(unit_var)) {
+      if (lav_sample_cov_is_cor(sample_cov)) {
         lav_msg_warn(gettext(
           "sample_cov appears to be a correlation matrix (all variances
            are 1), but the correlation= argument was not specified. If
@@ -396,4 +390,19 @@ lav_step02_options <- function(slot_options = NULL,
   }
 
   lavoptions
+}
+
+# does sample_cov (a matrix, or a list of matrices) look like a correlation
+# matrix: all variances equal to one (in every group)?
+lav_sample_cov_is_cor <- function(sample_cov = NULL) {
+  if (is.null(sample_cov)) {
+    return(FALSE)
+  }
+  cov_list <- if (is.list(sample_cov)) sample_cov else list(sample_cov)
+  unit_var <- vapply(cov_list, function(S) {
+    is.matrix(S) && is.numeric(S) && nrow(S) > 1L &&
+      all(is.finite(diag(S))) &&
+      all(abs(diag(S) - 1) < sqrt(.Machine$double.eps))
+  }, logical(1L))
+  length(unit_var) > 0L && all(unit_var)
 }

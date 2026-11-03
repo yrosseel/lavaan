@@ -26,7 +26,13 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
     level and two factors at the between level.}
 \item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
-    Unlike sem and CFA, the matrix may be a correlation matrix.}
+    Unlike sem and CFA, the matrix may be a correlation matrix: if all
+    variances are one (and no \code{correlation} argument is given), the
+    matrix is analyzed as a correlation structure
+    (\code{correlation = TRUE}), which gives the standard errors of a
+    correlation matrix; the loadings and the fit measures are the same as
+    for a covariance matrix. Set \code{correlation = FALSE} to analyze it
+    as a covariance matrix anyway.}
 \item{sample_nobs}{Number of observations if the full data frame is missing
     and only the sample variance-covariance matrix is given.}
 \item{rotation}{Character or a list with first element a character variable.

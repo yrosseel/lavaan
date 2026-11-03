@@ -122,9 +122,11 @@ efa <- function(data = NULL,
       }
     }
   } else if (!is.null(sample_cov)) {
-    ov_names <- rownames(sample_cov)
+    # a list of matrices (multiple groups): take the names of the first
+    cov_1 <- if (is.list(sample_cov)) sample_cov[[1L]] else sample_cov
+    ov_names <- rownames(cov_1)
     if (is.null(ov_names)) {
-      ov_names <- colnames(sample_cov)
+      ov_names <- colnames(cov_1)
     }
   }
   # ov_names?
@@ -212,6 +214,26 @@ efa <- function(data = NULL,
 
   # fit models
   nfits <- length(nfactors_list)
+  # a correlation matrix as input (all variances one): analyze it as a
+  # correlation structure, so that the standard errors are those of a
+  # correlation matrix (the loadings and the fit are the same either way);
+  # an explicit correlation = argument is left alone
+  if (is.null(dotdotdot$correlation) && is.null(dotdotdot$ordered) &&
+    is.null(dotdotdot$sample.th) && is.null(dotdotdot$sample_th) &&
+    !identical(tolower(dotdotdot$estimator), "catml")) {
+    cov_in <- NULL
+    if (!is.null(data) && inherits(data, "lavMoments")) {
+      if (is.null(data$sample_th)) {
+        cov_in <- data$sample_cov
+      }
+    } else if (is.null(data)) {
+      cov_in <- sample_cov
+    }
+    if (lav_sample_cov_is_cor(cov_in)) {
+      dotdotdot$correlation <- TRUE
+    }
+  }
+
   out <- vector("list", length = nfits)
   for (f in seq_len(nfits)) {
     # generate model syntax
