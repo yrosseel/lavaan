@@ -577,11 +577,13 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     lambda_list <- res$lambda_list
     iter <- res$iter
     converged <- res$converged
+    degenerate <- res$degenerate
     q_current <- res$q
   } else {
     c_mat <- lav_mat_rotate_mg_scales_start(lambda_list, identification)
     iter <- 0L
     converged <- FALSE
+    degenerate <- FALSE
     q_current <- as.numeric(objf(lambda_list, grad = FALSE))
     for (outer in seq_len(max_iter)) {
       q_old <- q_current
@@ -595,6 +597,11 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
       lambda_list <- res$lambda_list
       psi_list <- res$phi_list
       iter <- iter + res$iter
+      if (res$degenerate) {
+        # collapsed factors: stop here
+        degenerate <- TRUE
+        break
+      }
       c_mat <- lav_mat_rotate_mg_scales_update(
         lambda_list = lambda_list, c_mat = c_mat,
         method_fname = method_fname, method_args = method_args,
@@ -628,8 +635,14 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     }
   }
 
-  # warn if no convergence
-  if (!converged) {
+  # degenerate (collapsed) solution: not converged, never selected
+  if (degenerate) {
+    converged <- FALSE
+    q_current <- Inf
+    lav_msg_warn(gettext(
+      "the multiple-group agreement rotation is degenerate: two or more
+       factors have collapsed."))
+  } else if (!converged) {
     lav_msg_warn(gettextf(
       "mg-pairwise rotation algorithm did not converge after %s iterations",
       iter
@@ -647,12 +660,14 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     }
   } else {
     for (g in seq_len(ngroups)) {
-      # to be compatible with GPa
+      # to be compatible with GPa; a degenerate (collapsed) solution may
+      # have a singular transformation: fall back on the identity
       rott_inv <- solve(
         crossprod(a_list[[g]]),
         crossprod(a_list[[g]], lambda_list[[g]])
       )
-      rot_list[[g]] <- solve(t(rott_inv))
+      rot_g <- tryCatch(solve(t(rott_inv)), error = function(e) NULL)
+      rot_list[[g]] <- if (is.null(rot_g)) diag(m) else rot_g
     }
   }
 
@@ -661,6 +676,7 @@ lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     algorithm = "mg-pairwise",
     iter = iter,
     converged = converged,
+    degenerate = degenerate,
     method.value = q_current
   )
   if (free_scales) {

@@ -761,8 +761,8 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
   )
   mm_lambda <- res$lambda_list[[1L]]
 
-  # warn if no convergence
-  if (!res$converged) {
+  # warn if no convergence (a degenerate run is reported by the caller)
+  if (!res$converged && !res$degenerate) {
     lav_msg_warn(gettextf(
       "pairwise rotation algorithm did not converge after %s iterations",
       res$iter
@@ -773,9 +773,13 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
   if (orthogonal) {
     rot <- solve(crossprod(a), crossprod(a, mm_lambda))
   } else {
-    # to be compatible with GPa
+    # to be compatible with GPa; a degenerate (collapsed) solution may
+    # have a singular transformation: fall back on the starting rotation
     rott_inv <- solve(crossprod(a), crossprod(a, mm_lambda))
-    rot <- solve(t(rott_inv))
+    rot <- tryCatch(solve(t(rott_inv)), error = function(e) NULL)
+    if (is.null(rot)) {
+      rot <- if (is.null(init_rot)) diag(m) else init_rot
+    }
   }
 
   # algorithm information
@@ -783,6 +787,7 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
     algorithm = "pairwise",
     iter = res$iter,
     converged = res$converged,
+    degenerate = res$degenerate,
     method.value = res$q
   )
 
@@ -837,6 +842,17 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
 # convergence when the change in the objective over a sweep is below tol.
 # This is the path for a non-smooth criterion (simplimax), where the
 # derivative-based iteration can stall at a kink
+#
+# Factor collapse (oblique rotation only): some criteria (eg oblimin with
+# gamma > 0) are unbounded below for oblique rotation, and the sweeps then
+# chase -Inf towards two (nearly) perfectly correlated factors, with
+# exploding loadings. The same guard as in the GPA algorithm applies: a
+# plane step that makes an off-diagonal factor correlation exceed 1 - 1e-6
+# is not taken (degenerate, stop), a sweep that drives the objective far
+# below its starting value is a collapse trajectory (degenerate, stop),
+# and a non-converged run that ends with |phi| > 0.999 is flagged as
+# well. The result then carries degenerate = TRUE and q = Inf, so that
+# such a run never wins a random-start competition
 lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
                                          phi_list = NULL,
                                          orthogonal = FALSE,
@@ -937,7 +953,19 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
   # per-plane (and per-group) curvature estimates (NA = unknown)
   curv_pl <- matrix(as.numeric(NA), nrow = nplanes, ncol = ngroups)
 
+  # factor-collapse guard (oblique only): the largest tolerated
+  # off-diagonal factor correlation, and the divergence floor of the
+  # objective
+  phi_max <- 1 - 1e-6
+  q_floor <- -1000 * (1 + abs(q_current))
+  # oblique: does the updated PHI of group g have collapsed factors?
+  phi_collapsed <- function(phi, c1) {
+    any(abs(phi[c1, -c1]) > phi_max)
+  }
+
   converged <- FALSE
+  degenerate <- FALSE
+  iter <- 0L
   for (iter in seq_len(max_iter)) {
     q_old <- q_current
     g_max <- 0
@@ -965,12 +993,17 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
           )
           t <- out$minimum
           step <- plane_apply(mm_lambda, c1, c2, t, phi12 = phi12)
+          if (!orthogonal) {
+            phi_new <- phi_update(phi_list[[g]], c1, c2, t, step$gam)
+            if (phi_collapsed(phi_new, c1)) {
+              degenerate <- TRUE
+              break
+            }
+            phi_list[[g]] <- phi_new
+          }
           lambda_list[[g]] <- step$mm_lambda
           m_list[[g]] <- plane_apply(m_list[[g]], c1, c2, t,
             phi12 = phi12)$mm_lambda
-          if (!orthogonal) {
-            phi_list[[g]] <- phi_update(phi_list[[g]], c1, c2, t, step$gam)
-          }
           next
         }
 
@@ -1103,17 +1136,30 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
           lambda_list[[g]] <- mm_lambda
           next
         }
+        if (!orthogonal) {
+          # collapsed factors: do not take this step
+          phi_new <- phi_update(phi_list[[g]], c1, c2, best$t, best$gam)
+          if (phi_collapsed(phi_new, c1)) {
+            lambda_list[[g]] <- mm_lambda
+            degenerate <- TRUE
+            break
+          }
+          phi_list[[g]] <- phi_new
+        }
         lambda_list[[g]] <- best$mm_lambda
         m_list[[g]] <- plane_apply(m_list[[g]], c1, c2, best$t,
           phi12 = phi12)$mm_lambda
         q_current <- best$q
         grad_list <- best$grad
         n_accepted <- n_accepted + 1L
-        if (!orthogonal) {
-          phi_list[[g]] <- phi_update(phi_list[[g]], c1, c2, best$t, best$gam)
-        }
       } # planes
+      if (degenerate) {
+        break
+      }
     } # groups
+    if (degenerate) {
+      break
+    }
 
     if (!use_grad) {
       q_current <- as.numeric(objf(lambda_list, grad = FALSE))
@@ -1133,6 +1179,11 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
 
     if (!is.finite(diff)) {
       # something went wrong ... bail out
+      break
+    }
+    if (!orthogonal && q_current < q_floor) {
+      # the objective diverges: a factor-collapse trajectory
+      degenerate <- TRUE
       break
     }
     if (use_grad) {
@@ -1193,6 +1244,10 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
               }
               m_g <- t(t(m_g) / d_g)
               phi_g <- t(t(phi_g * d_g) * d_g)
+              if (max(abs(phi_g[lower.tri(phi_g)])) > phi_max) {
+                ok <- FALSE
+                break
+              }
             }
             m_e[[g]] <- m_g
             phi_e[[g]] <- phi_g
@@ -1229,9 +1284,24 @@ lav_mat_rotate_pairwise_core <- function(lambda_list = NULL,
     }
   } # iter
 
+  # a non-converged oblique run that ends with (nearly) perfectly
+  # correlated factors is a factor-collapse trajectory as well
+  if (!degenerate && !orthogonal && !converged) {
+    phi_off <- max(vapply(phi_list, function(phi) {
+      max(abs(phi[lower.tri(phi)]))
+    }, numeric(1L)))
+    if (phi_off > 0.999) {
+      degenerate <- TRUE
+    }
+  }
+  if (degenerate) {
+    converged <- FALSE
+    q_current <- Inf
+  }
+
   list(
     lambda_list = lambda_list, phi_list = phi_list,
-    q = q_current, iter = iter, converged = converged, neval = neval,
-    n_extrap = n_extrap
+    q = q_current, iter = iter, converged = converged,
+    degenerate = degenerate, neval = neval, n_extrap = n_extrap
   )
 }
