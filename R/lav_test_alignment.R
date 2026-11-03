@@ -304,9 +304,12 @@ lavTestAlignment <- function(object, p_connect = 0.01, p_set = 0.001, # nolint
   attr(out, "invariant") <- status
   attr(out, "p_connect") <- p_connect
   attr(out, "p_set") <- p_set
-  attr(out, "header") <- sprintf(
-    "Approximate measurement invariance of the aligned parameters (pairwise p > %s connects; p > %s keeps a group in the invariant set)",
-    format(p_connect), format(p_set))
+  # (three short lines: the printed output should not exceed 76 characters)
+  attr(out, "header") <- paste(
+    "Approximate measurement invariance of the aligned parameters",
+    sprintf("  - pairwise p > %s connects two groups", format(p_connect)),
+    sprintf("  - p > %s keeps a group in the invariant set", format(p_set)),
+    sep = "\n")
   class(out) <- c("lavaan.data.frame", "data.frame")
   out
 }
