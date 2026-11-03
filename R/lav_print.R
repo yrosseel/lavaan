@@ -11,6 +11,7 @@ lav_dataframe_print <- function(x, ..., nd = 3L) {
     if (is.numeric(x)) round(x, nd) else x
   }))
   rownames(y) <- row_names
+  names(y) <- names(x) # keep the column names verbatim (e.g. group labels)
 
   if (!is.null(attr(x, "header"))) {
     cat("\n", attr(x, "header"), "\n\n", sep = "")
