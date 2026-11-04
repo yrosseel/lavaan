@@ -113,6 +113,9 @@ lav_step02_options <- function(slot_options = NULL,
       # "alignment"): fill in what the user did not supply
       dotdotdot <- lav_options_mg_agreement_preset(dotdotdot)
     }
+    if (is.list(dotdotdot$alignment.args)) {
+      dotdotdot$alignment.args <- lav_snake_case(dotdotdot$alignment.args)
+    }
     if (is.list(dotdotdot$em.args)) {
       dotdotdot$em.args <- lav_snake_case(dotdotdot$em.args)
     }

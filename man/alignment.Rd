@@ -1,6 +1,5 @@
 \name{alignment}
 \alias{alignment}
-\alias{alignment.args}
 \title{Alignment of a multiple-group confirmatory model}
 \description{
 The \code{alignment} option of \code{\link{lavOptions}} aligns a
@@ -16,19 +15,27 @@ aligned loadings and intercepts can be inspected for (non-)invariance with
 \section{Usage}{
 \preformatted{
 fit <- cfa(model, data = data, group = "g", std.lv = TRUE,
-           meanstructure = TRUE, alignment = "fixed",
-           alignment.args = list(method = "loading.alignment",
-                                 epsilon = 0.01,
-                                 group_weights = "sqrt.nobs",
-                                 identification = "reference",
-                                 std_ov = FALSE, rstarts = 30L,
-                                 reference_group = 1L))
+           meanstructure = TRUE,
+           alignment = list("fixed",
+                            method = "loading.alignment",
+                            epsilon = 0.01,
+                            group_weights = "sqrt.nobs",
+                            identification = "reference",
+                            std_ov = FALSE, rstarts = 30L,
+                            reference_group = 1L))
 }
+The settings of the alignment are given in the \code{alignment} list
+after the type of alignment (as the settings of a rotation follow the
+rotation criterion in the \code{rotation} list); a list without the type
+requests a fixed alignment. \code{alignment = "fixed"} alone uses the
+default settings.
 }
 \section{Options}{
 \describe{
   \item{\code{alignment}}{\code{"none"} (the default), \code{"fixed"} or
-    \code{"free"}. With \code{"fixed"} the factor means of the first group
+    \code{"free"}, or a list with the type of alignment as its first
+    element followed by the settings listed below. With \code{"fixed"}
+    the factor means of the first group
     are fixed to zero; with \code{"free"} the means of all groups are
     aligned, which requires more than two groups and some loading
     non-invariance to be identified. The model must be a multiple-group
@@ -36,11 +43,12 @@ fit <- cfa(model, data = data, group = "g", std.lv = TRUE,
     TRUE}, a mean structure, free loadings and intercepts in every group,
     no equality constraints. The model may also contain efa blocks (see
     \code{\link{esem}}): they are rotated first, with the agreement
-    rotation if \code{rotation_args = list(mg_agreement = TRUE)}, and the
+    rotation if \code{rotation = list("geomin", mg_agreement = TRUE)}, and
+    the
     confirmatory factors are then aligned on the rotated model; the two
     transformations act on different factors and compose.}
-  \item{\code{alignment.args}}{A list with the settings of the alignment
-    loss (snake_case names):
+  \item{settings}{The elements of the \code{alignment} list after the
+    type of alignment (snake_case names):
     \code{method} (\code{"loading.alignment"}, the default: the component
     loss \eqn{(d^2 + \epsilon)^{1/4}} summed over all pairs of groups and
     all loadings and intercepts, with \eqn{d} the difference between the
@@ -135,7 +143,7 @@ Modeling, 30}(2), 169--191.
 \seealso{
 \code{\link{lavTestAlignment}} for the invariance analysis of the aligned
 parameters (efa and confirmatory); \code{\link{esem}} for the alignment
-of efa blocks (\code{rotation_args = list(mg_agreement = TRUE, ...)}).
+of efa blocks (\code{rotation = list("geomin", mg_agreement = TRUE, ...)}).
 }
 \examples{
 \donttest{

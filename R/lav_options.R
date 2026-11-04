@@ -204,8 +204,13 @@ lav_options_set <- function(opt = NULL) {
       # (eg geomin.epsilon) and its default (geomin_epsilon) would coexist
       # and lav_snake_case() would flag a duplicate.
       if (length(new_args) &&
-        optname %in% c("rotation", "em", "em.h1", "gn")) {
+        optname %in% c("rotation", "alignment", "em", "em.h1", "gn")) {
         new_args <- lav_snake_case(new_args)
+      }
+      # alignment = list(method = ...) without the type of alignment: a
+      # fixed alignment
+      if (optname == "alignment" && is.null(new_value)) {
+        new_value <- "fixed"
       }
       # a preset of the agreement rotation given inside the rotation list,
       # eg rotation = list("oblimin", mg_agreement = "mgfr"): expand it on
@@ -238,6 +243,9 @@ lav_options_set <- function(opt = NULL) {
 
   if (is.list(opt$rotation.args)) {
     opt$rotation.args <- lav_snake_case(opt$rotation.args)
+  }
+  if (is.list(opt$alignment.args)) {
+    opt$alignment.args <- lav_snake_case(opt$alignment.args)
   }
   # a preset of the agreement rotation that was not expanded earlier (a
   # character mg_agreement handed to lav_options_set() directly, as part of
