@@ -119,15 +119,7 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   # estimator
   c1 <- c("Estimator")
   # second column
-  tmp_est <- toupper(x$estimator)
-  if (tmp_est == "DLS") {
-    dls_first_letter <- substr(
-      x$estimator.args$dls_gamma_nt,
-      1L, 1L
-    )
-    tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
-  }
-  c2 <- tmp_est
+  c2 <- lav_print_estimator(x$estimator, x$estimator.args)
 
   # additional estimator args
   if (!is.null(x$estimator.args) &&
@@ -146,18 +138,8 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
 
   # rotation method
   c1 <- c(c1, "Rotation method")
-  if (x$rotation == "none") {
-    mm <- toupper(x$rotation)
-  } else if (x$rotation.args$orthogonal) {
-    mm <- paste(toupper(x$rotation), " ", "ORTHOGONAL",
-      sep = ""
-    )
-  } else {
-    mm <- paste(toupper(x$rotation), " ", "OBLIQUE",
-      sep = ""
-    )
-  }
-  c2 <- c(c2, mm)
+  c2 <- c(c2, lav_print_rotation_method(x$rotation,
+                                        x$rotation.args$orthogonal))
 
   if (x$rotation != "none") {
     # method options
@@ -184,9 +166,8 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
 
     # rotation algorithm
     c1 <- c(c1, "Rotation algorithm (rstarts)")
-    tmp <- paste(toupper(x$rotation.args$algorithm),
-      " (", x$rotation.args$rstarts, ")",
-      sep = ""
+    tmp <- paste0(lav_print_rotation_algorithm(x$rotation.args$algorithm),
+      " (", x$rotation.args$rstarts, ")"
     )
     c2 <- c(c2, tmp)
 

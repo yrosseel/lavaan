@@ -1071,24 +1071,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
     c1 <- c("Estimator")
     # second column
-    tmp_est <- toupper(estimator)
-    if (tmp_est == "DLS") {
-      dls_first_letter <- substr(
-        estimator_args$dls_gamma_nt,
-        1L, 1L
-      )
-      tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
-    }
-    # reduced-bias M-estimation: show IRBM / ERBM (estimator is ML internally)
-    if (!is.null(estimator_args$rbm_method)) {
-      tmp_est <- switch(estimator_args$rbm_method,
-        implicit = "IRB-ML",
-        explicit = "ERB-ML",
-        none = "ML",
-        "RBM"
-      )
-    }
-    c2 <- tmp_est
+    c2 <- lav_print_estimator(estimator, estimator_args)
 
     # additional estimator args
     if (!is.null(estimator_args) &&
@@ -1108,7 +1091,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
     # optimization method + npar
     c1 <- c(c1, "Optimization method", "Number of model parameters")
-    c2 <- c(c2, toupper(optim_method), npar)
+    c2 <- c(c2, lav_print_optim_method(optim_method), npar)
 
     # optional output
     if (eq_constraints) {
@@ -1155,12 +1138,12 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
     # sam method
     c1 <- c("SAM method")
-    c2 <- toupper(sam_method)
+    c2 <- lav_print_sam_method(sam_method)
 
     # options
     if (sam_method == "local") {
       c1 <- c(c1, "Mapping matrix M method")
-      c2 <- c(c2, sam_local_options$m_method)
+      c2 <- c(c2, toupper(sam_local_options$m_method))
       # TODo: more!
     }
 
@@ -1170,11 +1153,11 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
     # estimator measurement blocks
     c1 <- c(c1, "Estimator measurement part")
-    c2 <- c(c2, sam_mm_estimator)
+    c2 <- c(c2, lav_print_estimator(sam_mm_estimator))
 
     # estimator structural part
-    c1 <- c(c1, "Estimator  structural part")
-    c2 <- c(c2, sam_struc_estimator)
+    c1 <- c(c1, "Estimator structural part")
+    c2 <- c(c2, lav_print_estimator(sam_struc_estimator))
 
     # format
     c1 <- format(c1, width = 40L)
@@ -1204,18 +1187,8 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
     # rotation method
     c1 <- c(c1, "Rotation method")
-    if (rotation$rotation == "none") {
-      mm <- toupper(rotation$rotation)
-    } else if (rotation$rotation.args$orthogonal) {
-      mm <- paste(toupper(rotation$rotation), " ", "ORTHOGONAL",
-        sep = ""
-      )
-    } else {
-      mm <- paste(toupper(rotation$rotation), " ", "OBLIQUE",
-        sep = ""
-      )
-    }
-    c2 <- c(c2, mm)
+    c2 <- c(c2, lav_print_rotation_method(rotation$rotation,
+                                          rotation$rotation.args$orthogonal))
 
     if (rotation$rotation != "none") {
       # method options
@@ -1242,9 +1215,9 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
       # rotation algorithm
       c1 <- c(c1, "Rotation algorithm (rstarts)")
-      tmp <- paste(toupper(rotation$rotation.args$algorithm),
-        " (", rotation$rotation.args$rstarts, ")",
-        sep = ""
+      tmp <- paste0(
+        lav_print_rotation_algorithm(rotation$rotation.args$algorithm),
+        " (", rotation$rotation.args$rstarts, ")"
       )
       c2 <- c(c2, tmp)
 
@@ -1261,12 +1234,13 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       c2 <- c(c2, lav_print_row_weights(rotation$rotation.args$row_weights))
 
       # multiple-group agreement rotation (keywords: first letter upper
-      # case, the rest lower case)
+      # case, the rest lower case; acronyms in upper case)
       if (isTRUE(rotation$mg_agreement)) {
         ra <- rotation$rotation.args
         c1 <- c(c1, "Agreement rotation (weight)")
         c2 <- c(c2, paste0(lav_print_capitalize(ra$mg_agreement_method),
-                           " (", ra$mg_agreement_weight, ")"))
+                           " (", format(ra$mg_agreement_weight, digits = 3L),
+                           ")"))
         c1 <- c(c1, "Agreement scales / intercepts")
         c2 <- c(c2, paste(lav_print_capitalize(ra$mg_agreement_scales), "/",
                           lav_print_capitalize(ra$mg_agreement_intercepts)))
@@ -1283,7 +1257,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         if (!is.null(ra$mg_agreement_preset) &&
             ra$mg_agreement_preset != "none") {
           c1 <- c(c1, "Agreement preset")
-          c2 <- c(c2, lav_print_capitalize(ra$mg_agreement_preset))
+          c2 <- c(c2, lav_print_acronym(ra$mg_agreement_preset, "mgfr"))
         }
       }
     }
@@ -1817,14 +1791,103 @@ lav_print_psi <- function(x, nd = 3L, alpha_level = 0.01, x_se = NULL) {
   print(y, quote = FALSE)
 }
 
-# keywords in the summary header: first letter upper case, the rest lower
-# case (only TRUE and FALSE are printed in capitals)
+# keywords in the summary header: acronyms (ML, GPA, MGFR, ...) in upper
+# case; words (Pairwise, Equal, None, ...) with the first letter in upper
+# case and the rest in lower case (only TRUE and FALSE are printed in
+# capitals)
 lav_print_capitalize <- function(x = NULL) {
   if (is.null(x) || length(x) == 0L) {
     return("")
   }
   x <- tolower(as.character(x))
   paste0(toupper(substring(x, 1L, 1L)), substring(x, 2L))
+}
+
+# a keyword that is an acronym when it is one of 'acronyms' (upper case),
+# and a word otherwise
+lav_print_acronym <- function(x = NULL, acronyms = character(0L)) {
+  if (is.null(x) || length(x) == 0L) {
+    return("")
+  }
+  if (tolower(x) %in% tolower(acronyms)) {
+    return(toupper(x))
+  }
+  lav_print_capitalize(x)
+}
+
+# the estimator (an acronym, except catML and none)
+lav_print_estimator <- function(estimator = NULL, estimator_args = NULL) {
+  if (is.null(estimator) || length(estimator) == 0L) {
+    return("")
+  }
+  est <- toupper(estimator)
+  if (est == "DLS" && !is.null(estimator_args$dls_gamma_nt)) {
+    dls_first_letter <- substr(estimator_args$dls_gamma_nt, 1L, 1L)
+    est <- paste0("DLS-", toupper(dls_first_letter))
+  } else if (est == "CATML") {
+    est <- "catML"
+  } else if (est == "NONE") {
+    est <- "None"
+  }
+  # reduced-bias M-estimation: show IRBM / ERBM (estimator is ML internally)
+  if (!is.null(estimator_args$rbm_method)) {
+    est <- switch(estimator_args$rbm_method,
+      implicit = "IRB-ML",
+      explicit = "ERB-ML",
+      none = "ML",
+      "RBM"
+    )
+  }
+  est
+}
+
+# the optimization method (NLMINB, GN, EM, BFGS, L-BFGS-B are acronyms or
+# function names; noniterative estimators do not optimize)
+lav_print_optim_method <- function(x = NULL) {
+  if (is.null(x) || length(x) == 0L) {
+    return("")
+  }
+  switch(tolower(x),
+    noniter = "Noniterative",
+    none = "None",
+    l.bfgs.b = "L-BFGS-B",
+    toupper(x)
+  )
+}
+
+# the sam method: local/global are words, fsr/cfsr acronyms
+lav_print_sam_method <- function(x = NULL) {
+  lav_print_acronym(x, c("fsr", "cfsr"))
+}
+
+# the rotation method + orthogonal/oblique: the names of the criteria are
+# words (Geomin, Varimax, Target, ...) or names (Crawford-Ferguson,
+# McCammon, Bentler), except CF and PST
+lav_print_rotation_method <- function(rotation = NULL, orthogonal = FALSE) {
+  if (is.null(rotation) || length(rotation) == 0L) {
+    return("")
+  }
+  x <- tolower(rotation)
+  if (x == "none") {
+    return("None")
+  }
+  if (x %in% c("cf", "pst")) {
+    name <- toupper(x)
+  } else if (startsWith(x, "cf-")) {
+    name <- paste0("CF-", substring(x, 4L))
+  } else if (x == "crawford-ferguson") {
+    name <- "Crawford-Ferguson"
+  } else if (x == "mccammon") {
+    name <- "McCammon"
+  } else {
+    name <- lav_print_capitalize(x)
+  }
+  paste(name, if (isTRUE(orthogonal)) "orthogonal" else "oblique")
+}
+
+# the rotation algorithm: GPA is an acronym, pairwise/promax are words
+lav_print_rotation_algorithm <- function(x = NULL) {
+  lav_print_acronym(x, "gpa")
 }
 
 # the row_weights keyword of the rotation
