@@ -185,7 +185,13 @@ Model features:
      (endogenous) variables, and \code{sam()}. For models where all
      endogenous variables are declared \code{ordered}, the fitted
      moments are already correlations, and \code{correlation = TRUE} is
-     redundant (but harmless).}
+     redundant (but harmless). If \code{correlation} is not specified
+     and the input looks like a correlation matrix (a \code{sample_cov}
+     with unit diagonal, or raw \code{data} in which all continuous model
+     variables were standardized to unit variance), a warning asks to
+     set \code{correlation = TRUE} (correlation structure) or
+     \code{correlation = FALSE} (ordinary covariance analysis)
+     explicitly.}
     \item{\code{composites_cov}:}{Character string. Only used if the model
      contains composites. Controls whether the composite-indicator
      (co)variances (the elements of the \code{T} matrix) are fixed to their

@@ -131,6 +131,38 @@ lav_step03_data <- function(slot_data = NULL,
     }
     # more needed?
   }
+  # raw data that was standardized beforehand (all continuous variables in
+  # the model, including the exogenous x, have unit variance; product terms
+  # do not count), but the user did not say whether a correlation structure
+  # is intended: warn, as for a correlation matrix given as sample_cov (an
+  # explicit correlation = FALSE silences this); the variances in the
+  # variable table are pooled over groups/levels and use the n - 1
+  # denominator (as scale() does); a 1/n denominator is also accepted
+  # (issue #655)
+  if (is.null(slot_data) && lavdata@data.type == "full" &&
+      is.null(dotdotdot$correlation) && !isTRUE(lavoptions$correlation) &&
+      !isTRUE(lavoptions$std.ov) && !lavoptions$.categorical &&
+      tolower(lavoptions$estimator) != "catml") {
+    ov <- lavdata@ov
+    num_idx <- which(ov$type == "numeric" &
+                     !grepl(":", ov$name, fixed = TRUE))
+    if (length(num_idx) > 1L) {
+      ov_var <- ov$var[num_idx]
+      ov_n <- ov$nobs[num_idx]
+      unit_var <- is.finite(ov_var) & ov_n > 1L &
+        (abs(ov_var - 1) < 1e-04 |
+         abs(ov_var * (ov_n - 1) / ov_n - 1) < 1e-04)
+      if (all(unit_var)) {
+        lav_msg_warn(gettext(
+          "the observed variables appear to be standardized (all variances
+           are 1), but the correlation= argument was not specified. If the
+           intention is to analyze a correlation structure, use
+           correlation = TRUE. To analyze the standardized variables as
+           ordinary (covariance) data (and to remove this warning), set
+           correlation = FALSE explicitly."))
+      }
+    }
+  }
   # sanity check
   if (!is.null(slot_par_table) || inherits(model, "lavaan")) {
     if (ngroups != lavdata@ngroups) {
