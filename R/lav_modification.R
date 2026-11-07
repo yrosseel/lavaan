@@ -197,10 +197,30 @@ modindices <- function(object,
   #    LIST$mi[ eq.idx ] <- OUT$uni$X2
   # }
 
-  # scaled?
-  # if(length(object@test) > 1L) {
-  #    LIST$mi.scaled <- LIST$mi / object@test[[2]]$scaling.factor
-  # }
+  # scaled (robust) modification indices (new in 0.7-4): the standard
+  # index is chi-square(1) only when the estimator is asymptotically
+  # efficient (and the distributional assumptions hold); whenever the
+  # object provides a sandwich meat B (robust standard errors or a scaled
+  # test statistic, as in lavTestScore()), the scaled version of Satorra
+  # (2000) is added, which for a single parameter equals the generalized
+  # ('robust') statistic: n * g_k^2 / (c' B c), with c = (-I22^{-1} I21[, k],
+  # e_k) the k-th column of the Schur complement map; all candidates share
+  # one information matrix, one meat matrix and one inverse
+  b_meat <- lav_test_meat(fit)
+  if (!is.null(b_meat)) {
+    ncand <- length(extra_idx)
+    c_mat <- matrix(0, nrow = nrow(information_1), ncol = ncand)
+    c_mat[model_idx, ] <- -i22_inv %*% i21
+    c_mat[cbind(extra_idx, seq_len(ncand))] <- 1
+    denom <- colSums(c_mat * (b_meat %*% c_mat))
+    denom[denom < .Machine$double.eps^(1 / 3)] <- as.numeric(NA)
+    mi_scaled <- rep(as.numeric(NA), length(score))
+    mi_scaled[extra_idx] <- n * (score[extra_idx] * score[extra_idx]) / denom
+    # the (standard) index of a parameter that was not identified is NA
+    mi_scaled[extra_idx][is.na(v_diag)] <- as.numeric(NA)
+    list_1$mi.scaled <- rep(as.numeric(NA), length(list_1$lhs))
+    list_1$mi.scaled[list_1$free > 0] <- mi_scaled
+  }
 
   # EPC
   d <- (-1 * n) * score
@@ -305,7 +325,23 @@ modindices <- function(object,
     list_1$decision <- character(length(list_1$power))
 
     # five possibilities (Table 6 in Saris, Satorra, van der Veld, 2009)
-    mi_significant <- ifelse(1 - pchisq(list_1$mi, df = 1) < alpha,
+    # the significance of the index is judged by the scaled (robust)
+    # version when it is available; otherwise by the standard index, which
+    # is only chi-square(1) for an asymptotically efficient estimator
+    if (!is.null(list_1$mi.scaled)) {
+      mi_test <- list_1$mi.scaled
+    } else {
+      mi_test <- list_1$mi
+      if (object@Model@estimator %in% c("DWLS", "ULS")) {
+        lav_msg_warn(gettextf(
+          "the significance of the modification indices (and the decision
+           column) assumes a chi-square(1) distribution, which does not
+           hold for estimator = %s; request robust standard errors (or a
+           scaled test statistic) to obtain the scaled version.",
+          dQuote(object@Model@estimator)))
+      }
+    }
+    mi_significant <- ifelse(1 - pchisq(mi_test, df = 1) < alpha,
       TRUE, FALSE
     )
     high_power <- list_1$power > high_power
@@ -379,7 +415,8 @@ modindices <- function(object,
     list_1$level <- NULL
   }
 
-  # sort?
+  # sort? (by the standard index, as before; the scaled index may be NA
+  # for some rows)
   if (sort) {
     list_1 <- list_1[order(list_1$mi, decreasing = TRUE), ]
   }

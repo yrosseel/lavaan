@@ -84,24 +84,55 @@ lav_test_meat <- function(object, se = NULL) {
     if (length(gamma) == 0L || is.null(gamma[[1]])) {
       return(NULL)
     }
-    nvcov <- try(
-      lav_model_nvcov_robust_sem(
+    # the meat ingredients (Delta, WLS.V) are those of the (non-inverted)
+    # information matrix, so the meat is also available when the model is
+    # not identified (the extended model of modindices()); the legacy
+    # Mplus flavor of the expected information (ML only) keeps its own
+    # ingredients, as in lav_model_nvcov_robust_sem()
+    if (lavmodel@estimator == "ML" && lavoptions$information.expected.mplus) {
+      info <- try(
+        lav_model_info_expected_mlm(
+          lavmodel = lavmodel,
+          lavsamplestats = object@SampleStats,
+          extra = TRUE,
+          augmented = FALSE,
+          inverted = FALSE
+        ),
+        silent = TRUE
+      )
+    } else {
+      info <- try(
+        lav_model_info(
+          lavmodel = lavmodel,
+          lavsamplestats = object@SampleStats,
+          lavdata = object@Data,
+          lavimplied = object@implied,
+          lavh1 = lavh1,
+          lavcache = object@Cache,
+          lavoptions = lavoptions,
+          extra = TRUE,
+          augmented = FALSE,
+          inverted = FALSE
+        ),
+        silent = TRUE
+      )
+    }
+    if (inherits(info, "try-error")) {
+      return(NULL)
+    }
+    b_meat <- try(
+      lav_model_meat_robust_sem(
         lavmodel = lavmodel,
         lavsamplestats = object@SampleStats,
-        lavdata = object@Data,
-        lavcache = object@Cache,
-        lavimplied = object@implied,
-        lavh1 = lavh1,
         lavoptions = lavoptions,
-        attr_delta = FALSE,
-        attr_t_dvgvd = TRUE
+        delta = attr(info, "Delta"),
+        wls_v = attr(info, "WLS.V")
       ),
       silent = TRUE
     )
-    if (inherits(nvcov, "try-error")) {
+    if (inherits(b_meat, "try-error")) {
       return(NULL)
     }
-    b_meat <- attr(nvcov, "tDVGVD")
   } else {
     # casewise (or clusterwise) scores
     if (!lavmodel@estimator %in% c("ML", "PML")) {

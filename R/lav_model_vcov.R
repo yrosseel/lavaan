@@ -231,47 +231,12 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
   wls_v <- attr(e_inv, "WLS.V")
   attr(e_inv, "Delta") <- NULL
   attr(e_inv, "WLS.V") <- NULL
-  # gamma
-  gamma <- lavsamplestats@NACOV
-  if (lavmodel@estimator == "ML" &&
-    lavoptions$gamma.vcov.mplus && !lavsamplestats@NACOV.user) {
-    # 'fix' G11 part of gamma (NOTE: this is NOT needed for SB test
-    # statistic
-    for (g in 1:lavsamplestats@ngroups) {
-      gg1 <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]]
-      if (lavmodel@conditional.x) {
-        nvar <- NCOL(lavsamplestats@res.cov[[g]])
-      } else {
-        nvar <- NCOL(lavsamplestats@cov[[g]])
-      }
-      g11 <- gamma[[g]][1:nvar, 1:nvar, drop = FALSE]
-      gamma[[g]][1:nvar, 1:nvar] <- g11 * gg1
-    } # g
-  }
 
-
-  t_dvgvd <- matrix(0, ncol = ncol(e_inv), nrow = nrow(e_inv))
-  for (g in 1:lavsamplestats@ngroups) {
-    fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
-    if (lavoptions$gamma.vcov.mplus) {
-      fg1 <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@ntotal
-    } else {
-      # from 0.6 onwards, we use fg1 == fg, to be more consistent with
-      # lav_test()
-      fg1 <- fg
-    }
-    # fg twice for WLS.V, 1/fg1 once for GaMMA
-    # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
-    # t(Delta) * WLS.V %*% gamma %*% WLS.V %*% Delta
-    if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
-      # diagonal weight matrix
-      wd <- wls_v[[g]] * delta[[g]]
-    } else {
-      # full weight matrix
-      wd <- wls_v[[g]] %*% delta[[g]]
-    }
-    t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
-  } # g
+  # the meat: sum_g f_g Delta_g' V_g Gamma_g V_g Delta_g
+  t_dvgvd <- lav_model_meat_robust_sem(
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+    lavoptions = lavoptions, delta = delta, wls_v = wls_v
+  )
   nvar_cov <- (e_inv %*% t_dvgvd %*% e_inv)
 
   # information.meat.hc = "HC2"/"HC3": leverage-adjust the casewise part
@@ -321,6 +286,62 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
   }
 
   nvar_cov
+}
+
+# the meat of the robust `sem' sandwich: sum_g f_g Delta_g' V_g Gamma_g V_g
+# Delta_g (unit scale), from the model Jacobians (delta) and the weight
+# matrices (wls_v) per group, as returned by lav_model_info(extra = TRUE);
+# this does not need the (inverse of the) information matrix, so it is also
+# available for models that are not identified (the extended model of
+# modindices())
+lav_model_meat_robust_sem <- function(lavmodel = NULL,
+                                      lavsamplestats = NULL,
+                                      lavoptions = NULL,
+                                      delta = NULL,
+                                      wls_v = NULL) {
+  # gamma
+  gamma <- lavsamplestats@NACOV
+  if (lavmodel@estimator == "ML" &&
+    lavoptions$gamma.vcov.mplus && !lavsamplestats@NACOV.user) {
+    # 'fix' G11 part of gamma (NOTE: this is NOT needed for SB test
+    # statistic
+    for (g in 1:lavsamplestats@ngroups) {
+      gg1 <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]]
+      if (lavmodel@conditional.x) {
+        nvar <- NCOL(lavsamplestats@res.cov[[g]])
+      } else {
+        nvar <- NCOL(lavsamplestats@cov[[g]])
+      }
+      g11 <- gamma[[g]][1:nvar, 1:nvar, drop = FALSE]
+      gamma[[g]][1:nvar, 1:nvar] <- g11 * gg1
+    } # g
+  }
+
+  npar <- ncol(delta[[1]])
+  t_dvgvd <- matrix(0, ncol = npar, nrow = npar)
+  for (g in 1:lavsamplestats@ngroups) {
+    fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+    if (lavoptions$gamma.vcov.mplus) {
+      fg1 <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@ntotal
+    } else {
+      # from 0.6 onwards, we use fg1 == fg, to be more consistent with
+      # lav_test()
+      fg1 <- fg
+    }
+    # fg twice for WLS.V, 1/fg1 once for GaMMA
+    # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
+    # t(Delta) * WLS.V %*% gamma %*% WLS.V %*% Delta
+    if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
+      # diagonal weight matrix
+      wd <- wls_v[[g]] * delta[[g]]
+    } else {
+      # full weight matrix
+      wd <- wls_v[[g]] %*% delta[[g]]
+    }
+    t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
+  } # g
+
+  t_dvgvd
 }
 
 lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint

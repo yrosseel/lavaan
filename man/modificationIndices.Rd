@@ -50,7 +50,9 @@ and the power are computed, and the \code{decision} column compares the
 standardized epc with \code{delta}. Only the standardized epc column in the
 metric of \code{delta} is shown.}
 \item{alpha}{The significance level used for deciding if the modification
-index is statistically significant or not.}
+index is statistically significant or not. The decision is based on the
+\code{mi.scaled} column when it is available (see Details), and on the
+\code{mi} column otherwise.}
 \item{high_power}{If the computed power is higher than this cutoff value,
 the power is considered `high'. If not, the power is considered `low'.
 This affects the values in the 'decision' column in the output.}
@@ -70,7 +72,11 @@ operator \code{op}.}
 \item{...}{To support old argument names.}
 }
 \value{
-  A data.frame containing modification indices and EPCs.
+  A data.frame containing modification indices and EPCs. The \code{mi}
+  column holds the standard modification index; the \code{mi.scaled}
+  column (only present when the fitted object provides the ingredients for
+  a sandwich covariance matrix, see Details) holds its scaled (robust)
+  version.
 }
 \details{
   Modification indices are just 1-df (or univariate) score tests. The
@@ -78,6 +84,32 @@ operator \code{op}.}
   (approximately) the improvement in model fit (in terms of the chi-square
   test statistic) if we were to refit the model with this parameter set
   free.
+
+  The standard modification index (the \code{mi} column) is the score test
+  based on the expected information matrix. It follows a chi-square
+  distribution with one degree of freedom only if the estimator is
+  asymptotically efficient and the distributional assumptions hold: for
+  example for maximum likelihood with (multivariate) normal data, or for
+  \code{estimator = "WLS"}. For estimators that are not asymptotically
+  efficient (\code{"DWLS"}, \code{"ULS"}, and therefore also
+  \code{"WLSMV"}, \code{"ULSMV"} and their relatives), and for
+  \code{"ML"} with non-normal data, the standard index is not chi-square
+  distributed, its expected value under the null hypothesis may be larger
+  or smaller than one, and even the ranking of the candidate parameters
+  can be affected. Whenever the fitted object provides the ingredients for
+  a sandwich (robust) covariance matrix (robust standard errors, or a
+  scaled test statistic, as for \code{"MLM"}, \code{"MLR"},
+  \code{"WLSMV"}, \code{"ULSMV"}), an extra column \code{mi.scaled} is
+  added with the scaled version of the score test (Satorra, 2000), which
+  for a single parameter coincides with the generalized (robust) version.
+  This column is identical to the \code{X2.scaled} column of the
+  univariate table of \code{\link{lavTestScore}} (and to the
+  \code{score.robust} statistic of \code{lavTestScore(add = )}), but it
+  is computed for all candidate parameters at once. The \code{mi.scaled}
+  column should be used to judge the significance of a candidate parameter
+  (the \code{power} option does so automatically); the \code{mi} column
+  is kept for comparability with other software. The expected parameter
+  change (epc) values do not depend on this choice.
   This function is a convenience function in the sense that it produces a
   (hopefully sensible) table of currently fixed-to-zero (or fixed to another
   constant) parameters. For each of these parameters, a modification index
@@ -87,6 +119,13 @@ operator \code{op}.}
   and you wish to examine what happens if you release all (or some) of these
   equality constraints, use the \code{\link{lavTestScore}} function.
 }
+\references{
+Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample
+analysis of moment structures. In Heijmans, R.D.H., Pollock, D.S.G. &
+Satorra, A. (eds.), Innovations in multivariate statistical analysis.
+A Festschrift for Heinz Neudecker (pp.233-247). London: Kluwer Academic
+Publishers.
+}
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
@@ -94,4 +133,8 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
 modindices(fit, minimum_value = 10, sort = TRUE)
+
+# robust standard errors: the mi.scaled column is added
+fit2 <- cfa(HS.model, data=HolzingerSwineford1939, estimator = "MLM")
+modindices(fit2, minimum_value = 10, sort = TRUE)
 }
