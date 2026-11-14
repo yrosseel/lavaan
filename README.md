@@ -56,3 +56,10 @@ summary(fit)
 
 More information can be found on the website: https://lavaan.org
 
+## Use of AI tools
+
+Since 2026 (the 0.7 series), parts of lavaan have been developed with the
+assistance of an AI coding tool (Claude, by Anthropic). All such code is
+reviewed, tested and committed by the lavaan authors, who remain responsible
+for it. The commits concerned carry a `Co-Authored-By: Claude` trailer.
+
