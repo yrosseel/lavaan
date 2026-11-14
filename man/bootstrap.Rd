@@ -63,7 +63,7 @@ created for the duration of the \code{lavBootstrap} call.}
 bootstrap under the hypothesis that the population RMSEA equals a specified
 value.}
 }
-\author{Yves Rosseel and Leonard Vanbrabant. Ed Merkle contributed
+\author{Yves Rosseel. Ed Merkle contributed
 Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
 by Hao Wu and Chuchu Cheng. The handling of iseed was contributed by
 Shu Fai Cheung.}

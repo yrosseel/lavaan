@@ -66,4 +66,4 @@ License: GPL (>= 2)
 LazyData: yes
 LazyDataCompression: xz
 ByteCompile: true
-URL: https://lavaan.ugent.be
+URL: https://lavaan.org
