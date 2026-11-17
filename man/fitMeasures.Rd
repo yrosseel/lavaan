@@ -151,6 +151,17 @@ log-likelihood based measures are available: \code{"npar"},
 \code{"bic2"} (plus \code{"scaling.factor.h0"} for random slopes with
 robust standard errors). Requesting any other measure is an error.
 
+For two-level models, \code{"srmr_within"} and \code{"srmr_between"} are
+based on the residual correlations (the difference between the unrestricted
+and the model-implied correlation matrix) of each level. The alternative
+versions \code{"srmr_within_mplus"} and \code{"srmr_between_mplus"} follow
+the definition used by Mplus (version 8.1 and later): the diagonal elements
+are the relative variance residuals, the mean residuals are included (the
+means of the variables that are split belong to the between level), and
+the elements that only involve fixed exogenous covariates are not counted.
+If \code{mimic = "Mplus"}, these are also the values that are reported as
+\code{"srmr_within"} and \code{"srmr_between"}.
+
 When a scaled (or robust) test statistic is requested (for example, by using
 \code{test = "satorra.bentler"}), the function will also return fit indices
 based on the scaled chi-square statistic, rather than the standard version.

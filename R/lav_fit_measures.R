@@ -177,6 +177,7 @@ lav_fit_measures_names <- function() {
     "crmr", "crmr_nomean",
     "srmr_mplus", "srmr_mplus_nomean",
     "srmr_within", "srmr_between",
+    "srmr_within_mplus", "srmr_between_mplus",
     # various
     "cn_05", "cn_01", "mfi", "ecvi", "wrmr"
   )
@@ -682,7 +683,8 @@ lav_fit <- function(object, fit_measures = "all",
   } else {
     if (object@Data@nlevels > 1L) {
       fit_srmr <- c("srmr", "srmr_within", "srmr_between")
-      fit_srmr2 <- c("srmr", "srmr_within", "srmr_between")
+      fit_srmr2 <- c("srmr", "srmr_within", "srmr_between",
+                     "srmr_within_mplus", "srmr_between_mplus")
     } else {
       fit_srmr <- c("srmr")
       fit_srmr2 <- c(

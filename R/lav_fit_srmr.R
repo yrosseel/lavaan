@@ -116,6 +116,8 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
 
   srmr_within <- numeric(g_1)
   srmr_between <- numeric(g_1)
+  srmr_within_mplus <- numeric(g_1)
+  srmr_between_mplus <- numeric(g_1)
   for (g in 1:g_1) {
     b_within <- (g - 1L) * nlevels + 1L
     b_between <- (g - 1L) * nlevels + 2L
@@ -176,6 +178,78 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
       pstar_within)
     srmr_between[g] <- sqrt(sum(lav_mat_vech(r_between_cor)^2) /
       pstar_between)
+
+    # the Mplus versions:
+    # - the diagonal elements are the (relative) variance residuals
+    # - the elements that only involve fixed exogenous covariates are not
+    #   counted
+    # - the mean residuals (divided by the standard deviations of the
+    #   unrestricted model) are included; the means of the variables that
+    #   are split are the total means (within + between) and belong to the
+    #   between level; only the means of the within-only variables belong
+    #   to the within level
+    sigma_between_raw <- sigma_between
+    if (!is.null(h1_implied$res.cov) &&
+        !is.null(h1_implied$res.cov[[b_within]])) {
+      # conditional.x: no means, no exogenous covariates
+      m_between <- mu_between <- m_within <- mu_within <- NULL
+      x_within <- x_between <- mean_within <- integer(0L)
+    } else {
+      ov_names_w <- lavobject@Data@ov.names.l[[g]][[1L]]
+      ov_names_b <- lavobject@Data@ov.names.l[[g]][[2L]]
+      m_between <- as.numeric(h1_implied$mean[[b_between]])
+      mu_between <- as.numeric(implied$mean[[b_between]])
+      m_within <- as.numeric(h1_implied$mean[[b_within]])
+      mu_within <- as.numeric(implied$mean[[b_within]])
+      both_idx <- match(ov_names_b, ov_names_w)
+      has_w <- !is.na(both_idx)
+      # within-only variables
+      mean_within <- which(!ov_names_w %in% ov_names_b)
+      if (length(m_between) == nvar_between && any(has_w) &&
+          length(m_within) == nvar_within) {
+        m_between[has_w] <- m_between[has_w] + m_within[both_idx[has_w]]
+        mu_between[has_w] <- mu_between[has_w] + mu_within[both_idx[has_w]]
+      }
+      x_within <- x_between <- character(0L)
+      if (lavobject@Options$fixed.x) {
+        x_within <- lav_object_vnames(lavobject, "ov.x", block = b_within)
+        x_between <- lav_object_vnames(lavobject, "ov.x", block = b_between)
+      }
+      x_within <- which(ov_names_w %in% x_within)
+      x_between <- which(ov_names_b %in% x_between)
+    }
+    srmr_mplus_level <- function(s, sigma, m = NULL, mu = NULL,
+                                 x_idx = integer(0L),
+                                 mean_idx = seq_len(NCOL(s))) {
+      nvar <- NCOL(s)
+      if (!all(diag(sigma) > 0) || !all(diag(s) > 0)) {
+        return(as.numeric(NA))
+      }
+      r <- cov2cor(s) - cov2cor(sigma)
+      diag(r) <- (diag(s) - diag(sigma)) / diag(s)
+      nx <- length(x_idx)
+      ss <- sum(lav_mat_vech(r)^2)
+      nel <- nvar * (nvar + 1) / 2 - nx * (nx + 1) / 2
+      if (nx > 0L) {
+        ss <- ss - sum(lav_mat_vech(r[x_idx, x_idx, drop = FALSE])^2)
+      }
+      mean_idx <- setdiff(mean_idx, x_idx)
+      if (length(m) == nvar && length(mu) == nvar &&
+          length(mean_idx) > 0L) {
+        r_mean <- ((m - mu) / sqrt(diag(s)))[mean_idx]
+        ss <- ss + sum(r_mean^2)
+        nel <- nel + length(mean_idx)
+      }
+      if (nel < 1) {
+        return(as.numeric(NA))
+      }
+      sqrt(ss / nel)
+    }
+    srmr_within_mplus[g] <- srmr_mplus_level(s_within, sigma_within,
+      m = m_within, mu = mu_within, x_idx = x_within,
+      mean_idx = mean_within)
+    srmr_between_mplus[g] <- srmr_mplus_level(s_between, sigma_between_raw,
+      m = m_between, mu = mu_between, x_idx = x_between)
   }
 
   # adjust for group sizes
@@ -186,8 +260,12 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
   srmr_within_1 <- sum(ng / ntotal * srmr_within)
   srmr_between_1 <- sum(ng / ntotal * srmr_between)
   srmr_total <- srmr_within_1 + srmr_between_1
+  srmr_within_mplus_1 <- sum(ng / ntotal * srmr_within_mplus)
+  srmr_between_mplus_1 <- sum(ng / ntotal * srmr_between_mplus)
 
-  c(srmr_total, srmr_within_1, srmr_between_1)
+  out <- c(srmr_total, srmr_within_1, srmr_between_1)
+  attr(out, "mplus") <- c(srmr_within_mplus_1, srmr_between_mplus_1)
+  out
 }
 
 lav_fit_srmr_lavobject <- function(lavobject = NULL, fit_measures = "rmsea") {
@@ -210,7 +288,8 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit_measures = "rmsea") {
   } else {
     if (lavobject@Data@nlevels > 1L) {
       fit_srmr <- c("srmr", "srmr_within", "srmr_between")
-      fit_srmr2 <- c("srmr", "srmr_within", "srmr_between")
+      fit_srmr2 <- c("srmr", "srmr_within", "srmr_between",
+                     "srmr_within_mplus", "srmr_between_mplus")
     } else {
       fit_srmr <- c("srmr")
       fit_srmr2 <- c(
@@ -337,9 +416,18 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit_measures = "rmsea") {
   } else {
     # 2. twolevel setting
     out <- lav_fit_srmr_twolevel(lavobject = lavobject)
-    indices["srmr"] <- out[1]
-    indices["srmr_within"] <- out[2]
-    indices["srmr_between"] <- out[3]
+    out_mplus <- attr(out, "mplus")
+    if (lavobject@Options$mimic == "Mplus") {
+      indices["srmr"] <- sum(out_mplus)
+      indices["srmr_within"] <- out_mplus[1]
+      indices["srmr_between"] <- out_mplus[2]
+    } else {
+      indices["srmr"] <- out[1]
+      indices["srmr_within"] <- out[2]
+      indices["srmr_between"] <- out[3]
+    }
+    indices["srmr_within_mplus"] <- out_mplus[1]
+    indices["srmr_between_mplus"] <- out_mplus[2]
   } # twolevel
 
   # return only those that were requested
