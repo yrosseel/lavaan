@@ -946,20 +946,10 @@ lav_pt_flat <- function(flat = NULL,
         }
       }
 
-      # latent variances if efa = TRUE (new in 0.6-5)
-      if (length(lv_names_efa) > 0L &&
-          auto_efa && "loadings" %in% group_equal &&
-        !"lv.variances" %in% group_equal) {
-        lv_var_idx <- which(op == "~~" &
-          lhs %in% lv_names_efa &
-          lhs == rhs &
-          user == 0L &
-          group == g)
-        if (length(lv_var_idx) > 0L) {
-          free[lv_var_idx] <- 1L
-          ustart[lv_var_idx] <- as.numeric(NA)
-        }
-      }
+      # note: the latent (co)variances of the efa factors (if
+      # group.equal = "loadings") are handled in lav_pt_efa_con(), so that
+      # they are treated in the same way if the groups are specified by
+      # 'group:' blocks in the model syntax (as in efa())
 
       # latent response scaling -- categorical only
       # - if thresholds are equal -> free scalings/residual variances

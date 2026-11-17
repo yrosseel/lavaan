@@ -127,6 +127,14 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
     combined. By default, the same number of factors is extracted in every
     block, but a different number of factors per block can be requested by
     supplying \code{nfactors} as a list (see the \code{nfactors} argument).
+    If the factor loadings are constrained to be equal across groups
+    (\code{group_equal = "loadings"}), a single rotation (based on the
+    first group) is used for all groups. The factor variances and covariances
+    are then fixed (to unity and, for an orthogonal rotation, to zero) in
+    the first group only, and they are freely estimated in the other
+    groups, even if \code{orthogonal = TRUE}. To force the same factor
+    covariance matrix in all groups, add both \code{"lv.variances"} and
+    \code{"lv.covariances"} to \code{group_equal}.
     The promax rotation method (taken from the stats package) is only 
     provided for convenience. Because promax is a two-step algorithm (first 
     varimax, then oblique rotation to get simple structure), it does not 
