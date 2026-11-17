@@ -1100,9 +1100,28 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, glist = NULL,
 # This is the housekeeping wrapper: it loops over blocks, extracts the
 # block-specific MLIST and free-element indices, and dispatches the actual
 # computation to the representation-specific worker.
+#
+# Two-level models (continuous, ML): 'mean folding' (fold_means = TRUE,
+# the default). For the variables that are shared by both levels, only
+# the SUM of the within-level and the between-level mean is identified;
+# all the (observed-data) statistics in the space of the unrestricted
+# moments -- the cluster-wise scores, the (expected, observed and
+# first-order) h1 information matrices -- therefore follow the convention
+# that this sum is stored in the between-level mean, while the row
+# (and column) of the within-level mean is zero. The Jacobian must follow
+# the same convention: the rows of the within-level means of the shared
+# variables are ADDED to the rows of their between-level means, and are
+# then set to zero. This matters as soon as the within-level mean of a
+# shared variable is a function of the model parameters (for example, if
+# it is regressed on a within-level covariate with a nonzero mean): the
+# unfolded Jacobian would then lose that part of the scores (wrong
+# 'meat' for the robust standard errors and the scaled test statistics).
+# The gradient is not affected (it gives the same value to both rows).
+# Use fold_means = FALSE for the 'complete-data' representation, where
+# the within and between parts are distinct (EM, Louis's method).
 lav_model_delta <- function(lavmodel = NULL, glist = NULL,
                             m_el_idx = NULL, x_el_idx = NULL,
-                            ceq_simple = FALSE) {
+                            ceq_simple = FALSE, fold_means = TRUE) {
 
   # two-level + categorical: custom standardized Jacobian, stacked per
   # group (see lav_model_wls_2l_cat.R); 'free' parameters only
@@ -1200,15 +1219,65 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
   if (lavmodel@multilevel) {
     delta_tmp <- vector("list", length = lavmodel@ngroups)
     for (g in 1:lavmodel@ngroups) {
-      delta_tmp[[g]] <- rbind(
-        delta[[(g - 1) * 2 + 1]],
-        delta[[(g - 1) * 2 + 2]]
-      )
+      delta_w <- delta[[(g - 1) * 2 + 1]]
+      delta_b <- delta[[(g - 1) * 2 + 2]]
+      if (fold_means) {
+        fold <- lav_model_delta_fold_idx(lavmodel = lavmodel, g = g,
+          nrow_w = nrow(delta_w), nrow_b = nrow(delta_b))
+        if (length(fold$w_idx) > 0L) {
+          delta_b[fold$b_idx, ] <- delta_b[fold$b_idx, , drop = FALSE] +
+            delta_w[fold$w_idx, , drop = FALSE]
+          delta_w[fold$w_idx, ] <- 0
+        }
+      }
+      delta_tmp[[g]] <- rbind(delta_w, delta_b)
     }
     delta <- delta_tmp
   }
 
   delta
+}
+
+# two-level models: the rows of Delta that contain the within-level means
+# (w_idx) and the between-level means (b_idx) of the variables that are
+# shared by both levels (see lav_model_delta); empty if the mean folding
+# does not apply
+lav_model_delta_fold_idx <- function(lavmodel = NULL, g = 1L,
+                                     nrow_w = 0L, nrow_b = 0L) {
+  empty <- list(w_idx = integer(0L), b_idx = integer(0L))
+  if (!lavmodel@multilevel || !lavmodel@meanstructure ||
+      lavmodel@conditional.x || lavmodel@categorical ||
+      lavmodel@group.w.free || lavmodel@correlation ||
+      !lavmodel@estimator %in% c("ML", "REML")) {
+    return(empty)
+  }
+
+  # observed variable names per level: rownames of the lambda matrices
+  ov_names <- vector("list", 2L)
+  for (l in 1:2) {
+    b <- (g - 1L) * 2L + l
+    mm_in_block <- seq_len(lavmodel@nmat[b]) +
+      cumsum(c(0L, lavmodel@nmat))[b]
+    lambda_idx <- mm_in_block[names(lavmodel@GLIST)[mm_in_block] == "lambda"]
+    if (length(lambda_idx) != 1L) {
+      return(empty)
+    }
+    ov_names[[l]] <- lavmodel@dimNames[[lambda_idx]][[1L]]
+  }
+  p_w <- length(ov_names[[1L]])
+  p_b <- length(ov_names[[2L]])
+  # sanity check: means first, followed by vech(Sigma)
+  if (is.null(ov_names[[1L]]) || is.null(ov_names[[2L]]) ||
+      nrow_w != p_w + p_w * (p_w + 1L) / 2L ||
+      nrow_b != p_b + p_b * (p_b + 1L) / 2L) {
+    return(empty)
+  }
+
+  shared <- ov_names[[1L]][ov_names[[1L]] %in% ov_names[[2L]]]
+  list(
+    w_idx = match(shared, ov_names[[1L]]),
+    b_idx = match(shared, ov_names[[2L]])
+  )
 }
 
 

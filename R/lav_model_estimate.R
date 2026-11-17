@@ -1252,7 +1252,42 @@ lav_model_est_h1_saturated <- function(lavmodel = NULL,
   x_idx <- integer(0L)
   value <- numeric(0L)
 
+  # the h1 estimates put the (total) means of the variables that are
+  # shared by both levels in the between block, while their within-level
+  # means are zero; this is only what the model implies if the
+  # within-level model-implied means of these shared variables are
+  # (structurally) zero. They are not if, for example, a shared variable
+  # is regressed on a within-level covariate with a nonzero mean: the
+  # model-implied between-level mean (intercept) then equals the total
+  # mean minus the within-level mean, and pinning it at its h1 value would
+  # bias both the intercept and the slope. In that case, we do not pin
+  # the between-level means of the shared variables
+  implied_start <- delta_start <- NULL
+  if (lavmodel@meanstructure && nlevels > 1L) {
+    implied_start <- try(lav_model_implied(lavmodel), silent = TRUE)
+    delta_start <- try(lav_model_delta(lavmodel, fold_means = FALSE),
+                       silent = TRUE)
+    if (inherits(implied_start, "try-error") ||
+        inherits(delta_start, "try-error")) {
+      return(empty)
+    }
+  }
+  shared_mean_free <- function(g) {
+    ovn_w <- lavdata@ov.names.l[[g]][[1L]]
+    shared <- ovn_w[ovn_w %in% unlist(lavdata@ov.names.l[[g]][-1L])]
+    if (length(shared) == 0L || is.null(implied_start)) {
+      return(character(0L))
+    }
+    w_idx <- match(shared, ovn_w)
+    mu_w <- drop(implied_start$mean[[(g - 1L) * nlevels + 1L]])
+    # the first rows of Delta are the within-level means
+    d_w <- delta_start[[g]][w_idx, , drop = FALSE]
+    nonzero <- abs(mu_w[w_idx]) > 1e-10 | rowSums(abs(d_w) > 0) > 0L
+    shared[nonzero]
+  }
+
   for (g in seq_len(ngroups)) {
+    no_pin_mean <- shared_mean_free(g)
     for (l in seq_len(nlevels)) {
       b <- (g - 1L) * nlevels + l
       ovn <- lavdata@ov.names.l[[g]][[l]]
@@ -1326,6 +1361,12 @@ lav_model_est_h1_saturated <- function(lavmodel = NULL,
 
       # this block is saturated: collect positions + h1 values
       b_free <- which(free > 0L)
+      if (l > 1L && length(no_pin_mean) > 0L) {
+        # do not pin the between-level means of the shared variables if
+        # their within-level means are not (structurally) zero
+        b_free <- b_free[!(op[b_free] == "~1" &
+                           lhs[b_free] %in% no_pin_mean)]
+      }
       b_value <- numeric(length(b_free))
       for (i in seq_along(b_free)) {
         r <- b_free[i]

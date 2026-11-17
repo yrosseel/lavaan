@@ -706,7 +706,24 @@ covariates. Between-only \emph{endogenous} observed variables
 (level-2 outcomes, e.g., indicators of a between-level factor) are
 supported; they must be pure indicators (not involved in
 regressions), with a free (or fixed to a nonzero value) residual
-variance, and without missing values. No
+variance. They may contain missing values (\code{missing = "ml"}):
+the clusters with missing values are retained. To use a level-2
+variable with missing values as a predictor (or as an outcome in a
+regression), define a between-level latent variable with this variable
+as its single indicator, and fix the residual variance of the
+indicator to a small value:
+\preformatted{  level: 2
+    zb =~ 1*z
+    z ~~ 0.001*z
+    zb ~ w
+    s1 ~ zb
+}
+Similarly, a level-1 covariate with missing values can carry a random
+slope if it is brought into the model as the single indicator of a
+within-level latent variable (\code{xw =~ 1*x; x ~~ 0*x}), so that the
+latent-covariate route described above is taken (the cases with a
+missing value on this covariate are then retained, as in Mplus when
+the variance of the covariate is mentioned in the model). No
 chi-square test statistic (or fit indices) are available for models
 with random slopes; \code{fitMeasures()} provides the
 loglikelihood-based measures only (\code{npar}, \code{ntotal},

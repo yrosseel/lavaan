@@ -411,7 +411,8 @@ lav_mvn_cl_mi_h_louis <- function(lavmodel = NULL,
   cgrad <- function(x) {
     glist2 <- lav_model_x2glist(lavmodel, type = type_glist, x = x)
     implied_x <- lav_model_implied(lavmodel, glist = glist2)
-    delta_x <- lav_model_delta(lavmodel, glist = glist2)[[1]]
+    delta_x <- lav_model_delta(lavmodel, glist = glist2,
+                               fold_means = FALSE)[[1]]
     # complete-data score (-2 logl scale) at the expected moments
     ow_x <- solve.default(implied_x$cov[[1]])
     resw <- estat_mu_w - drop(implied_x$mean[[1]])
@@ -444,7 +445,7 @@ lav_mvn_cl_mi_h_louis <- function(lavmodel = NULL,
   #    H_obj = term_a - Delta' Cov Delta / (4N)
   #    (lav_model_delta() columns are in the unconstrained space when
   #    ceq.simple.only, matching term_a)
-  delta <- lav_model_delta(lavmodel = lavmodel)[[1]]
+  delta <- lav_model_delta(lavmodel = lavmodel, fold_means = FALSE)[[1]]
   term_b <- crossprod(delta, scov %*% delta) / (4 * ntotal)
 
   hessian <- term_a - term_b
@@ -454,4 +455,82 @@ lav_mvn_cl_mi_h_louis <- function(lavmodel = NULL,
     hessian <- crossprod(k_mat, hessian %*% k_mat)
   }
   hessian
+}
+
+# ---------------------------------------------------------------------
+# (total) observed information in the *moment* space: minus the Hessian
+# of the observed-data loglikelihood with respect to
+# (Mu.W, vech(Sigma.W), Mu.B, vech(Sigma.B)), using Louis's method:
+#   I_obs = E[I_complete | v.obs] - Cov[S_complete | v.obs]
+# the first term is the observed information of two independent Gaussian
+# samples (level-1 units and clusters), evaluated at the expected
+# complete-data moments (one E-step); the second term is computed by
+# lav_mvn_cl_mi_scov_louis() (on the -2 logl scale, hence the factor 1/4)
+#
+# this replaces a numerical jacobian of the full-data gradient
+# (lav_mvn_cl_info_obs_engine); to remain compatible with that version,
+# the columns of the within-level means of the 'both' variables are set
+# to zero: these means are not parameters of the saturated model (they
+# are absorbed in Mu.B)
+lav_mvn_cl_mi_info_obs_louis <- function(y1 = NULL,
+                                         y2 = NULL,
+                                         lp = NULL,
+                                         mp = NULL,
+                                         mu_w = NULL,
+                                         sigma_w = NULL,
+                                         mu_b = NULL,
+                                         sigma_b = NULL) {
+  nunits <- lp$nclusters[[1]] # including the empty units
+  nclusters <- lp$nclusters[[2]]
+  mu_w <- drop(mu_w)
+  mu_b <- drop(mu_b)
+
+  # 1. one E-step: expected complete-data moments
+  engine <- lav_mvn_cl_mi_em_engine(
+    y1 = y1, y2 = y2, lp = lp, mp = mp,
+    min_variance = .Machine$double.eps # no clamping here
+  )
+  out2 <- lav_mvn_cl_implied22l(
+    lp = lp, mu_w = mu_w, mu_b = mu_b,
+    sigma_w = sigma_w, sigma_b = sigma_b
+  )
+  theta <- engine$pack(
+    out2$mu_w, out2$mu_b, out2$sigma_w, out2$sigma_b,
+    out2$mu_z, out2$sigma_zz, out2$sigma_yz
+  )
+  estat <- engine$implied(engine$step(theta))
+
+  # convention shift (see lav_mvn_cl_mi_h_louis)
+  both_idx <- lp$both.idx[[2]]
+  both_w_idx <- match(both_idx, lp$ov.idx[[1]])
+  both_b_idx <- match(both_idx, lp$ov.idx[[2]])
+  s0 <- mu_w[both_w_idx]
+  estat_mu_w <- drop(estat$Mu.W)
+  estat_mu_w[both_w_idx] <- estat_mu_w[both_w_idx] + s0
+  estat_mu_b <- drop(estat$Mu.B)
+  estat_mu_b[both_b_idx] <- estat_mu_b[both_b_idx] - s0
+
+  # 2. E[I_complete | v.obs]
+  info_w <- nunits * lav_mvn_info_observed_samp(
+    sample_mean = estat_mu_w, sample_cov = estat$Sigma.W,
+    mu = mu_w, sigma_1 = sigma_w
+  )
+  info_b <- nclusters * lav_mvn_info_observed_samp(
+    sample_mean = estat_mu_b, sample_cov = estat$Sigma.B,
+    mu = mu_b, sigma_1 = sigma_b
+  )
+
+  # 3. Cov[S_complete | v.obs] (-2 logl scale)
+  scov <- lav_mvn_cl_mi_scov_louis(
+    y1 = y1, y2 = y2, lp = lp, mp = mp,
+    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b,
+    out = out2
+  )$scov
+
+  information <- lav_mat_bdiag(info_w, info_b) - scov / 4
+
+  # the within-level means of the 'both' variables are not perturbed
+  information[, both_w_idx] <- 0
+
+  information
 }

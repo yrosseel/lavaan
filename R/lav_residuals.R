@@ -935,6 +935,40 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
   # blocks
   nblocks <- length(obs_list)
 
+  # multilevel: for the variables that are shared by both levels, only
+  # the sum of the within-level and the between-level mean is identified;
+  # the observed (h1) statistics store this sum in the between-level mean
+  # (the within-level mean is zero). Use the same convention for the
+  # model-implied means, so that the mean residuals are meaningful (they
+  # would otherwise be nonzero for a model that fits the means perfectly,
+  # eg if a shared variable is regressed on a within-level covariate with
+  # a nonzero mean)
+  if (lavdata@nlevels > 1L && lavmodel@meanstructure &&
+      !lavmodel@conditional.x && !lavmodel@categorical) {
+    for (g in seq_len(lavdata@ngroups)) {
+      b_w <- (g - 1L) * lavdata@nlevels + 1L
+      ov_w <- object@pta$vnames$ov[[b_w]]
+      if (is.null(est_list[[b_w]][["mean"]])) {
+        next
+      }
+      for (l in seq_len(lavdata@nlevels)[-1L]) {
+        b_l <- (g - 1L) * lavdata@nlevels + l
+        ov_l <- object@pta$vnames$ov[[b_l]]
+        shared <- ov_w[ov_w %in% ov_l]
+        if (length(shared) == 0L ||
+            is.null(est_list[[b_l]][["mean"]])) {
+          next
+        }
+        w_idx <- match(shared, ov_w)
+        l_idx <- match(shared, ov_l)
+        est_list[[b_l]][["mean"]][l_idx] <-
+          est_list[[b_l]][["mean"]][l_idx] +
+          est_list[[b_w]][["mean"]][w_idx]
+        est_list[[b_w]][["mean"]][w_idx] <- 0
+      }
+    }
+  }
+
   # pre-scale?
   if (type %in% c("cor.bentler", "cor.bollen")) {
     for (b in seq_len(nblocks)) {

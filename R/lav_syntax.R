@@ -25,7 +25,7 @@ lavParseModelString <- function(model_syntax = "", as_data_frame = FALSE,   # no
      lav_msg_view(parser_choices, "or")))
   }
 
-  switch(parser,
+  flat <- switch(parser,
   old = # original/classic parser
     lav_parse_model_string_orig(model_syntax = model_syntax,
        as_data_frame = as_data_frame),
@@ -36,6 +36,58 @@ lavParseModelString <- function(model_syntax = "", as_data_frame = FALSE,   # no
     lav_parse_model_string_open(model_syntax = model_syntax,
       as_data_frame = as_data_frame)
   )
+
+  lav_syntax_merge_blocks(flat)
+}
+
+# if the same block (eg "level: 1") appears more than once in the model
+# syntax, the parsers assign a new block number to each occurrence;
+# lavaanify() merges these blocks (since 0.6-12), but the block column of
+# the flat model must reflect this too: otherwise, the role of a variable
+# is determined per occurrence (eg a covariate in the first "level: 1"
+# block, whose variance is only mentioned in the second "level: 1" block,
+# would still be treated as exogenous when the data is processed)
+lav_syntax_merge_blocks <- function(flat) {
+  if (is.null(flat$block) || is.null(flat$op) || length(flat$op) == 0L) {
+    return(flat)
+  }
+  block_op_idx <- which(flat$op == ":")
+  if (length(block_op_idx) < 2L) {
+    return(flat)
+  }
+
+  # the block label of each row: the current values of all the block
+  # identifiers (group, level, ...), exactly as in lavaanify()
+  blocks_lhs <- unique(tolower(flat$lhs[block_op_idx]))
+  current <- rep("0", length(blocks_lhs))
+  label <- character(length(flat$op))
+  for (i in seq_along(flat$op)) {
+    if (flat$op[i] == ":") {
+      current[match(tolower(flat$lhs[i]), blocks_lhs)] <- flat$rhs[i]
+    }
+    label[i] <- paste(current, collapse = ".")
+  }
+  # a block identifier that is immediately followed by another block
+  # identifier (eg "group: 1" followed by "level: 1") belongs to the block
+  # that is opened by the last one
+  for (i in rev(block_op_idx)) {
+    if (i < length(flat$op) && flat$op[i + 1L] == ":") {
+      label[i] <- label[i + 1L]
+    }
+  }
+  # rows before the first block identifier keep their own block
+  first <- block_op_idx[1L]
+  if (first > 1L) {
+    label[seq_len(first - 1L)] <- ""
+  }
+
+  if (!anyDuplicated(unique(cbind(label, flat$block))[, 1L])) {
+    # no repeated blocks: nothing to do
+    return(flat)
+  }
+
+  flat$block <- match(label, unique(label))
+  flat
 }
 
 # the 'original' parser (up to 0.6-17)

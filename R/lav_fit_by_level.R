@@ -387,6 +387,58 @@ lav_object_fit_by_level <- function(object) {
 
   level_names <- c("within", "between")
 
+  # fit an auxiliary model: first with nlminb (fast if all goes well);
+  # if that fails, and the EM optimizer can handle this model, try again
+  # with EM. This matters for the saturated level in particular: its
+  # (residual) covariance matrix is often close to singular at the
+  # solution (certainly for the baseline models), and the quasi-Newton
+  # steps of nlminb then keep ending up in the inadmissible region (where
+  # the objective function is not finite), resulting in false
+  # convergence; the EM iterations never leave the admissible region.
+  # For the baseline models, we do not need a very precise solution (the
+  # baseline test statistic is typically huge), so we use a loose
+  # stopping rule, and no nlminb hand-off
+  em_ok <- (lavoptions$optim.method == "nlminb" &&
+            lavdata@ngroups == 1L && lavdata@nlevels == 2L &&
+            object@Model@estimator == "ML")
+  fit_aux <- function(pt, baseline = FALSE) {
+    em_ok_pt <- em_ok && !any(pt$op %in% c("==", "<", ">"))
+    lavoptions_1 <- lavoptions
+    if (em_ok_pt && baseline) {
+      # no need to try (much) harder: we have a fallback
+      lavoptions_1$optim.attempts <- 1L
+    }
+    fit <- try(
+      suppressWarnings(lavaan(pt,
+        slot_options      = lavoptions_1,
+        slot_sample_stats = object@SampleStats,
+        slot_data         = lavdata,
+        slot_cache        = object@Cache,
+        sloth1            = object@h1
+      )),
+      silent = TRUE
+    )
+    if (em_ok_pt && (inherits(fit, "try-error") || !fit@optim$converged)) {
+      lavoptions_2 <- lavoptions
+      lavoptions_2$optim.method <- "em"
+      if (baseline) {
+        lavoptions_2$em.args$fx_tol <- 1e-02
+        lavoptions_2$em.args$nlminb_handoff <- FALSE
+      }
+      fit <- try(
+        suppressWarnings(lavaan(pt,
+          slot_options      = lavoptions_2,
+          slot_sample_stats = object@SampleStats,
+          slot_data         = lavdata,
+          slot_cache        = object@Cache,
+          sloth1            = object@h1
+        )),
+        silent = TRUE
+      )
+    }
+    fit
+  }
+
   for (l in seq_len(lavdata@nlevels)) {
     # partially saturated model for this level
     pt_ps <- lav_pt_partial_saturation(object,
@@ -400,16 +452,7 @@ lav_object_fit_by_level <- function(object) {
          levels."))
       return(list())
     }
-    fit_ps <- try(
-      lavaan(pt_ps,
-        slot_options      = lavoptions,
-        slot_sample_stats = object@SampleStats,
-        slot_data         = lavdata,
-        slot_cache        = object@Cache,
-        sloth1            = object@h1
-      ),
-      silent = TRUE
-    )
+    fit_ps <- fit_aux(pt_ps, baseline = FALSE)
     if (inherits(fit_ps, "try-error") || !fit_ps@optim$converged) {
       lav_msg_warn(gettextf(
         "estimation of the partially saturated model for the %s level
@@ -422,16 +465,7 @@ lav_object_fit_by_level <- function(object) {
       level_keep = l,
       independent = TRUE
     )
-    fit_bl <- try(
-      lavaan(pt_bl,
-        slot_options      = lavoptions,
-        slot_sample_stats = object@SampleStats,
-        slot_data         = lavdata,
-        slot_cache        = object@Cache,
-        sloth1            = object@h1
-      ),
-      silent = TRUE
-    )
+    fit_bl <- fit_aux(pt_bl, baseline = TRUE)
     if (inherits(fit_bl, "try-error") || !fit_bl@optim$converged) {
       lav_msg_warn(gettextf(
         "estimation of the level-specific baseline model for the %s level

@@ -1289,7 +1289,9 @@ lav_mvn_cl_mi_info_firstorder <- function(
 # order: mu_w within, vech(sigma_w) within, mu_b between, vech(sigma_b) between
 # mu_w rows/cols that are splitted within/between are forced to zero
 #
-# numerical approximation (for now)
+# analytic (Louis's method, see lav_mvn_cl_mi_info_obs_louis()); the
+# numerical approximation (a jacobian of the full-data gradient: very slow
+# with many variables and/or clusters) is only used as a fallback
 lav_mvn_cl_mi_info_observed <- function(
                                         y1 = NULL,
                                         y2 = NULL,
@@ -1301,7 +1303,25 @@ lav_mvn_cl_mi_info_observed <- function(
                                         mu_b = NULL,
                                         sigma_b = NULL,
                                         x_idx = integer(0L),
-                                        sinv_method = "eigen") {
+                                        sinv_method = "eigen",
+                                        method = "louis") {
+  if (method == "louis") {
+    information <- try(lav_mvn_cl_mi_info_obs_louis(
+      y1 = y1, y2 = y2, lp = lp, mp = mp,
+      mu_w = mu_w, sigma_w = sigma_w,
+      mu_b = mu_b, sigma_b = sigma_b
+    ), silent = TRUE)
+    if (!inherits(information, "try-error") &&
+        all(is.finite(information))) {
+      # unit information
+      information <- information / lp$nclusters[[2]]
+      # if x.idx, set rows/cols to zero
+      return(lav_mvn_cl_zero_x_idx(information,
+        lp = lp, mu_w = mu_w, mu_b = mu_b, x_idx = x_idx
+      ))
+    }
+  }
+
   lav_mvn_cl_info_obs_engine(
     lp = lp,
     mu_w = mu_w, sigma_w = sigma_w,

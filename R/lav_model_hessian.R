@@ -5,9 +5,17 @@
 #   extrapolation (4 x npar gradient evaluations), with a fixed
 #   (absolute) step size h
 # method = "central": plain central differences (2 x npar gradient
-#   evaluations), with a *relative* step size h * max(1, |x_j|);
+#   evaluations), with a *relative* step size h * max(0.01, |x_j|);
 #   cheaper, and the appropriate choice when the gradient itself
-#   contains a numerical layer (eg random-slope models)
+#   contains a numerical layer (eg random-slope models); the floor
+#   (0.01) keeps the step small for parameters that are close to zero
+#   (eg tiny random-slope (co)variances), where a step of size h is
+#   far too large
+#
+# asym_action = "warn" (the default): warn if the Hessian is not
+#   (almost) symmetric; "none": no warning, but the result gets an
+#   attribute "asymmetric" (TRUE/FALSE), so that the caller can decide
+#   what to do (eg switch to a more accurate method)
 #
 # `NA' semantics: if the gradient cannot be computed (or is not
 # finite) at one of the perturbed parameter values, an all-NA matrix
@@ -21,7 +29,8 @@ lav_model_hessian <- function(lavmodel = NULL,
                               group_weight = TRUE,
                               ceq_simple = FALSE,
                               h = 1e-06,
-                              method = "richardson") {
+                              method = "richardson",
+                              asym_action = "warn") {
   # estimator <- lavmodel@estimator
 
   # catch numerical gradient
@@ -112,7 +121,7 @@ lav_model_hessian <- function(lavmodel = NULL,
   for (j in seq_len(npar)) {
     if (method == "central") {
       # central differences, relative step size
-      h_j <- h * max(1, abs(x[j]))
+      h_j <- h * max(0.01, abs(x[j]))
       x_left <- x_right <- x
       x_left[j] <- x[j] - h_j
       x_right[j] <- x[j] + h_j
@@ -150,7 +159,8 @@ lav_model_hessian <- function(lavmodel = NULL,
 
   # check if Hessian is (almost) symmetric, as it should be
   max_diff <- max(abs(hessian - t(hessian)))
-  if (max_diff > 1e-05 * max(diag(hessian))) {
+  asym_flag <- max_diff > 1e-05 * max(diag(hessian))
+  if (asym_flag && asym_action == "warn") {
     # hm, Hessian is not symmetric -> WARNING!
     lav_msg_warn(gettextf(
     "Hessian is not fully symmetric. Max diff = %1$s (Max diag Hessian = %2$s)",
@@ -158,6 +168,9 @@ lav_model_hessian <- function(lavmodel = NULL,
     # FIXME: use numDeriv::hessian instead?
   }
   hessian <- (hessian + t(hessian)) / 2.0
+  if (asym_action == "none") {
+    attr(hessian, "asymmetric") <- asym_flag
+  }
 
   hessian
 }

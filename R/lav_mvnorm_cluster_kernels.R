@@ -812,6 +812,10 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
     reorder = FALSE, na.rm = TRUE
   )
 
+  # level-1 unit indices per cluster
+  cl_index <- split.default(seq_along(cluster_idx),
+    factor(cluster_idx, levels = seq_len(nclusters)))
+
   # per cluster
   both_diag_idx <- lav_mat_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
@@ -939,31 +943,26 @@ lav_mvn_cl_mi_grad_engine <- function(y1 = NULL,
     part2 <- matrix(0, ny, 1L)
     part2[both_idx, 1L] <- part2_b
 
-    ij_index <- which(cluster_idx == j)
+    # units of this cluster, grouped per missing pattern (0 = complete);
+    # all units with the same pattern share the same W_p, so we only
+    # need the number of units and the sum of their pij rows (per pattern)
+    ij_index <- cl_index[[j]]
     pij <- pij_1[ij_index, , drop = FALSE]
-
-    which_compl <- which(mpi[ij_index] == 0L)
-    which_incompl <- which(mpi[ij_index] > 0L)
-
-    ap2 <- rep(list(sigma_w_inv %*% part2), length(ij_index))
-    ap1a_a <- ap1a_b <- matrix(0, ny, ny)
-    if (length(which_compl) > 0L) {
-      tmp <- (sigma_w_inv %*% part1 %*% sigma_w_inv)
-      ap1a_a <- tmp * length(which_compl)
+    pat_j <- mpi[ij_index]
+    t1 <- matrix(0, ny, ny)
+    t2 <- -crossprod(pij)
+    for (k in unique.default(pat_j)) {
+      if (k < 0L) {
+        next # empty units
+      }
+      k_idx <- which(pat_j == k)
+      w_k <- if (k == 0L) sigma_w_inv else wip[[k]]
+      t1 <- t1 + length(k_idx) * (w_k %*% part1 %*% w_k)
+      t2 <- t2 + tcrossprod(
+        w_k %*% part2,
+        .colSums(pij[k_idx, , drop = FALSE], length(k_idx), ny)
+      )
     }
-    if (length(which_incompl) > 0L) {
-      p_idx <- mpi[ij_index][which_incompl]
-      tmp <- lapply(wip[p_idx], function(x) {
-        x %*% part1 %*% x
-      })
-      ap1a_b <- Reduce("+", tmp)
-      ap2[which_incompl] <-
-        lapply(wip[p_idx], function(x) {
-          x %*% part2
-        })
-    }
-    t1 <- ap1a_a + ap1a_b
-    t2 <- (do.call("cbind", ap2) - t(pij)) %*% pij
 
     aa_wj <- t1 + t2
 

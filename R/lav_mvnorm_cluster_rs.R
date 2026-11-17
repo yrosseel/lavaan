@@ -454,13 +454,19 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
     first_idx <- which(!duplicated(cluster_idx))
     first_idx <- first_idx[order(cluster_idx[first_idx])]
     zb <- y1[first_idx, rs_info$zb.data.idx, drop = FALSE]
-    if (anyNA(zb)) {
-      lav_msg_stop(gettext(
-        "missing values in between-only endogenous observed variables
-         are not supported (yet) in combination with random slopes."))
-    }
+    # missing values: the z-block of a cluster only contains the observed
+    # z-values of that cluster; we store the (unique) missing patterns
+    # (TRUE = observed), and the pattern index of each cluster
+    zb_obs <- !is.na(zb)
+    zb_key <- apply(zb_obs, 1L, function(x) paste(as.integer(x),
+                                                  collapse = ""))
+    zb_ukey <- unique(zb_key)
+    zb_pat_idx <- match(zb_key, zb_ukey)
+    zb_pats <- zb_obs[match(zb_ukey, zb_key), , drop = FALSE]
   } else {
     zb <- matrix(0, nclusters, 0L)
+    zb_pat_idx <- rep(1L, nclusters)
+    zb_pats <- matrix(TRUE, 1L, 0L)
   }
 
   # missing data in the y-block?
@@ -536,7 +542,8 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
     return(list(
       nclusters = nclusters, cluster.size = cluster_size,
       sy = NULL, sx = NULL, sxx = NULL, sxy = NULL, syy = NULL,
-      exo.b = exo_b, zb = zb, ntotal = sum(cluster_size),
+      exo.b = exo_b, zb = zb,
+      zb_pat_idx = zb_pat_idx, zb_pats = zb_pats, ntotal = sum(cluster_size),
       ntotal.used = sum(cluster_size) - length(empty_idx), mp = mp
     ))
   }
@@ -563,7 +570,8 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
   list(
     nclusters = nclusters, cluster.size = cluster_size,
     sy = sy, sx = sx, sxx = sxx, sxy = sxy, syy = syy,
-    exo.b = exo_b, zb = zb, ntotal = sum(cluster_size),
+    exo.b = exo_b, zb = zb,
+      zb_pat_idx = zb_pat_idx, zb_pats = zb_pats, ntotal = sum(cluster_size),
     ntotal.used = sum(cluster_size), mp = NULL
   )
 }
@@ -876,17 +884,11 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
   # Gaussian observation block, z_j | v_b ~ N(mu_z + G v_b, Sigma_z)
   kz <- rs_info$kz
   if (kz > 0L) {
-    wzb <- lav_mat_sym_inverse(imp$sigma.z,
-      logdet = TRUE, sinv_method = sinv_method
-    )
-    logdet_zb <- attr(wzb, "logdet")
-    if (!is.finite(logdet_zb)) {
+    zblk <- lav_mvn_cl_rs_zblock(imp = imp, rs_stats = rs_stats,
+                                 sinv_method = sinv_method)
+    if (is.null(zblk)) {
       return(+Inf)
     }
-    wzg <- wzb %*% imp$gmat # kz x pv
-    a_zb <- crossprod(imp$gmat, wzg) # pv x pv
-    zb_all <- rs_stats$zb
-    mu_zb <- imp$mu_z
   }
 
   # more constants (hoisted out of the cluster loop)
@@ -966,10 +968,11 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
 
     # z-outcome contributions (the extra observation block)
     if (kz > 0L) {
-      e_zb <- zb_all[j, ] - mu_zb
-      a_j <- a_j + a_zb
-      p_j <- p_j + as.numeric(crossprod(wzg, e_zb))
-      quad0 <- quad0 + sum(e_zb * (wzb %*% e_zb))
+      qz <- zblk$pat_idx[j]
+      e_zb <- zblk$e_z[j, ]
+      a_j <- a_j + zblk$a_zb[[qz]]
+      p_j <- p_j + as.numeric(crossprod(zblk$wzg[[qz]], e_zb))
+      quad0 <- quad0 + sum(e_zb * (zblk$wzb[[qz]] %*% e_zb))
     }
 
     # mean of v_b for this cluster (given the between covariates)
@@ -1008,11 +1011,13 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
     # -2 loglik for this cluster
     loglik_j[j] <- nj * logdet_w + logdet_z +
       quad_j - sum(p_tilde * (sigma_v_local %*% zp_j))
+    kz_j <- 0L
     if (kz > 0L) {
-      loglik_j[j] <- loglik_j[j] + logdet_zb
+      loglik_j[j] <- loglik_j[j] + zblk$logdet[qz]
+      kz_j <- zblk$kobs[qz]
     }
     if (log2pi) {
-      loglik_j[j] <- loglik_j[j] + (nj * p1 + kz) * log(2 * pi)
+      loglik_j[j] <- loglik_j[j] + (nj * p1 + kz_j) * log(2 * pi)
     }
   }
   ok
@@ -1091,20 +1096,14 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
   exo_b <- rs_stats$exo.b
   log2pi_c <- if (log2pi) log(2 * pi) else 0
 
-  # between-only endogenous z-outcomes (always complete)
+  # between-only endogenous z-outcomes
   kz <- rs_info$kz
   if (kz > 0L) {
-    wzb <- lav_mat_sym_inverse(imp$sigma.z,
-      logdet = TRUE, sinv_method = sinv_method
-    )
-    logdet_zb <- attr(wzb, "logdet")
-    if (!is.finite(logdet_zb)) {
+    zblk <- lav_mvn_cl_rs_zblock(imp = imp, rs_stats = rs_stats,
+                                 sinv_method = sinv_method)
+    if (is.null(zblk)) {
       return(+Inf)
     }
-    wzg <- wzb %*% imp$gmat # kz x pv
-    a_zb <- crossprod(imp$gmat, wzg) # pv x pv
-    zb_all <- rs_stats$zb
-    mu_zb <- imp$mu_z
   }
 
   # per-cluster accumulators
@@ -1204,11 +1203,12 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
 
       # z-outcome contributions (the extra observation block)
       if (kz > 0L) {
-        e_zb <- zb_all[j, ] - mu_zb
-        a_j <- a_j + a_zb
-        p_j <- p_j + as.numeric(crossprod(wzg, e_zb))
-        quad_j[j] <- quad_j[j] + sum(e_zb * (wzb %*% e_zb))
-        ld_j[j] <- ld_j[j] + logdet_zb + kz * log2pi_c
+        qz <- zblk$pat_idx[j]
+        e_zb <- zblk$e_z[j, ]
+        a_j <- a_j + zblk$a_zb[[qz]]
+        p_j <- p_j + as.numeric(crossprod(zblk$wzg[[qz]], e_zb))
+        quad_j[j] <- quad_j[j] + sum(e_zb * (zblk$wzb[[qz]] %*% e_zb))
+        ld_j[j] <- ld_j[j] + zblk$logdet[qz] + zblk$kobs[qz] * log2pi_c
       }
 
       # mean of v_b for this cluster (given the between covariates)
@@ -1761,6 +1761,64 @@ lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
 # are fixed to (near) zero are floored at 1e-4 in the M-step model
 # (cfr. the Mplus 'minimum variance'); the nlminb hand-off (enabled by
 # default) polishes the solution of the *exact* model afterwards
+
+# ---------------------------------------------------------------------
+# the z-block: between-only endogenous z-outcomes, one extra Gaussian
+# observation block per cluster: z_j | v_b ~ N(mu_z + G v_b, Sigma_z)
+#
+# missing z-values are handled per missing pattern: only the observed
+# part of the block is used. For each pattern, the inverse of the
+# observed part of Sigma_z is embedded in a (kz x kz) matrix of zeros
+# (W_q); the zero rows/columns annihilate the (zero-padded) residuals of
+# the missing z-values, so that all formulas of the complete-data
+# z-block carry over (cfr. the missing patterns of the y-block)
+#
+# returns NULL if (the observed part of) Sigma_z is not positive definite
+# ---------------------------------------------------------------------
+lav_mvn_cl_rs_zblock <- function(imp = NULL, rs_stats = NULL,
+                                 sinv_method = "eigen") {
+  zb <- rs_stats$zb
+  kz <- ncol(zb)
+  pats <- rs_stats$zb_pats
+  pat_idx <- rs_stats$zb_pat_idx
+  if (is.null(pats)) {
+    # (older) stats without pattern information: complete z
+    pats <- matrix(TRUE, 1L, kz)
+    pat_idx <- rep(1L, nrow(zb))
+  }
+  npat <- nrow(pats)
+
+  wzb <- wzg <- a_zb <- vector("list", npat)
+  logdet <- numeric(npat)
+  kobs <- integer(npat)
+  for (q in seq_len(npat)) {
+    o_idx <- which(pats[q, ])
+    w_q <- matrix(0, kz, kz)
+    kobs[q] <- length(o_idx)
+    if (length(o_idx) > 0L) {
+      w_o <- lav_mat_sym_inverse(imp$sigma.z[o_idx, o_idx, drop = FALSE],
+        logdet = TRUE, sinv_method = sinv_method
+      )
+      logdet[q] <- attr(w_o, "logdet")
+      if (!is.finite(logdet[q])) {
+        return(NULL)
+      }
+      attr(w_o, "logdet") <- NULL
+      w_q[o_idx, o_idx] <- w_o
+    }
+    wzb[[q]] <- w_q
+    wzg[[q]] <- w_q %*% imp$gmat # kz x pv
+    a_zb[[q]] <- crossprod(imp$gmat, wzg[[q]]) # pv x pv
+  }
+
+  # residuals; zero for the missing z-values
+  e_z <- t(t(zb) - imp$mu_z)
+  e_z[is.na(e_z)] <- 0
+
+  list(wzb = wzb, wzg = wzg, a_zb = a_zb, logdet = logdet, kobs = kobs,
+       pat_idx = pat_idx, e_z = e_z)
+}
+
 
 # check if the EM version can handle this model; returns character(0)
 # if ok, otherwise the reason(s)
@@ -2734,22 +2792,20 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
   # z-outcome constants (the extra observation block)
   if (kz > 0L) {
     gmat_z <- imp$gmat
-    mu_zb <- imp$mu_z
-    zb_all <- rs_stats$zb
-    wzb <- lav_mat_sym_inverse(imp$sigma.z,
-      logdet = TRUE, sinv_method = sinv_method
-    )
-    if (!is.finite(attr(wzb, "logdet"))) {
+    zblk <- lav_mvn_cl_rs_zblock(imp = imp, rs_stats = rs_stats,
+                                 sinv_method = sinv_method)
+    if (is.null(zblk)) {
       return(NULL)
     }
-    wzg <- wzb %*% gmat_z # kz x pv
-    a_zb <- crossprod(gmat_z, wzg) # pv x pv
   }
 
   # ---- z-block adjoints (mu_z, G, Sigma_z); the z-block is one
   #      extra 'cell' with constant loading G and weight Wz ----
+  #      (with missing z-values: the weight W_q of the missing pattern
+  #      of this cluster; see lav_mvn_cl_rs_zblock)
   add_zcell <- function(j, g_a, g_p) {
-    e_z <- zb_all[j, ] - mu_zb
+    wzb <- zblk$wzb[[zblk$pat_idx[j]]]
+    e_z <- zblk$e_z[j, ]
     wze <- as.numeric(wzb %*% e_z)
     gga <- gmat_z %*% g_a # kz x pv
     ggp <- as.numeric(gmat_z %*% g_p) # kz
@@ -2930,8 +2986,9 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
       }
 
       if (kz > 0L) {
-        a_j <- a_j + a_zb
-        p_j <- p_j + as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+        qz <- zblk$pat_idx[j]
+        a_j <- a_j + zblk$a_zb[[qz]]
+        p_j <- p_j + as.numeric(crossprod(zblk$wzg[[qz]], zblk$e_z[j, ]))
       }
 
       adj <- post_adj(j, a_j, p_j)
@@ -3012,9 +3069,10 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
     # z-outcome contributions (once per cluster)
     if (kz > 0L) {
       for (j in seq_len(nclusters)) {
-        a_arr[, , j] <- a_arr[, , j] + a_zb
+        qz <- zblk$pat_idx[j]
+        a_arr[, , j] <- a_arr[, , j] + zblk$a_zb[[qz]]
         p_all[j, ] <- p_all[j, ] +
-          as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+          as.numeric(crossprod(zblk$wzg[[qz]], zblk$e_z[j, ]))
       }
     }
 
@@ -3147,11 +3205,24 @@ lav_mvn_cl_rs_scaling_h0 <- function(lavobject = NULL, rs = NULL,
     lavdata = lavobject@Data,
     lavoptions = lavobject@Options,
     lavcache = lavobject@Cache,
-    h = h, method = "central"
+    h = h, method = "central", asym_action = "none"
   )
+  # if the (cheap) central differences are not accurate enough (the
+  # Hessian is not symmetric), switch to the Richardson extrapolation
+  # (as used for the standard errors)
+  if (!anyNA(h_obj) && isTRUE(attr(h_obj, "asymmetric"))) {
+    h_obj <- lav_model_hessian(
+      lavmodel = lavmodel,
+      lavsamplestats = lavobject@SampleStats,
+      lavdata = lavobject@Data,
+      lavoptions = lavobject@Options,
+      lavcache = lavobject@Cache
+    )
+  }
   if (anyNA(h_obj)) {
     return(as.numeric(NA))
   }
+  attr(h_obj, "asymmetric") <- NULL
   h_mat <- h_obj * lavobject@SampleStats@ntotal
 
   npar <- lavmodel@nx.free
@@ -3317,11 +3388,12 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
   # between-only endogenous z-outcomes
   kz <- rs_info$kz
   if (kz > 0L) {
-    wzb <- lav_mat_sym_inverse(imp$sigma.z)
-    wzg <- wzb %*% imp$gmat
-    a_zb <- crossprod(imp$gmat, wzg)
-    zb_all <- rs_stats$zb
-    mu_zb <- imp$mu_z
+    zblk <- lav_mvn_cl_rs_zblock(imp = imp, rs_stats = rs_stats)
+    if (is.null(zblk)) {
+      lav_msg_stop(gettext(
+        "the residual covariance matrix of the between-only endogenous
+         observed variables is not positive definite."))
+    }
   }
 
   # ---- per-cluster posterior of v_b: mu0_j (and posterior sd) ----
@@ -3387,9 +3459,10 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
     for (j in seq_len(nclusters)) {
       a_j <- matrix(a_arr[, , j], pv, pv)
       if (kz > 0L) {
-        a_j <- a_j + a_zb
+        qz <- zblk$pat_idx[j]
+        a_j <- a_j + zblk$a_zb[[qz]]
         p_all[j, ] <- p_all[j, ] +
-          as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+          as.numeric(crossprod(zblk$wzg[[qz]], zblk$e_z[j, ]))
       }
       if (rs_info$nexo.b > 0L) {
         d_j <- imp$mu.v +
@@ -3439,8 +3512,9 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
     }
 
     if (kz > 0L) {
-      a_j <- a_j + a_zb
-      p_j <- p_j + as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+      qz <- zblk$pat_idx[j]
+      a_j <- a_j + zblk$a_zb[[qz]]
+      p_j <- p_j + as.numeric(crossprod(zblk$wzg[[qz]], zblk$e_z[j, ]))
     }
 
     if (rs_info$nexo.b > 0L) {
