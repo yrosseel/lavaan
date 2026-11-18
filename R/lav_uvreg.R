@@ -104,7 +104,7 @@ lav_uvreg_init_cache <- function(y = NULL,
   beta_idx <- c(int_idx, slope_idx)
   var_idx <- 1L + nexo + 1L
 
-  # starting values + crossprod
+  # starting values
   if (any(is.na(y)) || any(is.na(x1))) {
     missing_idx <- which(apply(cbind(y, x1), 1, function(x) any(is.na(x))))
     y_tmp <- y[-missing_idx]
@@ -113,13 +113,9 @@ lav_uvreg_init_cache <- function(y = NULL,
     fit_lm <- stats::lm.wfit(y = y_tmp, x = x1_tmp, w = wt_tmp)
     theta_evar <- sum(fit_lm$residuals * wt_tmp * fit_lm$residuals) /
                   sum(wt_tmp)
-
-    lav_crossprod <- lav_mat_crossprod
   } else {
     fit_lm <- stats::lm.wfit(y = y, x = x1, w = wt)
     theta_evar <- sum(fit_lm$residuals * wt * fit_lm$residuals) / sum(wt)
-
-    lav_crossprod <- base::crossprod
   }
   theta_beta <- unname(fit_lm$coefficients)
   theta <- c(theta_beta, theta_evar)
@@ -129,7 +125,6 @@ lav_uvreg_init_cache <- function(y = NULL,
       y = y, x1 = x1, wt = wt, n = n,
       int_idx = int_idx, beta_idx = beta_idx,
       var_idx = var_idx, slope_idx = slope_idx, nexo = nexo,
-      lav_crossprod = lav_crossprod,
       theta = theta
     ),
     parent = parent
@@ -227,13 +222,29 @@ lav_uvreg_hessian <- function(y = NULL,
 
 lav_uvreg_hessian_cache <- function(cache = NULL) {
   with(cache, {      # nolint start
-    dx2_beta <- -1 / evar * lav_crossprod(x1 * wt, x1)
-    dx_beta_var <- -1 / (evar2) * lav_crossprod(x1, resw)
+    # only the cases that contribute to the loglik/gradient (y and x1 both
+    # observed) may contribute to the hessian; using all rows of x1/wt made
+    # the hessian inconsistent with the gradient if y contains missing
+    # values (github issue 658)
+    if (anyNA(res)) {
+      obs_idx <- which(!is.na(res))
+      x1_obs <- x1[obs_idx, , drop = FALSE]
+      wt_obs <- wt[obs_idx]
+      res_obs <- res[obs_idx]
+    } else {
+      x1_obs <- x1
+      wt_obs <- wt
+      res_obs <- res
+    }
+    resw_obs <- res_obs * wt_obs
+
+    dx2_beta <- -1 / evar * base::crossprod(x1_obs * wt_obs, x1_obs)
+    dx_beta_var <- -1 / (evar2) * base::crossprod(x1_obs, resw_obs)
 
     sq_evar <- sqrt(evar)
     sq_evar6 <- sq_evar * sq_evar * sq_evar * sq_evar * sq_evar * sq_evar
-    dx2_var <- (sum(wt, na.rm = TRUE) / (2 * evar2) -
-      1 / sq_evar6 * sum(resw * res, na.rm = TRUE))
+    dx2_var <- (sum(wt_obs) / (2 * evar2) -
+      1 / sq_evar6 * sum(resw_obs * res_obs))
 
     hessian <- rbind(cbind(dx2_beta, dx_beta_var, deparse.level = 0),
       cbind(t(dx_beta_var), dx2_var, deparse.level = 0),
