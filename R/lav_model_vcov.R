@@ -1,3 +1,19 @@
+# column indices of the bootstrap draws with a high ratio of sd() to mad()
+# (see github issue 347)
+#
+# columns that are (numerically) constant across the bootstrap draws -- eg, a
+# defined parameter that is pinned by an equality constraint -- are never
+# flagged: their ratio is either NaN (0/0), or Inf (rounding noise/0)
+lav_model_vcov_boot_outlier_idx <- function(boot_draws, crit_ratio = 5) {
+  col_sd  <- apply(boot_draws, 2L,  sd, na.rm = TRUE)
+  col_mad <- apply(boot_draws, 2L, mad, na.rm = TRUE)
+  col_scale <- pmax(1, abs(colMeans(boot_draws, na.rm = TRUE)))
+  constant_flag <- col_sd < sqrt(.Machine$double.eps) * col_scale
+  sd_mad_ratio <- col_sd / col_mad
+  # which() silently drops the NA/NaN ratios
+  which(sd_mad_ratio > crit_ratio & !constant_flag)
+}
+
 # bootstrap based NVCOV
 lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
                                       lavsamplestats = NULL,
@@ -75,13 +91,10 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
 
   # new in 0.6-20: check for outliers, ie big difference between sd() and mad()
   # see github issue 347
-  sd_mad_ratio <- (apply(coef_1, 2,  sd, na.rm = TRUE) /
-                   apply(coef_1, 2, mad, na.rm = TRUE))
-  crit_ratio <- 5
-  if (any(sd_mad_ratio > crit_ratio)) {
+  outlier_idx <- lav_model_vcov_boot_outlier_idx(coef_1)
+  if (length(outlier_idx) > 0L) {
     names_1 <- lav_pt_labels(lavpartable, type = "free")
-    params_w_outliers <- paste(names_1[sd_mad_ratio > crit_ratio],
-                               collapse = " ")
+    params_w_outliers <- paste(names_1[outlier_idx], collapse = " ")
     lav_msg_warn(gettextf(
       "The following bootstrapped free parameters have a high (>5)
       ratio of standard deviation to median absolute deviation: %s.
@@ -1144,13 +1157,10 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, vcov = NULL,
       }
       # new in 0.6-20: check for outliers, big difference between sd() and mad()
       # see github issue 347
-      sd_mad_ratio <- (apply(boot_def, 2,  sd, na.rm = TRUE) /
-                       apply(boot_def, 2, mad, na.rm = TRUE))
-      crit_ratio <- 5
-      if (any(sd_mad_ratio > crit_ratio)) {
+      outlier_idx <- lav_model_vcov_boot_outlier_idx(boot_def)
+      if (length(outlier_idx) > 0L) {
         names_1 <- colnames(boot_def)
-        def_w_outliers <- paste(names_1[sd_mad_ratio > crit_ratio],
-                                collapse = " ")
+        def_w_outliers <- paste(names_1[outlier_idx], collapse = " ")
         lav_msg_warn(gettextf(
           "The following bootstrapped defined parameters have a high (>5)
           ratio of standard deviation to median absolute deviation: %s.
