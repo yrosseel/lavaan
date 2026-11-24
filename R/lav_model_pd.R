@@ -463,27 +463,95 @@ lav_model_pd_parscale <- function(parscale, pd) {
 # reference variance for each block (group/level) of the model (typically
 # the largest model-implied variance of the observed variables)
 #
-# returns the names of the variables in the offending blocks
+# For a flagged block, we also return the jacobian of the constraints that
+# are active at the solution. If the columns of U span the null space of
+# the (singular) PSI block, the matrices in the neighbourhood of PSI that
+# have the same rank are (to first order) PSI + D with U' D U = 0: this is
+# the tangent space of the boundary. Each pair of null vectors (u_a, u_b)
+# therefore gives one linear constraint on the free elements of PSI:
+#     u_a' D u_b = sum_i u_ai u_bi d_ii
+#                + sum_{i>j} (u_ai u_bj + u_aj u_bi) d_ij = 0
+# (a single null vector if the rank deficiency is one; for a variance that
+# has vanished, the null vector is a unit vector, and the constraint simply
+# fixes that variance; for a correlation of one between two standardized
+# variables, the constraint fixes their covariance). These rows are added
+# to the active (inequality) constraints of the model, so that the
+# standard errors are computed on this tangent space, exactly as for a
+# parameter that sits on a (simple) bound.
+#
+# returns a list with elements:
+#   - names: the names of the variables in the offending blocks
+#   - jac:   the jacobian of the active constraints (one row per
+#            constraint, one column per free parameter)
 lav_model_pd_boundary <- function(x, pd, var_ref = NULL,
                                   tol_cor = 1e-06, tol_var = 1e-06) {
-  out <- character(0L)
+  out_names <- character(0L)
+  out_jac <- matrix(0, 0L, length(x))
+
   for (blk in pd$blocks) {
+    n <- blk$n
     psi <- lav_model_pd_block_psi(x, blk)
     psi_var <- diag(psi)
-    flag <- FALSE
-    if (any(!is.finite(psi)) || any(psi_var <= 0)) {
-      flag <- TRUE
-    } else if (blk$n > 1L) {
-      ev <- eigen(cov2cor(psi), symmetric = TRUE, only.values = TRUE)$values
-      flag <- min(ev) < tol_cor
+    if (any(!is.finite(psi))) {
+      out_names <- c(out_names, blk$names)
+      next
     }
-    if (!flag && length(var_ref) >= blk$block &&
-        isTRUE(var_ref[blk$block] > 0)) {
-      flag <- any(psi_var < tol_var * var_ref[blk$block])
+
+    # null vectors (columns of u_mat)
+    u_mat <- matrix(0, n, 0L)
+
+    # 1. variances that have vanished
+    zero_idx <- which(psi_var <= 0)
+    if (length(var_ref) >= blk$block && isTRUE(var_ref[blk$block] > 0)) {
+      zero_idx <- which(psi_var < tol_var * var_ref[blk$block])
     }
-    if (flag) {
-      out <- c(out, blk$names)
+    if (length(zero_idx) > 0L) {
+      u_mat <- diag(n)[, zero_idx, drop = FALSE]
+    }
+
+    # 2. the other variables: (almost) singular correlation matrix
+    rest_idx <- setdiff(seq_len(n), zero_idx)
+    if (length(rest_idx) > 1L) {
+      sd_rest <- sqrt(psi_var[rest_idx])
+      ev <- eigen(cov2cor(psi[rest_idx, rest_idx, drop = FALSE]),
+                  symmetric = TRUE)
+      null_idx <- which(ev$values < tol_cor)
+      if (length(null_idx) > 0L) {
+        u_rest <- ev$vectors[, null_idx, drop = FALSE] / sd_rest
+        u_rest <- t(t(u_rest) / sqrt(colSums(u_rest * u_rest)))
+        u_new <- matrix(0, n, length(null_idx))
+        u_new[rest_idx, ] <- u_rest
+        u_mat <- cbind(u_mat, u_new)
+      }
+    }
+
+    if (ncol(u_mat) == 0L) {
+      next
+    }
+    out_names <- c(out_names, blk$names)
+
+    # one constraint per pair of null vectors
+    for (a in seq_len(ncol(u_mat))) {
+      for (b in seq_len(a)) {
+        row <- numeric(length(x))
+        vf <- which(blk$var_free)
+        row[blk$diag_x[vf]] <- u_mat[vf, a] * u_mat[vf, b]
+        li <- blk$low_pos[, 1L]
+        lj <- blk$low_pos[, 2L]
+        row[blk$low_x] <- u_mat[li, a] * u_mat[lj, b] +
+          u_mat[lj, a] * u_mat[li, b]
+        if (sqrt(sum(row * row)) > 1e-10) {
+          out_jac <- rbind(out_jac, row, deparse.level = 0L)
+        }
+      }
     }
   }
-  unique(out)
+
+  # remove redundant rows (if any)
+  if (nrow(out_jac) > 1L) {
+    qr_jac <- qr(t(out_jac))
+    out_jac <- out_jac[qr_jac$pivot[seq_len(qr_jac$rank)], , drop = FALSE]
+  }
+
+  list(names = unique(out_names), jac = out_jac)
 }

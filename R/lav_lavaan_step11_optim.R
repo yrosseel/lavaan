@@ -649,6 +649,15 @@ lav_step11_estoptim <- function(lavdata = NULL,
       lav_msg_warn(gettext(warn_txt))
     }
 
+    # in case of non-linear constraints: store final con.jac and con.lambda
+    # in lavmodel
+    if (!is.null(attr(x, "con.jac"))) {
+      lavmodel@con.jac <- attr(x, "con.jac")
+    }
+    if (!is.null(attr(x, "con.lambda"))) {
+      lavmodel@con.lambda <- attr(x, "con.lambda")
+    }
+
     # pd_lv = TRUE: (almost) on the boundary?
     if (!is.null(pd) && isTRUE(attr(x, "converged"))) {
       # reference: the largest model-implied variance (per block)
@@ -662,23 +671,60 @@ lav_step11_estoptim <- function(lavdata = NULL,
       }
       pd_boundary <- lav_model_pd_boundary(as.numeric(x), pd = pd,
                                            var_ref = var_ref)
-      if (length(pd_boundary) > 0L) {
+      if (length(pd_boundary$names) > 0L) {
+        # treat the boundary as a set of active (inequality) constraints:
+        # add their jacobian to con.jac, so that the standard errors are
+        # computed on the tangent space of the boundary (just like a
+        # parameter that sits on a simple bound); as for all inequality
+        # constraints, the degrees of freedom are not affected
+        pd_jac <- pd_boundary$jac
+        if (lavmodel@ceq.simple.only) {
+          # con.jac lives in the unconstrained (unco) parameter space
+          unco_id <- lavpartable$free[lavpartable$free > 0L]
+          pd_jac_unco <- matrix(0, nrow(pd_jac), length(unco_id))
+          for (id in pd$x_idx) {
+            pd_jac_unco[, match(id, unco_id)] <- pd_jac[, id]
+          }
+          pd_jac <- pd_jac_unco
+        }
+        con_jac <- lavmodel@con.jac
+        if (nrow(pd_jac) > 0L &&
+            (nrow(con_jac) == 0L || ncol(con_jac) == ncol(pd_jac))) {
+          n_old <- nrow(con_jac)
+          new_idx <- n_old + seq_len(nrow(pd_jac))
+          if (n_old == 0L) {
+            new_jac <- pd_jac
+            ceq_idx <- inactive_idx <- cin_idx <- integer(0L)
+          } else {
+            new_jac <- rbind(con_jac[, , drop = FALSE], pd_jac)
+            ceq_idx <- attr(con_jac, "ceq.idx")
+            cin_idx <- attr(con_jac, "cin.idx")
+            inactive_idx <- attr(con_jac, "inactive.idx")
+          }
+          attr(new_jac, "inactive.idx") <- as.integer(inactive_idx)
+          attr(new_jac, "cin.idx") <- as.integer(c(cin_idx, new_idx))
+          attr(new_jac, "ceq.idx") <- as.integer(ceq_idx)
+          attr(new_jac, "pd.idx") <- as.integer(new_idx)
+          lavmodel@con.jac <- new_jac
+          lavmodel@con.lambda <- c(
+            if (length(lavmodel@con.lambda) == n_old) {
+              lavmodel@con.lambda
+            } else {
+              numeric(n_old)
+            },
+            numeric(nrow(pd_jac))
+          )
+        }
         lav_msg_warn(gettextf(
-          "pd_lv = TRUE: the solution is on (or very close to) the boundary
-          of the admissible region: the variance-covariance matrix of the
-          following latent variables is (almost) singular: %s. The standard
-          errors and the test statistic(s) may not be trustworthy.",
-          lav_msg_view(pd_boundary, "none", FALSE)))
+          "pd_lv = TRUE: the solution is on the boundary of the admissible
+          region: the variance-covariance matrix of the following latent
+          variables is singular: %s. The standard errors are computed as
+          if the model was restricted to this boundary (some standard
+          errors may be zero); the degrees of freedom are not adjusted,
+          and the test statistic(s) may not follow a chi-square
+          distribution.",
+          lav_msg_view(pd_boundary$names, "none", FALSE)))
       }
-    }
-
-    # in case of non-linear constraints: store final con.jac and con.lambda
-    # in lavmodel
-    if (!is.null(attr(x, "con.jac"))) {
-      lavmodel@con.jac <- attr(x, "con.jac")
-    }
-    if (!is.null(attr(x, "con.lambda"))) {
-      lavmodel@con.lambda <- attr(x, "con.lambda")
     }
 
     # store parameters in lavmodel

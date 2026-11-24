@@ -923,8 +923,12 @@ Optimization options:
       default setting (\code{pd_lv = FALSE}). If the solution is on
       (or very close to) the boundary (for example, a correlation between
       two latent variables that is equal to one, or a latent variance that
-      is equal to zero), a warning is given, as the standard errors and the
-      test statistic(s) may not be trustworthy in this case. This option
+      is equal to zero), a warning is given. In this case, the boundary is
+      treated as an active (inequality) constraint: the standard errors
+      are computed as if the model was restricted to this boundary (just
+      like a parameter that sits on a bound), and some standard errors may
+      be zero. The degrees of freedom are not adjusted, and the test
+      statistic(s) may not follow a chi-square distribution. This option
       is currently only available if the variances of the latent
       variables are either free or fixed to a positive value (for example,
       \code{std_lv = TRUE}), if the covariances among the latent variables
