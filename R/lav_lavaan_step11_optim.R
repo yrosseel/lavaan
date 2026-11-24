@@ -111,13 +111,9 @@ lav_step11_estoptim <- function(lavdata = NULL,
     # blocks of) PSI during optimization; see lav_model_pd.R
     pd <- NULL
     if (isTRUE(lavoptions$pd.lv) && lavoptions$optim.method != "none") {
-      # only for the quasi-Newton optimizers (lav_model_est())
-      if (lavoptions$optim.method == "em" &&
-          isTRUE(lavoptions$.optim.em.fallback)) {
-        # "em" was merely the default
-        lavoptions$optim.method <- "nlminb"
-      }
-      if (lavoptions$optim.method %in% c("em", "gn", "noniter")) {
+      # only for the quasi-Newton optimizers (lav_model_est()), and for
+      # the EM algorithm (where the M-step is done with pd_lv = TRUE)
+      if (lavoptions$optim.method %in% c("gn", "noniter")) {
         lav_msg_stop(gettextf(
           "pd_lv = TRUE is not available if optim_method = %s; use
           optim_method = \"nlminb\" instead.",
@@ -279,6 +275,13 @@ lav_step11_estoptim <- function(lavdata = NULL,
         # the EM fixed point is not the optimum of the exact model:
         # always run the hand-off
         force_handoff <- isTRUE(attr(x, "rs.floored"))
+        # pd_lv = TRUE: an EM solution that is not admissible (this should
+        # not happen: the M-step is constrained) is never kept
+        pd_bad <- !is.null(pd) &&
+          !lav_model_pd_admissible(as.numeric(x), pd = pd)
+        if (pd_bad) {
+          force_handoff <- TRUE
+        }
         if (!inherits(dx_em, "try-error") && all(is.finite(dx_em)) &&
             (force_handoff || max(abs(dx_em)) >= em_dx_tol)) {
           if (lav_verbose()) {
@@ -315,7 +318,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
             isTRUE(attr(x2, "converged")) &&
             all(is.finite(x2)) &&
             is.finite(attr(x2, "fx")[1]) &&
-            (inherits(fx_em, "try-error") || !is.finite(fx_em[1]) ||
+            (pd_bad || inherits(fx_em, "try-error") ||
+             !is.finite(fx_em[1]) ||
              attr(x2, "fx")[1] <= fx_em[1] + 1e-10))
           if (accept) {
             x <- x2
@@ -342,6 +346,34 @@ lav_step11_estoptim <- function(lavdata = NULL,
         !isFALSE(lavoptions$em.args$early_handoff) &&
         em_fx_tol < 1e-03
       x <- run_em(lavmodel, if (early_flag) 1e-03 else em_fx_tol)
+
+      # pd_lv = TRUE: if the (constrained) EM failed, or if its solution is
+      # not admissible while the nlminb hand-off is switched off, use
+      # nlminb (with pd_lv = TRUE) instead
+      if (!is.null(pd) &&
+          (inherits(x, "try-error") ||
+           (!handoff_flag &&
+            !lav_model_pd_admissible(as.numeric(x), pd = pd)))) {
+        lavoptions2 <- lavoptions
+        lavoptions2$optim.method <- "nlminb"
+        x <- try(
+          lav_model_est(
+            lavmodel = if (inherits(x, "try-error")) {
+              lavmodel
+            } else {
+              lav_model_set_parameters(lavmodel, x = as.numeric(x))
+            },
+            lavpartable = lavpartable,
+            lavh1 = lavh1,
+            lavsamplestats = lavsamplestats,
+            lavdata = lavdata,
+            lavoptions = lavoptions2,
+            lavcache = lavcache
+          ),
+          silent = TRUE
+        )
+        handoff_flag <- FALSE
+      }
 
       if (handoff_flag && !inherits(x, "try-error")) {
         out_h <- run_handoff(x)

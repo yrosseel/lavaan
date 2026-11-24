@@ -937,9 +937,14 @@ Optimization options:
       involved in equality or inequality constraints and have no
       user-specified bounds; in all other cases, an error is given.
       Automatic bounds (see the \code{bounds} option) are ignored for
-      these variances and covariances. Only used if the model is
-      estimated by a quasi-Newton optimizer (for example,
-      \code{optim_method = "nlminb"}). The default is \code{FALSE}.}
+      these variances and covariances. In two-level models, the random
+      slopes (see the \code{rv()} modifier) are treated as latent
+      variables, so that the variance-covariance matrix of the random
+      effects is positive definite too. This option is available if the
+      model is estimated by a quasi-Newton optimizer (for example,
+      \code{optim_method = "nlminb"}), or by the EM algorithm
+      (\code{optim_method = "em"}; the M-step is then a constrained
+      M-step). The default is \code{FALSE}.}
     \item{\code{em_args}:}{List. Options related to the EM algorithm that
       is used to estimate the model parameters when
       \code{optim_method = "em"} (currently only available for multilevel

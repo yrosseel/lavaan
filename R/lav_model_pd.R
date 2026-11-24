@@ -39,14 +39,24 @@
 #
 # PSI is split in 'blocks': the connected components of the pattern of its
 # (free or fixed) nonzero off-diagonal elements. Only the blocks that
-# contain at least one (regular) latent variable and at least one free
-# parameter are reparameterized; these blocks must be 'unconstrained':
+# contain at least one latent variable (a regular latent variable, or a
+# random slope) and at least one free parameter are reparameterized; these
+# blocks must be 'unconstrained':
 #   - the variances are either free, or fixed to a positive value
 #   - the covariances are either free, or fixed to zero
 #   - the free elements are not involved in (in)equality constraints
 #   - the free elements have no (user-specified) bounds
 # All other blocks (eg variances fixed to zero, the fixed.x block, blocks
 # with observed variables only) are left alone.
+#
+# EM (two-level models): the M-step is itself a lavaan() fit of a
+# two-group model to the expected complete-data moments; with pd_lv = TRUE,
+# this M-step is also done with pd_lv = TRUE (a constrained M-step), so
+# that all EM iterates are positive definite. In the M-step model of the
+# random-slope EM, the random slopes are observed variables of the second
+# group: their names are passed on via 'pd_lv_extra_names' in
+# lavaan_cache_env (see lav_model_pd_extra_names()), and their variances
+# and covariances may then also be found in the THETA matrix.
 #
 # Note: the automatic bounds (bounds = "standard", "pos.var", ...) can not
 # be imposed on the elements of the Cholesky factor: they are ignored for
@@ -122,17 +132,37 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
     x_bnd <- unique(lavpartable$free[bnd_flag & lavpartable$free > 0L])
   }
 
+  # extra variables that must be treated as latent variables (the random
+  # slopes in the M-step model of the random-slope EM)
+  extra_names <- lav_model_pd_extra_names()
+
   blocks <- list()
   psi_idx <- which(names(glist) == "psi")
-  for (b in seq_along(psi_idx)) {
-    mm <- psi_idx[b]
+  # THETA is only needed for the extra variables
+  theta_idx <- integer(0L)
+  if (length(extra_names) > 0L) {
+    theta_idx <- which(names(glist) == "theta")
+  }
+  mat_idx <- c(psi_idx, theta_idx)
+  mat_block <- c(seq_along(psi_idx), seq_along(theta_idx))
+  mat_psi <- c(rep(TRUE, length(psi_idx)), rep(FALSE, length(theta_idx)))
+  for (m in seq_along(mat_idx)) {
+    mm <- mat_idx[m]
+    b <- mat_block[m]
     psi <- glist[[mm]]
     n <- nrow(psi)
     if (n == 0L || length(lavmodel@m.free.idx[[mm]]) == 0L) {
       next
     }
     psi_names <- lavmodel@dimNames[[mm]][[1L]]
-    lv_names <- lav_pt_vnames(lavpartable, type = "lv.regular", block = b)
+    lv_names <- extra_names
+    if (mat_psi[m]) {
+      lv_names <- c(
+        lv_names,
+        lav_pt_vnames(lavpartable, type = "lv.regular", block = b),
+        lav_pt_vnames(lavpartable, type = "lv.rv", block = b)
+      )
+    }
 
     # free parameter id's (0 = fixed)
     id <- matrix(0L, n, n)
@@ -331,9 +361,9 @@ lav_model_pd_block_psi <- function(x, blk) {
 
 # original (model) metric -> 'Cholesky' metric
 #
-# this is only used for the starting values; if a PSI block is not
-# (comfortably) positive definite, the starting values of the covariances
-# are shrunken towards zero until it is
+# this is used for the starting values (and for the EM accelerators); if
+# a PSI block is not positive definite, the covariances are shrunken
+# towards zero (as little as possible) until it is
 lav_model_pd_to_cholesky <- function(x, pd) {
   x_pd <- x
   for (blk in pd$blocks) {
@@ -346,17 +376,20 @@ lav_model_pd_to_cholesky <- function(x, pd) {
     psi[!is.finite(psi)] <- 0
     diag(psi) <- psi_var
 
+    # shrink the covariances (gently at first) until the block is
+    # positive definite
+    psi_off <- psi
+    diag(psi_off) <- 0
     l_mat <- NULL
-    for (attempt in 1:20) {
-      l_try <- try(t(chol(psi)), silent = TRUE)
-      # 'comfortably': conditional sd > 5% of the marginal sd
-      if (!inherits(l_try, "try-error") &&
-          all(diag(l_try) > 0.05 * sqrt(psi_var))) {
+    for (shrink in c(1, 1 - 1e-08, 1 - 1e-06, 1 - 1e-04, 0.99, 0.5^(1:20))) {
+      psi_try <- psi_off * shrink
+      diag(psi_try) <- psi_var
+      l_try <- try(t(chol(psi_try)), silent = TRUE)
+      if (!inherits(l_try, "try-error") && all(is.finite(l_try)) &&
+          all(diag(l_try) > 0)) {
         l_mat <- l_try
         break
       }
-      psi <- psi * 0.5
-      diag(psi) <- psi_var
     }
     if (is.null(l_mat)) {
       l_mat <- diag(sqrt(psi_var), nrow = blk$n)
@@ -554,4 +587,88 @@ lav_model_pd_boundary <- function(x, pd, var_ref = NULL,
   }
 
   list(names = unique(out_names), jac = out_jac)
+}
+
+# extra variables that must be treated as latent variables when the PSI
+# (and THETA) blocks are selected; only used by the M-step of the
+# random-slope EM, where the random slopes are observed variables: the
+# names are stored in lavaan_cache_env during the M-step fit
+#
+# if 'value' is given, the names are set (NULL: removed), and the previous
+# value is returned
+lav_model_pd_extra_names <- function(value) {
+  old <- get0("pd_lv_extra_names", lavaan_cache_env,
+              ifnotfound = character(0L))
+  if (!missing(value)) {
+    if (length(value) == 0L) {
+      if (exists("pd_lv_extra_names", envir = lavaan_cache_env,
+                 inherits = FALSE)) {
+        rm(list = "pd_lv_extra_names", envir = lavaan_cache_env)
+      }
+    } else {
+      assign("pd_lv_extra_names", value, envir = lavaan_cache_env)
+    }
+    return(invisible(old))
+  }
+  old
+}
+
+# are all the PSI blocks (x: original metric) positive semi-definite?
+# (up to a tolerance, relative to the size of the variances)
+lav_model_pd_admissible <- function(x, pd, tol = 1e-08) {
+  for (blk in pd$blocks) {
+    psi <- lav_model_pd_block_psi(x, blk)
+    if (any(!is.finite(psi))) {
+      return(FALSE)
+    }
+    ev <- eigen(psi, symmetric = TRUE, only.values = TRUE)$values
+    if (min(ev) < -tol * max(abs(diag(psi)), .Machine$double.eps)) {
+      return(FALSE)
+    }
+  }
+  TRUE
+}
+
+# EM acceleration (squarem, qn): the accelerators extrapolate in the
+# parameter space, and an extrapolated point may well be outside the
+# admissible region; with pd_lv = TRUE, the extrapolation is done in the
+# 'Cholesky' metric instead, where every point is admissible
+#
+# returns a list with the wrapped functions, and the two conversions
+lav_model_pd_em_wrap <- function(pd, step_fn, logl_fn, conv_fn) {
+  to_model <- function(theta) lav_model_pd_to_model(theta, pd = pd)
+  to_chol <- function(x) {
+    x_attr <- attributes(x)
+    out <- lav_model_pd_to_cholesky(as.numeric(x), pd = pd)
+    # keep the "logl" attribute (a byproduct of the E-step)
+    if (!is.null(x_attr$logl)) {
+      attr(out, "logl") <- x_attr$logl
+    }
+    out
+  }
+  list(
+    to_model = to_model,
+    to_chol = to_chol,
+    step_fn = function(theta, ...) to_chol(step_fn(to_model(theta), ...)),
+    logl_fn = function(theta) logl_fn(to_model(theta)),
+    conv_fn = function(theta_old, theta, fx_old, fx) {
+      conv_fn(to_model(theta_old), to_model(theta), fx_old, fx)
+    }
+  )
+}
+
+# the M-step parameter table: remove the bounds of the parameters that are
+# reparameterized (the automatic bounds of the original model would be
+# mistaken for user-specified bounds in the M-step fit)
+lav_model_pd_mstep_partable <- function(partable, pd) {
+  idx <- which(partable$free %in% pd$x_idx)
+  if (length(idx) > 0L) {
+    if (!is.null(partable$lower)) {
+      partable$lower[idx] <- -Inf
+    }
+    if (!is.null(partable$upper)) {
+      partable$upper[idx] <- +Inf
+    }
+  }
+  partable
 }

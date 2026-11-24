@@ -1065,6 +1065,18 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   free_idx <- which(lavpartable$free > 0L)
   mstep_fixed_x <- any(lavpartable$exo == 1L)
 
+  # pd_lv = TRUE: the M-step is also done with pd_lv = TRUE (a constrained
+  # M-step), so that all EM iterates are positive definite
+  pd <- NULL
+  if (isTRUE(lavoptions$pd.lv)) {
+    pd <- lav_model_pd_setup(lavmodel = lavmodel, lavpartable = lavpartable,
+                             lavoptions = lavoptions)
+  }
+  pd_flag <- !is.null(pd)
+  if (pd_flag) {
+    mstep_partable <- lav_model_pd_mstep_partable(mstep_partable, pd = pd)
+  }
+
   # M-step: fit the two-group model to the expected complete-data moments
   em_mstep <- function(implied, x_start) {
     local_partable <- mstep_partable
@@ -1096,6 +1108,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       ),
       fixed.x = mstep_fixed_x,
       estimator = "ML",
+      pd_lv = pd_flag,
       warn = FALSE, # no warnings
       check.start = FALSE,
       check.post = FALSE,
@@ -1213,11 +1226,24 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       FALSE
     }
     accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
-    out_em <- accel_fn(
-      theta = x_current, step_fn = em_step, logl_fn = em_logl,
-      fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
-      logl_dec = 0 # inexact M-step: only accept monotone extrapolations
-    )
+    if (pd_flag) {
+      # extrapolate in the 'Cholesky' metric (always admissible)
+      pd_em <- lav_model_pd_em_wrap(pd = pd, step_fn = em_step,
+                                    logl_fn = em_logl, conv_fn = em_conv)
+      out_em <- accel_fn(
+        theta = pd_em$to_chol(x_current), step_fn = pd_em$step_fn,
+        logl_fn = pd_em$logl_fn,
+        fx0 = fx, conv_fn = pd_em$conv_fn, max_iter = max_iter,
+        logl_dec = 0
+      )
+      out_em$theta <- pd_em$to_model(out_em$theta)
+    } else {
+      out_em <- accel_fn(
+        theta = x_current, step_fn = em_step, logl_fn = em_logl,
+        fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
+        logl_dec = 0 # inexact M-step: only accept monotone extrapolations
+      )
+    }
     x <- out_em$theta
     fx <- out_em$fx
     # a stall (the M-step no longer improves the loglikelihood) counts as

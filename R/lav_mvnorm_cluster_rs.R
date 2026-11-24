@@ -2493,6 +2493,20 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
   }
   nobs_list <- list(ntot_used, rs$stats$nclusters)
 
+  # pd_lv = TRUE: the M-step is also done with pd_lv = TRUE (a constrained
+  # M-step); in the M-step model, the random slopes are observed variables
+  # of the second group: their names are passed on to the M-step fit (see
+  # lav_model_pd_extra_names())
+  pd <- NULL
+  if (isTRUE(lavoptions$pd.lv)) {
+    pd <- lav_model_pd_setup(lavmodel = lavmodel, lavpartable = lavpartable,
+                             lavoptions = lavoptions)
+  }
+  pd_flag <- !is.null(pd)
+  if (pd_flag) {
+    mstep$pt <- lav_model_pd_mstep_partable(mstep$pt, pd = pd)
+  }
+
   # M-step: fit the two-group model to the expected moments
   em_mstep <- function(estep, x_start) {
     local_pt <- mstep$pt
@@ -2511,6 +2525,10 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
         on.exit(lav_verbose(current_verbose), TRUE)
       }
     }
+    if (pd_flag) {
+      pd_old_names <- lav_model_pd_extra_names(rs$info$z.names)
+      on.exit(lav_model_pd_extra_names(pd_old_names), TRUE)
+    }
     lavaan(local_pt,
       sample_cov = list(within = t1, between = t2),
       sample_mean = list(within = r1, between = r2),
@@ -2522,6 +2540,7 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
       ),
       fixed.x = mstep$fixed.x,
       estimator = "ML",
+      pd_lv = pd_flag,
       warn = FALSE,
       check.start = FALSE,
       check.post = FALSE,
@@ -2601,11 +2620,24 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
       FALSE
     }
     accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
-    out_em <- accel_fn(
-      theta = x_current, step_fn = em_step, logl_fn = em_logl,
-      fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
-      logl_dec = 0 # inexact M-step: only accept monotone extrapolations
-    )
+    if (pd_flag) {
+      # extrapolate in the 'Cholesky' metric (always admissible)
+      pd_em <- lav_model_pd_em_wrap(pd = pd, step_fn = em_step,
+                                    logl_fn = em_logl, conv_fn = em_conv)
+      out_em <- accel_fn(
+        theta = pd_em$to_chol(x_current), step_fn = pd_em$step_fn,
+        logl_fn = pd_em$logl_fn,
+        fx0 = fx, conv_fn = pd_em$conv_fn, max_iter = max_iter,
+        logl_dec = 0
+      )
+      out_em$theta <- pd_em$to_model(out_em$theta)
+    } else {
+      out_em <- accel_fn(
+        theta = x_current, step_fn = em_step, logl_fn = em_logl,
+        fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
+        logl_dec = 0 # inexact M-step: only accept monotone extrapolations
+      )
+    }
     x <- out_em$theta
     fx <- out_em$fx
     em_converged <- out_em$converged || out_em$stalled
