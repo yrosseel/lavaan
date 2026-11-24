@@ -925,11 +925,11 @@ Optimization options:
       two latent variables that is equal to one, or a latent variance that
       is equal to zero), a warning is given, as the standard errors and the
       test statistic(s) may not be trustworthy in this case. This option
-      is currently only available if the variances of the (correlated)
-      latent variables are free parameters (so not in combination with
-      \code{std_lv = TRUE}, unless the latent variables are orthogonal),
-      if the covariances among the latent variables are either free or
-      fixed to zero, and if these variances and covariances are not
+      is currently only available if the variances of the latent
+      variables are either free or fixed to a positive value (for example,
+      \code{std_lv = TRUE}), if the covariances among the latent variables
+      are either free or fixed to zero, and if these variances and
+      covariances are not
       involved in equality or inequality constraints and have no
       user-specified bounds; in all other cases, an error is given.
       Automatic bounds (see the \code{bounds} option) are ignored for

@@ -19,6 +19,16 @@
 #           L[i,j] = -( sum_{k<j} L[i,k] * L[j,k] ) / L[j,j]
 #       so that psi[i,j] is exactly zero
 #
+#   - variance psi[i,i] fixed to a (positive) value v (eg std_lv = TRUE):
+#       row i of L must have length sqrt(v), and log(L[i,i]) is NOT a
+#       parameter; instead, we use an unnormalized row w with w[i,i] = 1,
+#           free covariance psi[i,j] (i > j)  <->   asinh(w[i,j])
+#       (the elements implied by fixed zeros are computed as above), and
+#       row i of L is sqrt(v) * w / ||w||, so that psi[i,i] is exactly v;
+#       the boundary (a singular PSI) corresponds to w[i,j] -> +/- infinity,
+#       and the asinh() scale makes sure that the optimizer can get close
+#       (just like the log scale for the free variances)
+#
 # This is a smooth one-to-one mapping between the free elements of the PSI
 # block and the set of all positive definite matrices with the same pattern
 # of fixed zeros (whatever the ordering of the variables). The number of
@@ -31,7 +41,7 @@
 # (free or fixed) nonzero off-diagonal elements. Only the blocks that
 # contain at least one (regular) latent variable and at least one free
 # parameter are reparameterized; these blocks must be 'unconstrained':
-#   - all variances must be free
+#   - the variances are either free, or fixed to a positive value
 #   - the covariances are either free, or fixed to zero
 #   - the free elements are not involved in (in)equality constraints
 #   - the free elements have no (user-specified) bounds
@@ -148,14 +158,15 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
         where_txt <- gettextf(" (block %s)", b)
       }
 
-      # 1. all variances must be free
-      bad <- which(diag(id_c) == 0L)
+      # 1. variances: free, or fixed to a positive value
+      var_free <- diag(id_c) > 0L
+      bad <- which(!var_free & !(diag(psi_c) > 0))
       if (length(bad) > 0L) {
         lav_msg_stop(gettextf(
-          "pd_lv = TRUE is (currently) only available if the variances of
-          the (correlated) latent variables are free parameters; the
-          following variances are fixed%1$s: %2$s. (Perhaps std_lv = TRUE
-          was used?)", where_txt,
+          "pd_lv = TRUE is not available if the variance of a latent
+          variable that has free covariances is fixed to zero (or to a
+          negative value); the following variances are not positive%1$s:
+          %2$s.", where_txt,
           lav_msg_view(v_names[bad], "none", FALSE)))
       }
 
@@ -208,7 +219,11 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
         n = length(v),
         block = b,
         names = v_names,
-        diag_x = diag(id_c),
+        var_free = var_free,
+        var_fixed = ifelse(var_free, NA_real_, diag(psi_c)),
+        diag_x = diag(id_c), # 0 = fixed variance
+        low_row = unname(free_pos[, 1L]),
+        low_sinh = !var_free[free_pos[, 1L]], # row with a fixed variance
         low_pos = free_pos,
         low_x = id_c[free_pos],
         zero_cols = zero_cols,
@@ -223,7 +238,9 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
 
   list(
     blocks = blocks,
-    x_idx = unlist(lapply(blocks, function(blk) c(blk$diag_x, blk$low_x)))
+    x_idx = unlist(lapply(blocks, function(blk) {
+      c(blk$diag_x[blk$var_free], blk$low_x)
+    }))
   )
 }
 
@@ -250,32 +267,52 @@ lav_model_pd_components <- function(adj) {
 
 # the Cholesky factor L of a single block, given the transformed
 # parameters (x_pd: the full parameter vector in the 'Cholesky' metric)
+#
+# returns a list with L, and the 'unnormalized' rows W: for a variable with
+# a free variance, the rows of W and L coincide; for a variable with a
+# fixed variance v, row i of L is sqrt(v) * W[i, ] / ||W[i, ]||
 lav_model_pd_block_l <- function(x_pd, blk) {
   n <- blk$n
-  l_mat <- matrix(0, n, n)
-  l_mat[blk$low_pos] <- x_pd[blk$low_x]
-  diag(l_mat) <- exp(x_pd[blk$diag_x])
+  w_mat <- matrix(0, n, n)
+  w_low <- x_pd[blk$low_x]
+  w_low[blk$low_sinh] <- sinh(w_low[blk$low_sinh])
+  w_mat[blk$low_pos] <- w_low
+  w_diag <- rep(1.0, n)
+  w_diag[blk$var_free] <- exp(x_pd[blk$diag_x[blk$var_free]])
+  diag(w_mat) <- w_diag
 
-  # elements that are implied by the fixed zeros in PSI
-  if (blk$zero_flag) {
-    for (i in seq_len(n)[-1L]) {
-      for (j in blk$zero_cols[[i]]) {
-        k <- seq_len(j - 1L)
-        l_mat[i, j] <- -sum(l_mat[i, k] * l_mat[j, k]) / l_mat[j, j]
-      }
+  # nothing special: L = W
+  if (!blk$zero_flag && all(blk$var_free)) {
+    return(list(l = w_mat, w = w_mat, w_norm = rep(1.0, n)))
+  }
+
+  l_mat <- w_mat
+  w_norm <- rep(1.0, n)
+  for (i in seq_len(n)) {
+    # elements that are implied by the fixed zeros in PSI
+    for (j in blk$zero_cols[[i]]) {
+      k <- seq_len(j - 1L)
+      w_mat[i, j] <- -sum(w_mat[i, k] * l_mat[j, k]) / l_mat[j, j]
+    }
+    # fixed variance: rescale
+    if (blk$var_free[i]) {
+      l_mat[i, ] <- w_mat[i, ]
+    } else {
+      w_norm[i] <- sqrt(sum(w_mat[i, ]^2))
+      l_mat[i, ] <- sqrt(blk$var_fixed[i]) * w_mat[i, ] / w_norm[i]
     }
   }
 
-  l_mat
+  list(l = l_mat, w = w_mat, w_norm = w_norm)
 }
 
 # 'Cholesky' metric -> original (model) metric
 lav_model_pd_to_model <- function(x_pd, pd) {
   x <- x_pd
   for (blk in pd$blocks) {
-    l_mat <- lav_model_pd_block_l(x_pd, blk)
+    l_mat <- lav_model_pd_block_l(x_pd, blk)$l
     psi <- tcrossprod(l_mat)
-    x[blk$diag_x] <- diag(psi)
+    x[blk$diag_x[blk$var_free]] <- diag(psi)[blk$var_free]
     x[blk$low_x] <- psi[blk$low_pos]
   }
   x
@@ -286,7 +323,9 @@ lav_model_pd_block_psi <- function(x, blk) {
   psi <- matrix(0, blk$n, blk$n)
   psi[blk$low_pos] <- x[blk$low_x]
   psi <- psi + t(psi)
-  diag(psi) <- x[blk$diag_x]
+  psi_var <- blk$var_fixed
+  psi_var[blk$var_free] <- x[blk$diag_x[blk$var_free]]
+  diag(psi) <- psi_var
   psi
 }
 
@@ -322,8 +361,16 @@ lav_model_pd_to_cholesky <- function(x, pd) {
     if (is.null(l_mat)) {
       l_mat <- diag(sqrt(psi_var), nrow = blk$n)
     }
-    x_pd[blk$diag_x] <- log(diag(l_mat))
-    x_pd[blk$low_x] <- l_mat[blk$low_pos]
+    # fixed variances: unnormalized rows, with a unit diagonal
+    w_mat <- l_mat
+    fixed <- which(!blk$var_free)
+    if (length(fixed) > 0L) {
+      w_mat[fixed, ] <- l_mat[fixed, , drop = FALSE] / diag(l_mat)[fixed]
+    }
+    x_pd[blk$diag_x[blk$var_free]] <- log(diag(l_mat)[blk$var_free])
+    w_low <- w_mat[blk$low_pos]
+    w_low[blk$low_sinh] <- asinh(w_low[blk$low_sinh])
+    x_pd[blk$low_x] <- w_low
   }
   x_pd
 }
@@ -334,33 +381,57 @@ lav_model_pd_gradient <- function(dx, x_pd, pd) {
   dx_pd <- dx
   for (blk in pd$blocks) {
     n <- blk$n
-    l_mat <- lav_model_pd_block_l(x_pd, blk)
+    tmp <- lav_model_pd_block_l(x_pd, blk)
+    l_mat <- tmp$l
+    w_mat <- tmp$w
 
     # dF/dPSI, with psi[i,j] and psi[j,i] as two distinct elements
+    # (fixed variances: zero)
     g_mat <- matrix(0, n, n)
     g_mat[blk$low_pos] <- dx[blk$low_x] / 2
     g_mat <- g_mat + t(g_mat)
-    diag(g_mat) <- dx[blk$diag_x]
+    g_diag <- numeric(n)
+    g_diag[blk$var_free] <- dx[blk$diag_x[blk$var_free]]
+    diag(g_mat) <- g_diag
 
     # dF/dL, all (lower-triangular) elements of L being independent
     l_bar <- 2 * g_mat %*% l_mat
+    l_bar[upper.tri(l_bar)] <- 0
 
-    # reverse sweep: the elements of L implied by the fixed zeros in PSI
-    # are functions of the elements that precede them
-    if (blk$zero_flag) {
-      for (i in rev(seq_len(n)[-1L])) {
-        for (j in rev(blk$zero_cols[[i]])) {
-          a <- l_bar[i, j] / l_mat[j, j]
-          k <- seq_len(j - 1L)
-          l_bar[i, k] <- l_bar[i, k] - a * l_mat[j, k]
-          l_bar[j, k] <- l_bar[j, k] - a * l_mat[i, k]
-          l_bar[j, j] <- l_bar[j, j] - a * l_mat[i, j]
+    # reverse sweep (last row first): when we arrive at row i, l_bar[i, ]
+    # is complete; go back from L[i, ] to W[i, ] (fixed variances), and
+    # then to the elements of W[i, ] that are parameters (the elements
+    # implied by the fixed zeros in PSI are functions of the elements that
+    # precede them, and of the previous rows of L)
+    w_bar <- l_bar
+    if (blk$zero_flag || !all(blk$var_free)) {
+      for (i in rev(seq_len(n))) {
+        wb <- l_bar[i, ]
+        if (!blk$var_free[i]) {
+          w_i <- w_mat[i, ]
+          w_n <- tmp$w_norm[i]
+          wb <- (sqrt(blk$var_fixed[i]) / w_n) *
+            (wb - sum(wb * w_i) * w_i / (w_n * w_n))
         }
+        for (j in rev(blk$zero_cols[[i]])) {
+          a <- wb[j] / l_mat[j, j]
+          k <- seq_len(j - 1L)
+          wb[k] <- wb[k] - a * l_mat[j, k]
+          l_bar[j, k] <- l_bar[j, k] - a * w_mat[i, k]
+          l_bar[j, j] <- l_bar[j, j] - a * w_mat[i, j]
+        }
+        w_bar[i, ] <- wb
       }
     }
 
-    dx_pd[blk$low_x] <- l_bar[blk$low_pos]
-    dx_pd[blk$diag_x] <- diag(l_bar) * diag(l_mat) # log scale
+    w_low <- w_bar[blk$low_pos]
+    # fixed variances: asinh scale
+    w_low[blk$low_sinh] <- w_low[blk$low_sinh] *
+      cosh(x_pd[blk$low_x[blk$low_sinh]])
+    dx_pd[blk$low_x] <- w_low
+    # free variances: log scale
+    dx_pd[blk$diag_x[blk$var_free]] <-
+      (diag(w_bar) * diag(w_mat))[blk$var_free]
   }
   dx_pd
 }
@@ -370,14 +441,16 @@ lav_model_pd_gradient <- function(dx, x_pd, pd) {
 # original parameters (variance: s_i^2, covariance: s_i * s_j)
 lav_model_pd_parscale <- function(parscale, pd) {
   for (blk in pd$blocks) {
-    s2 <- parscale[blk$diag_x]
+    s2 <- rep(1.0, blk$n)
+    s2[blk$var_free] <- parscale[blk$diag_x[blk$var_free]]
     if (any(!is.finite(s2)) || any(s2 <= 0)) {
       s2 <- rep(1.0, blk$n)
     }
     # log(L[i,i]): the scaling is a shift, not a factor
-    parscale[blk$diag_x] <- 1.0
-    # L[i,j]: scaled like the sd of variable i
-    parscale[blk$low_x] <- sqrt(s2)[blk$low_pos[, 1L]]
+    parscale[blk$diag_x[blk$var_free]] <- 1.0
+    # L[i,j]: scaled like the sd of variable i; fixed variance: W[i,j] is
+    # a ratio, on an asinh scale (no scaling)
+    parscale[blk$low_x] <- sqrt(s2)[blk$low_row]
   }
   parscale
 }
