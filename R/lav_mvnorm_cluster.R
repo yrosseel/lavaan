@@ -1068,7 +1068,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   # pd_lv = TRUE: the M-step is also done with pd_lv = TRUE (a constrained
   # M-step), so that all EM iterates are positive definite
   pd <- NULL
-  if (isTRUE(lavoptions$pd.lv)) {
+  if (lav_model_pd_on(lavoptions)) {
     pd <- lav_model_pd_setup(lavmodel = lavmodel, lavpartable = lavpartable,
                              lavoptions = lavoptions)
   }
@@ -1108,7 +1108,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       ),
       fixed.x = mstep_fixed_x,
       estimator = "ML",
-      pd_lv = pd_flag,
+      pd_lv = if (pd_flag) lavoptions$pd.lv else FALSE,
       warn = FALSE, # no warnings
       check.start = FALSE,
       check.post = FALSE,

@@ -187,7 +187,7 @@ lav_model_est <- function(lavmodel = NULL,
   # and the constraint functions are evaluated. From here on, x_unpack is
   # in the 'Cholesky' metric.
   pd <- NULL
-  if (isTRUE(lavoptions$pd.lv) &&
+  if (lav_model_pd_on(lavoptions) &&
       (is.null(lavoptions$optim.method) ||
        toupper(lavoptions$optim.method) != "NONE")) {
     pd <- lav_model_pd_setup(lavmodel = lavmodel, lavpartable = lavpartable,

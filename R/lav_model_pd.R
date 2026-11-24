@@ -58,6 +58,11 @@
 # lavaan_cache_env (see lav_model_pd_extra_names()), and their variances
 # and covariances may then also be found in the THETA matrix.
 #
+# pd_lv = "auto": the same, but a block that can not be handled (see the
+# list above) is silently left alone instead of raising an error; the
+# names of the variables in these blocks are returned in 'skipped'. The
+# same holds for an optimizer that can not be used (gn, noniter).
+#
 # Note: the automatic bounds (bounds = "standard", "pos.var", ...) can not
 # be imposed on the elements of the Cholesky factor: they are ignored for
 # the parameters that are reparameterized.
@@ -66,12 +71,21 @@
 # can handle them (if not, an error is raised)
 #
 # returns NULL if there is nothing to do, or a list with elements:
-#   - blocks: a list with one element per PSI block
-#   - x_idx:  the positions (in the vector of free parameters) of all the
-#             parameters that are reparameterized
+#   - blocks:  a list with one element per PSI block
+#   - x_idx:   the positions (in the vector of free parameters) of all the
+#              parameters that are reparameterized
+#   - skipped: (pd_lv = "auto" only) the names of the variables in the
+#              blocks that could not be handled
 lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
                                lavoptions = NULL) {
+  # pd_lv = "auto": skip what we can not handle
+  auto <- identical(lavoptions$pd.lv, "auto")
+  skipped <- character(0L)
+
   if (lavmodel@representation != "LISREL") {
+    if (auto) {
+      return(NULL)
+    }
     lav_msg_stop(gettext(
       "pd_lv = TRUE is only available for the LISREL representation."))
   }
@@ -192,6 +206,10 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
       var_free <- diag(id_c) > 0L
       bad <- which(!var_free & !(diag(psi_c) > 0))
       if (length(bad) > 0L) {
+        if (auto) {
+          skipped <- c(skipped, v_names)
+          next
+        }
         lav_msg_stop(gettextf(
           "pd_lv = TRUE is not available if the variance of a latent
           variable that has free covariances is fixed to zero (or to a
@@ -204,6 +222,10 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
       low <- lower.tri(id_c)
       bad <- which(low & id_c == 0L & psi_c != 0, arr.ind = TRUE)
       if (nrow(bad) > 0L) {
+        if (auto) {
+          skipped <- c(skipped, v_names)
+          next
+        }
         lav_msg_stop(gettextf(
           "pd_lv = TRUE is (currently) only available if the covariances
           among the latent variables are either free, or fixed to zero;
@@ -218,6 +240,10 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
       bad <- which(low_d & (id_c %in% x_dup | id_c %in% x_con),
                    arr.ind = TRUE)
       if (nrow(bad) > 0L) {
+        if (auto) {
+          skipped <- c(skipped, v_names)
+          next
+        }
         lav_msg_stop(gettextf(
           "pd_lv = TRUE is (currently) not available if the variances or
           covariances of the latent variables are involved in equality or
@@ -231,6 +257,10 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
       # 4. no (user-specified) bounds
       bad <- which(low_d & id_c %in% x_bnd, arr.ind = TRUE)
       if (nrow(bad) > 0L) {
+        if (auto) {
+          skipped <- c(skipped, v_names)
+          next
+        }
         lav_msg_stop(gettextf(
           "pd_lv = TRUE is (currently) not available if the variances or
           covariances of the latent variables have (user-specified) lower
@@ -262,11 +292,17 @@ lav_model_pd_setup <- function(lavmodel = NULL, lavpartable = NULL,
     } # components
   } # psi matrices
 
+  if (auto && length(skipped) > 0L && lav_verbose()) {
+    cat("pd_lv = \"auto\": skipped the block(s) with:",
+        paste(unique(skipped), collapse = " "), "\n")
+  }
+
   if (length(blocks) == 0L) {
     return(NULL)
   }
 
   list(
+    skipped = unique(skipped),
     blocks = blocks,
     x_idx = unlist(lapply(blocks, function(blk) {
       c(blk$diag_x[blk$var_free], blk$low_x)
@@ -671,4 +707,9 @@ lav_model_pd_mstep_partable <- function(partable, pd) {
     }
   }
   partable
+}
+
+# is the pd_lv option switched on (TRUE, or "auto")?
+lav_model_pd_on <- function(lavoptions = NULL) {
+  isTRUE(lavoptions$pd.lv) || identical(lavoptions$pd.lv, "auto")
 }

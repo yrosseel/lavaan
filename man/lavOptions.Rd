@@ -912,7 +912,8 @@ Optimization options:
       (default is 0.1). Finally, the \code{min_var_lv_endo} element indicates
       the lower bound of the variance of any endogenous latent variable
       (default is 0.0).}
-    \item{\code{pd_lv}:}{Logical. If \code{TRUE}, the model is estimated
+    \item{\code{pd_lv}:}{Logical, or \code{"auto"}. If \code{TRUE}, the
+      model is estimated
       in such a way that the variance-covariance matrix of the latent
       variables is positive definite. To achieve this, the free (residual)
       variances and covariances of the latent variables (the elements of
@@ -944,7 +945,14 @@ Optimization options:
       model is estimated by a quasi-Newton optimizer (for example,
       \code{optim_method = "nlminb"}), or by the EM algorithm
       (\code{optim_method = "em"}; the M-step is then a constrained
-      M-step). The default is \code{FALSE}.}
+      M-step). If \code{"auto"}, the option is applied wherever this is
+      possible: a set of (correlated) latent variables that can not be
+      handled (for example, because \code{group_equal} includes
+      \code{"lv.variances"}) is silently left alone instead of raising an
+      error, and nothing is done if the optimizer does not support this
+      option. Note that with \code{"auto"}, two models that are compared
+      may not have been estimated in the same way. The default is
+      \code{FALSE}.}
     \item{\code{em_args}:}{List. Options related to the EM algorithm that
       is used to estimate the model parameters when
       \code{optim_method = "em"} (currently only available for multilevel

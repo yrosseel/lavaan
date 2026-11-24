@@ -110,19 +110,28 @@ lav_step11_estoptim <- function(lavdata = NULL,
     # the latent variables positive definite, by reparameterizing (the
     # blocks of) PSI during optimization; see lav_model_pd.R
     pd <- NULL
-    if (isTRUE(lavoptions$pd.lv) && lavoptions$optim.method != "none") {
+    if (lav_model_pd_on(lavoptions) && lavoptions$optim.method != "none") {
       # only for the quasi-Newton optimizers (lav_model_est()), and for
       # the EM algorithm (where the M-step is done with pd_lv = TRUE)
+      pd_on <- TRUE
       if (lavoptions$optim.method %in% c("gn", "noniter")) {
-        lav_msg_stop(gettextf(
-          "pd_lv = TRUE is not available if optim_method = %s; use
-          optim_method = \"nlminb\" instead.",
-          dQuote(lavoptions$optim.method)))
+        if (identical(lavoptions$pd.lv, "auto")) {
+          # pd_lv = "auto": silently do nothing
+          pd_on <- FALSE
+        } else {
+          lav_msg_stop(gettextf(
+            "pd_lv = TRUE is not available if optim_method = %s; use
+            optim_method = \"nlminb\" instead.",
+            dQuote(lavoptions$optim.method)))
+        }
       }
-      # check if we can handle this model (if not: error)
-      pd <- lav_model_pd_setup(lavmodel = lavmodel,
-                               lavpartable = lavpartable,
-                               lavoptions = lavoptions)
+      # check if we can handle this model (if not: error, unless
+      # pd_lv = "auto": the offending blocks are then left alone)
+      if (pd_on) {
+        pd <- lav_model_pd_setup(lavmodel = lavmodel,
+                                 lavpartable = lavpartable,
+                                 lavoptions = lavoptions)
+      }
     }
 
     # internal variable rescaling for badly scaled data (new in 0.7-2):

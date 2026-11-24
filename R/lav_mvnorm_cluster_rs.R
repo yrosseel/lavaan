@@ -2498,7 +2498,7 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
   # of the second group: their names are passed on to the M-step fit (see
   # lav_model_pd_extra_names())
   pd <- NULL
-  if (isTRUE(lavoptions$pd.lv)) {
+  if (lav_model_pd_on(lavoptions)) {
     pd <- lav_model_pd_setup(lavmodel = lavmodel, lavpartable = lavpartable,
                              lavoptions = lavoptions)
   }
@@ -2540,7 +2540,7 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
       ),
       fixed.x = mstep$fixed.x,
       estimator = "ML",
-      pd_lv = pd_flag,
+      pd_lv = if (pd_flag) lavoptions$pd.lv else FALSE,
       warn = FALSE,
       check.start = FALSE,
       check.post = FALSE,
