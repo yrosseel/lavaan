@@ -433,6 +433,8 @@ lav_options_default <- function() {
     "none", "default", "standard", "user", "wide", "wide.zerovar", "pos.var",
     "pos.ov.var", "pos.lv.var"))      # new in 0.6-6
   elm("rstarts", 0L, nm = "[0, 10000]", num2int = TRUE) # new in 0.6-18
+  # keep the var-cov matrix of the latent variables positive definite
+  elm("pd.lv", FALSE, bl = TRUE)                        # new in 0.7-3
 
   # inference
   elm("se", "default", chr = c(

@@ -180,6 +180,31 @@ lav_model_est <- function(lavmodel = NULL,
     cat("parscale = ", parscale, "\n")
   }
 
+  # 1b. pd_lv = TRUE (new in 0.7-3): the optimizer works with the elements
+  # of the Cholesky factor of (the blocks of) PSI, instead of the free
+  # elements of PSI itself; see lav_model_pd.R. This is the innermost
+  # transformation: it is undone right before the objective, the gradient
+  # and the constraint functions are evaluated. From here on, x_unpack is
+  # in the 'Cholesky' metric.
+  pd <- NULL
+  if (isTRUE(lavoptions$pd.lv) &&
+      (is.null(lavoptions$optim.method) ||
+       toupper(lavoptions$optim.method) != "NONE")) {
+    pd <- lav_model_pd_setup(lavmodel = lavmodel, lavpartable = lavpartable,
+                             lavoptions = lavoptions)
+  }
+  pd_flag <- !is.null(pd)
+  pd_glist <- NULL
+  if (pd_flag) {
+    x_unpack <- lav_model_pd_to_cholesky(x_unpack, pd = pd)
+    # the starting values of the (co)variances of the latent variables
+    # may have changed (if they were not positive definite)
+    pd_glist <- lav_model_x2glist(lavmodel,
+      x = lav_model_pd_to_model(x_unpack, pd = pd))
+    parscale_model <- parscale
+    parscale <- lav_model_pd_parscale(parscale, pd = pd)
+  }
+
   # 2. pack (apply equality constraints)
   if (lavmodel@eq.constraints && ncol(lavmodel@eq.constraints.K) > 0L) {
     x_pack <- as.numeric((x_unpack - lavmodel@eq.constraints.k0) %*%
@@ -269,6 +294,17 @@ lav_model_est <- function(lavmodel = NULL,
     upper[bad_idx] <- +Inf
   }
 
+  # pd_lv = TRUE: the bounds of the (co)variances of the latent variables
+  # do not apply to the elements of the Cholesky factor
+  if (pd_flag) {
+    if (length(lower) == length(start_x)) {
+      lower[pd$x_idx] <- -Inf
+    }
+    if (length(upper) == length(start_x)) {
+      upper[pd$x_idx] <- +Inf
+    }
+  }
+
   # new in 0.7-1: fix the parameters of saturated blocks at their h1
   # values during optimization, by forcing lower == upper == start
   if (length(h1_sat_idx) > 0L) {
@@ -301,6 +337,11 @@ lav_model_est <- function(lavmodel = NULL,
     if (lavmodel@eq.constraints) {
       x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
         lavmodel@eq.constraints.k0
+    }
+
+    # 1b. pd_lv: Cholesky metric -> original metric
+    if (pd_flag) {
+      x <- lav_model_pd_to_model(x, pd = pd)
     }
 
     # update GLIST (change `state') and make a COPY!
@@ -351,8 +392,11 @@ lav_model_est <- function(lavmodel = NULL,
     fx
   }
 
+  # model_metric = TRUE (pd_lv only): skip the chain rule of the Cholesky
+  # reparameterization, and return the gradient with respect to the
+  # original parameters
   gradient_function <- function(x, verbose = FALSE, inf_to_max = FALSE,
-                                debug = FALSE) {
+                                debug = FALSE, model_metric = FALSE) {
     # transform variances back
     # if(lavoptions$optim.var.transform == "sqrt" &&
     #   length(lavmodel@x.free.var.idx) > 0L) {
@@ -369,6 +413,12 @@ lav_model_est <- function(lavmodel = NULL,
     if (lavmodel@eq.constraints) {
       x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
         lavmodel@eq.constraints.k0
+    }
+
+    # 1b. pd_lv: Cholesky metric -> original metric
+    if (pd_flag) {
+      x_pd <- x
+      x <- lav_model_pd_to_model(x_pd, pd = pd)
     }
 
     # update GLIST (change `state') and make a COPY!
@@ -389,6 +439,11 @@ lav_model_est <- function(lavmodel = NULL,
       cat("Gradient function (analytical) =\n")
       print(dx)
       cat("\n")
+    }
+
+    # 1b. pd_lv: chain rule (original metric -> Cholesky metric)
+    if (pd_flag && !model_metric) {
+      dx <- lav_model_pd_gradient(dx, x_pd = x_pd, pd = pd)
     }
 
     # 2. pack
@@ -479,7 +534,7 @@ lav_model_est <- function(lavmodel = NULL,
   # check if the initial values produce a positive definite Sigma
   # to begin with -- but only for estimator="ML"
   if (estimator %in% c("ML", "FML", "MML")) {
-    sigma_hat <- lav_model_sigma(lavmodel, extra = TRUE)
+    sigma_hat <- lav_model_sigma(lavmodel, glist = pd_glist, extra = TRUE)
     for (g in 1:ngroups) {
       if (!attr(sigma_hat[[g]], "po")) {
         group_txt <-
@@ -851,19 +906,29 @@ lav_model_est <- function(lavmodel = NULL,
     # are defined for the original parameters (there is no
     # equality-constraint packing in this branch), while the optimizer
     # works with u = x * scale
-    if (scaling) {
+    # pd_lv: the constraint functions also need the original parameters;
+    # because the reparameterized parameters are not involved in any
+    # constraint, the jacobians of the constraints are not affected
+    if (scaling || pd_flag) {
+      con_x <- function(x) {
+        x <- x / scale
+        if (pd_flag) {
+          x <- lav_model_pd_to_model(x, pd = pd)
+        }
+        x
+      }
       scale_con <- function(fun) {
         if (is.null(fun)) {
           return(NULL)
         }
-        function(x, ...) fun(x / scale, ...)
+        function(x, ...) fun(con_x(x), ...)
       }
       scale_con_jac <- function(fun) {
         if (is.null(fun)) {
           return(NULL)
         }
         function(x, ...) {
-          jac <- fun(x / scale, ...)
+          jac <- fun(con_x(x), ...)
           if (!is.matrix(jac)) {
             jac <- matrix(jac, ncol = length(scale))
           }
@@ -932,7 +997,7 @@ lav_model_est <- function(lavmodel = NULL,
       # needed for df!
 
       optim_out <- list()
-      x_con <- start_x / scale
+      x_con <- start_x / scale # (pd_flag is always FALSE here)
       if (is.null(body(lavmodel@ceq.function))) {
         ceq <- function(x, ...) {
           numeric(0)
@@ -1002,6 +1067,12 @@ lav_model_est <- function(lavmodel = NULL,
       # back to the packed metric (the optimizer works with u = p * scale)
       dx <- gradient(x) * scale
       x_p <- x / scale
+      if (pd_flag) {
+        # pd_lv: cin.function and cin.JAC need the original parameters
+        # (and the gradient with respect to these parameters)
+        dx <- gradient_function(x, model_metric = TRUE) * scale
+        x_p <- lav_model_pd_to_model(x_p, pd = pd)
+      }
       if (lavmodel@ceq.simple.only) {
         unpack_idx <- lavpartable$free[lavpartable$free > 0]
         x_unpack <- x_p[unpack_idx]
@@ -1149,6 +1220,12 @@ lav_model_est <- function(lavmodel = NULL,
   if (lavmodel@eq.constraints) {
     x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
       lavmodel@eq.constraints.k0
+  }
+
+  # 1b. pd_lv: Cholesky metric -> original metric
+  if (pd_flag) {
+    x <- lav_model_pd_to_model(x, pd = pd)
+    parscale <- parscale_model
   }
 
   # runaway solution? (residual variance far more negative than the

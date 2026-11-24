@@ -912,6 +912,30 @@ Optimization options:
       (default is 0.1). Finally, the \code{min_var_lv_endo} element indicates
       the lower bound of the variance of any endogenous latent variable
       (default is 0.0).}
+    \item{\code{pd_lv}:}{Logical. If \code{TRUE}, the model is estimated
+      in such a way that the variance-covariance matrix of the latent
+      variables is positive definite. To achieve this, the free (residual)
+      variances and covariances of the latent variables (the elements of
+      the Psi matrix) are replaced, during optimization only, by the
+      elements of the Cholesky factor of this matrix. Covariances that are
+      fixed to zero remain exactly zero. If the solution is in the interior
+      of the admissible region, the results are identical to those of the
+      default setting (\code{pd_lv = FALSE}). If the solution is on
+      (or very close to) the boundary (for example, a correlation between
+      two latent variables that is equal to one, or a latent variance that
+      is equal to zero), a warning is given, as the standard errors and the
+      test statistic(s) may not be trustworthy in this case. This option
+      is currently only available if the variances of the (correlated)
+      latent variables are free parameters (so not in combination with
+      \code{std_lv = TRUE}, unless the latent variables are orthogonal),
+      if the covariances among the latent variables are either free or
+      fixed to zero, and if these variances and covariances are not
+      involved in equality or inequality constraints and have no
+      user-specified bounds; in all other cases, an error is given.
+      Automatic bounds (see the \code{bounds} option) are ignored for
+      these variances and covariances. Only used if the model is
+      estimated by a quasi-Newton optimizer (for example,
+      \code{optim_method = "nlminb"}). The default is \code{FALSE}.}
     \item{\code{em_args}:}{List. Options related to the EM algorithm that
       is used to estimate the model parameters when
       \code{optim_method = "em"} (currently only available for multilevel

@@ -106,6 +106,29 @@ lav_step11_estoptim <- function(lavdata = NULL,
       }
     }
 
+    # pd_lv = TRUE (new in 0.7-3): keep the variance-covariance matrix of
+    # the latent variables positive definite, by reparameterizing (the
+    # blocks of) PSI during optimization; see lav_model_pd.R
+    pd <- NULL
+    if (isTRUE(lavoptions$pd.lv) && lavoptions$optim.method != "none") {
+      # only for the quasi-Newton optimizers (lav_model_est())
+      if (lavoptions$optim.method == "em" &&
+          isTRUE(lavoptions$.optim.em.fallback)) {
+        # "em" was merely the default
+        lavoptions$optim.method <- "nlminb"
+      }
+      if (lavoptions$optim.method %in% c("em", "gn", "noniter")) {
+        lav_msg_stop(gettextf(
+          "pd_lv = TRUE is not available if optim_method = %s; use
+          optim_method = \"nlminb\" instead.",
+          dQuote(lavoptions$optim.method)))
+      }
+      # check if we can handle this model (if not: error)
+      pd <- lav_model_pd_setup(lavmodel = lavmodel,
+                               lavpartable = lavpartable,
+                               lavoptions = lavoptions)
+    }
+
     # internal variable rescaling for badly scaled data (new in 0.7-2):
     # fit the model in a well-scaled metric (a recursive call on
     # rescaled data, with the fixed values transformed along) and map
@@ -624,6 +647,29 @@ lav_step11_estoptim <- function(lavdata = NULL,
     warn_txt <- attr(x, "warn.txt")
     if (!is.null(warn_txt) && nchar(warn_txt) > 0L) {
       lav_msg_warn(gettext(warn_txt))
+    }
+
+    # pd_lv = TRUE: (almost) on the boundary?
+    if (!is.null(pd) && isTRUE(attr(x, "converged"))) {
+      # reference: the largest model-implied variance (per block)
+      var_ref <- try(sapply(
+        lav_model_sigma(lav_model_set_parameters(lavmodel,
+          x = as.numeric(x))),
+        function(sigma) max(diag(sigma))
+      ), silent = TRUE)
+      if (inherits(var_ref, "try-error") || !is.numeric(var_ref)) {
+        var_ref <- NULL
+      }
+      pd_boundary <- lav_model_pd_boundary(as.numeric(x), pd = pd,
+                                           var_ref = var_ref)
+      if (length(pd_boundary) > 0L) {
+        lav_msg_warn(gettextf(
+          "pd_lv = TRUE: the solution is on (or very close to) the boundary
+          of the admissible region: the variance-covariance matrix of the
+          following latent variables is (almost) singular: %s. The standard
+          errors and the test statistic(s) may not be trustworthy.",
+          lav_msg_view(pd_boundary, "none", FALSE)))
+      }
     }
 
     # in case of non-linear constraints: store final con.jac and con.lambda
