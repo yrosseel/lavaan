@@ -404,6 +404,14 @@ lav_model_info_observed <- function(lavmodel = NULL,
       ceq_simple = FALSE
     )
 
+    # pd_lv = TRUE, solution on the boundary: add the second-order term of
+    # the (curved) boundary (see lav_model_pd_boundary())
+    pd_hessian <- attr(lavmodel@con.jac, "pd.hessian")
+    if (!is.null(pd_hessian) && is.matrix(pd_hessian) &&
+        all(dim(pd_hessian) == dim(hessian))) {
+      hessian <- hessian + pd_hessian
+    }
+
     # NOTE! What is the relationship between the Hessian of the objective
     # function, and the `information' matrix (unit or total)
 

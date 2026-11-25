@@ -532,6 +532,15 @@ lav_model_pd_parscale <- function(parscale, pd) {
 # reference variance for each block (group/level) of the model (typically
 # the largest model-implied variance of the observed variables)
 #
+# The tolerances (1e-04) are deliberately not too strict: when the
+# likelihood is flat (eg a random slope without variance, few clusters),
+# the optimizer stops at a relative variance of 1e-05 or so; if such a
+# solution is not flagged, the information matrix is evaluated at a point
+# that is not a stationary point in the original metric, and the standard
+# errors may not exist (a Monte Carlo study with random-slope models:
+# NaN standard errors in up to 2.4% of the replications with 1e-06, none
+# of them flagged).
+#
 # For a flagged block, we also return the jacobian of the constraints that
 # are active at the solution. If the columns of U span the null space of
 # the (singular) PSI block, the matrices in the neighbourhood of PSI that
@@ -548,14 +557,35 @@ lav_model_pd_parscale <- function(parscale, pd) {
 # standard errors are computed on this tangent space, exactly as for a
 # parameter that sits on a (simple) bound.
 #
+# Second-order term: the boundary is curved (unless a variance vanishes),
+# and the hessian of the objective function alone does not describe the
+# curvature of the objective function along the boundary. If LAMBDA is the
+# (positive semi-definite) matrix of Lagrange multipliers, dF/dPSI = LAMBDA
+# = U M U' at the solution, the quadratic form that matters for a tangent
+# direction D is
+#     (1/2) D' H D + tr(LAMBDA D PSI^+ D)
+# (PSI^+ is the Moore-Penrose inverse of PSI; this is the 'sigma term' of
+# the second-order conditions of semidefinite programming). The second
+# term is returned as a matrix ('hess', to be added to the hessian of the
+# objective function when the observed information is computed); it needs
+# the gradient of the objective function with respect to the free
+# parameters (dx), from which M is obtained by least squares. Without
+# this term, the observed information restricted to the tangent space can
+# be indefinite (no standard errors).
+#
 # returns a list with elements:
 #   - names: the names of the variables in the offending blocks
 #   - jac:   the jacobian of the active constraints (one row per
 #            constraint, one column per free parameter)
-lav_model_pd_boundary <- function(x, pd, var_ref = NULL,
-                                  tol_cor = 1e-06, tol_var = 1e-06) {
+#   - hess:  the second-order term (NULL if dx is not given)
+lav_model_pd_boundary <- function(x, pd, var_ref = NULL, dx = NULL,
+                                  tol_cor = 1e-04, tol_var = 1e-04) {
   out_names <- character(0L)
   out_jac <- matrix(0, 0L, length(x))
+  out_hess <- NULL
+  if (!is.null(dx) && length(dx) == length(x) && all(is.finite(dx))) {
+    out_hess <- matrix(0, length(x), length(x))
+  }
 
   for (blk in pd$blocks) {
     n <- blk$n
@@ -600,17 +630,81 @@ lav_model_pd_boundary <- function(x, pd, var_ref = NULL,
     out_names <- c(out_names, blk$names)
 
     # one constraint per pair of null vectors
+    vf <- which(blk$var_free)
+    li <- blk$low_pos[, 1L]
+    lj <- blk$low_pos[, 2L]
+    blk_x <- c(blk$diag_x[vf], blk$low_x)
+    pair_rows <- matrix(0, 0L, length(blk_x))
+    pair_a <- pair_b <- integer(0L)
     for (a in seq_len(ncol(u_mat))) {
       for (b in seq_len(a)) {
         row <- numeric(length(x))
-        vf <- which(blk$var_free)
         row[blk$diag_x[vf]] <- u_mat[vf, a] * u_mat[vf, b]
-        li <- blk$low_pos[, 1L]
-        lj <- blk$low_pos[, 2L]
         row[blk$low_x] <- u_mat[li, a] * u_mat[lj, b] +
           u_mat[lj, a] * u_mat[li, b]
         if (sqrt(sum(row * row)) > 1e-10) {
           out_jac <- rbind(out_jac, row, deparse.level = 0L)
+          pair_rows <- rbind(pair_rows, row[blk_x], deparse.level = 0L)
+          pair_a <- c(pair_a, a)
+          pair_b <- c(pair_b, b)
+        }
+      }
+    }
+
+    # second-order term
+    if (!is.null(out_hess) && nrow(pair_rows) > 0L) {
+      # multipliers: dx = sum_c coef_c * row_c (least squares)
+      coef_c <- try(drop(MASS::ginv(t(pair_rows)) %*% dx[blk_x]),
+                    silent = TRUE)
+      if (!inherits(coef_c, "try-error") && all(is.finite(coef_c))) {
+        k <- ncol(u_mat)
+        m_mat <- matrix(0, k, k)
+        for (cc in seq_along(coef_c)) {
+          a <- pair_a[cc]
+          b <- pair_b[cc]
+          if (a == b) {
+            m_mat[a, a] <- coef_c[cc]
+          } else {
+            m_mat[a, b] <- m_mat[b, a] <- coef_c[cc] / 2
+          }
+        }
+        # LAMBDA must be positive semi-definite
+        m_ev <- eigen(m_mat, symmetric = TRUE)
+        m_val <- pmax(m_ev$values, 0)
+        lambda <- u_mat %*% (m_ev$vectors %*% (m_val * t(m_ev$vectors))) %*%
+          t(u_mat)
+        # PSI^+, on the orthogonal complement of the null space
+        u_orth <- qr.Q(qr(u_mat))
+        proj <- diag(n) - tcrossprod(u_orth)
+        p_ev <- eigen(proj %*% psi %*% proj, symmetric = TRUE)
+        keep <- which(p_ev$values > 1e-08 * max(p_ev$values))
+        if (any(m_val > 0) && length(keep) > 0L) {
+          psi_plus <- p_ev$vectors[, keep, drop = FALSE] %*%
+            (t(p_ev$vectors[, keep, drop = FALSE]) / p_ev$values[keep])
+          # basis matrices E_p (dPSI / dx_p) of the free elements
+          npb <- length(blk_x)
+          le <- vector("list", npb) # LAMBDA %*% E_p
+          pe <- vector("list", npb) # PSI^+ %*% E_p
+          for (p in seq_len(npb)) {
+            e_mat <- matrix(0, n, n)
+            if (p <= length(vf)) {
+              e_mat[vf[p], vf[p]] <- 1
+            } else {
+              q <- p - length(vf)
+              e_mat[li[q], lj[q]] <- e_mat[lj[q], li[q]] <- 1
+            }
+            le[[p]] <- lambda %*% e_mat
+            pe[[p]] <- psi_plus %*% e_mat
+          }
+          h_blk <- matrix(0, npb, npb)
+          for (p in seq_len(npb)) {
+            for (q in seq_len(npb)) {
+              # tr(LAMBDA E_p PSI^+ E_q)
+              h_blk[p, q] <- sum(le[[p]] * t(pe[[q]]))
+            }
+          }
+          out_hess[blk_x, blk_x] <- out_hess[blk_x, blk_x] +
+            h_blk + t(h_blk)
         }
       }
     }
@@ -622,7 +716,7 @@ lav_model_pd_boundary <- function(x, pd, var_ref = NULL,
     out_jac <- out_jac[qr_jac$pivot[seq_len(qr_jac$rank)], , drop = FALSE]
   }
 
-  list(names = unique(out_names), jac = out_jac)
+  list(names = unique(out_names), jac = out_jac, hess = out_hess)
 }
 
 # extra variables that must be treated as latent variables when the PSI

@@ -710,8 +710,22 @@ lav_step11_estoptim <- function(lavdata = NULL,
       if (inherits(var_ref, "try-error") || !is.numeric(var_ref)) {
         var_ref <- NULL
       }
+      # the gradient in the original metric (not zero on the boundary):
+      # needed for the second-order term of the observed information
+      pd_dx <- try(lav_model_grad(
+        lavmodel = lav_model_set_parameters(lavmodel, x = as.numeric(x)),
+        lavsamplestats = lavsamplestats,
+        lavdata = lavdata,
+        lavcache = lavcache,
+        type = "free",
+        group_weight = TRUE, # as in lav_model_info_observed()
+        ceq_simple = lavmodel@ceq.simple.only
+      ), silent = TRUE)
+      if (inherits(pd_dx, "try-error")) {
+        pd_dx <- NULL
+      }
       pd_boundary <- lav_model_pd_boundary(as.numeric(x), pd = pd,
-                                           var_ref = var_ref)
+                                           var_ref = var_ref, dx = pd_dx)
       if (length(pd_boundary$names) > 0L) {
         # treat the boundary as a set of active (inequality) constraints:
         # add their jacobian to con.jac, so that the standard errors are
@@ -719,14 +733,19 @@ lav_step11_estoptim <- function(lavdata = NULL,
         # parameter that sits on a simple bound); as for all inequality
         # constraints, the degrees of freedom are not affected
         pd_jac <- pd_boundary$jac
+        pd_hess <- pd_boundary$hess
         if (lavmodel@ceq.simple.only) {
           # con.jac lives in the unconstrained (unco) parameter space
           unco_id <- lavpartable$free[lavpartable$free > 0L]
           pd_jac_unco <- matrix(0, nrow(pd_jac), length(unco_id))
-          for (id in pd$x_idx) {
-            pd_jac_unco[, match(id, unco_id)] <- pd_jac[, id]
-          }
+          unco_pos <- match(pd$x_idx, unco_id)
+          pd_jac_unco[, unco_pos] <- pd_jac[, pd$x_idx]
           pd_jac <- pd_jac_unco
+          if (!is.null(pd_hess)) {
+            pd_hess_unco <- matrix(0, length(unco_id), length(unco_id))
+            pd_hess_unco[unco_pos, unco_pos] <- pd_hess[pd$x_idx, pd$x_idx]
+            pd_hess <- pd_hess_unco
+          }
         }
         con_jac <- lavmodel@con.jac
         if (nrow(pd_jac) > 0L &&
@@ -746,6 +765,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
           attr(new_jac, "cin.idx") <- as.integer(c(cin_idx, new_idx))
           attr(new_jac, "ceq.idx") <- as.integer(ceq_idx)
           attr(new_jac, "pd.idx") <- as.integer(new_idx)
+          # second-order term for the observed information (hessian)
+          attr(new_jac, "pd.hessian") <- pd_hess
           lavmodel@con.jac <- new_jac
           lavmodel@con.lambda <- c(
             if (length(lavmodel@con.lambda) == n_old) {
