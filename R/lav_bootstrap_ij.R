@@ -39,6 +39,8 @@
 # YR/LV 26 Nov 2026: add method = "hoij2" (complete data only)
 # YR/LV 26 Nov 2026: cluster bootstrap; hoij2: missing = "ml", sampling
 #                    weights, bounds and (linear) inequality constraints
+# YR/LV 26 Nov 2026: least-squares estimators (DWLS, ULS), continuous or
+#                    categorical data (see lav_bootstrap_ij_ls() below)
 
 # check if the approximate bootstrap is available for this model; if not,
 # stop with an informative message
@@ -55,11 +57,40 @@ lav_bootstrap_ij_check <- function(lavmodel = NULL,
     lav_msg_stop(gettextf(
       "The bootstrap method %s is not available (yet).", dQuote(method)))
   }
-  if (lavmodel@estimator != "ML") {
-    not_available(gettext("if the estimator is not ML"))
+  ls_flag <- lavmodel@estimator %in% c("DWLS", "ULS")
+  if (lavmodel@estimator != "ML" && !ls_flag) {
+    not_available(gettext("if the estimator is not ML, DWLS or ULS"))
   }
-  if (lavmodel@categorical) {
-    not_available(gettext("for categorical data"))
+  if (lavmodel@categorical && !ls_flag) {
+    not_available(gettext("for categorical data, unless the estimator is
+                           DWLS or ULS"))
+  }
+  # least-squares estimators: more restrictions (for now)
+  if (ls_flag) {
+    if (lavoptions$missing != "listwise") {
+      not_available(gettextf("if missing = %1$s and estimator = %2$s",
+                             dQuote(lavoptions$missing),
+                             dQuote(lavmodel@estimator)))
+    }
+    if (length(lavdata@sampling.weights) > 0L) {
+      not_available(gettextf(
+        "in combination with sampling weights, if estimator = %s",
+        dQuote(lavmodel@estimator)))
+    }
+    if (length(unlist(lavdata@ov.names.x)) > 0L) {
+      not_available(gettextf(
+        "for models with exogenous covariates, if estimator = %s",
+        dQuote(lavmodel@estimator)))
+    }
+    if (lavmodel@correlation || lavmodel@group.w.free) {
+      not_available(gettextf(
+        "for correlation structures or free group weights, if
+         estimator = %s", dQuote(lavmodel@estimator)))
+    }
+    if (lavmodel@ceq.simple.only) {
+      not_available(gettextf("if ceq_simple = TRUE and estimator = %s",
+                             dQuote(lavmodel@estimator)))
+    }
   }
   if (lavdata@nlevels > 1L) {
     not_available(gettext("for multilevel data"))
@@ -87,7 +118,7 @@ lav_bootstrap_ij_check <- function(lavmodel = NULL,
 
   # second-order: more restrictions (for now)
   if (method == "hoij2") {
-    if (!is.null(lavoptions$likelihood) &&
+    if (!ls_flag && !is.null(lavoptions$likelihood) &&
         lavoptions$likelihood != "normal") {
       not_available(gettextf("if likelihood = %s",
                              dQuote(lavoptions$likelihood)))
@@ -183,6 +214,24 @@ lav_bootstrap_ij_influence <- function(lavmodel = NULL,
                                        lavimplied = NULL,
                                        lavh1 = NULL,
                                        lavcache = NULL) {
+  # least-squares estimators: the influence values of case i are the
+  # (first-order) changes in the parameters if the weight of case i is
+  # increased by one
+  if (lavmodel@estimator != "ML") {
+    x0 <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
+    n_g <- lapply(lavdata@X, nrow)
+    out <- vector("list", length = lavdata@ngroups)
+    for (g in seq_len(lavdata@ngroups)) {
+      freq <- lapply(n_g, function(n) matrix(1, n_g[[g]], n))
+      freq[[g]] <- freq[[g]] + diag(n_g[[g]])
+      out[[g]] <- lav_bootstrap_ij_ls(
+        lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+        lavdata = lavdata, lavoptions = lavoptions, lavcache = lavcache,
+        freq = freq, x0 = x0, method = "ij"
+      )$d_theta
+    }
+    return(out)
+  }
   sc <- lav_bootstrap_ij_scores(
     lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
     lavoptions = lavoptions, lavimplied = lavimplied
@@ -325,29 +374,6 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   # original estimates
   x0 <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
 
-  # casewise scores (per group)
-  sc <- lav_bootstrap_ij_scores(
-    lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
-    lavoptions = lavoptions, lavimplied = lavimplied
-  )
-
-  # inverse of the observed (unit) information; the augmented version takes
-  # care of the (equality) constraints, if any
-  lavoptions_info <- lavoptions
-  lavoptions_info$information[1] <- "observed"
-  e_inv <- lav_model_info(
-    lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
-    lavcache = lavcache, lavimplied = lavimplied, lavh1 = lavh1,
-    lavoptions = lavoptions_info, extra = FALSE, augmented = TRUE,
-    inverted = TRUE
-  )
-  if (inherits(e_inv, "try-error") || anyNA(e_inv) ||
-      ncol(e_inv) != ncol(sc[[1]])) {
-    lav_msg_stop(gettextf(
-      "The bootstrap method %s needs the inverse of the observed information
-       matrix, but it could not be computed.", dQuote(method)))
-  }
-
   # bootstrap weights; these can also be provided by the caller, as a list
   # (per group) of weight matrices (not necessarily integers; internal use)
   if (is.null(freq)) {
@@ -358,48 +384,84 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
     attr(freq, "pool") <- lapply(lavdata@X, function(x) seq_len(nrow(x)))
   }
 
-  # weighted sum of the casewise scores: sum_i (w_i - 1) s_i
-  g_delta <- matrix(0, r, ncol(e_inv))
-  for (g in seq_len(lavdata@ngroups)) {
-    pool <- attr(freq, "pool")[[g]]
-    sc_pool <- sc[[g]][pool, , drop = FALSE]
-    g_delta <- g_delta + (freq[[g]][, pool, drop = FALSE] %*% sc_pool -
-      matrix(colSums(sc_pool), r, ncol(sc_pool), byrow = TRUE))
-  }
-
-  # first-order change in the parameters (e_inv is symmetric)
-  d_theta <- (g_delta / lavsamplestats@ntotal) %*% e_inv
-
-  # second-order term
   error_idx <- integer(0L)
   bound_idx <- integer(0L)
   guard_dist <- NULL
-  if (method == "hoij2") {
-    # simple equality constraints: everything in the compact parameter
-    # space (theta.unco = K %*% theta, and e_inv = K (K'HK)^-1 K')
-    h2_e_inv <- e_inv
-    h2_g_delta <- g_delta
-    if (lavmodel@ceq.simple.only) {
-      k_matrix <- lavmodel@ceq.simple.K
-      k_pinv <- solve(crossprod(k_matrix), t(k_matrix))
-      h2_e_inv <- k_pinv %*% e_inv %*% t(k_pinv)
-      h2_g_delta <- g_delta %*% k_matrix
-    }
-    tmp <- lav_bootstrap_hoij2(
+  if (lavmodel@estimator != "ML") {
+    # least-squares estimators (continuous or categorical data)
+    tmp <- lav_bootstrap_ij_ls(
       lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
-      lavpartable = lavpartable, lavcache = lavcache, freq = freq, x0 = x0,
-      g_delta = h2_g_delta, e_inv = h2_e_inv
+      lavoptions = lavoptions, lavcache = lavcache, freq = freq, x0 = x0,
+      method = method
     )
-    d_theta <- tmp$d_theta + tmp$d2_theta
+    d_theta <- tmp$d_theta
     error_idx <- tmp$error_idx
     guard_dist <- tmp$dist
     bound_idx <- tmp$bound_idx
-  }
+  } else {
+    # casewise scores (per group)
+    sc <- lav_bootstrap_ij_scores(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+      lavoptions = lavoptions, lavimplied = lavimplied
+    )
 
-  # simple equality constraints: from the 'unco' space to the free parameters
-  if (lavmodel@ceq.simple.only && method != "hoij2") {
-    k_matrix <- lavmodel@ceq.simple.K
-    d_theta <- d_theta %*% k_matrix %*% solve(crossprod(k_matrix))
+    # inverse of the observed (unit) information; the augmented version takes
+    # care of the (equality) constraints, if any
+    lavoptions_info <- lavoptions
+    lavoptions_info$information[1] <- "observed"
+    e_inv <- lav_model_info(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+      lavcache = lavcache, lavimplied = lavimplied, lavh1 = lavh1,
+      lavoptions = lavoptions_info, extra = FALSE, augmented = TRUE,
+      inverted = TRUE
+    )
+    if (inherits(e_inv, "try-error") || anyNA(e_inv) ||
+        ncol(e_inv) != ncol(sc[[1]])) {
+      lav_msg_stop(gettextf(
+        "The bootstrap method %s needs the inverse of the observed information
+         matrix, but it could not be computed.", dQuote(method)))
+    }
+
+    # weighted sum of the casewise scores: sum_i (w_i - 1) s_i
+    g_delta <- matrix(0, r, ncol(e_inv))
+    for (g in seq_len(lavdata@ngroups)) {
+      pool <- attr(freq, "pool")[[g]]
+      sc_pool <- sc[[g]][pool, , drop = FALSE]
+      g_delta <- g_delta + (freq[[g]][, pool, drop = FALSE] %*% sc_pool -
+        matrix(colSums(sc_pool), r, ncol(sc_pool), byrow = TRUE))
+    }
+
+    # first-order change in the parameters (e_inv is symmetric)
+    d_theta <- (g_delta / lavsamplestats@ntotal) %*% e_inv
+
+    # second-order term
+    if (method == "hoij2") {
+      # simple equality constraints: everything in the compact parameter
+      # space (theta.unco = K %*% theta, and e_inv = K (K'HK)^-1 K')
+      h2_e_inv <- e_inv
+      h2_g_delta <- g_delta
+      if (lavmodel@ceq.simple.only) {
+        k_matrix <- lavmodel@ceq.simple.K
+        k_pinv <- solve(crossprod(k_matrix), t(k_matrix))
+        h2_e_inv <- k_pinv %*% e_inv %*% t(k_pinv)
+        h2_g_delta <- g_delta %*% k_matrix
+      }
+      tmp <- lav_bootstrap_hoij2(
+        lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+        lavpartable = lavpartable, lavcache = lavcache, freq = freq, x0 = x0,
+        g_delta = h2_g_delta, e_inv = h2_e_inv
+      )
+      d_theta <- tmp$d_theta + tmp$d2_theta
+      error_idx <- tmp$error_idx
+      guard_dist <- tmp$dist
+      bound_idx <- tmp$bound_idx
+    }
+
+    # simple equality constraints: from the 'unco' space to the free parameters
+    if (lavmodel@ceq.simple.only && method != "hoij2") {
+      k_matrix <- lavmodel@ceq.simple.K
+      d_theta <- d_theta %*% k_matrix %*% solve(crossprod(k_matrix))
+    }
   }
 
   coef_boot <- d_theta + matrix(x0, r, length(x0), byrow = TRUE)
@@ -650,6 +712,47 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
     }
   }
 
+  # the derivative of the gradient along the path of the weights; if the
+  # model contains fixed exogenous covariates, it is computed by finite
+  # differences, to include the effect of the changing sample statistics
+  # of these covariates
+  g_dot <- NULL
+  if (!exo_flag) {
+    g_dot <- -1 * g_delta / ntotal
+  }
+
+  lav_bootstrap_hoij2_core(
+    lavmodel = lavmodel, grad_fn = grad_fn, x0 = x0, r = r, e_inv = e_inv,
+    g_dot = g_dot, ntotal = ntotal, h = h
+  )
+}
+
+# the core of the second-order infinitesimal jackknife
+#
+# - grad_fn(theta, b, t): the gradient of the objective function at theta,
+#     for bootstrap sample b, at position t on the path from the original
+#     sample (t = 0) to the bootstrap sample (t = 1)
+# - x0: the original estimates
+# - e_inv: the (augmented) inverse of the Jacobian of the gradient
+# - g_dot: (r x npar) matrix, the derivative of the gradient with respect to
+#     t (at t = 0, and theta = x0); if NULL, finite differences are used
+# - se: optional, the standard errors of the parameters; if provided, they
+#     are used to express the distance to the exact solution in standard
+#     error units (if not, the metric of the information matrix is used)
+lav_bootstrap_hoij2_core <- function(lavmodel = NULL,
+                                     grad_fn = NULL,
+                                     x0 = NULL,
+                                     r = 0L,
+                                     e_inv = NULL,
+                                     g_dot = NULL,
+                                     ntotal = 1,
+                                     se = NULL,
+                                     h = 0.05) {
+  npar <- length(x0)
+  ceq_simple <- lavmodel@ceq.simple.only
+  nonlinear <- length(lavmodel@ceq.nonlinear.idx) > 0L
+  g_dot_all <- g_dot
+
   # nonlinear equality constraints: work with z = (theta, lambda)
   ncon <- 0L
   if (nonlinear) {
@@ -748,13 +851,11 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
   dist <- rep(as.numeric(NA), r)
   for (b in seq_len(r)) {
     # derivative of the gradient along the path of the weights
-    if (exo_flag) {
-      # fixed.x: include the effect of the changing sample statistics of
-      # the exogenous covariates
+    if (is.null(g_dot_all)) {
       g_dot <- (-grad_fn(x0, b, 2 * h) + 8 * grad_fn(x0, b, h) -
         8 * grad_fn(x0, b, -h) + grad_fn(x0, b, -2 * h)) / (12 * h)
     } else {
-      g_dot <- -1 * g_delta[b, ] / ntotal
+      g_dot <- g_dot_all[b, ]
     }
     # first-order change
     z_dot <- -1 * drop(a_inv %*% c(g_dot, pad))
@@ -775,8 +876,15 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
     f1 <- f_fn(z0 + z_dot + 0.5 * z_ddot, b, 1)
     if (nonlinear) {
       step1 <- drop(a_inv %*% f1)[seq_len(npar)]
-      dist[b] <- sqrt(max(0, ntotal * sum(step1 * drop(b_mat %*% step1)) /
-        npar_eff))
+      if (!is.null(se)) {
+        dist[b] <- sqrt(sum((step1[se > 0] / se[se > 0])^2) / npar_eff)
+      } else {
+        dist[b] <- sqrt(max(0, ntotal *
+          sum(step1 * drop(b_mat %*% step1)) / npar_eff))
+      }
+    } else if (!is.null(se)) {
+      step1 <- drop(e_inv %*% f1)[se > 0]
+      dist[b] <- sqrt(sum((step1 / se[se > 0])^2) / npar_eff)
     } else {
       dist[b] <- sqrt(max(0, ntotal * sum(f1 * drop(e_inv %*% f1)) /
         npar_eff))
@@ -894,6 +1002,231 @@ lav_bootstrap_hoij2_exo_map <- function(lavmodel = NULL,
   }
 
   out
+}
+
+# ------------------------------------------------------------------------
+# least-squares estimators (DWLS, ULS), continuous or categorical data
+#
+# The estimator is a function of the sample statistics s (means and
+# covariances, or thresholds and polychoric correlations) and of the weight
+# matrix W: theta = argmin (s - sigma(theta))' W (s - sigma(theta)).
+#
+# - first stage: the sample statistics of a bootstrap sample are
+#   approximated by a first-order expansion,
+#       s(w) ~ s + sum_i (w_i - 1) infl_i
+#   where infl_i are the casewise influence values of the statistics (their
+#   crossproduct is the asymptotic covariance matrix of the statistics)
+# - the weight matrix is kept fixed (for ULS, this is exact)
+# - second stage, method = "ij": first-order expansion of theta(s), using
+#   the observed information (the Jacobian of the gradient); the covariance
+#   matrix of the draws is (up to Monte Carlo error) the robust (sandwich)
+#   covariance matrix (se = "robust.sem") with information_bread = "observed"
+# - second stage, method = "hoij2": second-order expansion of theta(s),
+#   along the path s(t) = s + t * (s(w) - s)
+#
+# Note that "hoij2" is therefore NOT a complete second-order expansion in
+# the weights for these estimators: the second-order terms of the first
+# stage, and the changes in the weight matrix, are ignored.
+# ------------------------------------------------------------------------
+
+# the casewise influence values of the sample statistics (in the order of
+# WLS.obs), per group
+lav_bootstrap_ij_ls_influence <- function(lavmodel = NULL,
+                                          lavsamplestats = NULL,
+                                          lavdata = NULL,
+                                          lavoptions = NULL) {
+  ngroups <- lavdata@ngroups
+  out <- vector("list", length = ngroups)
+  for (g in seq_len(ngroups)) {
+    y <- lavdata@X[[g]]
+    n_g <- nrow(y)
+    nvar <- ncol(y)
+    if (anyNA(y)) {
+      lav_msg_stop(gettext(
+        "The approximate bootstrap methods need complete data if the
+         estimator is DWLS or ULS."))
+    }
+    if (lavmodel@categorical) {
+      ov_idx <- match(lavdata@ov.names[[g]], lavdata@ov$name)
+      m84_args <- list(
+        data_1 = y, ov_names = lavdata@ov.names[[g]],
+        ov_types = lavdata@ov$type[ov_idx],
+        ov_levels = lavdata@ov$nlev[ov_idx], wls_w = TRUE, group = g
+      )
+      if (!is.null(lavoptions$zero.add)) {
+        m84_args$zero_add <- lavoptions$zero.add
+      }
+      if (!is.null(lavoptions$zero.keep.margins)) {
+        m84_args$zero_keep_margins <- lavoptions$zero.keep.margins
+      }
+      if (!is.null(lavoptions$allow.empty.cell)) {
+        m84_args$allow_empty_cell <- lavoptions$allow.empty.cell
+      }
+      cat_1 <- do.call(muthen1984, m84_args)
+      b_inv <- lav_m84_b_inv(
+        a11 = cat_1$A11, a21 = cat_1$A21, a22 = cat_1$A22
+      )$b_inv
+      infl <- cat_1$SC %*% t(b_inv) %*% t(cat_1$H)
+      # numeric variables: WLS.obs contains -mu
+      num_idx <- which(unlist(cat_1$TH.IDX) == 0L)
+      if (length(num_idx) > 0L) {
+        infl[, num_idx] <- -1 * infl[, num_idx]
+      }
+      infl[is.na(infl)] <- 0
+      # sanity check: the crossproduct must reproduce Gamma
+      nacov <- lavsamplestats@NACOV[[g]]
+      if (!is.null(nacov) && length(nacov) > 0L &&
+          length(lavdata@cluster) == 0L) {
+        if (ncol(nacov) != ncol(infl) ||
+            max(abs(n_g * crossprod(infl) - nacov)) >
+              1e-06 * max(1, abs(nacov))) {
+          lav_msg_stop(gettext(
+            "The casewise influence values of the sample statistics could
+             not be computed for this model; please use
+             bootstrap = list(method = \"refit\") instead."))
+        }
+      }
+    } else {
+      yc <- t(t(y) - colMeans(y))
+      idx1 <- lav_mat_vech_col_idx(nvar)
+      idx2 <- lav_mat_vech_row_idx(nvar)
+      zc <- yc[, idx1, drop = FALSE] * yc[, idx2, drop = FALSE]
+      zc <- t(t(zc) - colMeans(zc))
+      # is the divisor of the sample covariance matrix N or N - 1?
+      cov_n <- crossprod(yc) / n_g
+      ratio <- sum(diag(lavsamplestats@cov[[g]])) / sum(diag(cov_n))
+      if (abs(ratio - n_g / (n_g - 1)) < abs(ratio - 1)) {
+        zc <- zc * n_g / (n_g - 1)
+      }
+      if (lavmodel@meanstructure) {
+        infl <- cbind(yc, zc) / n_g
+      } else {
+        infl <- zc / n_g
+      }
+    }
+    if (ncol(infl) != length(lavsamplestats@WLS.obs[[g]])) {
+      lav_msg_stop(gettext(
+        "The casewise influence values of the sample statistics could not
+         be computed for this model; please use
+         bootstrap = list(method = \"refit\") instead."))
+    }
+    out[[g]] <- infl
+  }
+
+  out
+}
+
+# the changes in the free parameters, for the least-squares estimators
+lav_bootstrap_ij_ls <- function(lavmodel = NULL,
+                                lavsamplestats = NULL,
+                                lavdata = NULL,
+                                lavoptions = NULL,
+                                lavcache = NULL,
+                                freq = NULL,
+                                x0 = NULL,
+                                method = "ij",
+                                h = 0.05) {
+  ngroups <- lavdata@ngroups
+  r <- nrow(freq[[1]])
+  failed <- function() {
+    lav_msg_stop(gettextf(
+      "The bootstrap method %s could not be computed for this model; please
+       use bootstrap = list(method = \"refit\") instead.", dQuote(method)))
+  }
+
+  # first stage: the changes in the sample statistics (first-order)
+  infl <- lav_bootstrap_ij_ls_influence(
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+    lavoptions = lavoptions
+  )
+  s0 <- lavsamplestats@WLS.obs
+  nstat <- lengths(s0)
+  stat_idx <- lapply(seq_len(ngroups), function(g) {
+    sum(nstat[seq_len(g - 1L)]) + seq_len(nstat[g])
+  })
+  d_s <- matrix(0, r, sum(nstat))
+  for (g in seq_len(ngroups)) {
+    d_s[, stat_idx[[g]]] <- (freq[[g]] - 1) %*% infl[[g]]
+  }
+
+  # the gradient, as a function of theta and the (stacked) changes in the
+  # sample statistics; the weight matrix is fixed
+  nvar <- lapply(lavdata@X, ncol)
+  grad_fn <- function(theta, delta_s, ceq_simple = FALSE) {
+    for (g in seq_len(ngroups)) {
+      s_g <- s0[[g]] + delta_s[stat_idx[[g]]]
+      lavsamplestats@WLS.obs[[g]] <- s_g
+      if (!lavmodel@categorical) {
+        # continuous data: the gradient uses the moments themselves
+        if (lavmodel@meanstructure) {
+          lavsamplestats@mean[[g]] <- s_g[seq_len(nvar[[g]])]
+          s_g <- s_g[-seq_len(nvar[[g]])]
+        }
+        lavsamplestats@cov[[g]] <- lav_mat_vech_rev(s_g)
+      }
+    }
+    out <- try(suppressWarnings(lav_model_grad(
+      lavmodel = lavmodel,
+      glist = lav_model_x2glist(lavmodel = lavmodel, x = theta),
+      lavsamplestats = lavsamplestats, lavdata = lavdata,
+      lavcache = lavcache, type = "free", ceq_simple = ceq_simple
+    )), silent = TRUE)
+    if (inherits(out, "try-error") || !all(is.finite(out))) {
+      out <- rep(as.numeric(NA), length(out))
+    }
+    as.numeric(out)
+  }
+
+  # the gradient is linear in the sample statistics: G = G0 + M %*% delta_s
+  zero <- numeric(sum(nstat))
+  g0 <- grad_fn(x0, zero)
+  m_mat <- matrix(0, length(g0), sum(nstat))
+  for (k in seq_len(sum(nstat))) {
+    step <- zero
+    step[k] <- 1
+    m_mat[, k] <- grad_fn(x0, step) - g0
+  }
+  if (anyNA(m_mat)) {
+    failed()
+  }
+  g_dot <- d_s %*% t(m_mat)
+
+  # observed information (the Jacobian of the gradient with respect to the
+  # parameters)
+  npar <- length(x0)
+  hess <- matrix(0, npar, npar)
+  for (k in seq_len(npar)) {
+    step <- numeric(npar)
+    step[k] <- 1e-05 * max(1, abs(x0[k]))
+    hess[, k] <- (grad_fn(x0 + step, zero) - grad_fn(x0 - step, zero)) /
+      (2 * step[k])
+  }
+  if (anyNA(hess)) {
+    failed()
+  }
+  hess <- (hess + t(hess)) / 2
+  e_inv <- try(lav_model_info_augment_invert(
+    lavmodel = lavmodel, information = hess, inverted = TRUE
+  ), silent = TRUE)
+  if (inherits(e_inv, "try-error") || anyNA(e_inv)) {
+    failed()
+  }
+  if (method == "ij") {
+    return(list(d_theta = -1 * g_dot %*% e_inv, error_idx = integer(0L),
+                dist = NULL, bound_idx = integer(0L)))
+  }
+
+  # standard errors (of the first-order draws), to scale the distances
+  se <- apply(g_dot %*% e_inv, 2L, stats::sd)
+
+  out <- lav_bootstrap_hoij2_core(
+    lavmodel = lavmodel,
+    grad_fn = function(theta, b, t) grad_fn(theta, t * d_s[b, ]),
+    x0 = x0, r = r, e_inv = e_inv, g_dot = g_dot,
+    ntotal = lavsamplestats@ntotal, se = se, h = h
+  )
+  list(d_theta = out$d_theta + out$d2_theta, error_idx = out$error_idx,
+       dist = out$dist, bound_idx = out$bound_idx)
 }
 
 # the 'method' element of the bootstrap option

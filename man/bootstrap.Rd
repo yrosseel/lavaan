@@ -137,8 +137,9 @@ therefore mostly useful to obtain percentile-type confidence intervals for
 (nonlinear) functions of the parameters. Because the approximation is linear
 in the weights, it does not capture any skewness that is due to the
 estimator itself (for example, for variance parameters in small samples).
-The IJ method is currently only available for single-level models that are
-estimated by ML using continuous (complete or incomplete) data. If the data
+For ML, the IJ method is currently only available for single-level models
+using continuous (complete or incomplete) data (see below for DWLS and
+ULS). If the data
 are clustered (\code{cluster = }), whole clusters are resampled (as for
 \code{method = "refit"}); the covariance matrix of the IJ draws then equals
 the cluster-robust sandwich covariance matrix.
@@ -192,6 +193,33 @@ the bootstrap samples is typically refitted. With \code{guard = FALSE},
 these draws are not corrected, and bounds or inequality constraints should
 then not be combined with HOIJ-2. Nonlinear inequality constraints are not
 supported.
+
+Both methods are also available for single-level models that are estimated
+by DWLS or ULS, using complete continuous or categorical data (this includes
+the estimators \code{"WLSMV"} and \code{"ULSMV"}); exogenous covariates,
+sampling weights and \code{ceq_simple = TRUE} are not supported. For these
+estimators, the parameter estimates are a function of the sample statistics
+(means and covariances, or thresholds and polychoric correlations) and of a
+weight matrix, and the approximation works in two stages. In the first
+stage, the sample statistics of a bootstrap sample are approximated by a
+first-order expansion, using the casewise influence values of these
+statistics; the statistics themselves (for example, the polychoric
+correlations) are not recomputed. The weight matrix is kept fixed (for ULS,
+this is exact). In the second stage, the change in the parameters is
+obtained from the change in the statistics by a first-order
+(\code{method = "ij"}) or a second-order (\code{method = "hoij2"})
+expansion. The covariance matrix of the \code{"ij"} draws equals (up to
+Monte Carlo error) the robust sandwich covariance matrix
+(\code{se = "robust.sem"}) with \code{information_bread = "observed"}.
+Note that \code{"hoij2"} is not a complete second-order expansion here: it
+captures the nonlinearity of the model (the largest source of error), but
+not the nonlinearity of the sample statistics, nor the changes in the
+weight matrix. It is closer to the refitted estimates than \code{"ij"},
+but less close than it is for ML. In addition, the guard only sees the
+second stage: the distance is computed using the approximate sample
+statistics, and it can not detect that these statistics themselves are
+inaccurate for a bootstrap sample (for example, if a response category is
+almost empty).
 
 Both methods can be requested when fitting the model, by using
 \code{se = "bootstrap"} together with, for example,

@@ -147,7 +147,8 @@ shown in the output.}
   constants are computed from the infinitesimal jackknife influence values
   instead (the casewise scores, premultiplied by the inverse of the observed
   information matrix); this is only possible for single-level models
-  estimated by ML using continuous data, and no \code{"design"} attribute
+  estimated by ML using continuous data (or by DWLS or ULS, where the
+  influence values of the sample statistics are used), and no \code{"design"} attribute
   is returned in this case. For clustered data (cluster bootstrap), the
   influence values of the clusters are used. The parameter estimates in the bootstrap samples
   themselves are available via \code{lavInspect(object, "coef_boot")}.
