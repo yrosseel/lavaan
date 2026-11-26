@@ -494,12 +494,12 @@ standardizedSolution <- function(object,                     # nolint
         # is a derived quantity, so the CI is computed uniformly for all rows.
         t0 <- tmp_list$est.std
         if (boot_ci_type == "bca") {
-          design <- lav_bootstrap_bca_design(object, boot_error_idx)
-          stopifnot(nrow(design) == nrow(boot_std))
-          # keep the empirical-influence design matrix, so users can retrieve
-          # it via attr(., "design") (it is computed anyway for BCa)
-          boot_bca_design <- design
-          acc <- lav_bootstrap_acceleration(boot_std, design)
+          bca <- lav_bootstrap_bca_setup(object, boot_error_idx)
+          # keep the empirical-influence design matrix (if any), so users can
+          # retrieve it via attr(., "design") (it is computed anyway for BCa)
+          boot_bca_design <- bca$design
+          acc <- lav_bootstrap_bca_acc(bca, boot_t = boot_std,
+                                       boot_coef = tmp_boot_free)
           ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
             boot_ci_type = "bca", level = level, acc = acc)
         } else {
@@ -942,11 +942,10 @@ lavParameterEstimates <- function(object,                      # nolint
           # we assume that the 'ordinary' (nonparametric) bootstrap was used.
           # The empirical-influence design matrix and the acceleration/CI
           # computations are shared with lavEffects() (see lav_bootstrap.R).
-          design <- lav_bootstrap_bca_design(object, error_idx)
-          stopifnot(nrow(design) == nrow(tmp_boot))
-          # keep the design matrix, so users can retrieve it via
+          bca <- lav_bootstrap_bca_setup(object, error_idx)
+          # keep the design matrix (if any), so users can retrieve it via
           # attr(., "design") (it is computed anyway for BCa)
-          boot_bca_design <- design
+          boot_bca_design <- bca$design
 
           ci <- cbind(tmp_list$est, tmp_list$est)
 
@@ -954,7 +953,8 @@ lavParameterEstimates <- function(object,                      # nolint
           free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
           stopifnot(length(free_idx) == ncol(tmp_boot))
-          acc <- lav_bootstrap_acceleration(tmp_boot, design)
+          acc <- lav_bootstrap_bca_acc(bca, boot_t = tmp_boot,
+                                       boot_coef = tmp_boot)
           ci[free_idx, ] <- lav_bootstrap_ci(
             boot_t = tmp_boot, t0 = tmp_list$est[free_idx],
             boot_ci_type = "bca", level = level, acc = acc
@@ -969,7 +969,8 @@ lavParameterEstimates <- function(object,                      # nolint
             } else {
               boot_def <- t(boot_def)
             }
-            acc <- lav_bootstrap_acceleration(boot_def, design)
+            acc <- lav_bootstrap_bca_acc(bca, boot_t = boot_def,
+                                         boot_coef = tmp_boot)
             ci[def_idx, ] <- lav_bootstrap_ci(
               boot_t = boot_def, t0 = tmp_list$est[def_idx],
               boot_ci_type = "bca", level = level, acc = acc

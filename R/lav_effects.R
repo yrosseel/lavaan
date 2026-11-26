@@ -335,9 +335,9 @@ lavEffects <- function(object,
       if (identical(boot_ci_type, "bca")) {
         # adjusted bootstrap percentile method: the acceleration constants are
         # obtained from the empirical influence values of the effects
-        design <- lav_bootstrap_bca_design(object, error_idx)
-        stopifnot(nrow(design) == nrow(boot_eff))
-        acc <- lav_bootstrap_acceleration(boot_eff, design)
+        bca <- lav_bootstrap_bca_setup(object, error_idx)
+        acc <- lav_bootstrap_bca_acc(bca, boot_t = boot_eff,
+                                     boot_coef = boot)
         eff_ci <- lav_bootstrap_ci(boot_t = boot_eff, t0 = est,
           boot_ci_type = "bca", level = level, acc = acc)
       } else {

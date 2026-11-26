@@ -102,17 +102,11 @@ lav_bootstrap_ij_check <- function(lavmodel = NULL,
     if (lavmodel@group.w.free) {
       not_available(gettext("if group_w_free = TRUE"))
     }
-    if (lavmodel@ceq.simple.only) {
-      not_available(gettext("if ceq_simple = TRUE"))
-    }
-    if (length(lavmodel@ceq.nonlinear.idx) > 0L) {
-      not_available(gettext("for models with nonlinear equality constraints"))
-    }
     # inequality constraints, or bounds
-    n_ceq <- length(lavmodel@ceq.linear.idx)
     if (length(lavmodel@cin.linear.idx) > 0L ||
         length(lavmodel@cin.nonlinear.idx) > 0L ||
-        nrow(lavmodel@con.jac) > n_ceq) {
+        length(attr(lavmodel@con.jac, "cin.idx")) > 0L ||
+        length(attr(lavmodel@con.jac, "inactive.idx")) > 0L) {
       not_available(
         gettext("for models with inequality constraints or bounds"))
     }
@@ -169,6 +163,41 @@ lav_bootstrap_ij_scores <- function(lavmodel = NULL,
   }
 
   out
+}
+
+# the (infinitesimal jackknife) influence values of the free parameters, per
+# group: the rows of the g-th element correspond to the rows of
+# lavdata@X[[g]], the columns to the free parameters; the change in the
+# parameters for a set of weights w is sum_i (w_i - 1) * influence_i
+lav_bootstrap_ij_influence <- function(lavmodel = NULL,
+                                       lavsamplestats = NULL,
+                                       lavdata = NULL,
+                                       lavoptions = NULL,
+                                       lavimplied = NULL,
+                                       lavh1 = NULL,
+                                       lavcache = NULL) {
+  sc <- lav_bootstrap_ij_scores(
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+    lavoptions = lavoptions, lavimplied = lavimplied
+  )
+  lavoptions$information[1] <- "observed"
+  e_inv <- lav_model_info(
+    lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+    lavcache = lavcache, lavimplied = lavimplied, lavh1 = lavh1,
+    lavoptions = lavoptions, extra = FALSE, augmented = TRUE,
+    inverted = TRUE
+  )
+  if (inherits(e_inv, "try-error") || anyNA(e_inv) ||
+      ncol(e_inv) != ncol(sc[[1]])) {
+    lav_msg_stop(gettext(
+      "The inverse of the observed information matrix could not be
+       computed."))
+  }
+  if (lavmodel@ceq.simple.only) {
+    k_matrix <- lavmodel@ceq.simple.K
+    e_inv <- e_inv %*% k_matrix %*% solve(crossprod(k_matrix))
+  }
+  lapply(sc, function(x) (x %*% e_inv) / lavsamplestats@ntotal)
 }
 
 # the bootstrap samples, as frequencies (weights), per group; the r rows
@@ -310,10 +339,20 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   error_idx <- integer(0L)
   guard_dist <- NULL
   if (method == "hoij2") {
+    # simple equality constraints: everything in the compact parameter
+    # space (theta.unco = K %*% theta, and e_inv = K (K'HK)^-1 K')
+    h2_e_inv <- e_inv
+    h2_g_delta <- g_delta
+    if (lavmodel@ceq.simple.only) {
+      k_matrix <- lavmodel@ceq.simple.K
+      k_pinv <- solve(crossprod(k_matrix), t(k_matrix))
+      h2_e_inv <- k_pinv %*% e_inv %*% t(k_pinv)
+      h2_g_delta <- g_delta %*% k_matrix
+    }
     tmp <- lav_bootstrap_hoij2(
       lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavpartable = lavpartable, lavcache = lavcache, freq = freq, x0 = x0,
-      d_theta = d_theta, e_inv = e_inv
+      g_delta = h2_g_delta, e_inv = h2_e_inv
     )
     d_theta <- tmp$d_theta + tmp$d2_theta
     error_idx <- tmp$error_idx
@@ -321,7 +360,7 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   }
 
   # simple equality constraints: from the 'unco' space to the free parameters
-  if (lavmodel@ceq.simple.only) {
+  if (lavmodel@ceq.simple.only && method != "hoij2") {
     k_matrix <- lavmodel@ceq.simple.K
     d_theta <- d_theta %*% k_matrix %*% solve(crossprod(k_matrix))
   }
@@ -384,15 +423,23 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
 #
 # - freq: list (per group) of (r x n_g) weight matrices
 # - x0: the original estimates
-# - d_theta: the (r x npar) first-order changes (score based)
+# - g_delta: the (r x npar) weighted sums of the casewise scores,
+#     sum_i (w_i - 1) s_i
 # - e_inv: the (augmented) inverse of the observed (unit) information
 #
+# nonlinear equality constraints c(theta) = 0: the same reasoning is applied
+# to the stationarity conditions of the Lagrangian,
+#     F(theta, lambda, w) = [G(theta, w) + t(J(theta)) lambda; c(theta)] = 0
+# with J the Jacobian of c(); the path is then a path for (theta, lambda),
+# and e_inv is replaced by the inverse of the Jacobian of F, which also
+# contains the curvature of the constraints
+#
 # returns a list with
-# - d_theta: the first-order changes; these are the score-based ones, unless
-#     the model contains fixed exogenous covariates (fixed.x = TRUE): their
-#     (co)variances and means are fixed to the sample values, which change
-#     under reweighting; the first-order changes are then recomputed (by
-#     finite differences) to take this into account
+# - d_theta: the first-order changes; if the model contains fixed
+#     exogenous covariates (fixed.x = TRUE), their (co)variances and means
+#     are fixed to the sample values, which change under reweighting; the
+#     derivative of the gradient along the path is then computed by finite
+#     differences (instead of using the scores) to take this into account
 # - d2_theta: the second-order changes
 # - error_idx: bootstrap samples for which the gradient could not be
 #     computed along the path (the corresponding rows are set to NA)
@@ -403,12 +450,15 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
                                 lavcache = NULL,
                                 freq = NULL,
                                 x0 = NULL,
-                                d_theta = NULL,
+                                g_delta = NULL,
                                 e_inv = NULL,
                                 h = 0.05) {
   ngroups <- lavdata@ngroups
-  r <- nrow(d_theta)
+  r <- nrow(g_delta)
   npar <- length(x0)
+  ntotal <- lavsamplestats@ntotal
+  ceq_simple <- lavmodel@ceq.simple.only
+  nonlinear <- length(lavmodel@ceq.nonlinear.idx) > 0L
 
   # per group: the first and second (raw) moments, and their changes (per
   # unit of t) for every bootstrap sample
@@ -473,7 +523,8 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
     }
     out <- try(suppressWarnings(lav_model_grad(
       lavmodel = lavmodel, glist = glist, lavsamplestats = lavsamplestats,
-      lavdata = lavdata, lavcache = lavcache, type = "free"
+      lavdata = lavdata, lavcache = lavcache, type = "free",
+      ceq_simple = ceq_simple
     )), silent = TRUE)
     if (inherits(out, "try-error") || length(out) != npar ||
         !all(is.finite(out))) {
@@ -482,42 +533,97 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
     as.numeric(out)
   }
 
-  # (should be zero)
-  r0 <- grad_fn(x0, 1L, 0)
+  # nonlinear equality constraints: work with z = (theta, lambda)
+  ncon <- 0L
+  if (nonlinear) {
+    con_fn <- lavmodel@ceq.function
+    jac_fn <- function(theta) {
+      lav_func_jacobian_complex(func = con_fn, x = theta)
+    }
+    ncon <- length(con_fn(x0))
+    jac0 <- jac_fn(x0)
+    # Lagrange multipliers at the solution
+    lambda0 <- -1 * drop(solve(tcrossprod(jac0),
+                               jac0 %*% grad_fn(x0, 1L, 0)))
+    f_fn <- function(z, b, t) {
+      theta <- z[seq_len(npar)]
+      c(grad_fn(theta, b, t) + drop(crossprod(jac_fn(theta),
+                                              z[npar + seq_len(ncon)])),
+        con_fn(theta))
+    }
+    z0 <- c(x0, lambda0)
+    # Jacobian of F with respect to z (central differences)
+    nz <- npar + ncon
+    a_mat <- matrix(0, nz, nz)
+    for (k in seq_len(nz)) {
+      step <- numeric(nz)
+      step[k] <- 1e-05 * max(1, abs(z0[k]))
+      a_mat[, k] <- (f_fn(z0 + step, 1L, 0) - f_fn(z0 - step, 1L, 0)) /
+        (2 * step[k])
+    }
+    a_inv <- try(solve(a_mat), silent = TRUE)
+    if (inherits(a_inv, "try-error") || anyNA(a_inv)) {
+      lav_msg_stop(gettext(
+        "The bootstrap method \"hoij2\" could not be computed for this
+         model (singular system); please use
+         bootstrap = list(method = \"refit\") instead."))
+    }
+    b_mat <- a_mat[seq_len(npar), seq_len(npar), drop = FALSE]
+  } else {
+    f_fn <- grad_fn
+    z0 <- x0
+    nz <- npar
+    a_inv <- e_inv
+  }
+  pad <- numeric(ncon)
 
-  # effective number of parameters (rank of e_inv)
-  ntotal <- lavsamplestats@ntotal
-  npar_eff <- npar
+  # effective number of parameters
+  npar_eff <- npar - ncon
   if (lavmodel@eq.constraints) {
     npar_eff <- ncol(lavmodel@eq.constraints.K)
   }
 
-  d1_theta <- d_theta
+  # (should be zero)
+  r0 <- f_fn(z0, 1L, 0)
+
+  d1_theta <- matrix(as.numeric(NA), r, npar)
   d2_theta <- matrix(as.numeric(NA), r, npar)
   dist <- rep(as.numeric(NA), r)
   for (b in seq_len(r)) {
-    # fixed.x: recompute the first-order change, including the effect of
-    # the changing sample statistics of the exogenous covariates
+    # derivative of the gradient along the path of the weights
     if (exo_flag) {
+      # fixed.x: include the effect of the changing sample statistics of
+      # the exogenous covariates
       g_dot <- (-grad_fn(x0, b, 2 * h) + 8 * grad_fn(x0, b, h) -
         8 * grad_fn(x0, b, -h) + grad_fn(x0, b, -2 * h)) / (12 * h)
-      d1_theta[b, ] <- -1 * drop(e_inv %*% g_dot)
+    } else {
+      g_dot <- -1 * g_delta[b, ] / ntotal
     }
-    dir <- d1_theta[b, ]
+    # first-order change
+    z_dot <- -1 * drop(a_inv %*% c(g_dot, pad))
     # second derivative of r(t) at t = 0 (five-point stencil)
-    r2 <- (-grad_fn(x0 + 2 * h * dir, b, 2 * h) +
-      16 * grad_fn(x0 + h * dir, b, h) - 30 * r0 +
-      16 * grad_fn(x0 - h * dir, b, -h) -
-      grad_fn(x0 - 2 * h * dir, b, -2 * h)) / (12 * h * h)
-    d2_theta[b, ] <- -0.5 * drop(e_inv %*% r2)
+    r2 <- (-f_fn(z0 + 2 * h * z_dot, b, 2 * h) +
+      16 * f_fn(z0 + h * z_dot, b, h) - 30 * r0 +
+      16 * f_fn(z0 - h * z_dot, b, -h) -
+      f_fn(z0 - 2 * h * z_dot, b, -2 * h)) / (12 * h * h)
+    z_ddot <- -1 * drop(a_inv %*% r2)
+    d1_theta[b, ] <- z_dot[seq_len(npar)]
+    d2_theta[b, ] <- 0.5 * z_ddot[seq_len(npar)]
     # how far are we from the exact solution for this bootstrap sample?
     # the gradient at the approximate solution (zero if it is exact),
     # expressed as the length of the corresponding Newton step, in the
     # metric of the (total) information: an estimate of the distance to
     # the exact solution in standard error units (root mean square over
     # the parameters)
-    g1 <- grad_fn(x0 + d1_theta[b, ] + d2_theta[b, ], b, 1)
-    dist[b] <- sqrt(max(0, ntotal * sum(g1 * drop(e_inv %*% g1)) / npar_eff))
+    f1 <- f_fn(z0 + z_dot + 0.5 * z_ddot, b, 1)
+    if (nonlinear) {
+      step1 <- drop(a_inv %*% f1)[seq_len(npar)]
+      dist[b] <- sqrt(max(0, ntotal * sum(step1 * drop(b_mat %*% step1)) /
+        npar_eff))
+    } else {
+      dist[b] <- sqrt(max(0, ntotal * sum(f1 * drop(e_inv %*% f1)) /
+        npar_eff))
+    }
   }
 
   error_idx <- which(!stats::complete.cases(d1_theta + d2_theta))

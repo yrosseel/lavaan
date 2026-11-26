@@ -1113,6 +1113,107 @@ lav_bootstrap_acceleration <- function(boot_t, design) {
   })
 }
 
+# The acceleration constants for the BCa method can be obtained in two ways:
+#
+# - type = "design": by regressing the bootstrap realizations on the bootstrap
+#   frequencies (see lav_bootstrap_acceleration()); this needs more
+#   (successful) bootstrap runs than observations, and no sampling weights
+# - type = "ij": from the (analytic) infinitesimal jackknife influence values
+#   of the free parameters (the casewise scores, premultiplied by the inverse
+#   of the observed information); this works for any number of bootstrap
+#   runs, but it is only available if the casewise scores are available (see
+#   lav_bootstrap_ij_check())
+#
+# The "ij" type is used if the bootstrap draws themselves were obtained by
+# the infinitesimal jackknife (bootstrap method "ij" or "hoij2"), or if the
+# prerequisites for the "design" type are not met.
+lav_bootstrap_bca_setup <- function(object, error_idx = integer(0L)) {
+  if (length(object@Data@cluster) > 0L) {
+    lav_msg_stop(gettext(
+      "BCa confidence intervals are not available for clustered/multilevel
+       data (cluster bootstrap)."))
+  }
+  r <- object@Options$bootstrap
+  if (is.list(r)) {
+    r <- r$R
+  }
+  design_ok <- (r - length(error_idx)) >= object@SampleStats@ntotal &&
+    is.null(object@Data@weights[[1]])
+  ij_ok <- !inherits(try(lav_bootstrap_ij_check(
+    lavmodel = object@Model, lavdata = object@Data,
+    lavoptions = object@Options, method = "ij"
+  ), silent = TRUE), "try-error")
+  use_ij <- ij_ok &&
+    (lav_bootstrap_method(object@Options) != "refit" || !design_ok)
+
+  if (!use_ij) {
+    # (this stops with an informative message if the prerequisites for
+    # the design matrix are not met)
+    design <- lav_bootstrap_bca_design(object, error_idx)
+    return(list(type = "design", design = design))
+  }
+
+  infl <- lav_bootstrap_ij_influence(
+    lavmodel = object@Model, lavsamplestats = object@SampleStats,
+    lavdata = object@Data, lavoptions = object@Options,
+    lavimplied = object@implied, lavh1 = object@h1, lavcache = object@Cache
+  )
+  list(type = "ij", design = NULL, infl = infl)
+}
+
+# the acceleration constants for the columns of 'boot_t' (the bootstrap
+# realizations of some functions of the free parameters); 'boot_coef' are
+# the corresponding bootstrap realizations of the free parameters themselves
+lav_bootstrap_bca_acc <- function(bca, boot_t, boot_coef) {
+  boot_t <- as.matrix(boot_t)
+  if (bca$type == "design") {
+    stopifnot(nrow(bca$design) == nrow(boot_t))
+    return(lav_bootstrap_acceleration(boot_t, bca$design))
+  }
+
+  # the influence values of a function phi(theta) of the free parameters
+  # are the influence values of theta, times the gradient of phi; the
+  # gradient is estimated by regressing the bootstrap realizations of phi
+  # on those of theta
+  boot_coef <- as.matrix(boot_coef)
+  stopifnot(nrow(boot_coef) == nrow(boot_t))
+  x_ok <- stats::complete.cases(boot_coef) &
+    apply(boot_coef, 1L, function(x) all(is.finite(x)))
+  acc <- numeric(ncol(boot_t))
+  same <- identical(dim(boot_t), dim(boot_coef)) &&
+    isTRUE(all.equal(unclass(boot_t), unclass(boot_coef),
+                     check.attributes = FALSE))
+  for (j in seq_len(ncol(boot_t))) {
+    if (same) {
+      grad <- numeric(ncol(boot_coef))
+      grad[j] <- 1
+    } else {
+      ok <- x_ok & is.finite(boot_t[, j])
+      if (sum(ok) <= ncol(boot_coef) + 1L) {
+        next
+      }
+      grad <- stats::lm.fit(
+        x = cbind(1, boot_coef[ok, , drop = FALSE]), y = boot_t[ok, j]
+      )$coefficients[-1L]
+      grad[!is.finite(grad)] <- 0
+    }
+    # influence values, centered per group
+    num <- 0
+    den <- 0
+    for (g in seq_along(bca$infl)) {
+      tmp_l <- drop(bca$infl[[g]] %*% grad)
+      tmp_l <- tmp_l - mean(tmp_l)
+      num <- num + sum(tmp_l^3)
+      den <- den + sum(tmp_l^2)
+    }
+    if (den > 0) {
+      acc[j] <- num / (6 * den^1.5)
+    }
+  }
+
+  acc
+}
+
 # Build the design matrix used to compute empirical influence values for the
 # BCa method: an intercept column followed by the bootstrap frequency matrix,
 # with one reference case per group removed (to avoid collinearity, since the

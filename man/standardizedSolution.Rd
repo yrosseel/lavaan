@@ -156,7 +156,10 @@ everyday users, but for authors of external R packages that depend on
 
   In addition, if \code{boot_ci_type = "bca"}, the empirical-influence design
   matrix used to compute the acceleration constant is stored as the
-  \code{"design"} attribute (retrieve with \code{attr(x, "design")}).
+  \code{"design"} attribute (retrieve with \code{attr(x, "design")}); see
+  \code{\link{parameterEstimates}} for the cases where the acceleration
+  constant is computed from the infinitesimal jackknife influence values
+  instead.
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3

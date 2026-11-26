@@ -169,8 +169,8 @@ and the indices of the refitted draws are available as the attributes
 perfect: the distance is itself an estimate, and a few inaccurate draws may
 not be detected. The HOIJ-2 method is currently only
 available for single-level models that are estimated by ML using complete
-continuous data, possibly with multiple groups and linear equality
-constraints (but without inequality constraints or bounds).
+continuous data, possibly with multiple groups and (linear or nonlinear)
+equality constraints (but without inequality constraints or bounds).
 
 Both methods can be requested when fitting the model, by using
 \code{se = "bootstrap"} together with, for example,
