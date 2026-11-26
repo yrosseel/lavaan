@@ -537,7 +537,8 @@ lav_options_default <- function() {
   # bootstrap
   # - R: number of bootstrap draws
   # - method: "refit" (refit the model for every bootstrap sample), or
-  #           "ij" (infinitesimal jackknife approximation, no refitting)
+  #           "ij" or "hoij2" (first-order or second-order infinitesimal
+  #           jackknife approximation, no refitting)
   elm("bootstrap", list(R = 1000L, method = "refit"), oklen = c(1L, 10L))
 
   # gamma

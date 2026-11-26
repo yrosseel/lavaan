@@ -14,7 +14,21 @@
 #   observed (unit) information. The covariance matrix of these draws is
 #   (up to Monte Carlo error) the Huber-White sandwich estimator.
 #
-# - method = "hoij2": the second-order expansion (not available yet)
+# - method = "hoij2": the second-order expansion (the second-order
+#   infinitesimal jackknife). Let w(t) = 1 + t * (w - 1) be the path from
+#   the original weights (t = 0) to the bootstrap weights (t = 1), and let
+#   G(theta, w) be the gradient of the objective function, evaluated at the
+#   reweighted sample statistics. Along the (first-order) path
+#
+#       r(t) = G(theta + t * theta.dot, w(t))
+#
+#   we have r(0) = 0 and r'(0) = 0, and (implicit function theorem)
+#
+#       theta(w) ~ theta + theta.dot - 0.5 * E.inv %*% r''(0)
+#
+#   where r''(0) is computed by finite differences (four gradient
+#   evaluations per bootstrap sample). No casewise Hessians or arrays of
+#   third-order derivatives are needed.
 #
 # The draws are returned in exactly the same format as the draws of
 # lav_bootstrap_internal(fun = "coef"), so that everything downstream
@@ -22,6 +36,7 @@
 # used unchanged.
 #
 # YR/LV 26 Nov 2026: first version (method = "ij")
+# YR/LV 26 Nov 2026: add method = "hoij2" (complete data only)
 
 # check if the approximate bootstrap is available for this model; if not,
 # stop with an informative message
@@ -34,11 +49,9 @@ lav_bootstrap_ij_check <- function(lavmodel = NULL,
       "The bootstrap method %1$s is not available (yet) %2$s; please use
        bootstrap = list(method = \"refit\") instead.", dQuote(method), reason))
   }
-  if (method != "ij") {
+  if (!method %in% c("ij", "hoij2")) {
     lav_msg_stop(gettextf(
-      "The bootstrap method %s is not available (yet); please use
-       bootstrap = list(method = \"ij\") or
-       bootstrap = list(method = \"refit\") instead.", dQuote(method)))
+      "The bootstrap method %s is not available (yet).", dQuote(method)))
   }
   if (lavmodel@estimator != "ML") {
     not_available(gettext("if the estimator is not ML"))
@@ -68,6 +81,41 @@ lav_bootstrap_ij_check <- function(lavmodel = NULL,
   if (!is.null(lavoptions$backend) &&
       !identical(lavoptions$backend, "lavaan")) {
     not_available(gettext("for models estimated by an external backend"))
+  }
+
+  # second-order: more restrictions (for now)
+  if (method == "hoij2") {
+    if (lavoptions$missing != "listwise") {
+      not_available(gettextf("if missing = %s", dQuote(lavoptions$missing)))
+    }
+    if (length(lavdata@sampling.weights) > 0L) {
+      not_available(gettext("in combination with sampling weights"))
+    }
+    if (!is.null(lavoptions$likelihood) &&
+        lavoptions$likelihood != "normal") {
+      not_available(gettextf("if likelihood = %s",
+                             dQuote(lavoptions$likelihood)))
+    }
+    if (lavmodel@correlation) {
+      not_available(gettext("for correlation structures"))
+    }
+    if (lavmodel@group.w.free) {
+      not_available(gettext("if group_w_free = TRUE"))
+    }
+    if (lavmodel@ceq.simple.only) {
+      not_available(gettext("if ceq_simple = TRUE"))
+    }
+    if (length(lavmodel@ceq.nonlinear.idx) > 0L) {
+      not_available(gettext("for models with nonlinear equality constraints"))
+    }
+    # inequality constraints, or bounds
+    n_ceq <- length(lavmodel@ceq.linear.idx)
+    if (length(lavmodel@cin.linear.idx) > 0L ||
+        length(lavmodel@cin.nonlinear.idx) > 0L ||
+        nrow(lavmodel@con.jac) > n_ceq) {
+      not_available(
+        gettext("for models with inequality constraints or bounds"))
+    }
   }
 
   invisible(TRUE)
@@ -189,7 +237,8 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
                              lavcache = NULL,
                              r = 1000L,
                              method = "ij",
-                             check_post = TRUE) {
+                             check_post = TRUE,
+                             freq = NULL) {
   lav_bootstrap_ij_check(
     lavmodel = lavmodel, lavdata = lavdata, lavoptions = lavoptions,
     method = method
@@ -231,8 +280,15 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
        matrix, but it could not be computed.", dQuote(method)))
   }
 
-  # bootstrap weights
-  freq <- lav_bootstrap_ij_freq(lavdata = lavdata, r = r, iseed = iseed)
+  # bootstrap weights; these can also be provided by the caller, as a list
+  # (per group) of weight matrices (not necessarily integers; internal use)
+  if (is.null(freq)) {
+    freq <- lav_bootstrap_ij_freq(lavdata = lavdata, r = r, iseed = iseed)
+  } else {
+    stopifnot(is.list(freq), length(freq) == lavdata@ngroups)
+    r <- nrow(freq[[1]])
+    attr(freq, "pool") <- lapply(lavdata@X, function(x) seq_len(nrow(x)))
+  }
 
   # weighted sum of the casewise scores: sum_i (w_i - 1) s_i
   g_delta <- matrix(0, r, ncol(e_inv))
@@ -246,6 +302,18 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   # first-order change in the parameters (e_inv is symmetric)
   d_theta <- (g_delta / lavsamplestats@ntotal) %*% e_inv
 
+  # second-order term
+  error_idx <- integer(0L)
+  if (method == "hoij2") {
+    tmp <- lav_bootstrap_hoij2(
+      lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
+      lavpartable = lavpartable, lavcache = lavcache, freq = freq, x0 = x0,
+      d_theta = d_theta, e_inv = e_inv
+    )
+    d_theta <- tmp$d_theta + tmp$d2_theta
+    error_idx <- tmp$error_idx
+  }
+
   # simple equality constraints: from the 'unco' space to the free parameters
   if (lavmodel@ceq.simple.only) {
     k_matrix <- lavmodel@ceq.simple.K
@@ -255,7 +323,7 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   coef_boot <- d_theta + matrix(x0, r, length(x0), byrow = TRUE)
 
   # same attributes as lav_bootstrap_internal()
-  attr(coef_boot, "error.idx") <- integer(0L)
+  attr(coef_boot, "error.idx") <- error_idx
   if (check_post) {
     attr(coef_boot, "nonadmissible") <-
       lav_bootstrap_ij_nonadmissible(coef_boot, lavpartable = lavpartable)
@@ -264,6 +332,185 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   attr(coef_boot, "method") <- method
 
   coef_boot
+}
+
+# the second-order term of the second-order infinitesimal jackknife
+#
+# - freq: list (per group) of (r x n_g) weight matrices
+# - x0: the original estimates
+# - d_theta: the (r x npar) first-order changes (score based)
+# - e_inv: the (augmented) inverse of the observed (unit) information
+#
+# returns a list with
+# - d_theta: the first-order changes; these are the score-based ones, unless
+#     the model contains fixed exogenous covariates (fixed.x = TRUE): their
+#     (co)variances and means are fixed to the sample values, which change
+#     under reweighting; the first-order changes are then recomputed (by
+#     finite differences) to take this into account
+# - d2_theta: the second-order changes
+# - error_idx: bootstrap samples for which the gradient could not be
+#     computed along the path (the corresponding rows are set to NA)
+lav_bootstrap_hoij2 <- function(lavmodel = NULL,
+                                lavsamplestats = NULL,
+                                lavdata = NULL,
+                                lavpartable = NULL,
+                                lavcache = NULL,
+                                freq = NULL,
+                                x0 = NULL,
+                                d_theta = NULL,
+                                e_inv = NULL,
+                                h = 0.05) {
+  ngroups <- lavdata@ngroups
+  r <- nrow(d_theta)
+  npar <- length(x0)
+
+  # per group: the first and second (raw) moments, and their changes (per
+  # unit of t) for every bootstrap sample
+  mom <- vector("list", length = ngroups)
+  for (g in seq_len(ngroups)) {
+    y <- lavdata@X[[g]]
+    n_g <- nrow(y)
+    nvar <- ncol(y)
+    vech_idx <- which(lower.tri(diag(nvar), diag = TRUE), arr.ind = TRUE)
+    yy <- y[, vech_idx[, 1L], drop = FALSE] * y[, vech_idx[, 2L], drop = FALSE]
+    dw <- freq[[g]] - 1
+    mean_g <- colMeans(y)
+    yy_g <- colMeans(yy)
+    mom[[g]] <- list(
+      nvar = nvar, vech_idx = vech_idx, mean = mean_g, yy = yy_g,
+      d_mean = (dw %*% y) / n_g, d_yy = (dw %*% yy) / n_g
+    )
+    # sanity check: can we reproduce the sample statistics?
+    cov_g <- matrix(0, nvar, nvar)
+    cov_g[vech_idx] <- yy_g
+    cov_g[vech_idx[, 2:1, drop = FALSE]] <- yy_g
+    cov_g <- cov_g - tcrossprod(mean_g)
+    if (max(abs(cov_g - lavsamplestats@cov[[g]])) >
+        1e-8 * max(1, abs(cov_g)) ||
+        max(abs(mean_g - lavsamplestats@mean[[g]])) >
+        1e-8 * max(1, abs(mean_g))) {
+      lav_msg_stop(gettext(
+        "The bootstrap method \"hoij2\" could not reproduce the sample
+         statistics from the raw data; please use
+         bootstrap = list(method = \"refit\") instead."))
+    }
+  }
+
+  # fixed exogenous covariates: where do their (fixed) sample statistics
+  # live in GLIST?
+  exo_map <- lav_bootstrap_hoij2_exo_map(
+    lavmodel = lavmodel, lavdata = lavdata, lavpartable = lavpartable
+  )
+  exo_flag <- length(exo_map) > 0L
+
+  # the gradient, at theta, for bootstrap sample b, at position t on the path
+  grad_fn <- function(theta, b, t) {
+    for (g in seq_len(ngroups)) {
+      mm <- mom[[g]]
+      mean_t <- mm$mean + t * mm$d_mean[b, ]
+      yy_t <- mm$yy + t * mm$d_yy[b, ]
+      cov_t <- matrix(0, mm$nvar, mm$nvar)
+      cov_t[mm$vech_idx] <- yy_t
+      cov_t[mm$vech_idx[, 2:1, drop = FALSE]] <- yy_t
+      cov_t <- cov_t - tcrossprod(mean_t)
+      lavsamplestats@mean[[g]] <- mean_t
+      lavsamplestats@cov[[g]] <- cov_t
+    }
+    glist <- lav_model_x2glist(lavmodel = lavmodel, x = theta)
+    for (el in exo_map) {
+      if (el$type == "cov") {
+        value <- lavsamplestats@cov[[el$group]][el$idx]
+      } else {
+        value <- lavsamplestats@mean[[el$group]][el$idx]
+      }
+      glist[[el$mm]][el$m_idx] <- value
+    }
+    out <- try(suppressWarnings(lav_model_grad(
+      lavmodel = lavmodel, glist = glist, lavsamplestats = lavsamplestats,
+      lavdata = lavdata, lavcache = lavcache, type = "free"
+    )), silent = TRUE)
+    if (inherits(out, "try-error") || length(out) != npar ||
+        !all(is.finite(out))) {
+      out <- rep(as.numeric(NA), npar)
+    }
+    as.numeric(out)
+  }
+
+  # (should be zero)
+  r0 <- grad_fn(x0, 1L, 0)
+
+  d1_theta <- d_theta
+  d2_theta <- matrix(as.numeric(NA), r, npar)
+  for (b in seq_len(r)) {
+    # fixed.x: recompute the first-order change, including the effect of
+    # the changing sample statistics of the exogenous covariates
+    if (exo_flag) {
+      g_dot <- (-grad_fn(x0, b, 2 * h) + 8 * grad_fn(x0, b, h) -
+        8 * grad_fn(x0, b, -h) + grad_fn(x0, b, -2 * h)) / (12 * h)
+      d1_theta[b, ] <- -1 * drop(e_inv %*% g_dot)
+    }
+    dir <- d1_theta[b, ]
+    # second derivative of r(t) at t = 0 (five-point stencil)
+    r2 <- (-grad_fn(x0 + 2 * h * dir, b, 2 * h) +
+      16 * grad_fn(x0 + h * dir, b, h) - 30 * r0 +
+      16 * grad_fn(x0 - h * dir, b, -h) -
+      grad_fn(x0 - 2 * h * dir, b, -2 * h)) / (12 * h * h)
+    d2_theta[b, ] <- -0.5 * drop(e_inv %*% r2)
+  }
+
+  error_idx <- which(!stats::complete.cases(d1_theta + d2_theta))
+
+  list(d_theta = d1_theta, d2_theta = d2_theta, error_idx = error_idx)
+}
+
+# fixed.x = TRUE: the (co)variances and the means of the exogenous
+# covariates are fixed to their sample values, and stored in GLIST; return a
+# list with (per model matrix) the elements that need to be updated if the
+# sample statistics change
+lav_bootstrap_hoij2_exo_map <- function(lavmodel = NULL,
+                                        lavdata = NULL,
+                                        lavpartable = NULL) {
+  out <- list()
+  if (!lavmodel@fixed.x || is.null(lavpartable) ||
+      is.null(lavpartable$exo)) {
+    return(out)
+  }
+  exo_id <- lavpartable$id[lavpartable$exo == 1L & lavpartable$free == 0L &
+    lavpartable$op %in% c("~~", "~1")]
+  if (length(exo_id) == 0L) {
+    return(out)
+  }
+  pt_row <- match(exo_id, lavpartable$id)
+  nmat <- lavmodel@nmat
+  for (mm in seq_along(lavmodel@GLIST)) {
+    keep <- which(lavmodel@x.user.idx[[mm]] %in% exo_id)
+    if (length(keep) == 0L) {
+      next
+    }
+    g <- which(mm <= cumsum(nmat))[1L]
+    ov_names <- lavdata@ov.names[[g]]
+    row_idx <- pt_row[match(lavmodel@x.user.idx[[mm]][keep], exo_id)]
+    op <- lavpartable$op[row_idx]
+    lhs <- match(lavpartable$lhs[row_idx], ov_names)
+    rhs <- match(lavpartable$rhs[row_idx], ov_names)
+    m_idx <- lavmodel@m.user.idx[[mm]][keep]
+    cov_idx <- which(op == "~~")
+    if (length(cov_idx) > 0L) {
+      out[[length(out) + 1L]] <- list(
+        mm = mm, group = g, type = "cov", m_idx = m_idx[cov_idx],
+        idx = cbind(lhs[cov_idx], rhs[cov_idx])
+      )
+    }
+    mean_idx <- which(op == "~1")
+    if (length(mean_idx) > 0L) {
+      out[[length(out) + 1L]] <- list(
+        mm = mm, group = g, type = "mean", m_idx = m_idx[mean_idx],
+        idx = lhs[mean_idx]
+      )
+    }
+  }
+
+  out
 }
 
 # the 'method' element of the bootstrap option

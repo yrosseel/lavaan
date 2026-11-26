@@ -66,8 +66,9 @@ value.}
 \item{method}{Character. If \code{"refit"} (the default), the model is refitted
 for every bootstrap sample. If \code{"ij"}, the bootstrap draws are
 approximated by the (first-order) infinitesimal jackknife, without refitting
-the model; see Details. This is only available for the ordinary bootstrap
-and \code{fun = "coef"}.}
+the model. If \code{"hoij2"}, the second-order infinitesimal jackknife is
+used instead; see Details. The approximations are only available for the
+ordinary bootstrap and \code{fun = "coef"}.}
 }
 \author{Yves Rosseel. Ed Merkle contributed
 Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
@@ -129,9 +130,27 @@ therefore mostly useful to obtain percentile-type confidence intervals for
 in the weights, it does not capture any skewness that is due to the
 estimator itself (for example, for variance parameters in small samples).
 The IJ method is currently only available for single-level models that are
-estimated by ML using continuous (complete or incomplete) data. The same
-method can be requested when fitting the model, by using
-\code{se = "bootstrap"} together with
+estimated by ML using continuous (complete or incomplete) data.
+
+If \code{method = "hoij2"}, a second-order term is added to the expansion
+(the second-order infinitesimal jackknife, or HOIJ-2). This term accounts for
+the change in the curvature of the objective function, both due to the
+reweighting of the observations and due to the change in the parameter
+values. As a result, the draws can also reflect the skewness of the
+estimator itself. The second-order term needs four evaluations of the
+gradient for every bootstrap sample, which is still much cheaper than
+refitting the model. Note that HOIJ-2 is a local (quadratic) approximation:
+it is usually closer to the refitted estimates than IJ for typical bootstrap
+samples, but it can be less accurate for the most extreme bootstrap samples,
+and these samples determine the limits of percentile-type confidence
+intervals. Comparing the IJ and HOIJ-2 results, or comparing with a (small)
+number of refits, is recommended. The HOIJ-2 method is currently only
+available for single-level models that are estimated by ML using complete
+continuous data, possibly with multiple groups and linear equality
+constraints (but without inequality constraints or bounds).
+
+Both methods can be requested when fitting the model, by using
+\code{se = "bootstrap"} together with, for example,
 \code{bootstrap = list(R = 1000, method = "ij")}.}
 \references{
 Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in

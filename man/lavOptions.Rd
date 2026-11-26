@@ -787,9 +787,10 @@ Estimation options:
      used. This can also be a list with elements \code{R} (the number of
      bootstrap draws; default 1000) and \code{method}. If \code{method} is
      \code{"refit"} (the default), the model is refitted for every bootstrap
-     sample. If \code{method} is \code{"ij"}, the bootstrap draws are
-     approximated by the infinitesimal jackknife, without refitting the
-     model; see \code{\link{lavBootstrap}} for details.}
+     sample. If \code{method} is \code{"ij"} or \code{"hoij2"}, the
+     bootstrap draws are approximated by the (first-order or second-order)
+     infinitesimal jackknife, without refitting the model; see
+     \code{\link{lavBootstrap}} for details.}
    \item{\code{do_fit}:}{If \code{FALSE}, the model is not fit, and the 
      current starting values of the model parameters are preserved.}
    \item{\code{backend}:}{Character (or function). The estimation
