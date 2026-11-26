@@ -263,12 +263,16 @@ lav_step11_estoptim <- function(lavdata = NULL,
         }
       }
 
-      # EM-stall -> nlminb hand-off (new in 0.7-1): the EM iterations
-      # typically stop because the loglikelihood stalls (fx_tol) before
-      # the gradient becomes small (dx_tol); in that case, refine the
-      # solution with nlminb, warm-started at the EM values; if nlminb
-      # gets lost in parameter space (non-finite values, a worse
-      # solution) or does not converge, we keep the EM solution;
+      # EM -> nlminb hand-off (new in 0.7-1): the EM iterations stop
+      # because the loglikelihood stalls (fx_tol), or because the gradient
+      # becomes small (dx_tol); the latter is an absolute criterion that
+      # depends on the scale of the parameters, and the solution may
+      # still be (slightly) off. Therefore, we always refine the solution
+      # with nlminb (0.7-3; before, only if max|grad| >= dx_tol),
+      # warm-started at the EM values, so that the final solution meets
+      # the same convergence criteria as a solution found by nlminb
+      # alone; if nlminb gets lost in parameter space (non-finite values,
+      # a worse solution) or does not converge, we keep the EM solution;
       # returns list(x = , accepted = )
       run_handoff <- function(x) {
         accept <- FALSE
@@ -280,21 +284,14 @@ lav_step11_estoptim <- function(lavdata = NULL,
           lavdata = lavdata,
           lavcache = lavcache
         ), silent = TRUE)
-        # random slopes: if the M-step model used the variance floor,
-        # the EM fixed point is not the optimum of the exact model:
-        # always run the hand-off
-        force_handoff <- isTRUE(attr(x, "rs.floored"))
         # pd_lv = TRUE: an EM solution that is not admissible (this should
         # not happen: the M-step is constrained) is never kept
         pd_bad <- !is.null(pd) &&
           !lav_model_pd_admissible(as.numeric(x), pd = pd)
-        if (pd_bad) {
-          force_handoff <- TRUE
-        }
-        if (!inherits(dx_em, "try-error") && all(is.finite(dx_em)) &&
-            (force_handoff || max(abs(dx_em)) >= em_dx_tol)) {
+        # (the gradient is only used to check if nlminb can start here)
+        if (!inherits(dx_em, "try-error") && all(is.finite(dx_em))) {
           if (lav_verbose()) {
-            cat("EM stalled (max|grad| = ", max(abs(dx_em)),
+            cat("EM ended (max|grad| = ", max(abs(dx_em)),
                 "); handing off to nlminb\n")
           }
           # objective at the EM solution (for the accept/reject check)

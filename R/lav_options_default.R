@@ -435,7 +435,9 @@ lav_options_default <- function() {
   elm("rstarts", 0L, nm = "[0, 10000]", num2int = TRUE) # new in 0.6-18
   # keep the var-cov matrix of the latent variables positive definite
   # (TRUE, FALSE, or "auto": only where possible)
-  elm("pd.lv", FALSE, chr = "auto", bl = TRUE)          # new in 0.7-3
+  # "default" - resolved later: "auto" if the model contains random slopes
+  #             (rv() modifier) and mimic is not "Mplus", FALSE otherwise
+  elm("pd.lv", "default", chr = c("default", "auto"), bl = TRUE) # 0.7-3
 
   # inference
   elm("se", "default", chr = c(
@@ -576,8 +578,9 @@ lav_options_default <- function() {
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.args", "fused"), TRUE, bl = TRUE)
-  # if the EM iterations end with a non-negligible gradient (a 'stall'),
-  # refine the solution with nlminb, warm-started at the EM values?
+  # when the EM iterations end, refine the solution with nlminb,
+  # warm-started at the EM values? (always, since 0.7-3; before, only if
+  # the EM iterations ended with a gradient larger than dx_tol)
   # (the EM solution is kept if nlminb fails to converge, or ends up
   # at a worse solution)
   elm(c("em.args", "nlminb_handoff"), TRUE, bl = TRUE)

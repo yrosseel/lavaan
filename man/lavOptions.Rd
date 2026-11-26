@@ -952,7 +952,9 @@ Optimization options:
       error, and nothing is done if the optimizer does not support this
       option. Note that with \code{"auto"}, two models that are compared
       may not have been estimated in the same way. The default is
-      \code{FALSE}.}
+      \code{FALSE}, unless the model contains random slopes (see the
+      \code{rv()} modifier): in that case, the default is \code{"auto"},
+      except if \code{mimic = "Mplus"}.}
     \item{\code{em_args}:}{List. Options related to the EM algorithm that
       is used to estimate the model parameters when
       \code{optim_method = "em"} (currently only available for multilevel
@@ -971,11 +973,13 @@ Optimization options:
       and the \code{fused} element controls whether the loglikelihood is
       computed as a byproduct of the E-step (see the \code{em_h1_args}
       option for details on both). If the \code{nlminb_handoff} element
-      is \code{TRUE} (the default), and the EM iterations end with a
-      non-negligible gradient (larger than \code{dx_tol}; this typically
-      happens when the loglikelihood stalls before the gradient has
-      converged), the solution is refined by a quasi-Newton (nlminb)
-      run, warm-started at the EM values; the refined solution is only
+      is \code{TRUE} (the default), the solution of the EM iterations
+      is always refined by a quasi-Newton (nlminb) run, warm-started at
+      the EM values, so that the final solution meets the same
+      convergence criteria as a solution that is found by nlminb alone
+      (the stopping rules of the EM algorithm are absolute criteria, and
+      the EM solution may still be slightly off); the refined solution
+      is only
       accepted if nlminb converges to an (at least) equally good
       solution; otherwise, the EM solution is retained. If, in addition,
       the \code{early_handoff} element is \code{TRUE} (the default), the

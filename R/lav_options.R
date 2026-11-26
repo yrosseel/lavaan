@@ -885,6 +885,14 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
+  # pd.lv: resolve "default"
+  # random slopes: keep the variance-covariance matrix of the random
+  # effects positive definite, unless we mimic Mplus (which does not
+  # restrict this matrix)
+  if (identical(opt$pd.lv, "default")) {
+    opt$pd.lv <- if (opt$.rv && opt$mimic != "Mplus") "auto" else FALSE
+  }
+
   # em.h1.args: resolve "default" values
   # note: the single-level (missing data) EM converges when the change in
   # the parameter values is smaller than tol (tol was 1e-06 < 0.6-9), while
