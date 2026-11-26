@@ -4,7 +4,8 @@ lav_step04_pt <- function(slot_par_table = NULL,
                                        lavoptions = NULL,
                                        lavdata = NULL,
                                        constraints = NULL,
-                                       marker = NULL) {
+                                       marker = NULL,
+                                       meanstructure_explicit = FALSE) {
   # # # # # # # # # # # #
   # #  4. lavpartable # #
   # # # # # # # # # # # #
@@ -171,6 +172,36 @@ lav_step04_pt <- function(slot_par_table = NULL,
       lavpartable$ustart[zero_var_idx] <- lavoptions$em.args$zerovar_offset
     }
     lavpartable <- lav_pt_set_cache(lavpartable, NULL, force = TRUE)
+  }
+
+  # if the model was given as a parameter table (or a fitted lavaan
+  # object), the parameter table is not created from the options, and the
+  # meanstructure option (which may have been switched on because a
+  # sample_mean= or group= argument was given) can be in conflict with the
+  # parameter table: meanstructure = TRUE, but no intercepts/means (~1) in
+  # the parameter table. The parameter table decides: there is no mean
+  # structure (otherwise, the model-implied means do not exist, and
+  # computing eg the loglikelihood fails with a cryptic error)
+  if (isTRUE(lavoptions$meanstructure) &&
+      !(is.character(model) || inherits(model, "formula")) &&
+      !any(lavpartable$op == "~1") &&
+      !isTRUE(lavoptions$.categorical) &&
+      !isTRUE(lavoptions$conditional.x) &&
+      lavdata@nlevels == 1L) {
+    if (lavoptions$missing %in% c("ml", "ml.x")) {
+      lav_msg_stop(gettextf(
+        "The parameter table does not contain any intercepts or means (~1),
+         but a mean structure is needed if missing = %s.",
+        dQuote(lavoptions$missing)))
+    }
+    # only tell the user if meanstructure = TRUE was explicitly requested;
+    # otherwise (sample_mean= or group= was given), this is done silently
+    if (meanstructure_explicit) {
+      lav_msg_note(gettext(
+        "The parameter table does not contain any intercepts or means (~1);
+         the meanstructure option is set to FALSE."))
+    }
+    lavoptions$meanstructure <- FALSE
   }
 
   list(

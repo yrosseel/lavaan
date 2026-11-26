@@ -62,6 +62,13 @@ lav_step05_samp <- function(slot_sample_stats = NULL,
         gettext("sample_mean= argument is missing, but model contains
                 mean/intercept parameters."))
     }
+    # no mean structure (the model was given as a parameter table without
+    # any intercepts/means; see lav_step04_pt()): ignore the sample means,
+    # otherwise lav_samp_from_moments() would switch on the mean structure
+    # for the sample statistics only (WLS.obs, NACOV, ...)
+    if (!lavoptions$meanstructure && !is.null(sample_mean)) {
+      sample_mean <- NULL
+    }
     lavsamplestats <- lav_samp_from_moments(
       sample_cov    = sample_cov,
       sample_mean   = sample_mean,

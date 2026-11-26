@@ -467,7 +467,8 @@ lavaan <- function(
     flat_model     = flat_model,
     lavoptions     = lavoptions,
     lavdata        = lavdata,
-    constraints    = constraints
+    constraints    = constraints,
+    meanstructure_explicit = isTRUE(dotdotdot$meanstructure)
   )
   lavoptions <- temp$lavoptions
   lavpartable <- temp$lavpartable
