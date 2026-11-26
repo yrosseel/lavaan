@@ -140,15 +140,16 @@ shown in the output.}
   compute the acceleration constant is stored as the \code{"design"}
   attribute of the returned data.frame (retrieve with
   \code{attr(x, "design")}). This design matrix (the bootstrap frequencies)
-  needs more (successful) bootstrap draws than observations, and no
-  sampling weights. If these conditions are not met, or if the bootstrap
+  needs more (successful) bootstrap draws than observations, no
+  sampling weights, and no clustered data. If these conditions are not met, or if the bootstrap
   draws were approximated by the infinitesimal jackknife (see the
   \code{bootstrap} option in \code{\link{lavOptions}}), the acceleration
   constants are computed from the infinitesimal jackknife influence values
   instead (the casewise scores, premultiplied by the inverse of the observed
   information matrix); this is only possible for single-level models
   estimated by ML using continuous data, and no \code{"design"} attribute
-  is returned in this case. The parameter estimates in the bootstrap samples
+  is returned in this case. For clustered data (cluster bootstrap), the
+  influence values of the clusters are used. The parameter estimates in the bootstrap samples
   themselves are available via \code{lavInspect(object, "coef_boot")}.
 }
 \references{

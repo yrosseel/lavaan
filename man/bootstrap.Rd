@@ -138,7 +138,10 @@ therefore mostly useful to obtain percentile-type confidence intervals for
 in the weights, it does not capture any skewness that is due to the
 estimator itself (for example, for variance parameters in small samples).
 The IJ method is currently only available for single-level models that are
-estimated by ML using continuous (complete or incomplete) data.
+estimated by ML using continuous (complete or incomplete) data. If the data
+are clustered (\code{cluster = }), whole clusters are resampled (as for
+\code{method = "refit"}); the covariance matrix of the IJ draws then equals
+the cluster-robust sandwich covariance matrix.
 
 If \code{method = "hoij2"}, a second-order term is added to the expansion
 (the second-order infinitesimal jackknife, or HOIJ-2). This term accounts for
@@ -168,9 +171,27 @@ and the indices of the refitted draws are available as the attributes
 \code{"dist"} and \code{"guard"} of the returned matrix. The guard is not
 perfect: the distance is itself an estimate, and a few inaccurate draws may
 not be detected. The HOIJ-2 method is currently only
-available for single-level models that are estimated by ML using complete
-continuous data, possibly with multiple groups and (linear or nonlinear)
-equality constraints (but without inequality constraints or bounds).
+available for single-level models that are estimated by ML using continuous
+data (complete, or incomplete with \code{missing = "ml"}), possibly with
+multiple groups, sampling weights, clustered data (cluster bootstrap), and
+(linear or nonlinear) equality constraints.
+
+Bounds and linear inequality constraints are also allowed for HOIJ-2. Those
+that are active in the original solution are treated as equality
+constraints: the approximate draws stay on the boundary. This is not what
+happens in every bootstrap sample: in some samples, the solution leaves the
+boundary, and in other samples, a bound or constraint that was not active
+becomes active. The estimates are not a smooth function of the weights at
+these transitions, and no Taylor expansion can describe them. The guard
+therefore also flags (and refits) every bootstrap sample for which the
+approximate draw violates a bound or an inequality constraint, or for which
+the sign of the Lagrange multiplier of an active bound or constraint
+changes; the indices are available as the \code{bound.idx} element of the
+\code{"guard"} attribute. If a bound is active, a substantial fraction of
+the bootstrap samples is typically refitted. With \code{guard = FALSE},
+these draws are not corrected, and bounds or inequality constraints should
+then not be combined with HOIJ-2. Nonlinear inequality constraints are not
+supported.
 
 Both methods can be requested when fitting the model, by using
 \code{se = "bootstrap"} together with, for example,

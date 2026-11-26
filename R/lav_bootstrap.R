@@ -255,10 +255,10 @@ lav_bootstrap_internal <- function(object = NULL,
   }
 
   # the bootstrap samples are given: a list (per group) of matrices with
-  # row indices (one row per bootstrap sample); internal use only
+  # row indices (or cluster indices, for clustered data), one row per
+  # bootstrap sample; internal use only
   if (!is.null(boot_idx_fixed)) {
-    stopifnot(type == "ordinary", is.list(boot_idx_fixed),
-              length(lavdata_1@cluster) == 0L)
+    stopifnot(type == "ordinary", is.list(boot_idx_fixed))
     r <- nrow(boot_idx_fixed[[1]])
     t_star <- t_star[seq_len(r), , drop = FALSE]
   }
@@ -313,9 +313,11 @@ lav_bootstrap_internal <- function(object = NULL,
         "the cluster bootstrap is currently only available for a single
          cluster (level-2) variable."))
     }
-    lav_msg_note(gettext(
-      "clustered/multilevel data detected: the bootstrap resamples whole
-       clusters (not individual observations)."))
+    if (is.null(boot_idx_fixed)) {
+      lav_msg_note(gettext(
+        "clustered/multilevel data detected: the bootstrap resamples whole
+         clusters (not individual observations)."))
+    }
   }
 
   # bollen.stine, yuan, or parametric: we need the Sigma.hat values
@@ -465,7 +467,12 @@ lav_bootstrap_internal <- function(object = NULL,
           cl_rows <- split(seq_along(cl_idx), cl_idx) # row indices / cluster
           nclus <- length(cl_rows)
           stopifnot(nclus > 1L)
-          cl_boot <- sample.int(nclus, replace = TRUE)
+          if (!is.null(boot_idx_fixed)) {
+            # the bootstrap samples are given (no random sampling)
+            cl_boot <- boot_idx_fixed[[g]][b, ]
+          } else {
+            cl_boot <- sample.int(nclus, replace = TRUE)
+          }
           boot_idx <- unlist(cl_rows[cl_boot], use.names = FALSE)
           # relabel: each resampled cluster instance gets a fresh id, so a
           # cluster drawn more than once is treated as several distinct
@@ -1122,23 +1129,20 @@ lav_bootstrap_acceleration <- function(boot_t, design) {
 #   of the free parameters (the casewise scores, premultiplied by the inverse
 #   of the observed information); this works for any number of bootstrap
 #   runs, but it is only available if the casewise scores are available (see
-#   lav_bootstrap_ij_check())
+#   lav_bootstrap_ij_check()); for clustered data (cluster bootstrap), the
+#   influence values of the clusters are used
 #
 # The "ij" type is used if the bootstrap draws themselves were obtained by
 # the infinitesimal jackknife (bootstrap method "ij" or "hoij2"), or if the
 # prerequisites for the "design" type are not met.
 lav_bootstrap_bca_setup <- function(object, error_idx = integer(0L)) {
-  if (length(object@Data@cluster) > 0L) {
-    lav_msg_stop(gettext(
-      "BCa confidence intervals are not available for clustered/multilevel
-       data (cluster bootstrap)."))
-  }
+  clustered <- length(object@Data@cluster) > 0L
   r <- object@Options$bootstrap
   if (is.list(r)) {
     r <- r$R
   }
   design_ok <- (r - length(error_idx)) >= object@SampleStats@ntotal &&
-    is.null(object@Data@weights[[1]])
+    is.null(object@Data@weights[[1]]) && !clustered
   ij_ok <- !inherits(try(lav_bootstrap_ij_check(
     lavmodel = object@Model, lavdata = object@Data,
     lavoptions = object@Options, method = "ij"
@@ -1158,6 +1162,13 @@ lav_bootstrap_bca_setup <- function(object, error_idx = integer(0L)) {
     lavdata = object@Data, lavoptions = object@Options,
     lavimplied = object@implied, lavh1 = object@h1, lavcache = object@Cache
   )
+  # cluster bootstrap: the influence values of the clusters
+  if (clustered) {
+    for (g in seq_along(infl)) {
+      infl[[g]] <- rowsum.default(infl[[g]],
+        group = object@Data@Lp[[g]]$cluster.idx[[2L]], reorder = FALSE)
+    }
+  }
   list(type = "ij", design = NULL, infl = infl)
 }
 
