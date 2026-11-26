@@ -124,14 +124,32 @@ exploratory factors), which would otherwise inflate the standard errors. Note
 that the raw bootstrap coefficients returned by \code{lavBootstrap(object,
 fun = "coef")} are \emph{not} aligned to a reference solution in this way.
 
-If \code{method = "ij"}, the model is not refitted. A bootstrap sample is
+If \code{method} is \code{"ij"} or \code{"hoij2"}, the model is not refitted
+for the bootstrap samples; the bootstrap draws are approximated instead. See
+the section \sQuote{Approximate bootstrap methods} below.}
+\section{Approximate bootstrap methods}{
+Refitting the model for every bootstrap sample can take a long time. The
+methods \code{"ij"} and \code{"hoij2"} avoid (most of) these refits. They
+are requested with the \code{method} argument of \code{lavBootstrap()}, or,
+when fitting the model, by using \code{se = "bootstrap"} together with,
+for example, \code{bootstrap = list(R = 1000, method = "ij")} or
+\code{bootstrap = list(R = 1000, method = "hoij2", guard_tol = 0.1)}. The
+draws are stored in the same way as the refitted draws, so that everything
+that is based on them (standard errors, the confidence intervals of
+\code{\link{parameterEstimates}} and \code{\link{standardizedSolution}},
+including those for defined parameters, and \code{lavInspect(object,
+"coef_boot")}) works in the same way. The same bootstrap samples are used
+as for \code{method = "refit"} (given the same \code{iseed}, and no
+parallelization). Only the ordinary (nonparametric) bootstrap of the
+parameter estimates (\code{fun = "coef"}) is supported.
+
+\subsection{The infinitesimal jackknife (\code{method = "ij"})}{
+A bootstrap sample is
 equivalent to giving each observation a (multinomial) weight, and the
 estimates are a smooth function of these weights. The infinitesimal jackknife
 (IJ) approximates this function by a first-order Taylor expansion around the
 original (unit) weights, using the casewise scores and the observed
-information matrix of the original fit. The same bootstrap samples are used
-as for \code{method = "refit"} (given the same \code{iseed}, and no
-parallelization). The covariance matrix of the IJ draws equals (up to Monte
+information matrix of the original fit. The covariance matrix of the IJ draws equals (up to Monte
 Carlo error) the Huber-White (sandwich) covariance matrix; the draws are
 therefore mostly useful to obtain percentile-type confidence intervals for
 (nonlinear) functions of the parameters. Because the approximation is linear
@@ -143,8 +161,9 @@ ULS). If the data
 are clustered (\code{cluster = }), whole clusters are resampled (as for
 \code{method = "refit"}); the covariance matrix of the IJ draws then equals
 the cluster-robust sandwich covariance matrix.
-
-If \code{method = "hoij2"}, a second-order term is added to the expansion
+}
+\subsection{The second-order infinitesimal jackknife (\code{method = "hoij2"})}{
+A second-order term is added to the expansion
 (the second-order infinitesimal jackknife, or HOIJ-2). This term accounts for
 the change in the curvature of the objective function, both due to the
 reweighting of the observations and due to the change in the parameter
@@ -155,7 +174,11 @@ refitting the model. Note that HOIJ-2 is a local (quadratic) approximation:
 it is usually closer to the refitted estimates than IJ for typical bootstrap
 samples, but it can be less accurate for the most extreme bootstrap samples,
 and these samples determine the limits of percentile-type confidence
-intervals. For this reason, a guard is used by default
+intervals.
+}
+\subsection{The guard}{
+Because the most extreme bootstrap samples matter most for confidence
+intervals, a guard is used by default for \code{method = "hoij2"}
 (\code{guard = TRUE}). For every bootstrap sample, the gradient of the
 objective function is evaluated at the approximate draw, using the sample
 statistics of that bootstrap sample. If the draw were exact, this gradient
@@ -171,7 +194,10 @@ if this happens for more than half of the bootstrap samples. The distances
 and the indices of the refitted draws are available as the attributes
 \code{"dist"} and \code{"guard"} of the returned matrix. The guard is not
 perfect: the distance is itself an estimate, and a few inaccurate draws may
-not be detected. The HOIJ-2 method is currently only
+not be detected.
+}
+\subsection{Scope (ML)}{
+The HOIJ-2 method is currently only
 available for single-level models that are estimated by ML using continuous
 data (complete, or incomplete with \code{missing = "ml"}), possibly with
 multiple groups, sampling weights, clustered data (cluster bootstrap), and
@@ -193,7 +219,8 @@ the bootstrap samples is typically refitted. With \code{guard = FALSE},
 these draws are not corrected, and bounds or inequality constraints should
 then not be combined with HOIJ-2. Nonlinear inequality constraints are not
 supported.
-
+}
+\subsection{DWLS and ULS (continuous or categorical data)}{
 Both methods are also available for single-level models that are estimated
 by DWLS or ULS, using complete continuous or categorical data (this includes
 the estimators \code{"WLSMV"} and \code{"ULSMV"}); exogenous covariates,
@@ -220,11 +247,28 @@ second stage: the distance is computed using the approximate sample
 statistics, and it can not detect that these statistics themselves are
 inaccurate for a bootstrap sample (for example, if a response category is
 almost empty).
-
-Both methods can be requested when fitting the model, by using
-\code{se = "bootstrap"} together with, for example,
-\code{bootstrap = list(R = 1000, method = "ij")} or
-\code{bootstrap = list(R = 1000, method = "hoij2", guard_tol = 0.1)}.}
+}
+\subsection{Which method to use?}{
+\itemize{
+  \item \code{"refit"} is the reference: use it whenever the computing time
+    is acceptable, and always in small samples or if the model is only
+    weakly identified.
+  \item \code{"ij"} costs (almost) nothing. Its standard errors are the
+    robust (sandwich) standard errors, so its main use is to obtain
+    percentile-type confidence intervals for (nonlinear) functions of the
+    parameters, such as indirect effects or standardized parameters, in
+    larger samples.
+  \item \code{"hoij2"} (with the guard) is meant to replace the refit
+    bootstrap if the latter is too slow: in larger samples almost no
+    bootstrap samples need a refit, while in smaller samples the guard
+    falls back on refitting where needed. The number of refitted draws is
+    shown in the summary output.
+}
+BCa confidence intervals (\code{boot_ci_type = "bca"}) are available for
+both methods; the acceleration constants are then computed from the
+influence values (see \code{\link{parameterEstimates}}).
+}
+}
 \references{
 Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,
@@ -236,6 +280,13 @@ Multivariate Behavioral Research, 42, 261--281.
 
 Field, C. A., & Welsh, A. H. (2007). Bootstrapping clustered data. Journal of
 the Royal Statistical Society: Series B, 69, 369--390.
+
+Giordano, R., Stephenson, W., Liu, R., Jordan, M. I., & Broderick, T. (2019).
+A Swiss army infinitesimal jackknife. Proceedings of the 22nd International
+Conference on Artificial Intelligence and Statistics (AISTATS), PMLR 89.
+
+Giordano, R., Jordan, M. I., & Broderick, T. (2019). A higher-order Swiss
+army infinitesimal jackknife. arXiv:1907.12116.
 }
 
 \examples{
@@ -257,4 +308,25 @@ T.boot <- lavBootstrap(fit, r=10, type="bollen.stine",
 
 # compute a bootstrap based p-value
 pvalue.boot <- length(which(T.boot > T.orig))/length(T.boot)
+
+# approximate the bootstrap draws, without refitting the model:
+# a mediation model with an indirect effect
+med.model <- ' visual  =~ x1 + x2 + x3
+               textual =~ x4 + x5 + x6
+               speed   =~ x7 + x8 + x9
+               speed  ~ a*textual
+               visual ~ b*speed + c*textual
+               ab := a*b '
+# first-order (infinitesimal jackknife)
+fit.ij <- sem(med.model, data = HolzingerSwineford1939, se = "bootstrap",
+              bootstrap = list(R = 500, method = "ij"), iseed = 1234)
+parameterEstimates(fit.ij)[25, ]
+# second-order, with a guard that refits the model where needed
+\donttest{
+fit.h2 <- sem(med.model, data = HolzingerSwineford1939, se = "bootstrap",
+              bootstrap = list(R = 500, method = "hoij2"), iseed = 1234)
+parameterEstimates(fit.h2)[25, ]
+# the number of bootstrap samples that were refitted
+length(attr(lavInspect(fit.h2, "coef_boot"), "guard")$refit.idx)
+}
 }
