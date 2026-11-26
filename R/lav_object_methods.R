@@ -1383,8 +1383,15 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "se") <- object@Options$se
         attr(tmp_list, "group.label") <- object@Data@group.label
         attr(tmp_list, "level.label") <- object@Data@level.label
-        attr(tmp_list, "bootstrap") <- object@Options$bootstrap
+        # only the number of (requested) bootstrap draws
+        tmp_bootstrap <- object@Options$bootstrap
+        if (is.list(tmp_bootstrap) && !is.null(tmp_bootstrap$R)) {
+          tmp_bootstrap <- tmp_bootstrap$R
+        }
+        attr(tmp_list, "bootstrap") <- tmp_bootstrap
         attr(tmp_list, "bootstrap.successful") <- bootstrap_successful
+        attr(tmp_list, "bootstrap.method") <-
+          lav_bootstrap_method(object@Options)
         attr(tmp_list, "missing") <- object@Options$missing
         attr(tmp_list, "observed.information") <-
           object@Options$observed.information[1]

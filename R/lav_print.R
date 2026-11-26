@@ -366,6 +366,16 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
         c2 <- c(c2, attr(x, "bootstrap"))
         c1 <- c(c1, "Number of successful bootstrap draws")
         c2 <- c(c2, attr(x, "bootstrap.successful"))
+        # approximate bootstrap draws (no refitting)?
+        boot_method <- attr(x, "bootstrap.method")
+        if (!is.null(boot_method) && boot_method != "refit") {
+          c1 <- c(c1, "Bootstrap approximation")
+          c2 <- c(c2, switch(boot_method,
+            ij = "IJ",
+            hoij2 = "HOIJ-2",
+            boot_method
+          ))
+        }
       }
 
       # format c1/c2

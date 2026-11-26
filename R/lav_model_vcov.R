@@ -38,20 +38,38 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   }
 
   test <- NULL
-  coef_1 <- lav_bootstrap_internal(
-    object = NULL,
-    lavmodel = lavmodel,
-    lavsamplestats = lavsamplestats,
-    lavpartable = lavpartable,
-    lavoptions = lavoptions,
-    lavdata = lavdata,
-    r = r,
-    check_post = lavoptions$check.post,
-    type = boot_type,
-    fun = ifelse(boot_type == "bollen.stine",
-      "coeftest", "coef"
+  boot_method <- lav_bootstrap_method(lavoptions)
+  if (boot_method == "refit") {
+    coef_1 <- lav_bootstrap_internal(
+      object = NULL,
+      lavmodel = lavmodel,
+      lavsamplestats = lavsamplestats,
+      lavpartable = lavpartable,
+      lavoptions = lavoptions,
+      lavdata = lavdata,
+      r = r,
+      check_post = lavoptions$check.post,
+      type = boot_type,
+      fun = ifelse(boot_type == "bollen.stine",
+        "coeftest", "coef"
+      )
     )
-  )
+  } else {
+    # approximate the bootstrap draws, without refitting the model
+    coef_1 <- lav_bootstrap_ij(
+      lavmodel = lavmodel,
+      lavsamplestats = lavsamplestats,
+      lavdata = lavdata,
+      lavoptions = lavoptions,
+      lavpartable = lavpartable,
+      lavimplied = lavimplied,
+      lavh1 = lavh1,
+      lavcache = lavcache,
+      r = r,
+      method = boot_method,
+      check_post = lavoptions$check.post
+    )
+  }
   # warn            = -1L)
   coef_orig <- coef_1
 
@@ -868,6 +886,14 @@ lav_model_vcov <- function(lavmodel = NULL,
         use_ginv = use_ginv
       )
   } else if (se == "bootstrap") {
+    # approximate bootstrap draws (no refitting): check (outside the try())
+    # if the requested method is available for this model
+    if (lav_bootstrap_method(lavoptions) != "refit") {
+      lav_bootstrap_ij_check(
+        lavmodel = lavmodel, lavdata = lavdata, lavoptions = lavoptions,
+        method = lav_bootstrap_method(lavoptions)
+      )
+    }
     nvar_cov <- try(
       lav_model_nvcov_bootstrap(
         lavmodel = lavmodel,

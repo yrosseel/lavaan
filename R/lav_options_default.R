@@ -535,7 +535,10 @@ lav_options_default <- function() {
   elm("ug2.old.approach", FALSE, bl = TRUE)
 
   # bootstrap
-  elm("bootstrap", list(R = 1000L))
+  # - R: number of bootstrap draws
+  # - method: "refit" (refit the model for every bootstrap sample), or
+  #           "ij" (infinitesimal jackknife approximation, no refitting)
+  elm("bootstrap", list(R = 1000L, method = "refit"), oklen = c(1L, 10L))
 
   # gamma
   elm("gamma.n.minus.one", FALSE, bl = TRUE)

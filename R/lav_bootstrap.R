@@ -39,6 +39,7 @@ lavBootstrap <- function(object,                                   # nolint
                             cl = NULL,
                             iseed = NULL,
                             h0_rmsea = NULL,
+                            method = "refit",
                             ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
@@ -94,6 +95,45 @@ lavBootstrap <- function(object,                                   # nolint
   if (object@Model@conditional.x) {
     lav_msg_stop(gettext(
       "this function is not (yet) available if conditional_x = TRUE"))
+  }
+
+  # approximate the bootstrap draws, without refitting the model?
+  method <- lav_options_bootstrap(list(method = method))$method
+  if (method != "refit") {
+    if (type_1 != "ordinary") {
+      lav_msg_stop(gettextf(
+        "The bootstrap method %1$s is only available for the ordinary
+         (nonparametric) bootstrap, not for type = %2$s.",
+        dQuote(method), dQuote(type_1)))
+    }
+    if (!(is.character(fun) && length(fun) == 1L && fun == "coef") &&
+        !identical(fun, coef) && !identical(fun, lavaan::coef)) {
+      lav_msg_stop(gettextf(
+        "The bootstrap method %s is only available (for now) for
+         fun = \"coef\".", dQuote(method)))
+    }
+    lavoptions_ij <- object@Options
+    lavoptions_ij["iseed"] <- list(iseed)
+    out <- lav_bootstrap_ij(
+      lavmodel = object@Model,
+      lavsamplestats = object@SampleStats,
+      lavdata = object@Data,
+      lavoptions = lavoptions_ij,
+      lavpartable = object@ParTable,
+      lavimplied = object@implied,
+      lavh1 = object@h1,
+      lavcache = object@Cache,
+      r = r,
+      method = method,
+      check_post = TRUE
+    )
+    colnames(out) <- names(coef(object))
+    notok <- length(attr(out, "nonadmissible"))
+    if (notok > 0L) {
+      lav_msg_warn(gettextf(
+        "%s bootstrap runs resulted in nonadmissible solutions.", notok))
+    }
+    return(out)
   }
 
   lavoptions <- list(

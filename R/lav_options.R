@@ -1173,9 +1173,9 @@ lav_options_set <- function(opt = NULL) {
   }
 
   # bootstrap ####
-  if (is.numeric(opt$bootstrap)) {
-    opt$bootstrap <- list(R = as.integer(opt$bootstrap))
-  }
+  # either a single number (the number of bootstrap draws), or a list with
+  # elements R (number of draws) and/or method ("refit" or "ij")
+  opt$bootstrap <- lav_options_bootstrap(opt$bootstrap)
   if (opt$se == "bootstrap") {
     opt$information[1] <- "observed"
     if (length(opt$information) > 1L && opt$information[2] == "default") {
@@ -2125,4 +2125,71 @@ lav_options_mg_agreement_preset <- function(opt = list()) {
   ropts$mg_agreement_preset <- preset
   opt$rotation.args <- ropts
   opt
+}
+
+# the bootstrap option: either a single number (the number of bootstrap
+# draws), or a list with (optional) elements:
+#  - R: the number of bootstrap draws (default 1000)
+#  - method: "refit" (the default): refit the model for every bootstrap
+#            sample; "ij": approximate the bootstrap draws by the
+#            infinitesimal jackknife (no refitting); "hoij2": idem, but
+#            using the second-order infinitesimal jackknife
+# always returns a list(R = , method = )
+lav_options_bootstrap <- function(bootstrap = NULL) {
+  out <- list(R = 1000L, method = "refit")
+  if (is.null(bootstrap)) {
+    return(out)
+  }
+  if (is.numeric(bootstrap)) {
+    bootstrap <- list(R = bootstrap[1L])
+  }
+  if (!is.list(bootstrap)) {
+    lav_msg_stop(gettext(
+      "The bootstrap option should be a single number (the number of
+       bootstrap draws) or a list."))
+  }
+  if (length(bootstrap) > 0L) {
+    opt_names <- names(bootstrap)
+    if (is.null(opt_names)) {
+      opt_names <- rep("", length(bootstrap))
+    }
+    # the first element may be unnamed: the number of bootstrap draws
+    if (!nzchar(opt_names[1L]) && is.numeric(bootstrap[[1L]])) {
+      opt_names[1L] <- "R"
+    }
+    opt_names[tolower(opt_names) %in% c("r", "bootstrap")] <- "R"
+    opt_names[tolower(opt_names) == "method"] <- "method"
+    bad_idx <- which(!opt_names %in% c("R", "method"))
+    if (length(bad_idx) > 0L || anyDuplicated(opt_names) > 0L) {
+      lav_msg_stop(gettextf(
+        "The bootstrap option should be a list with elements %s.",
+        lav_msg_view(c("R", "method"), log_sep = "array")))
+    }
+    names(bootstrap) <- opt_names
+  }
+  if (!is.null(bootstrap$R)) {
+    r <- bootstrap$R
+    if (!is.numeric(r) || length(r) != 1L || !is.finite(r) || r < 1) {
+      lav_msg_stop(gettext(
+        "The number of bootstrap draws (R) should be a positive integer."))
+    }
+    out$R <- as.integer(r)
+  }
+  if (!is.null(bootstrap$method)) {
+    method <- bootstrap$method
+    if (!is.character(method) || length(method) != 1L) {
+      lav_msg_stop(gettext(
+        "The bootstrap method should be a single character string."))
+    }
+    method <- lav_keyword_canonical(method)
+    if (!method %in% c("refit", "ij", "hoij2")) {
+      lav_msg_stop(gettextf(
+        "Unknown bootstrap method: %1$s; valid choices are %2$s.",
+        dQuote(bootstrap$method),
+        lav_msg_view(c("refit", "ij", "hoij2"), log_sep = "or")))
+    }
+    out$method <- method
+  }
+
+  out
 }

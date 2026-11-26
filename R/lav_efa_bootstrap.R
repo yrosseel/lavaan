@@ -119,6 +119,15 @@ lav_efa_bootstrap_run <- function(lavmodel = NULL, lavpartable = NULL,
   }
   r <- as.integer(r)
 
+  # the rotated/aligned solutions need a refit for every bootstrap sample
+  boot_method <- lav_bootstrap_method(lavoptions)
+  if (boot_method != "refit") {
+    lav_msg_stop(gettextf(
+      "The bootstrap method %s is not available (yet) for rotated or aligned
+       solutions; please use bootstrap = list(method = \"refit\") instead.",
+      dQuote(boot_method)))
+  }
+
   coef_boot <- lav_bootstrap_internal(
     object = NULL,
     lavmodel = lavmodel,

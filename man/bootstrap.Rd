@@ -9,7 +9,8 @@ lavBootstrap(object, r = 1000L, type = "ordinary", verbose = FALSE,
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus = min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE)),
-                cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
+                cl = NULL, iseed = NULL, h0_rmsea = NULL, method = "refit",
+                ...)
 bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
@@ -62,6 +63,11 @@ created for the duration of the \code{lavBootstrap} call.}
 \item{h0_rmsea}{Only used if \code{type="yuan"}. Allows one to do the Yuan
 bootstrap under the hypothesis that the population RMSEA equals a specified
 value.}
+\item{method}{Character. If \code{"refit"} (the default), the model is refitted
+for every bootstrap sample. If \code{"ij"}, the bootstrap draws are
+approximated by the (first-order) infinitesimal jackknife, without refitting
+the model; see Details. This is only available for the ordinary bootstrap
+and \code{fun = "coef"}.}
 }
 \author{Yves Rosseel. Ed Merkle contributed
 Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
@@ -107,7 +113,26 @@ the original (full-sample) rotated solution before their variability is used.
 This alignment resolves the rotational indeterminacy (the sign and order of the
 exploratory factors), which would otherwise inflate the standard errors. Note
 that the raw bootstrap coefficients returned by \code{lavBootstrap(object,
-fun = "coef")} are \emph{not} aligned to a reference solution in this way.}
+fun = "coef")} are \emph{not} aligned to a reference solution in this way.
+
+If \code{method = "ij"}, the model is not refitted. A bootstrap sample is
+equivalent to giving each observation a (multinomial) weight, and the
+estimates are a smooth function of these weights. The infinitesimal jackknife
+(IJ) approximates this function by a first-order Taylor expansion around the
+original (unit) weights, using the casewise scores and the observed
+information matrix of the original fit. The same bootstrap samples are used
+as for \code{method = "refit"} (given the same \code{iseed}, and no
+parallelization). The covariance matrix of the IJ draws equals (up to Monte
+Carlo error) the Huber-White (sandwich) covariance matrix; the draws are
+therefore mostly useful to obtain percentile-type confidence intervals for
+(nonlinear) functions of the parameters. Because the approximation is linear
+in the weights, it does not capture any skewness that is due to the
+estimator itself (for example, for variance parameters in small samples).
+The IJ method is currently only available for single-level models that are
+estimated by ML using continuous (complete or incomplete) data. The same
+method can be requested when fitting the model, by using
+\code{se = "bootstrap"} together with
+\code{bootstrap = list(R = 1000, method = "ij")}.}
 \references{
 Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,
