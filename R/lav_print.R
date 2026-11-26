@@ -375,6 +375,10 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
             hoij2 = "HOIJ-2",
             boot_method
           ))
+          if (!is.null(attr(x, "bootstrap.refitted"))) {
+            c1 <- c(c1, "Number of refitted bootstrap draws")
+            c2 <- c(c2, attr(x, "bootstrap.refitted"))
+          }
         }
       }
 

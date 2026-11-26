@@ -539,7 +539,10 @@ lav_options_default <- function() {
   # - method: "refit" (refit the model for every bootstrap sample), or
   #           "ij" or "hoij2" (first-order or second-order infinitesimal
   #           jackknife approximation, no refitting)
-  elm("bootstrap", list(R = 1000L, method = "refit"), oklen = c(1L, 10L))
+  # - guard, guard_tol: (method = "hoij2" only) refit the model for the
+  #           bootstrap samples where the approximation is not accurate
+  elm("bootstrap", list(R = 1000L, method = "refit", guard = TRUE,
+                        guard_tol = 0.25), oklen = c(1L, 10L))
 
   # gamma
   elm("gamma.n.minus.one", FALSE, bl = TRUE)

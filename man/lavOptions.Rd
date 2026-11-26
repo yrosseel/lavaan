@@ -789,7 +789,11 @@ Estimation options:
      \code{"refit"} (the default), the model is refitted for every bootstrap
      sample. If \code{method} is \code{"ij"} or \code{"hoij2"}, the
      bootstrap draws are approximated by the (first-order or second-order)
-     infinitesimal jackknife, without refitting the model; see
+     infinitesimal jackknife, without refitting the model. For
+     \code{"hoij2"}, the elements \code{guard} (logical; default
+     \code{TRUE}) and \code{guard_tol} (default 0.25) control whether the
+     model is still refitted for those bootstrap samples where the
+     approximation is not accurate enough; see
      \code{\link{lavBootstrap}} for details.}
    \item{\code{do_fit}:}{If \code{FALSE}, the model is not fit, and the 
      current starting values of the model parameters are preserved.}

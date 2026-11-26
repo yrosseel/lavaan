@@ -40,6 +40,8 @@ lavBootstrap <- function(object,                                   # nolint
                             iseed = NULL,
                             h0_rmsea = NULL,
                             method = "refit",
+                            guard = TRUE,
+                            guard_tol = 0.25,
                             ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
@@ -98,7 +100,10 @@ lavBootstrap <- function(object,                                   # nolint
   }
 
   # approximate the bootstrap draws, without refitting the model?
-  method <- lav_options_bootstrap(list(method = method))$method
+  boot_opt <- lav_options_bootstrap(list(
+    R = r, method = method, guard = guard, guard_tol = guard_tol
+  ))
+  method <- boot_opt$method
   if (method != "refit") {
     if (type_1 != "ordinary") {
       lav_msg_stop(gettextf(
@@ -114,6 +119,13 @@ lavBootstrap <- function(object,                                   # nolint
     }
     lavoptions_ij <- object@Options
     lavoptions_ij["iseed"] <- list(iseed)
+    lavoptions_ij$bootstrap <- boot_opt
+    lavoptions_ij$parallel <- parallel
+    lavoptions_ij$ncpus <- ncpus
+    lavoptions_ij["cl"] <- list(cl)
+    if (lavoptions_ij$se == "bootstrap") {
+      lavoptions_ij$se <- "standard"
+    }
     out <- lav_bootstrap_ij(
       lavmodel = object@Model,
       lavsamplestats = object@SampleStats,
@@ -128,6 +140,11 @@ lavBootstrap <- function(object,                                   # nolint
       check_post = TRUE
     )
     colnames(out) <- names(coef(object))
+    nfailed <- length(attr(out, "error.idx"))
+    if (nfailed > 0L) {
+      lav_msg_warn(gettextf(
+        "%s bootstrap runs failed or did not converge.", nfailed))
+    }
     notok <- length(attr(out, "nonadmissible"))
     if (notok > 0L) {
       lav_msg_warn(gettextf(
@@ -180,6 +197,7 @@ lav_bootstrap_internal <- function(object = NULL,
                                    # return.boot     = FALSE,
                                    h0_rmsea = NULL,
                                    efa_reference = NULL,
+                                   boot_idx_fixed = NULL,
                                    ...) {
   # warning: avoid use of 'options', 'sample' (both are used as functions
   # below...
@@ -234,6 +252,15 @@ lav_bootstrap_internal <- function(object = NULL,
       t_star <- matrix(as.numeric(NA), r, lavmodel_1@nx.free + 1L)
       lavoptions_1$test <- "standard"
     }
+  }
+
+  # the bootstrap samples are given: a list (per group) of matrices with
+  # row indices (one row per bootstrap sample); internal use only
+  if (!is.null(boot_idx_fixed)) {
+    stopifnot(type == "ordinary", is.list(boot_idx_fixed),
+              length(lavdata_1@cluster) == 0L)
+    r <- nrow(boot_idx_fixed[[1]])
+    t_star <- t_star[seq_len(r), , drop = FALSE]
   }
 
   # always shut off some options:
@@ -457,7 +484,12 @@ lav_bootstrap_internal <- function(object = NULL,
             pool <- seq_len(nrow(lavdata_1@X[[g]]))
           }
           stopifnot(length(pool) > 1L)
-          boot_idx <- pool[sample.int(length(pool), replace = TRUE)]
+          if (!is.null(boot_idx_fixed)) {
+            # the bootstrap samples are given (no random sampling)
+            boot_idx <- boot_idx_fixed[[g]][b, ]
+          } else {
+            boot_idx <- pool[sample.int(length(pool), replace = TRUE)]
+          }
         }
         boot_idx_1[[g]] <- boot_idx
         data_x[[g]] <- data_x[[g]][boot_idx, , drop = FALSE]

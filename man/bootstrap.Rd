@@ -10,7 +10,7 @@ lavBootstrap(object, r = 1000L, type = "ordinary", verbose = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus = min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE)),
                 cl = NULL, iseed = NULL, h0_rmsea = NULL, method = "refit",
-                ...)
+                guard = TRUE, guard_tol = 0.25, ...)
 bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
@@ -69,6 +69,14 @@ approximated by the (first-order) infinitesimal jackknife, without refitting
 the model. If \code{"hoij2"}, the second-order infinitesimal jackknife is
 used instead; see Details. The approximations are only available for the
 ordinary bootstrap and \code{fun = "coef"}.}
+\item{guard}{Logical. Only used if \code{method = "hoij2"}. If \code{TRUE}
+(the default), the model is refitted for those bootstrap samples where the
+approximation is not accurate enough; see Details.}
+\item{guard_tol}{Numeric. Only used if \code{method = "hoij2"} and
+\code{guard = TRUE}. The model is refitted for a bootstrap sample if the
+estimated distance between the approximate draw and the exact solution
+(expressed in standard error units) exceeds this value. The default is
+0.25.}
 }
 \author{Yves Rosseel. Ed Merkle contributed
 Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
@@ -143,15 +151,31 @@ refitting the model. Note that HOIJ-2 is a local (quadratic) approximation:
 it is usually closer to the refitted estimates than IJ for typical bootstrap
 samples, but it can be less accurate for the most extreme bootstrap samples,
 and these samples determine the limits of percentile-type confidence
-intervals. Comparing the IJ and HOIJ-2 results, or comparing with a (small)
-number of refits, is recommended. The HOIJ-2 method is currently only
+intervals. For this reason, a guard is used by default
+(\code{guard = TRUE}). For every bootstrap sample, the gradient of the
+objective function is evaluated at the approximate draw, using the sample
+statistics of that bootstrap sample. If the draw were exact, this gradient
+would be zero. The size of the gradient is converted to an estimate of the
+distance between the draw and the exact solution, expressed in standard
+error units (the root mean square over the parameters). If this distance
+exceeds \code{guard_tol}, the model is refitted for this bootstrap sample,
+and the approximate draw is replaced by the refitted one. In large samples
+and for well-behaved models, (almost) no bootstrap samples need a refit. In
+small samples, or if the model is only weakly identified, many bootstrap
+samples may need a refit, and the gain in speed is smaller; a note is given
+if this happens for more than half of the bootstrap samples. The distances
+and the indices of the refitted draws are available as the attributes
+\code{"dist"} and \code{"guard"} of the returned matrix. The guard is not
+perfect: the distance is itself an estimate, and a few inaccurate draws may
+not be detected. The HOIJ-2 method is currently only
 available for single-level models that are estimated by ML using complete
 continuous data, possibly with multiple groups and linear equality
 constraints (but without inequality constraints or bounds).
 
 Both methods can be requested when fitting the model, by using
 \code{se = "bootstrap"} together with, for example,
-\code{bootstrap = list(R = 1000, method = "ij")}.}
+\code{bootstrap = list(R = 1000, method = "ij")} or
+\code{bootstrap = list(R = 1000, method = "hoij2", guard_tol = 0.1)}.}
 \references{
 Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,

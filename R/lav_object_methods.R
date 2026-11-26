@@ -1392,6 +1392,10 @@ lavParameterEstimates <- function(object,                      # nolint
         attr(tmp_list, "bootstrap.successful") <- bootstrap_successful
         attr(tmp_list, "bootstrap.method") <-
           lav_bootstrap_method(object@Options)
+        tmp_guard <- attr(object@boot$coef, "guard")
+        if (!is.null(tmp_guard)) {
+          attr(tmp_list, "bootstrap.refitted") <- length(tmp_guard$refit.idx)
+        }
         attr(tmp_list, "missing") <- object@Options$missing
         attr(tmp_list, "observed.information") <-
           object@Options$observed.information[1]

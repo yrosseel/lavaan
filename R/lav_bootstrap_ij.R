@@ -208,6 +208,10 @@ lav_bootstrap_ij_freq <- function(lavdata = NULL, r = 1000L, iseed = NULL) {
 
   # cases that can not be selected keep their (unit) weight
   attr(freq, "pool") <- pool
+  # the bootstrap samples as row indices (to refit the model, if needed)
+  attr(freq, "boot.idx") <- lapply(seq_len(ngroups), function(g) {
+    matrix(pool[[g]][boot_idx[[g]]], nrow = r)
+  })
   freq
 }
 
@@ -304,6 +308,7 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
 
   # second-order term
   error_idx <- integer(0L)
+  guard_dist <- NULL
   if (method == "hoij2") {
     tmp <- lav_bootstrap_hoij2(
       lavmodel = lavmodel, lavsamplestats = lavsamplestats, lavdata = lavdata,
@@ -312,6 +317,7 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
     )
     d_theta <- tmp$d_theta + tmp$d2_theta
     error_idx <- tmp$error_idx
+    guard_dist <- tmp$dist
   }
 
   # simple equality constraints: from the 'unco' space to the free parameters
@@ -321,15 +327,55 @@ lav_bootstrap_ij <- function(lavmodel = NULL,
   }
 
   coef_boot <- d_theta + matrix(x0, r, length(x0), byrow = TRUE)
+  nonadmissible <- lav_bootstrap_ij_nonadmissible(coef_boot,
+    lavpartable = lavpartable)
+
+  # guard: refit the model for the bootstrap samples where the approximation
+  # is not accurate enough (or failed)
+  guard_info <- NULL
+  boot_opt <- lavoptions$bootstrap
+  if (method == "hoij2" && is.list(boot_opt) && isTRUE(boot_opt$guard) &&
+      !is.null(attr(freq, "boot.idx"))) {
+    guard_tol <- boot_opt$guard_tol
+    if (is.null(guard_tol)) {
+      guard_tol <- 0.25
+    }
+    refit_idx <- which(!is.finite(guard_dist) | guard_dist > guard_tol)
+    refit_idx <- sort(union(refit_idx, error_idx))
+    if (length(refit_idx) > 0L) {
+      coef_refit <- lav_bootstrap_internal(
+        object = NULL, lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+        lavpartable = lavpartable, lavoptions = lavoptions,
+        lavdata = lavdata, r = length(refit_idx), check_post = TRUE,
+        type = "ordinary", fun = "coef",
+        boot_idx_fixed = lapply(attr(freq, "boot.idx"), function(x) {
+          x[refit_idx, , drop = FALSE]
+        })
+      )
+      coef_boot[refit_idx, ] <- coef_refit[, , drop = FALSE]
+      error_idx <- refit_idx[attr(coef_refit, "error.idx")]
+      nonadmissible <- sort(c(setdiff(nonadmissible, refit_idx),
+                              refit_idx[attr(coef_refit, "nonadmissible")]))
+    }
+    guard_info <- list(tol = guard_tol, refit.idx = refit_idx)
+    if (length(refit_idx) > r / 2) {
+      lav_msg_note(gettextf(
+        "The bootstrap method %1$s was not accurate enough for %2$s of the
+         %3$s bootstrap samples (for which the model was refitted instead);
+         consider using bootstrap = list(method = \"refit\").",
+        dQuote(method), length(refit_idx), r))
+    }
+  }
 
   # same attributes as lav_bootstrap_internal()
   attr(coef_boot, "error.idx") <- error_idx
   if (check_post) {
-    attr(coef_boot, "nonadmissible") <-
-      lav_bootstrap_ij_nonadmissible(coef_boot, lavpartable = lavpartable)
+    attr(coef_boot, "nonadmissible") <- nonadmissible
   }
+  attr(coef_boot, "guard") <- guard_info
   attr(coef_boot, "seed") <- iseed
   attr(coef_boot, "method") <- method
+  attr(coef_boot, "dist") <- guard_dist
 
   coef_boot
 }
@@ -439,8 +485,16 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
   # (should be zero)
   r0 <- grad_fn(x0, 1L, 0)
 
+  # effective number of parameters (rank of e_inv)
+  ntotal <- lavsamplestats@ntotal
+  npar_eff <- npar
+  if (lavmodel@eq.constraints) {
+    npar_eff <- ncol(lavmodel@eq.constraints.K)
+  }
+
   d1_theta <- d_theta
   d2_theta <- matrix(as.numeric(NA), r, npar)
+  dist <- rep(as.numeric(NA), r)
   for (b in seq_len(r)) {
     # fixed.x: recompute the first-order change, including the effect of
     # the changing sample statistics of the exogenous covariates
@@ -456,11 +510,20 @@ lav_bootstrap_hoij2 <- function(lavmodel = NULL,
       16 * grad_fn(x0 - h * dir, b, -h) -
       grad_fn(x0 - 2 * h * dir, b, -2 * h)) / (12 * h * h)
     d2_theta[b, ] <- -0.5 * drop(e_inv %*% r2)
+    # how far are we from the exact solution for this bootstrap sample?
+    # the gradient at the approximate solution (zero if it is exact),
+    # expressed as the length of the corresponding Newton step, in the
+    # metric of the (total) information: an estimate of the distance to
+    # the exact solution in standard error units (root mean square over
+    # the parameters)
+    g1 <- grad_fn(x0 + d1_theta[b, ] + d2_theta[b, ], b, 1)
+    dist[b] <- sqrt(max(0, ntotal * sum(g1 * drop(e_inv %*% g1)) / npar_eff))
   }
 
   error_idx <- which(!stats::complete.cases(d1_theta + d2_theta))
 
-  list(d_theta = d1_theta, d2_theta = d2_theta, error_idx = error_idx)
+  list(d_theta = d1_theta, d2_theta = d2_theta, error_idx = error_idx,
+       dist = dist)
 }
 
 # fixed.x = TRUE: the (co)variances and the means of the exogenous

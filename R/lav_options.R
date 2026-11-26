@@ -2134,9 +2134,15 @@ lav_options_mg_agreement_preset <- function(opt = list()) {
 #            sample; "ij": approximate the bootstrap draws by the
 #            infinitesimal jackknife (no refitting); "hoij2": idem, but
 #            using the second-order infinitesimal jackknife
-# always returns a list(R = , method = )
+#  - guard: logical (default TRUE); only used if method = "hoij2": refit
+#           the model for the bootstrap samples where the approximation is
+#           not accurate enough
+#  - guard_tol: the (estimated) distance between an approximate draw and
+#           the exact solution for that bootstrap sample (in standard
+#           error units) above which the model is refitted (default 0.25)
+# always returns a list(R = , method = , guard = , guard_tol = )
 lav_options_bootstrap <- function(bootstrap = NULL) {
-  out <- list(R = 1000L, method = "refit")
+  out <- list(R = 1000L, method = "refit", guard = TRUE, guard_tol = 0.25)
   if (is.null(bootstrap)) {
     return(out)
   }
@@ -2159,13 +2165,21 @@ lav_options_bootstrap <- function(bootstrap = NULL) {
     }
     opt_names[tolower(opt_names) %in% c("r", "bootstrap")] <- "R"
     opt_names[tolower(opt_names) == "method"] <- "method"
-    bad_idx <- which(!opt_names %in% c("R", "method"))
-    if (length(bad_idx) > 0L || anyDuplicated(opt_names) > 0L) {
+    opt_names[tolower(opt_names) == "guard"] <- "guard"
+    opt_names[tolower(opt_names) %in% c("guard_tol", "guard.tol")] <-
+      "guard_tol"
+    bad_idx <- which(!opt_names %in% c("R", "method", "guard", "guard_tol"))
+    if (length(bad_idx) > 0L) {
       lav_msg_stop(gettextf(
         "The bootstrap option should be a list with elements %s.",
-        lav_msg_view(c("R", "method"), log_sep = "array")))
+        lav_msg_view(c("R", "method", "guard", "guard_tol"),
+                     log_sep = "array")))
     }
     names(bootstrap) <- opt_names
+    # the user-specified elements have been merged with the defaults; if
+    # the same element occurs twice (eg guard_tol and guard.tol), the last
+    # (user-specified) one wins
+    bootstrap <- bootstrap[!duplicated(opt_names, fromLast = TRUE)]
   }
   if (!is.null(bootstrap$R)) {
     r <- bootstrap$R
@@ -2189,6 +2203,24 @@ lav_options_bootstrap <- function(bootstrap = NULL) {
         lav_msg_view(c("refit", "ij", "hoij2"), log_sep = "or")))
     }
     out$method <- method
+  }
+  if (!is.null(bootstrap$guard)) {
+    guard <- bootstrap$guard
+    if (!is.logical(guard) || length(guard) != 1L || is.na(guard)) {
+      lav_msg_stop(gettext(
+        "The guard element of the bootstrap option should be TRUE or FALSE."))
+    }
+    out$guard <- guard
+  }
+  if (!is.null(bootstrap$guard_tol)) {
+    guard_tol <- bootstrap$guard_tol
+    if (!is.numeric(guard_tol) || length(guard_tol) != 1L ||
+        is.na(guard_tol) || guard_tol < 0) {
+      lav_msg_stop(gettext(
+        "The guard_tol element of the bootstrap option should be a single
+         nonnegative number."))
+    }
+    out$guard_tol <- as.numeric(guard_tol)
   }
 
   out
