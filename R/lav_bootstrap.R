@@ -149,6 +149,16 @@ lavBootstrap <- function(object,                                   # nolint
       method = method,
       check_post = TRUE
     )
+    # simple equality constraints: the draws are in the compact parameter
+    # space; expand them, so that the columns correspond to coef(object)
+    # (as for method = "refit")
+    if (object@Model@ceq.simple.only &&
+        ncol(out) == ncol(object@Model@ceq.simple.K)) {
+      out_attr <- attributes(out)
+      out <- out %*% t(object@Model@ceq.simple.K)
+      keep_idx <- which(!names(out_attr) %in% c("dim", "dimnames"))
+      attributes(out)[names(out_attr)[keep_idx]] <- out_attr[keep_idx]
+    }
     colnames(out) <- names(coef(object))
     nfailed <- length(attr(out, "error.idx"))
     if (nfailed > 0L) {
