@@ -5,13 +5,13 @@
 \description{Bootstrap the LRT, or any other statistic (or vector
 of statistics) you can extract from a fitted lavaan object.}
 \usage{
-lavBootstrap(object, r = 1000L, type = "ordinary", verbose = FALSE, 
+lavBootstrap(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus = min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE)),
                 cl = NULL, iseed = NULL, h0_rmsea = NULL, method = "refit",
                 guard = TRUE, guard_tol = 0.25, ...)
-bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE, 
+bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus = min(2L, max(1L, parallel::detectCores() - 2L, na.rm = TRUE)),
@@ -19,7 +19,8 @@ bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE,
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{r}{Integer. The number of bootstrap draws.}
+\item{R}{Integer. The number of bootstrap draws. The lower-case
+spelling \code{r} is also accepted.}
 \item{type}{If \code{"ordinary"} or \code{"nonparametric"}, the usual (naive)
 bootstrap method is used. If \code{"bollen.stine"}, the data is first
 transformed such that the null hypothesis holds exactly in the resampling
@@ -270,7 +271,7 @@ influence values (see \code{\link{parameterEstimates}}).
 }
 }
 \references{
-Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
+Bollen, K. and Stine, R. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,
         205--229.
 
@@ -303,7 +304,7 @@ T.orig <- fitMeasures(fit, "chisq")
 # bootstrap to get bootstrap test statistics
 # we only generate 10 bootstrap samples in this example; in practice
 # you may wish to use a much higher number
-T.boot <- lavBootstrap(fit, r=10, type="bollen.stine",
+T.boot <- lavBootstrap(fit, R=10, type="bollen.stine",
                           fun = fitMeasures, fit_measures = "chisq")
 
 # compute a bootstrap based p-value

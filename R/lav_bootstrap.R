@@ -27,7 +27,7 @@
 # YR 10 Nov 2024: - detect sam object
 
 lavBootstrap <- function(object,                                   # nolint
-                            r = 1000L,
+                            R = 1000L,                             # nolint
                             type = "ordinary",
                             verbose = FALSE,
                             fun = "coef",
@@ -44,6 +44,16 @@ lavBootstrap <- function(object,                                   # nolint
                             guard_tol = 0.25,
                             ...) {
   dotdotdot <- list(...)
+  # the number of bootstrap draws is 'R' (as in the bootstrap = list(R = )
+  # option, and in boot::boot()); the lower-case spelling 'r' is accepted
+  # too, but an explicit 'R' wins
+  if (!is.null(dotdotdot[["r"]])) {
+    if (missing(R)) {
+      R <- dotdotdot[["r"]]                                        # nolint
+    }
+    dotdotdot[["r"]] <- NULL
+  }
+  r <- R
   lav_adapt_func(environment(), dotdotdot, FALSE)
 
   # check object

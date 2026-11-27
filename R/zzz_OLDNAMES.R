@@ -110,7 +110,7 @@ simulateData <- function(
 }
 # standardize function names in lav_bootstrap.R / 9 December 2025
 bootstrapLavaan <- function(object,
-                            r = 1000L,
+                            R = 1000L,
                             type = "ordinary",
                             verbose = FALSE,
                             fun = "coef",
