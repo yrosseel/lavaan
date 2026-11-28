@@ -462,11 +462,10 @@ lav_object_fit_by_level <- function(object) {
       independent = FALSE
     )
     if (is.null(pt_ps)) {
-      lav_msg_warn(gettext(
-        "level-specific fit measures are not available: the model contains
-         (equality) constraints involving parameters from different
-         levels."))
-      return(list())
+      # no message here (constraints across levels are very common); the
+      # reason is reported if level-specific fit measures are explicitly
+      # requested, see lav_fit_by_level_get()
+      return(structure(list(), reason = "constraints_across_levels"))
     }
     fit_ps <- fit_aux(pt_ps, baseline = FALSE)
     if (inherits(fit_ps, "try-error") || !fit_ps@optim$converged) {
@@ -585,6 +584,12 @@ lav_fit_by_level_get <- function(object, level = NULL) {
     fit_l <- fbl[[target]]
   }
   if (is.null(fit_l)) {
+    if (identical(attr(fbl, "reason"), "constraints_across_levels")) {
+      lav_msg_stop(gettext(
+        "level-specific fit measures are not available: the model contains
+         (equality) constraints involving parameters from different
+         levels."))
+    }
     lav_msg_stop(gettextf(
       "no partially saturated model is available for the %s level.",
       target))
