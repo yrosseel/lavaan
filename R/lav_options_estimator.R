@@ -38,7 +38,7 @@ lav_options_estimator_args_names <- function() {
 lav_options_optim_bounds_names <- function() {
   c("lower", "upper", "lower_factor", "upper_factor",
     "min_reliability_marker", "min_var_ov", "min_var_lv_exo",
-    "min_var_lv_endo", "max_r2_lv_endo")
+    "min_var_lv_endo", "max_r2_lv_endo", "upper_factor_between")
 }
 
 lav_options_est_ml <- function(opt) {

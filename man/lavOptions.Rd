@@ -905,7 +905,12 @@ Optimization options:
       observed and latent variances, and factor loadings. If
       \code{bounds = "wide"}, lower and upper bounds are computed for
       observed and latent variances, and factor loadings; but the range of
-      the bounds is enlarged (allowing again for slightly negative variances).}
+      the bounds is enlarged (allowing again for slightly negative variances).
+      For multilevel models, the bounds are computed for each level
+      separately, using the within and between variances of the unrestricted
+      (h1) model (see the \code{upper_factor_between} element of the
+      \code{optim_bounds} option); automatic bounds are not available (yet)
+      for models with random slopes.}
     \item{\code{optim_bounds}:}{List. This can be used instead of the 
       \code{bounds} argument to allow more control. Possible elements of the
       list are \code{lower}, \code{upper}, \code{lower_factor} and 
@@ -919,9 +924,17 @@ Optimization options:
       example, 1.1 or 1.2; the default is 1.0). Other elements are
       \code{min_reliability_marker} which sets the lower bound for the
       reliability of the marker indicator (if any) of each factor 
-      (default is 0.1). Finally, the \code{min_var_lv_endo} element indicates
+      (default is 0.1). The \code{min_var_lv_endo} element indicates
       the lower bound of the variance of any endogenous latent variable
-      (default is 0.0).}
+      (default is 0.0). Finally, the \code{upper_factor_between} element is
+      only used for multilevel models: it is the factor by which the
+      between-level variances of the unrestricted (h1) model are
+      multiplied before they are used to compute the upper bounds of the
+      between-level parameters (default is 1.5). This extra slack is
+      needed because the model-implied between-level variances can be
+      larger than those of the unrestricted model, in particular if the
+      intraclass correlations are small or the number of clusters is
+      small.}
     \item{\code{pd_lv}:}{Logical, or \code{"auto"}. If \code{TRUE}, the
       model is estimated
       in such a way that the variance-covariance matrix of the latent
