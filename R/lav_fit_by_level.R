@@ -218,6 +218,22 @@ lav_pt_partial_saturation <- function(lavobject, level_keep = 1L,
     }
   }
 
+  # bounds: the parameters of the target level keep their (user-specified
+  # or automatic) bounds, so that the partially saturated model imposes
+  # the same restrictions on this level as the fitted model; the saturated
+  # (and independence) rows are not bounded
+  if (!is.null(pt_user$lower) || !is.null(pt_user$upper)) {
+    if (independent || is.null(pt_keep$lower)) {
+      pt_keep$lower <- rep(-Inf, nrow(pt_keep))
+    }
+    if (independent || is.null(pt_keep$upper)) {
+      pt_keep$upper <- rep(+Inf, nrow(pt_keep))
+    }
+    pt_sat$lower <- rep(-Inf, nrow(pt_sat))
+    pt_sat$upper <- rep(+Inf, nrow(pt_sat))
+    core <- c(core, "lower", "upper")
+  }
+
   # the user parameter table may use labels in the group and level
   # columns (e.g., "g1", "within"), while the generated saturated and
   # independence partables use integer indices; map the indices to the
