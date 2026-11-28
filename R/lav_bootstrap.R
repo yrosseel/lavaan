@@ -310,6 +310,13 @@ lav_bootstrap_internal <- function(object = NULL,
     if (lavoptions_1$estimator %in% c("IV", "JS", "JSA", "MGM")) {
       lavoptions_1$h1 <- TRUE
     }
+    # two-level least-squares estimation (continuous data): the sample
+    # 'statistics' are the estimates of the h1 model (see
+    # lav_samp_wls_2l()), so we need h1 as well
+    if (lavdata_1@nlevels > 1L && !isTRUE(lavoptions_1$.categorical) &&
+        lavoptions_1$estimator %in% c("WLS", "DWLS", "ULS")) {
+      lavoptions_1$h1 <- TRUE
+    }
   }
 
   # clustered/multilevel data?
