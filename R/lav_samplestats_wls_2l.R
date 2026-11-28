@@ -125,6 +125,12 @@ lav_samp_gamma_2l_g <- function(lavsamplestats = NULL,
   gamma_1 <- (gamma_1 + t(gamma_1)) / 2
 
   attr(gamma_1, "keep") <- keep
+  # the normal-theory version (complete data only): nobs * I1^{-1} /
+  # nclusters, and its inverse; the latter is the weight matrix for
+  # two-level GLS
+  if (!lavdata@missing %in% c("ml", "ml.x")) {
+    attr(gamma_1, "wls_v_nt") <- i1 * nclusters / nobs
+  }
   gamma_1
 }
 
@@ -181,6 +187,9 @@ lav_samp_wls_2l <- function(lavsamplestats = NULL,
   estimator <- lavoptions$estimator
   ngroups <- lavsamplestats@ngroups
   nlevels <- lavdata@nlevels
+  # two-level GLS == two-level WLS with a normal-theory weight matrix
+  gls_flag <- (estimator == "WLS" && !is.null(lavoptions$estimator.orig) &&
+    lavoptions$estimator.orig == "GLS")
 
   wls_obs <- vector("list", length = ngroups)
   wls_v <- vector("list", length = ngroups)
@@ -211,14 +220,24 @@ lav_samp_wls_2l <- function(lavsamplestats = NULL,
       g = g
     )
     keep <- attr(gamma_1, "keep")
+    wls_v_nt <- attr(gamma_1, "wls_v_nt")
     attr(gamma_1, "keep") <- NULL
+    attr(gamma_1, "wls_v_nt") <- NULL
     nacov[[g]] <- gamma_1
 
     # weight matrices
-    w <- lav_samp_wls_v_2l(
-      gamma_1 = gamma_1, keep = keep,
-      estimator = estimator, nclusters = nclusters, group = g
-    )
+    if (gls_flag) {
+      # two-level GLS: the normal-theory weight matrix (zero for the
+      # structurally-fixed entries)
+      w_full <- matrix(0, nrow(gamma_1), ncol(gamma_1))
+      w_full[keep, keep] <- wls_v_nt[keep, keep, drop = FALSE]
+      w <- list(wls_v = (w_full + t(w_full)) / 2, wls_vd = NULL)
+    } else {
+      w <- lav_samp_wls_v_2l(
+        gamma_1 = gamma_1, keep = keep,
+        estimator = estimator, nclusters = nclusters, group = g
+      )
+    }
     wls_v[[g]] <- w$wls_v
     if (!is.null(w$wls_vd)) {
       wls_vd[[g]] <- w$wls_vd

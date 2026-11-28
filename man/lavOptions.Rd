@@ -478,7 +478,13 @@ Estimation options:
       (sometimes called ADF estimation), \code{"ULS"} for unweighted least 
       squares, \code{"DWLS"} for diagonally weighted least squares,
       and \code{"DLS"} for distributionally-weighted least squares. These
-      are the main options that affect the estimation. For convenience, the
+      are the main options that affect the estimation. For two-level
+      models, the least-squares estimators (\code{"GLS"}, \code{"WLS"},
+      \code{"DWLS"} and \code{"ULS"}) fit the model to the within and
+      between means and covariances of the unrestricted (h1) model; for
+      \code{"GLS"}, the weight matrix is the (normal-theory) expected
+      information matrix of this unrestricted model (complete continuous
+      data only). For convenience, the
       \code{"ML"} option can be extended as \code{"MLM"}, \code{"MLMV"},
       \code{"MLMVS"}, \code{"MLF"}, and \code{"MLR"}.
       The estimation will still be plain \code{"ML"}, but now

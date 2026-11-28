@@ -139,12 +139,9 @@ lav_options_est_gls <- function(opt) {
     lav_msg_stop(gettext(
       "ordered categorical data is not supported when estimator is GLS."))
   }
-  if (opt$.multilevel) {
-    # no two-level normal-theory weight matrix (yet); before 0.7-1 this
-    # failed silently during estimation
-    lav_msg_stop(gettext(
-      "multilevel data is not supported when estimator is GLS."))
-  }
+  # note: two-level GLS never arrives here: it is handled as two-level
+  # WLS with a normal-theory weight matrix (see the multilevel section of
+  # lav_options_set(), and lav_samp_wls_2l())
   # two-stage missing data: estimation uses the (EM) saturated moments, while
   # the SEs use the robust.sem sandwich (with the two-stage NACOV) and the
   # scaled (satorra.bentler) test; se/test/missing are set in lav_options()
@@ -276,8 +273,11 @@ lav_options_est_wls <- function(opt) {
     "browne.residual.adf.model"
   ))
   if (length(bad_idx) > 0L) {
+    # (two-level GLS is handled as two-level WLS: show the estimator that
+    # was requested)
     lav_msg_stop(gettextf(
-      "invalid value(s) in test= argument when estimator is WLS: %s.",
+      "invalid value(s) in test= argument when estimator is %1$s: %2$s.",
+      if (identical(opt$estimator.orig, "GLS")) "GLS" else "WLS",
       paste(opt$test[bad_idx], collapse = " ")))
   }
   # missing

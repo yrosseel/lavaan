@@ -296,7 +296,16 @@ lav_object_summary <- function(object, header = TRUE,
       }
 
       res$optim <- list(
-        estimator = object@Options$estimator,
+        # two-level GLS is fitted as two-level WLS with a normal-theory
+        # weight matrix (see lav_samp_wls_2l())
+        estimator = if (object@Data@nlevels > 1L &&
+          object@Options$estimator == "WLS" &&
+          !is.null(object@Options$estimator.orig) &&
+          object@Options$estimator.orig == "GLS") {
+          "GLS"
+        } else {
+          object@Options$estimator
+        },
         estimator.args = object@Options$estimator.args,
         correlation = correlation_flag,
         optim.method = if (!is.null(object@optim$backend)) {

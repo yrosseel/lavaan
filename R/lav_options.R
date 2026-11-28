@@ -553,6 +553,20 @@ lav_options_set <- function(opt = NULL) {
   if (opt$.multilevel) {
     opt$meanstructure <- TRUE
 
+    # two-level GLS: this is two-level WLS, where the weight matrix is the
+    # normal-theory one (the expected information matrix of the h1 model,
+    # evaluated at the h1 estimates), instead of the inverse of the
+    # (cluster-robust) Gamma matrix; estimator.orig remains "GLS"
+    # (see lav_samp_wls_2l())
+    if (opt$estimator == "gls") {
+      if (opt$.categorical) {
+        lav_msg_stop(gettext(
+          "ordered categorical data is not supported when estimator is
+           GLS."))
+      }
+      opt$estimator <- "wls"
+    }
+
     # no estimator supports sampling weights in the two-level case (yet);
     # before 0.7-1 the ML machinery silently ignored them
     if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
