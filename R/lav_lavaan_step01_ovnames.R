@@ -34,6 +34,7 @@ lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
         "panel= needs the default parser (parser = \"open\")."))
     }
     flat_model <- lav_parse_model_string_open(model, long_lags = TRUE)
+    flat_model <- lav_syntax_reorder_levels(flat_model)
   } else if (is.character(model)) {
     if (is.null(dotdotdot_parser)) {
       flat_model <- lavParseModelString(model)

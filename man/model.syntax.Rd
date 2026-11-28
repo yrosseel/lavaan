@@ -629,6 +629,27 @@ the index values of the two sides: 1 for \code{wx2 ~ wx1}, 0 for
 present if the syntax contains indexed names.
 }
 
+\section{Two-level models}{
+In a two-level model (with a \code{cluster=} argument), the model syntax
+contains a separate block for each level. A block starts with the
+\code{level:} block identifier, followed by a number or a label:
+\preformatted{ level: 1
+   fw =~ y1 + y2 + y3
+ level: 2
+   fb =~ y1 + y2 + y3
+}
+In general, the first block describes the within level, and the second
+block describes the between level. The blocks may be given in any order
+if the labels reveal which level is which: if both labels are numbers, the
+smallest number refers to the within level; the labels \code{within} and
+\code{between} (in lower or upper case) are recognized, and so is a label
+that equals the name of the cluster variable (the between level). In all
+other cases (for example \code{level: student} and \code{level: school},
+if the cluster variable has a different name), the order of appearance is
+used. In a multiple group model, the level blocks are nested within the
+\code{group:} blocks.
+}
+
 \section{Random slopes (two-level models)}{
 In a two-level model (with a \code{cluster=} argument), the \code{rv()}
 modifier can be used in the level-1 (within) part of the model to turn a

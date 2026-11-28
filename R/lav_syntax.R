@@ -37,7 +37,105 @@ lavParseModelString <- function(model_syntax = "", as_data_frame = FALSE,   # no
       as_data_frame = as_data_frame)
   )
 
+  flat <- lav_syntax_reorder_levels(flat)
   lav_syntax_merge_blocks(flat)
+}
+
+# the order of the levels is determined by the order in which the "level:"
+# blocks appear in the model syntax: the first one is the within level.
+# To allow users to write (say) "level: 2" before "level: 1", we reorder
+# the level blocks (within each group) if the level labels have a natural
+# order:
+# - all labels are numbers: increasing order (level: 1 comes first)
+# - a label equals "within": this level comes first
+# - a label equals "between" (two levels only): this level comes last
+# - a label equals the name of the cluster variable (two levels only; only
+#   if 'between' is given, see lavaan()): this level comes last
+# in all other cases, the order of appearance is kept
+lav_syntax_reorder_levels <- function(flat, between = NULL) {
+  if (is.null(flat$op) || length(flat$op) == 0L || is.null(flat$lhs) ||
+      is.null(flat$rhs)) {
+    return(flat)
+  }
+  nrows <- length(flat$op)
+  block_lhs <- tolower(flat$lhs)
+  header_flag <- flat$op == ":"
+  level_flag <- header_flag & block_lhs == "level"
+  group_flag <- header_flag & block_lhs == "group"
+  # only group and level block identifiers are handled here
+  if (!any(level_flag) || any(header_flag & !level_flag & !group_flag)) {
+    return(flat)
+  }
+  level_values <- unique(flat$rhs[level_flag])
+  nlevels <- length(level_values)
+  if (nlevels < 2L) {
+    return(flat)
+  }
+
+  # rank of each level value
+  level_num <- suppressWarnings(as.numeric(level_values))
+  if (!anyNA(level_num)) {
+    level_rank <- rank(level_num, ties.method = "first")
+  } else {
+    level_rank <- as.numeric(seq_len(nlevels))
+    level_low <- tolower(level_values)
+    level_rank[level_low == "within"] <- 0
+    if (nlevels == 2L) {
+      level_rank[level_low == "between"] <- nlevels + 1
+      if (is.character(between) && length(between) == 1L &&
+          sum(level_values == between) == 1L && !any(level_rank == 0)) {
+        level_rank[level_values == between] <- nlevels + 1
+      }
+    }
+  }
+  if (!is.unsorted(level_rank)) {
+    # the levels appear in their natural order: nothing to do
+    return(flat)
+  }
+
+  # sort key per row: group segment, and the rank of the current level
+  # (zero for the rows that precede the first level block of a group)
+  group_seg <- cumsum(group_flag)
+  level_key <- numeric(nrows)
+  current <- 0
+  for (i in seq_len(nrows)) {
+    if (group_flag[i]) {
+      current <- 0
+    } else if (level_flag[i]) {
+      current <- level_rank[match(flat$rhs[i], level_values)]
+    }
+    level_key[i] <- current
+  }
+  row_order <- order(group_seg, level_key, seq_len(nrows))
+
+  # permute the rows (keeping the attributes of flat)
+  flat_attr <- attributes(flat)
+  same_length <- vapply(flat, length, 1L) == nrows
+  if (!all(same_length)) {
+    return(flat)
+  }
+  flat[] <- lapply(flat, function(x) x[row_order])
+  attributes(flat) <- flat_attr
+
+  # renumber the blocks; a block identifier carries the block number of
+  # the block that it opens
+  if (!is.null(flat$block)) {
+    header_flag <- header_flag[row_order]
+    block <- flat$block
+    block[!header_flag] <- match(block[!header_flag],
+                                 unique(block[!header_flag]))
+    next_block <- max(c(block[!header_flag], 0L)) + 1L
+    for (i in rev(seq_len(nrows))) {
+      if (header_flag[i]) {
+        block[i] <- next_block
+      } else {
+        next_block <- block[i]
+      }
+    }
+    flat$block <- as.integer(block)
+  }
+
+  flat
 }
 
 # if the same block (eg "level: 1") appears more than once in the model

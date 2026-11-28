@@ -144,6 +144,11 @@ lavaan <- function(
     dotdotdot_parser = useparser,
     long_lags        = !is.null(panel)
   )
+  # a level block labeled with the name of the cluster variable is the
+  # between level, even if it comes first in the model syntax
+  if (is.character(model) && is.character(cluster) && length(cluster) == 1L) {
+    flat_model <- lav_syntax_reorder_levels(flat_model, between = cluster)
+  }
 
   # ------------ long panel data ------------------------------------------
   # - two-level model: the data stay long, the id is the cluster variable,
