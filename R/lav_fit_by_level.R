@@ -259,9 +259,21 @@ lav_pt_partial_saturation <- function(lavobject, level_keep = 1L,
   # other level(s); if they mix both, level-specific fit is not defined
   con_rows <- NULL
   if (!independent) {
+    mod_flag <- !pt_user$op %in% con_ops
+    keep_flag <- mod_flag & pt_user$level %in% level_keep_val
+    drop_flag <- mod_flag & !pt_user$level %in% level_keep_val
+
+    # under ceq.simple = TRUE, simple equality constraints are stored as
+    # shared positive free ids without '==' rows; reject if a free
+    # parameter is shared across levels
+    keep_free <- pt_user$free[keep_flag & pt_user$free > 0L]
+    drop_free <- pt_user$free[drop_flag & pt_user$free > 0L]
+    if (any(keep_free %in% drop_free)) {
+      return(NULL)
+    }
+
     con_idx <- which(pt_user$op %in% con_ops)
     if (length(con_idx) > 0L) {
-      mod_flag <- !pt_user$op %in% con_ops
       lab_all <- character(0L)
       if (!is.null(pt_user$plabel)) {
         lab_all <- pt_user$plabel
@@ -272,8 +284,6 @@ lav_pt_partial_saturation <- function(lavobject, level_keep = 1L,
       if (is.null(lab_user)) {
         lab_user <- rep("", nrow(pt_user))
       }
-      keep_flag <- mod_flag & pt_user$level %in% level_keep_val
-      drop_flag <- mod_flag & !pt_user$level %in% level_keep_val
       keep_syms <- c(lab_all[keep_flag], lab_user[keep_flag])
       drop_syms <- c(lab_all[drop_flag], lab_user[drop_flag])
       keep_syms <- keep_syms[nchar(keep_syms) > 0L]
@@ -324,6 +334,12 @@ lav_pt_partial_saturation <- function(lavobject, level_keep = 1L,
     }
   }
 
+  # give saturated rows distinct temporary free ids so they cannot
+  # collide with keep_rows (which may share ids under ceq.simple = TRUE)
+  sat_free_idx <- which(sat_rows$free > 0L)
+  free_offset <- max(0L, keep_rows$free, na.rm = TRUE)
+  sat_rows$free[sat_free_idx] <- free_offset + seq_along(sat_free_idx)
+
   # combine, per block; constraint rows at the end
   pt_new <- rbind(keep_rows, sat_rows)
   pt_new <- pt_new[order(pt_new$block), , drop = FALSE]
@@ -331,10 +347,12 @@ lav_pt_partial_saturation <- function(lavobject, level_keep = 1L,
     pt_new <- rbind(pt_new, con_rows)
   }
 
-  # renumber the free parameters
+  # renumber the free parameters, preserving shared ids (simple equality
+  # constraints under ceq.simple = TRUE)
   idx_free <- which(pt_new$free > 0L)
+  free_old <- pt_new$free[idx_free]
   pt_new$free <- 0L
-  pt_new$free[idx_free] <- seq_along(idx_free)
+  pt_new$free[idx_free] <- match(free_old, unique(free_old))
   pt_new$id <- seq_len(nrow(pt_new))
   rownames(pt_new) <- NULL
 
